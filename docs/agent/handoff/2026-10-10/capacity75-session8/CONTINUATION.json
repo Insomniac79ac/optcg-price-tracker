@@ -1,0 +1,44 @@
+{
+ "status": "session8_complete",
+ "written_at": "2026-10-10T15:20:00Z",
+ "objective_complete": false,
+ "staging_only": true,
+ "production_accessed": false,
+ "psa10": "OFF (NOT READY)",
+ "collectors": {
+  "commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+  "rolled_out": "2026-10-10T13:54:52Z..14:31:00Z sequential, 0 retries",
+  "delivery_verified_at": "2026-10-10T14:57:38Z",
+  "fleet": "evidence/fleet-after-pr98.json",
+  "daily_v1": true,
+  "crons_flags_start_commands_unchanged": true,
+  "previous_verified_images": "05f099d (evidence/fleet-after-pr95.json, rollback-pr96.json)"
+ },
+ "deliveries": {
+  "PR95": "05f099d encode-before-insert, delivered green 08:59Z",
+  "PR96": "419210d per-turn browser code; auto-built in parallel by Railway GitHub integration 09:57Z; rolled back to 05f099d by 11:00:53Z",
+  "PR97": "3d8421b recovery-scan fix; merged 11:42:44Z without rollout (merge-poll HTTP 504)",
+  "PR98": "a852244 merge-poll retry + sequential release of PR96 code; delivered green 14:57:38Z"
+ },
+ "requests": {
+  "snkr_per_attempt": {"before_24h": 160.3, "after": 88.1, "after_n": 45, "basis": "MEASURED freshness_attempts"},
+  "snkr_homepage_raw": {"before_per_day": 287, "after": "1 per turn (2 in 2 turns)"},
+  "snkr_window_peak": {"before_24h": 2958, "after": 2855, "limit": 3100, "note": "admission fills budget; peak falls only after backlog drains"},
+  "yuyu_per_capture": {"before_24h": 55.3, "after_verified": null, "unverified_build_419210d": 30.6, "next_due": "2026-10-10T18:22:13Z"},
+  "denials_403_429_challenges_since_release": 0
+ },
+ "storage": {
+  "raw_snapshots_n_tup_upd": {"at_0900": 5924, "at_1515": 5924},
+  "lossless": {"rows": 6367, "ids": "37712-44518", "failures": 0, "expanded": 0},
+  "volume_mb": {"2026-10-10T08:07Z": 3633.2, "2026-10-10T15:15Z": 3636.7},
+  "short_window_mb_day": 11.8,
+  "room_to_reserve_mb": 3142,
+  "runway_days": {"worst_116_7": 27, "steady_47_9": 66, "short_window_11_8_estimate": 266},
+  "b_reanchor": "moot: homepage stored once per turn",
+  "c_proposal_groups": "diagnosed; R1 digest fix proposed for session 9 (collector release)"
+ },
+ "owner_brief": {"path": "docs/agent/handoff/2026-10-10/capacity75-session8/OWNER_STORAGE_BRIEF.md", "recommendation": "Railway volume 10 -> 20 GB", "decide_by": "2026-10-29"},
+ "blockers": ["freshness-deadline-deficit", "snkrdunk-identity-quarantine (23)", "deployment-provenance-divergence"],
+ "never_replay": ["SNKR 3676/3677", "RAW recovery 35175", "Yuyu canary evidence", "deliveries PR77-98"],
+ "session9_first": ["Yuyu natural turns with work on a852244", "SNKR 24h requests and homepage rows", "lossless ids > 44518", "24h volume growth and runway", "owner volume decision"]
+}

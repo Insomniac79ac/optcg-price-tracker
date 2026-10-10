@@ -1,0 +1,187 @@
+{
+ "observed_at": "2026-10-10 09:01:01.263218",
+ "revision": "05f099db30e735605fb72b542699ac75559ad8d7",
+ "read_only": true,
+ "services": [
+  {
+   "service": "snkrdunk-collector",
+   "runs": 2,
+   "first": "2026-10-10 08:29:28.692891+00:00",
+   "last": "2026-10-10 08:57:14.294071+00:00",
+   "completed": 2,
+   "attempted": 0,
+   "raw": 0,
+   "accepted": 0,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 0.074084,
+   "deployments": [
+    "df5d8fec-b931-4cd6-97eb-b412e55fea29"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-0",
+   "runs": 2,
+   "first": "2026-10-10 08:33:33.488243+00:00",
+   "last": "2026-10-10 09:00:02.830915+00:00",
+   "completed": 2,
+   "attempted": 0,
+   "raw": 0,
+   "accepted": 0,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 0.091611,
+   "deployments": [
+    "9fcd896a-be94-438f-8aee-8f70e7aa2285"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-1",
+   "runs": 1,
+   "first": "2026-10-10 08:38:27.257562+00:00",
+   "last": "2026-10-10 08:38:27.257562+00:00",
+   "completed": 1,
+   "attempted": 7,
+   "raw": 7,
+   "accepted": 7,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 61.501823,
+   "deployments": [
+    "6fb87043-842b-45b1-8fac-88f421664d42"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-2",
+   "runs": 1,
+   "first": "2026-10-10 08:41:01.664500+00:00",
+   "last": "2026-10-10 08:41:01.664500+00:00",
+   "completed": 1,
+   "attempted": 0,
+   "raw": 0,
+   "accepted": 0,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 0.10666,
+   "deployments": [
+    "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-3",
+   "runs": 1,
+   "first": "2026-10-10 08:40:49.401800+00:00",
+   "last": "2026-10-10 08:40:49.401800+00:00",
+   "completed": 1,
+   "attempted": 0,
+   "raw": 0,
+   "accepted": 0,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 0.141002,
+   "deployments": [
+    "eca877bc-7022-4a9d-82dd-7093ed3af3f7"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-4-v2",
+   "runs": 1,
+   "first": "2026-10-10 08:47:04.994484+00:00",
+   "last": "2026-10-10 08:47:04.994484+00:00",
+   "completed": 1,
+   "attempted": 13,
+   "raw": 13,
+   "accepted": 13,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 110.68574,
+   "deployments": [
+    "cc31808f-1e04-4ed3-b116-ef57c86d34ef"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-5",
+   "runs": 1,
+   "first": "2026-10-10 08:49:41.949535+00:00",
+   "last": "2026-10-10 08:49:41.949535+00:00",
+   "completed": 1,
+   "attempted": 0,
+   "raw": 0,
+   "accepted": 0,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 0.107558,
+   "deployments": [
+    "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-6",
+   "runs": 1,
+   "first": "2026-10-10 08:50:29.273657+00:00",
+   "last": "2026-10-10 08:50:29.273657+00:00",
+   "completed": 1,
+   "attempted": 0,
+   "raw": 0,
+   "accepted": 0,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 0.149148,
+   "deployments": [
+    "2c06c710-b05e-40fc-a4d9-f04e572ce5d3"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-7",
+   "runs": 1,
+   "first": "2026-10-10 08:55:51.487125+00:00",
+   "last": "2026-10-10 08:55:51.487125+00:00",
+   "completed": 1,
+   "attempted": 0,
+   "raw": 0,
+   "accepted": 0,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 0.188305,
+   "deployments": [
+    "9855a237-c081-4ff9-9491-a156cfc3aa04"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-8",
+   "runs": 1,
+   "first": "2026-10-10 08:59:00.961353+00:00",
+   "last": "2026-10-10 08:59:00.961353+00:00",
+   "completed": 1,
+   "attempted": 3,
+   "raw": 3,
+   "accepted": 3,
+   "failures": 0,
+   "denials": 0,
+   "optional_resource": 0,
+   "safety_faults": 0,
+   "max_runtime_s": 26.303691,
+   "deployments": [
+    "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6"
+   ]
+  }
+ ]
+}

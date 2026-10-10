@@ -1,0 +1,136 @@
+{
+ "observed_at": "2026-10-10T14:59:20.832912+00:00",
+ "commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+ "services": {
+  "snkrdunk-collector": {
+   "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+   "active_deployment": "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+   "image_digest": "sha256:776a5cb43c680e287c3fc5826bc6513bba7056496daa7dd3ace589dbc1dbc334",
+   "rollback_source": "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+   "rollback_source_can_redeploy": true,
+   "cron": "27,57 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-0": {
+   "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+   "active_deployment": "209fc53c-8e15-4fc1-aac0-cdd2b3380ed4",
+   "image_digest": "sha256:e6ab33e19814f2afd66a9bc41ec403d35545d0ecc7f4440e43d94172a13785a3",
+   "rollback_source": "209fc53c-8e15-4fc1-aac0-cdd2b3380ed4",
+   "rollback_source_can_redeploy": true,
+   "cron": "0,30 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-1": {
+   "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+   "active_deployment": "cb8156c3-d4e4-4320-9a17-51cacd139f79",
+   "image_digest": "sha256:e526c096507b85ed4c65e6e477bf01e0844888178fe073d3abd3540dd0ff0e15",
+   "rollback_source": "cb8156c3-d4e4-4320-9a17-51cacd139f79",
+   "rollback_source_can_redeploy": true,
+   "cron": "3,33 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-2": {
+   "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+   "active_deployment": "f572ef86-6e19-4909-9a9b-a4009f42108c",
+   "image_digest": "sha256:a8c0fde18f03e80f206531de4f42cf78a7133900bac3433d12d3a93a048d5b64",
+   "rollback_source": "f572ef86-6e19-4909-9a9b-a4009f42108c",
+   "rollback_source_can_redeploy": true,
+   "cron": "6,36 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-3": {
+   "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+   "active_deployment": "8a5889b1-c269-415b-a8ac-331cc6fbeb0b",
+   "image_digest": "sha256:d5cf429053b54f794efc24faea97283348f2539142ace6848add0c208c6fe7f5",
+   "rollback_source": "8a5889b1-c269-415b-a8ac-331cc6fbeb0b",
+   "rollback_source_can_redeploy": true,
+   "cron": "9,39 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+   "active_deployment": "26808284-572d-4fea-bc93-f2fdefe51e85",
+   "image_digest": "sha256:4a4c3bbea57e449ee7a1f6543da52a81d1c45f9d70f60ba9edeb01441d466ae2",
+   "rollback_source": "26808284-572d-4fea-bc93-f2fdefe51e85",
+   "rollback_source_can_redeploy": true,
+   "cron": "12,42 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-5": {
+   "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+   "active_deployment": "a47093dc-ad60-4ede-ade4-7a42253a252a",
+   "image_digest": "sha256:1dc3c30fc4c87ac8db15b09379f1a5bf439fdff3dfdb7e6024389b1bdc254fbf",
+   "rollback_source": "a47093dc-ad60-4ede-ade4-7a42253a252a",
+   "rollback_source_can_redeploy": true,
+   "cron": "15,45 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-6": {
+   "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+   "active_deployment": "7dd74cd4-5073-4e0a-ad6c-7beb181db582",
+   "image_digest": "sha256:fe9e066ae266b5bda5853b1c8a018ea5613e26c1b2e0a23abed555d00a5901ab",
+   "rollback_source": "7dd74cd4-5073-4e0a-ad6c-7beb181db582",
+   "rollback_source_can_redeploy": true,
+   "cron": "18,48 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-7": {
+   "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+   "active_deployment": "d2c50819-5970-4935-b77e-cb3a3f66b64b",
+   "image_digest": "sha256:e3955b6ff3eb4e1a2762c6b78bec0b9cbe08573d2a89b32ffd7f7ff646571c5f",
+   "rollback_source": "d2c50819-5970-4935-b77e-cb3a3f66b64b",
+   "rollback_source_can_redeploy": true,
+   "cron": "21,51 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  },
+  "yuyutei-collector-shard-8": {
+   "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+   "active_deployment": "f98f53b9-237b-48f1-9bf7-b8ce19acdfb1",
+   "image_digest": "sha256:0ff26d968a45eea0904c57aa767c31ddc46cc0d716d95c293d698228bfad5eec",
+   "rollback_source": "f98f53b9-237b-48f1-9bf7-b8ce19acdfb1",
+   "rollback_source_can_redeploy": true,
+   "cron": "24,54 * * * *",
+   "variables": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   }
+  }
+ }
+}

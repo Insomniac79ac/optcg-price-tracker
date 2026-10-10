@@ -1,0 +1,142 @@
+{
+ "db": [
+  {
+   "observed_at": "2026-10-10 08:04:23.684092",
+   "db_bytes": 2787145407
+  }
+ ],
+ "tables": [
+  {
+   "relname": "raw_snapshots",
+   "total": 2612158464,
+   "heap": 13139968,
+   "toast": 2552881152,
+   "idx": 14204928,
+   "n_live_tup": 43678,
+   "n_dead_tup": 1299,
+   "n_tup_ins": 36404,
+   "n_tup_upd": 5857,
+   "n_tup_hot_upd": 4911,
+   "n_tup_del": 0,
+   "last_autovacuum": "2026-10-08 00:49:50.103620+00:00",
+   "autovacuum_count": 6,
+   "last_autoanalyze": "2026-10-10 04:20:43.425143+00:00"
+  },
+  {
+   "relname": "price_observations",
+   "total": 13295616,
+   "heap": 3547136,
+   "toast": null,
+   "idx": 9715712,
+   "n_live_tup": 34209,
+   "n_dead_tup": 0,
+   "n_tup_ins": 27965,
+   "n_tup_upd": 0,
+   "n_tup_hot_upd": 0,
+   "n_tup_del": 0,
+   "last_autovacuum": "2026-10-09 04:29:41.077309+00:00",
+   "autovacuum_count": 6,
+   "last_autoanalyze": "2026-10-10 06:51:47.420228+00:00"
+  },
+  {
+   "relname": "source_mapping_proposal_groups",
+   "total": 52117504,
+   "heap": 41926656,
+   "toast": 0,
+   "idx": 10141696,
+   "n_live_tup": 26838,
+   "n_dead_tup": 456,
+   "n_tup_ins": 27984,
+   "n_tup_upd": 24372,
+   "n_tup_hot_upd": 0,
+   "n_tup_del": 0,
+   "last_autovacuum": "2026-10-10 03:44:43.030994+00:00",
+   "autovacuum_count": 10,
+   "last_autoanalyze": "2026-10-10 03:51:42.709433+00:00"
+  },
+  {
+   "relname": "freshness_work",
+   "total": 3661824,
+   "heap": 2293760,
+   "toast": 0,
+   "idx": 1327104,
+   "n_live_tup": 3583,
+   "n_dead_tup": 364,
+   "n_tup_ins": 3677,
+   "n_tup_upd": 66725,
+   "n_tup_hot_upd": 19225,
+   "n_tup_del": 0,
+   "last_autovacuum": "2026-10-10 06:55:47.512706+00:00",
+   "autovacuum_count": 75,
+   "last_autoanalyze": "2026-10-10 07:41:48.757026+00:00"
+  },
+  {
+   "relname": "freshness_attempts",
+   "total": 15622144,
+   "heap": 11821056,
+   "toast": 0,
+   "idx": 3760128,
+   "n_live_tup": 21760,
+   "n_dead_tup": 1002,
+   "n_tup_ins": 21762,
+   "n_tup_upd": 1903846,
+   "n_tup_hot_upd": 1828416,
+   "n_tup_del": 2,
+   "last_autovacuum": "2026-10-10 06:27:46.893691+00:00",
+   "autovacuum_count": 69,
+   "last_autoanalyze": "2026-10-10 07:42:48.879523+00:00"
+  },
+  {
+   "relname": "raw_snapshot_dictionaries",
+   "total": 1679360,
+   "heap": 1212416,
+   "toast": null,
+   "idx": 434176,
+   "n_live_tup": 5856,
+   "n_dead_tup": 0,
+   "n_tup_ins": 5856,
+   "n_tup_upd": 1,
+   "n_tup_hot_upd": 1,
+   "n_tup_del": 0,
+   "last_autovacuum": "2026-10-10 02:51:40.608131+00:00",
+   "autovacuum_count": 3,
+   "last_autoanalyze": "2026-10-10 06:10:46.198889+00:00"
+  }
+ ],
+ "toast": [
+  {
+   "relname": "pg_toast_35140",
+   "bytes": 0,
+   "n_live_tup": 0,
+   "n_dead_tup": 0,
+   "n_tup_ins": 0,
+   "n_tup_upd": 0,
+   "n_tup_del": 0,
+   "last_autovacuum": null,
+   "autovacuum_count": 0
+  },
+  {
+   "relname": "pg_toast_16436",
+   "bytes": 2552881152,
+   "n_live_tup": 1069077,
+   "n_dead_tup": 11986,
+   "n_tup_ins": 1216681,
+   "n_tup_upd": 0,
+   "n_tup_del": 147798,
+   "last_autovacuum": "2026-10-10 05:10:52.028264+00:00",
+   "autovacuum_count": 92
+  }
+ ],
+ "ledger_today": [
+  {
+   "rows": 1729,
+   "bytes": 3171726,
+   "max_id": 43939
+  }
+ ],
+ "raw_max_id": [
+  {
+   "max_id": 43939
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+  "base": "5be24267c085a41c779b10708a1bdec622c5f368",
+  "merge": "05f099db30e735605fb72b542699ac75559ad8d7",
+  "decision": "full",
+  "files": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-delivery.yml",
+    "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
+    "docs/agent/STAGING_DELIVERY.md",
+    "docs/agent/STAGING_MISSION.json",
+    "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
+    "scripts/collector_variables.py",
+    "scripts/deploy_staging_collectors.py",
+    "scripts/tests/test_collector_variables.py",
+    "scripts/tests/test_deploy_staging_collectors.py",
+    "scripts/tests/test_operational_health.py",
+    "services/api/app/services/raw_dictionary_storage.py",
+    "services/api/tests/test_raw_dictionary_storage_postgres.py"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-delivery.yml",
+    "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
+    "scripts/collector_variables.py",
+    "scripts/deploy_staging_collectors.py",
+    "scripts/tests/test_collector_variables.py",
+    "scripts/tests/test_deploy_staging_collectors.py",
+    "scripts/tests/test_operational_health.py",
+    "services/api/app/services/raw_dictionary_storage.py",
+    "services/api/tests/test_raw_dictionary_storage_postgres.py"
+  ]
+}

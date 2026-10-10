@@ -1,0 +1,354 @@
+{
+ "observed_at_utc": "2026-10-10 07:55:19.672564Z",
+ "table": "source_mapping_proposal_groups",
+ "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
+ "verdict": "NOT primarily MVCC bloat. ~83% of live rows are superseded proposal versions created because evidence_digest includes discovery_run_id, so every recurring Yuyu discovery run re-versions every unchanged pending listing (INSERT new + UPDATE old superseded_at). Heap free/dead share is ~13%.",
+ "MEASURED": {
+  "sizes_bytes": {
+   "total": 52117504,
+   "heap": 41926656,
+   "toast": 8192,
+   "indexes": 10141696,
+   "per_index": {
+    "uq_mapping_proposal_groups_evidence_version": 5488640,
+    "source_mapping_proposal_groups_pkey": 1179648,
+    "ix_mapping_proposal_groups_candidate": 573440,
+    "ix_source_mapping_proposal_groups_canonical_card_id": 376832,
+    "ix_mapping_proposal_groups_result_mapping": 360448,
+    "ix_mapping_proposal_groups_release_status": 344064,
+    "uq_mapping_proposal_groups_current_listing": 335872,
+    "ix_source_mapping_proposal_groups_release_product_id": 335872,
+    "ix_source_mapping_proposal_groups_resolution_status": 335872,
+    "ix_source_mapping_proposal_groups_source_id": 311296,
+    "ix_source_mapping_proposal_groups_review_status": 303104
+   }
+  },
+  "stats": {
+   "n_live_tup": 26838,
+   "n_dead_tup": 456,
+   "n_tup_ins": 27984,
+   "n_tup_upd": 24372,
+   "n_tup_hot_upd": 0,
+   "n_tup_del": 0,
+   "relpages": 5118,
+   "reltuples": 26624.0,
+   "last_vacuum": null,
+   "last_autovacuum": "2026-10-10 03:44:43.030994+00:00",
+   "last_autoanalyze": "2026-10-10 03:51:42.709433+00:00",
+   "autovacuum_count": 10,
+   "autoanalyze_count": 24,
+   "vacuum_count": 0,
+   "reloptions": null
+  },
+  "fillfactor": "default 100 (reloptions null)",
+  "autovacuum_settings": {
+   "autovacuum": "on",
+   "autovacuum_analyze_scale_factor": "0.1",
+   "autovacuum_analyze_threshold": "50",
+   "autovacuum_freeze_max_age": "200000000",
+   "autovacuum_max_workers": "3",
+   "autovacuum_multixact_freeze_max_age": "400000000",
+   "autovacuum_naptime": "60",
+   "autovacuum_vacuum_cost_delay": "2",
+   "autovacuum_vacuum_cost_limit": "-1",
+   "autovacuum_vacuum_insert_scale_factor": "0.2",
+   "autovacuum_vacuum_insert_threshold": "1000",
+   "autovacuum_vacuum_max_threshold": "100000000",
+   "autovacuum_vacuum_scale_factor": "0.2",
+   "autovacuum_vacuum_threshold": "50",
+   "autovacuum_work_mem": "-1",
+   "autovacuum_worker_slots": "16",
+   "block_size": "8192",
+   "vacuum_cost_delay": "0",
+   "vacuum_cost_limit": "200"
+  },
+  "pgstattuple_available": false,
+  "extensions": [
+   {
+    "extname": "plpgsql",
+    "extversion": "1.0"
+   }
+  ],
+  "rows": {
+   "current": 4657,
+   "superseded": 22181,
+   "superseded_pct": 82.6
+  },
+  "row_width_bytes": {
+   "avg_row": 1246,
+   "max_row": 2032,
+   "avg_evidence_summary_json": 897,
+   "evidence_share_of_row_data_pct": 72.0,
+   "avg_resolution_reasons_json": 58,
+   "avg_source_url": 46,
+   "note": "evidence_summary_json is SQLAlchemy JSON -> postgres json (text), ~900 B inline, uncompressed (below TOAST threshold), toast empty"
+  },
+  "alternatives": {
+   "alts": 41153,
+   "alts_of_superseded": 35344,
+   "avg_alt_bytes": 199,
+   "heap": 8478720,
+   "idx": 5210112,
+   "n_tup_hot_upd": 0
+  },
+  "created_per_day": [
+   {
+    "d": "2026-09-20 00:00:00+00:00",
+    "n": 4027
+   },
+   {
+    "d": "2026-10-04 00:00:00+00:00",
+    "n": 4640
+   },
+   {
+    "d": "2026-10-05 00:00:00+00:00",
+    "n": 2053
+   },
+   {
+    "d": "2026-10-06 00:00:00+00:00",
+    "n": 8494
+   },
+   {
+    "d": "2026-10-07 00:00:00+00:00",
+    "n": 2381
+   },
+   {
+    "d": "2026-10-08 00:00:00+00:00",
+    "n": 2164
+   },
+   {
+    "d": "2026-10-09 00:00:00+00:00",
+    "n": 2164
+   },
+   {
+    "d": "2026-10-10 00:00:00+00:00",
+    "n": 915
+   }
+  ],
+  "superseded_per_day": [
+   {
+    "d": "2026-10-04 00:00:00+00:00",
+    "n": 4640
+   },
+   {
+    "d": "2026-10-05 00:00:00+00:00",
+    "n": 2053
+   },
+   {
+    "d": "2026-10-06 00:00:00+00:00",
+    "n": 7864
+   },
+   {
+    "d": "2026-10-07 00:00:00+00:00",
+    "n": 2381
+   },
+   {
+    "d": "2026-10-08 00:00:00+00:00",
+    "n": 2164
+   },
+   {
+    "d": "2026-10-09 00:00:00+00:00",
+    "n": 2164
+   },
+   {
+    "d": "2026-10-10 00:00:00+00:00",
+    "n": 915
+   }
+  ],
+  "created_per_hour_48h": [
+   {
+    "h": "2026-10-08 13:00:00+00:00",
+    "n": 1247
+   },
+   {
+    "h": "2026-10-08 14:00:00+00:00",
+    "n": 2
+   },
+   {
+    "h": "2026-10-09 01:00:00+00:00",
+    "n": 299
+   },
+   {
+    "h": "2026-10-09 03:00:00+00:00",
+    "n": 588
+   },
+   {
+    "h": "2026-10-09 04:00:00+00:00",
+    "n": 28
+   },
+   {
+    "h": "2026-10-09 13:00:00+00:00",
+    "n": 1247
+   },
+   {
+    "h": "2026-10-09 14:00:00+00:00",
+    "n": 2
+   },
+   {
+    "h": "2026-10-10 01:00:00+00:00",
+    "n": 299
+   },
+   {
+    "h": "2026-10-10 03:00:00+00:00",
+    "n": 476
+   },
+   {
+    "h": "2026-10-10 04:00:00+00:00",
+    "n": 140
+   }
+  ],
+  "versions_per_listing": [
+   {
+    "versions": 1,
+    "listings": 1117
+   },
+   {
+    "versions": 2,
+    "listings": 534
+   },
+   {
+    "versions": 3,
+    "listings": 337
+   },
+   {
+    "versions": 6,
+    "listings": 201
+   },
+   {
+    "versions": 7,
+    "listings": 703
+   },
+   {
+    "versions": 8,
+    "listings": 217
+   },
+   {
+    "versions": 10,
+    "listings": 1249
+   },
+   {
+    "versions": 11,
+    "listings": 299
+   }
+  ],
+  "resolver_versions": [
+   {
+    "resolver_version": "source-mapping-proposals/1.0",
+    "n": 11655,
+    "min": "2026-09-20 15:11:14.270565+00:00",
+    "max": "2026-10-06 03:48:46.273766+00:00"
+   },
+   {
+    "resolver_version": "source-mapping-proposals/1.1",
+    "n": 3006,
+    "min": "2026-10-06 04:35:11.196941+00:00",
+    "max": "2026-10-06 04:35:27.615154+00:00"
+   },
+   {
+    "resolver_version": "source-mapping-proposals/1.2",
+    "n": 12177,
+    "min": "2026-10-06 04:55:56.653914+00:00",
+    "max": "2026-10-10 04:08:36.160371+00:00"
+   }
+  ],
+  "new_versions_since_2026_10_09": 3079,
+  "of_which_material_change_excluding_discovery_run_id": 93,
+  "superseded_rows_identical_to_current_except_discovery_run_id": 8640,
+  "referencing_fks": [
+   {
+    "t": "source_mapping_proposal_alternatives",
+    "conname": "source_mapping_proposal_alternatives_proposal_group_id_fkey",
+    "confdeltype": "c"
+   }
+  ],
+  "note_ins_vs_live": "n_tup_ins exceeds live by ~1.1k with n_tup_del=0: aborted/rolled-back inserts (dead, reclaimed by vacuum)"
+ },
+ "ESTIMATE": {
+  "heap_bytes_per_live_row": 1562,
+  "index_bytes_per_row": 378,
+  "minimal_heap_bytes_ff100": 36642816,
+  "rows_per_page_ff100": 6,
+  "free_or_dead_heap_bytes": 5283840,
+  "free_or_dead_pct": 12.6,
+  "bytes_attributable_to_superseded_rows_groups": 43033315,
+  "bytes_attributable_to_superseded_alternatives": 11756569,
+  "steady_state_new_versions_per_day": 2164,
+  "steady_state_basis": "2,164 created on each of 2026-10-08 and 10-09 (bursts ~13:00Z 1,247 and ~01-04Z ~915)",
+  "bytes_per_version_incl_alternatives": 2450,
+  "growth_mb_per_day": {
+   "groups_heap": 3.38,
+   "groups_idx": 0.82,
+   "alternatives": 1.1,
+   "total": 5.3,
+   "share_of_session7_other_tables_16_6_mb_day_pct": 32
+  },
+  "growth_after_fix_mb_per_day": "~0.1-0.2 (only ~3% of versions carry material change: 93/3079)",
+  "dead_tuple_ceiling": "autovacuum triggers at 50+0.2*live ~= 5,420 dead (~7 MB) -> explains 456..4,655 swings; dead space is reused, not the growth driver"
+ },
+ "hot_zero_explanation": [
+  "supersede UPDATE sets superseded_at, which is in the predicate of partial unique index uq_mapping_proposal_groups_current_listing -> never HOT-eligible (PG treats predicate columns as indexed)",
+  "review/decision updates change review_status / resulting_source_card_mapping_id (both indexed) -> not HOT",
+  "fillfactor 100 with ~1.25 KB rows (~6/page) leaves no room on page even when HOT would be allowed"
+ ],
+ "update_writers": {
+  "persist_proposals": "services/api/app/services/source_mapping_proposals.py:887-994 (current.superseded_at = now at 957 and 965; INSERT at 967)",
+  "digest_input": "services/api/app/services/source_mapping_proposals.py:171-191 _candidate_payload includes 'discovery_run_id' (174 yuyutei, 190 snkrdunk); _make_plan:248 evidence_digest=_digest(evidence); physical-proof path :612",
+  "caller": "services/api/app/services/discovery_proposal_refresh.py (added 4ca9ae7, 2026-10-04) called from services/yuyutei_collector/yuyutei_collector/due_discovery.py:79-81 on every discovery claim",
+  "admin": "services/api/app/services/source_mapping_proposal_decision.py, source_mapping_proposal_review.py (review updates; low volume)"
+ },
+ "recommendations": [
+  {
+   "id": "R1",
+   "class": "GREEN code fix (no migration)",
+   "change": "Exclude volatile 'discovery_run_id' from the digest input (e.g. _digest({k:v for k,v in evidence.items() if k!='discovery_run_id'}) in _make_plan and the physical-proof replace at :612). Keep run-derived outcome (stale/superseded status) covered: persist_proposals already raises if status differs for equal digest, so either add resolution_status into the digest payload or treat status change as new evidence.",
+   "effect": "new versions/day ~2,164 -> ~70 (material changes only); growth ~5.3 -> ~0.2 MB/day; n_tup_upd falls proportionally",
+   "risk": "One-time re-version of ~4.7k current rows (~11 MB incl. alternatives) when the digest formula changes, unless gated by a RESOLVER_VERSION bump scheduled once; tests in services/api/tests/test_source_mapping_proposals.py assert digest/reuse semantics. Stored evidence_summary_json keeps the first run id (lineage of latest run lost unless stored elsewhere, e.g. update only on material change)."
+  },
+  {
+   "id": "R2",
+   "class": "AMBER data cleanup (DELETE, ROW EXCLUSIVE lock, no rewrite)",
+   "change": "After R1, prune superseded pending rows never reviewed (cascade to alternatives) or keep only last N per listing.",
+   "effect": "removes ~22k rows / ~35 MB groups + ~11 MB alternatives as reusable free space (not returned to OS)",
+   "risk": "loses proposal history/audit; check decision audit dependencies; generates WAL ~ size of deleted data; needs explicit approval"
+  },
+  {
+   "id": "R3",
+   "class": "AMBER catalog change",
+   "change": "ALTER TABLE source_mapping_proposal_groups SET (autovacuum_vacuum_scale_factor=0.05, autovacuum_vacuum_threshold=500)",
+   "lock": "SHARE UPDATE EXCLUSIVE (blocks only other VACUUM/ANALYZE/DDL; not reads/writes), instant",
+   "effect": "dead ceiling ~5.4k -> ~1.8k tuples (~4 MB less transient)",
+   "risk": "low; marginal value once R1 lands"
+  },
+  {
+   "id": "R4",
+   "class": "NOT recommended",
+   "change": "fillfactor<100",
+   "why": "supersede updates can never be HOT (partial-index predicate column); would only inflate heap; also requires rewrite to apply to existing pages"
+  },
+  {
+   "id": "R5",
+   "class": "AMBER table rewrite (VACUUM FULL / CLUSTER / pg_repack)",
+   "lock": "VACUUM FULL: ACCESS EXCLUSIVE for whole run (est. 2-10 s for ~50 MB + 11 indexes on Railway disk; up to ~30 s under IO contention). Blocks discovery refresh (due_discovery -> persist_proposals), admin proposal review API, and any API read of proposals; collectors' price paths unaffected unless they touch proposals. pg_repack not installed (pg_extension shows only plpgsql) -> would need CREATE EXTENSION (forbidden here).",
+   "effect": "only worth it after R1+R2; would return ~40 MB to OS",
+   "note": "plain VACUUM only truncates trailing empty pages (brief ACCESS EXCLUSIVE on truncate); otherwise space becomes reusable in-table, not returned to OS"
+  }
+ ],
+ "queries": {
+  "now": "select now() at time zone 'utc' as observed_at, current_setting('server_version') as server_version",
+  "sizes": "select c.relname, pg_total_relation_size(c.oid) total, pg_relation_size(c.oid) heap,\n   coalesce(pg_total_relation_size(c.reltoastrelid),0) toast, pg_indexes_size(c.oid) idx, c.reloptions, c.relpages, c.reltuples,\n   s.n_live_tup,s.n_dead_tup,s.n_tup_ins,s.n_tup_upd,s.n_tup_hot_upd,s.n_tup_del,s.n_mod_since_analyze,\n   s.last_vacuum,s.last_autovacuum,s.last_analyze,s.last_autoanalyze,s.vacuum_count,s.autovacuum_count,s.autoanalyze_count\n   from pg_class c join pg_stat_user_tables s on s.relid=c.oid\n   where c.relname in ('source_mapping_proposal_groups','source_mapping_proposal_alternatives')",
+  "indexes": "select indexrelname, pg_relation_size(indexrelid) bytes, idx_scan, pg_get_indexdef(indexrelid) def\n   from pg_stat_user_indexes where relname='source_mapping_proposal_groups' order by 2 desc",
+  "autovacuum_settings": "select name, setting, unit from pg_settings where name like 'autovacuum%'\n   or name in ('vacuum_cost_limit','vacuum_cost_delay','block_size')",
+  "extensions": "select extname, extversion from pg_extension",
+  "row_width": "select count(*) n, count(*) filter (where superseded_at is null) current_rows,\n   count(*) filter (where superseded_at is not null) superseded_rows,\n   avg(pg_column_size(t.*))::int avg_row_bytes, sum(pg_column_size(t.*)) sum_row_bytes, max(pg_column_size(t.*)) max_row_bytes,\n   avg(pg_column_size(evidence_summary_json))::int avg_evidence_bytes, sum(pg_column_size(evidence_summary_json)) sum_evidence_bytes,\n   avg(pg_column_size(resolution_reasons_json))::int avg_reasons_bytes, avg(pg_column_size(source_url))::int avg_url_bytes\n   from source_mapping_proposal_groups t",
+  "alternatives_width": "select count(*) alts, count(*) filter (where g.superseded_at is not null) alts_of_superseded,\n   avg(pg_column_size(a.*))::int avg_alt_bytes from source_mapping_proposal_alternatives a join source_mapping_proposal_groups g on g.id=a.proposal_group_id",
+  "created_per_day": "select date_trunc('day',created_at) d, count(*) n from source_mapping_proposal_groups group by 1 order by 1",
+  "superseded_per_day": "select date_trunc('day',superseded_at) d, count(*) n from source_mapping_proposal_groups where superseded_at is not null group by 1 order by 1",
+  "created_per_hour_48h": "select date_trunc('hour',created_at) h, count(*) n from source_mapping_proposal_groups where created_at > now()-interval '48 hours' group by 1 order by 1",
+  "versions_per_listing": "select n versions, count(*) listings from (select source_id, canonical_source_listing_identity, count(*) n\n   from source_mapping_proposal_groups group by 1,2) x group by n order by n",
+  "resolver_versions": "select resolver_version, count(*) n, min(created_at), max(created_at) from source_mapping_proposal_groups group by 1 order by 3",
+  "new_since_1009": "select count(*) n from source_mapping_proposal_groups where created_at>='2026-10-09'",
+  "new_since_1009_material_change": "select count(*) n from (select g.id from source_mapping_proposal_groups g join source_mapping_proposal_groups p\n   on p.source_id=g.source_id and p.canonical_source_listing_identity=g.canonical_source_listing_identity\n   and p.superseded_at between g.created_at and g.created_at+interval '1 minute'\n   where g.created_at>='2026-10-09' and ((p.evidence_summary_json::jsonb - 'discovery_run_id')\n   is distinct from (g.evidence_summary_json::jsonb - 'discovery_run_id')\n   or p.resolution_status<>g.resolution_status or p.resolver_version<>g.resolver_version)) x",
+  "superseded_identical_to_current_minus_run_id": "select count(*) n from source_mapping_proposal_groups g where superseded_at is not null\n   and review_status='pending' and exists (select 1 from source_mapping_proposal_groups c where c.source_id=g.source_id\n   and c.canonical_source_listing_identity=g.canonical_source_listing_identity and c.superseded_at is null\n   and c.resolver_version=g.resolver_version and c.resolution_status=g.resolution_status\n   and (c.evidence_summary_json::jsonb - 'discovery_run_id')=(g.evidence_summary_json::jsonb - 'discovery_run_id'))",
+  "referencing_fks": "select conrelid::regclass::text t, conname, confdeltype from pg_constraint where confrelid='source_mapping_proposal_groups'::regclass"
+ }
+}

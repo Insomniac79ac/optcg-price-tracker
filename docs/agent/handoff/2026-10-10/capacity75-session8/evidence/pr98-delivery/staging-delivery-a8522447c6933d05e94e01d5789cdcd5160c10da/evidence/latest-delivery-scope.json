@@ -1,0 +1,16 @@
+{
+  "base": "3d8421b7e11f61ffe216f7830d20448d725af732",
+  "merge": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+  "decision": "full",
+  "files": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-delivery.yml",
+    "docs/agent/STAGING_DELIVERY.md",
+    "docs/agent/STAGING_MISSION.json"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-delivery.yml"
+  ]
+}

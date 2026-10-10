@@ -1,0 +1,405 @@
+{
+ "observed_at": "2026-10-10T07:10:19.188267+00:00",
+ "services": {
+  "snkrdunk-collector": {
+   "latest": "13a65aff-ca9c-4922-843d-1d99bacded13",
+   "status": "SUCCESS",
+   "activation_deployment": "13a65aff-ca9c-4922-843d-1d99bacded13",
+   "same_as_activation": true,
+   "digest": "sha256:521ab4aafe3254883ef0d12d72b01e9b915efa92eb413a9958ee35d95a43f8f8",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.107Z",
+     "id": "58a368cf-5d1c-4f1f-97a3-f28ab22a4dbf",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:25.949Z",
+     "id": "8d7358fd-863f-4c61-b91a-7d880d94061e",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.090Z",
+     "id": "2eb03a5b-65fe-4406-912f-d9ac5a34c6e4",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:35.809Z",
+     "id": "e957af48-3b6a-4576-9de7-0b2aad5e3e64",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.389Z",
+     "id": "39a506c0-46ae-4c64-96f9-5f6f446f801d",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-0": {
+   "latest": "b64110bb-e328-4099-b689-f92546cc57fd",
+   "status": "SUCCESS",
+   "activation_deployment": "b64110bb-e328-4099-b689-f92546cc57fd",
+   "same_as_activation": true,
+   "digest": "sha256:db319645658a746bd5e7544b46160a6ff86062d21ab8e13f7ef3765832f8a090",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:26.991Z",
+     "id": "051dedf0-dadc-4885-ae4e-4d9359b0291c",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.212Z",
+     "id": "492ae504-e0b3-4225-8151-5fc3471818bd",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.096Z",
+     "id": "157fae77-6ba0-4b60-9f6e-51337625a598",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:36.047Z",
+     "id": "fe0eb6ec-e717-4a65-9c53-ed73efb77461",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.571Z",
+     "id": "57f4715d-7f88-4b0f-9757-cf2541bad6e9",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-1": {
+   "latest": "00f7e0fa-58db-4e40-a6e6-15c2d0cf3ece",
+   "status": "SUCCESS",
+   "activation_deployment": "00f7e0fa-58db-4e40-a6e6-15c2d0cf3ece",
+   "same_as_activation": true,
+   "digest": "sha256:aa73054ac904aec1fb4b993c9524ef005494f8603fe7696aa73c5cfb5eebccb7",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.751Z",
+     "id": "9cd8784e-4500-4c06-a04a-7599d6f4a4bf",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.882Z",
+     "id": "4b8b227c-4ae6-40f2-875e-3e7a862d4e91",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.851Z",
+     "id": "46b8f4d1-22ef-47e2-9afa-b3389f8d872a",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:36.363Z",
+     "id": "e71bf9c9-7c4f-4679-862c-6acbbbe59ac8",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.975Z",
+     "id": "c79db5aa-92eb-4268-8d99-8e57f2c9a2a9",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-2": {
+   "latest": "69ff7905-3e60-45b7-a1df-962abc717c5f",
+   "status": "SUCCESS",
+   "activation_deployment": "69ff7905-3e60-45b7-a1df-962abc717c5f",
+   "same_as_activation": true,
+   "digest": "sha256:67dcc4fbda22eb3347441d38b988fba663742fe11bfe65c55f57761de0188c92",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.215Z",
+     "id": "41c825c5-5f70-48b5-b783-9a29bf8eca50",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.192Z",
+     "id": "79c3fb24-7d66-461a-8e1b-338fda9cd19a",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.094Z",
+     "id": "d22f4ed3-73ea-4066-a25f-2263f0170fce",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:35.835Z",
+     "id": "eebb754e-f332-4fa2-ab66-2a85c630b1a9",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.552Z",
+     "id": "32417f07-6835-4fb2-b989-d64b6e0697a1",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-3": {
+   "latest": "7ddbd0f3-24ef-4bec-a647-1098c01159c6",
+   "status": "SUCCESS",
+   "activation_deployment": "7ddbd0f3-24ef-4bec-a647-1098c01159c6",
+   "same_as_activation": true,
+   "digest": "sha256:388d56bfb72040a29ed5970314a24395b9bfcd122ad04a1f548f0882ae609668",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.134Z",
+     "id": "0304bd3f-c6d8-496c-bd55-7f175c527b31",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.184Z",
+     "id": "f4bb3a97-d9c5-43da-be02-13387be89b85",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.117Z",
+     "id": "118a707a-1362-4b29-9a2c-89662e6e6d17",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:36.147Z",
+     "id": "9b97560b-50d0-410c-b5ac-db9407400f31",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.720Z",
+     "id": "99b70072-4ad9-43da-931e-b6f7529d5de8",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "latest": "a2e21e1e-5007-42bc-913c-8b761a334c62",
+   "status": "SUCCESS",
+   "activation_deployment": "a2e21e1e-5007-42bc-913c-8b761a334c62",
+   "same_as_activation": true,
+   "digest": "sha256:94987582cc48f438ccafe2aeb6018697a5ea9a813947f35fe1ec43cc76a0f228",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.131Z",
+     "id": "7e7a3622-ac50-4373-99e8-cd86f34708aa",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.130Z",
+     "id": "0c0a903f-26e1-4a26-b9d9-00fbd3657bc5",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.110Z",
+     "id": "ccec6f5f-46d8-4b52-b196-a6b8a2bc71f0",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:35.830Z",
+     "id": "a96afa9f-a8e9-4845-aa3a-6041050deaf1",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.431Z",
+     "id": "de59ea1c-4f2d-4938-bb4b-8aa367f87980",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-5": {
+   "latest": "73702e82-0670-476f-82f5-3324689af3ec",
+   "status": "SUCCESS",
+   "activation_deployment": "73702e82-0670-476f-82f5-3324689af3ec",
+   "same_as_activation": true,
+   "digest": "sha256:a2fcc0a40136e31a83237af0648cb483c2068779ca8f30682965be85c08baec9",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.085Z",
+     "id": "ee26116b-c174-413b-93b5-a8bfad598348",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.184Z",
+     "id": "c08e79dd-87ff-45dd-bba0-76bd6d3a02e6",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.098Z",
+     "id": "1bf55396-8600-416c-ac86-758da94b4035",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:35.794Z",
+     "id": "7f377a81-3618-48df-a34e-cd43fe126c54",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.440Z",
+     "id": "65117f56-4a4d-4949-a64f-1e5545c8c439",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-6": {
+   "latest": "64b19323-ef4f-4aed-925e-b8cc9b4800e2",
+   "status": "SUCCESS",
+   "activation_deployment": "64b19323-ef4f-4aed-925e-b8cc9b4800e2",
+   "same_as_activation": true,
+   "digest": "sha256:3abc15a28a2b68d7cd3a1c3ef55934775ce50f3292a0580df6d67271ca5beb84",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.722Z",
+     "id": "80e6dbd6-3fc6-4101-9d81-4b030247dfb2",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.438Z",
+     "id": "194f63f3-43e6-4b4e-94ed-44f119c170a0",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.864Z",
+     "id": "b71885ca-3e9d-4a46-bbd6-505542249e68",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:36.560Z",
+     "id": "740e1841-630f-4479-8f4c-f1726f2558e7",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.952Z",
+     "id": "119b25ce-378a-4e6c-95f3-d814c372eeea",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-7": {
+   "latest": "6eaf9275-4ba6-4787-a9ab-c556ba1ddd1e",
+   "status": "SUCCESS",
+   "activation_deployment": "6eaf9275-4ba6-4787-a9ab-c556ba1ddd1e",
+   "same_as_activation": true,
+   "digest": "sha256:8f0649eb17395357a76430a48f55bc786154c7a18f5532e10c045cd38190d7a6",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.094Z",
+     "id": "ceef083a-3de0-4cb8-8724-5eba273071ab",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.348Z",
+     "id": "ab4381a0-7cab-4dde-a323-c2442a374c2e",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.117Z",
+     "id": "38f7cd83-1acf-456e-aef1-d0a0e3f4e5b8",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:35.819Z",
+     "id": "7e579066-bd03-4d45-9db7-0899e0df2cce",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.530Z",
+     "id": "ddfa561e-adab-4d04-bee3-68aad9091cb6",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-8": {
+   "latest": "ce27c4a0-e5de-439b-b1e7-dfdf6af97328",
+   "status": "SUCCESS",
+   "activation_deployment": "ce27c4a0-e5de-439b-b1e7-dfdf6af97328",
+   "same_as_activation": true,
+   "digest": "sha256:2040bf9d501fa214e3c816925edf8eb224cdc0602dc2a2d6bc31695769fc787d",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-10T06:28:27.830Z",
+     "id": "05dd6292-f198-4779-a20a-0ae008fd643e",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-10T05:25:26.477Z",
+     "id": "e782dabd-df82-4def-9a38-228b7717a7b1",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T15:23:58.802Z",
+     "id": "799bb308-7316-4d49-8059-10d5fde858bb",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T14:57:36.408Z",
+     "id": "16cc722b-f4dd-4bc5-9922-bec8959a1270",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:27.012Z",
+     "id": "e93e1e3f-47c0-4551-a35e-f6133d34c2d8",
+     "status": "SKIPPED"
+    }
+   ]
+  }
+ }
+}
