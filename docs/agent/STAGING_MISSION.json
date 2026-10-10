@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Owner-authorized security fix (2026-10-10): admin auth on signal-event writes and on private market/digest reads, collector surfaces hide that data, inventory guards; Vercel Git builds only staging. API-only, no collector rollout",
+  "mission": "Land 2026-10-10 admin-auth fix (PR #93) follow-up note on staging (documentation only)",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,86 +20,15 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/api/analytics.py",
-        "services/api/app/api/market.py",
-        "services/api/app/services/dashboard.py",
-        "services/api/tests/test_dashboard.py",
-        "services/api/tests/test_mutating_route_auth.py",
-        "services/api/tests/test_private_read_route_auth.py"
-      ],
-      "effects": [
-        "application",
-        "tests",
-        "staging_deployment"
-      ],
-      "reason": "services/api: require_admin_token on PATCH/POST /market/signal-events writes and on GET /market/signals, /market/signal-events(/{id}), /market/opportunities, /market/report/latest, /market/reports(/{id}), /analytics/digest/latest, /analytics/digest/reports(/{id}); dashboard overview always returns the opportunity, market-report and signal-event widgets empty. Enforces the existing admin-token policy on routes that were missing it, as explicitly authorized by the owner (DECISIONS.md 2026-10-10); no auth mechanism, session, token or secret handling changes, so security_or_secrets_policy is assessed false. Exposure is reduced, not increased. None of these modules is in either collector's import graph (collector_runtime_inputs changed_runtime_inputs vs 1b1b64d: [] for SNKR and Yuyu), so no collector release. Tests: 401 without/with wrong token or with a collector bearer, 200 with admin token, primed cache never served unauthenticated, and a public-read allowlist plus user-derived response-field guard."
-    },
-    {
-      "files": [
-        "apps/web/src/app/analytics/buy-decisions/page.tsx",
-        "apps/web/src/app/analytics/digest/page.test.tsx",
-        "apps/web/src/app/analytics/digest/page.tsx",
-        "apps/web/src/app/analytics/sell-decisions/page.tsx",
-        "apps/web/src/app/api/analytics/digest/latest/route.ts",
-        "apps/web/src/app/api/analytics/digest/reports/[id]/route.ts",
-        "apps/web/src/app/api/analytics/digest/reports/route.ts",
-        "apps/web/src/app/api/market/opportunities/route.ts",
-        "apps/web/src/app/api/market/report/latest/route.ts",
-        "apps/web/src/app/api/market/reports/[id]/route.ts",
-        "apps/web/src/app/api/market/reports/route.ts",
-        "apps/web/src/app/api/market/signal-events/[id]/dismiss/route.ts",
-        "apps/web/src/app/api/market/signal-events/[id]/resolve/route.ts",
-        "apps/web/src/app/api/market/signal-events/[id]/route.ts",
-        "apps/web/src/app/api/market/signal-events/[id]/watch/route.ts",
-        "apps/web/src/app/api/market/signal-events/route.ts",
-        "apps/web/src/app/api/market/signal-events/signalEventWrites.test.ts",
-        "apps/web/src/app/api/market/signals/route.ts",
-        "apps/web/src/app/api/mutatingRouteAuth.test.ts",
-        "apps/web/src/app/api/privateReadProxies.test.ts",
-        "apps/web/src/app/dashboard/page.tsx",
-        "apps/web/src/app/market/opportunities/layout.tsx",
-        "apps/web/src/app/market/report/layout.tsx",
-        "apps/web/src/app/market/signal-events/layout.tsx",
-        "apps/web/src/app/market/signals/layout.tsx",
-        "apps/web/src/app/wishlist/page.tsx",
-        "apps/web/src/components/BuyDecisionCandidateTable.tsx",
-        "apps/web/src/components/SellDecisionCandidateTable.tsx",
-        "apps/web/src/components/admin/AdminOnlyPageLayout.test.tsx",
-        "apps/web/src/components/admin/AdminOnlyPageLayout.tsx",
-        "apps/web/src/components/ui/MarketContextPanel.tsx",
-        "apps/web/src/generated/buildVersion.ts",
-        "apps/web/src/lib/dashboardWidgets.test.ts",
-        "apps/web/src/lib/dashboardWidgets.ts"
-      ],
-      "effects": [
-        "application",
-        "tests",
-        "staging_deployment"
-      ],
-      "reason": "apps/web: the nine read proxies and four write proxies go through proxyAdminJson (admin session, server-side X-Admin-Token); /market/signals, /signal-events, /opportunities and /report pages sit behind requireAdminSession (collector gets not-found); /analytics/digest hides stored reports and history from non-admins; dashboard drops the three withheld widgets; collector links to /market/opportunities removed. Static guard requires every GET Route Handler to authenticate or be on a reviewed public list. Built by Vercel's existing Git integration on merge."
-    },
-    {
-      "files": [
-        "apps/web/vercel.json"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "git.deploymentEnabled {\"**\": false, \"staging\": true}: Vercel Git deployments only for the staging branch (the project's production target). Delivery verification reads only that target; branch previews are not used by verify_staging_delivery.py or state generation. Previews were already behind Vercel Authentication. Reversible by reverting the file."
-    },
-    {
-      "files": [
-        "docs/agent/DECISIONS.md",
-        "docs/agent/STAGING_DELIVERY.md",
-        "docs/route_inventory.md"
+        "docs/agent/handoff/2026-10-10/authfix/NOTE.md"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "DECISIONS.md records the owner authorization and the preview decision; STAGING_DELIVERY.md documents the preview change; route_inventory.md reflects the new access."
+      "reason": "Handoff note under docs/agent/handoff/ only: out-of-scope findings from PR #93 and stale branch-scoped Vercel preview variable names (no values). No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout, no Railway build."
     }
   ],
-  "diff_sha256": "5b1d60498fcb347a668d128ac8b9f17cd0fd1c2441a609cc498446c3e8ecb477",
+  "diff_sha256": "98cf1ec97198e7665e21421e96472bdef88289f45a12595830d6d5927e214e94",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
@@ -110,61 +39,5 @@
     "snkr_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
     "yuyu_reader_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
     "yuyu_capacity_cadence": true
-  },
-  "safeguards": {
-    "impact": {
-      "resources": [
-        "Railway API service optcg-price-tracker (watch services/api/** -> build at merge)",
-        "Railway market-index-snapshot cron image (same watch pattern; daily 0 20 * * * UTC, not run by deploy)",
-        "Vercel staging production build (staging branch)"
-      ],
-      "routes": [
-        "/market/signals",
-        "/market/signal-events",
-        "/market/signal-events/{id} (GET, PATCH)",
-        "/market/signal-events/{id}/dismiss|watch|resolve",
-        "/market/opportunities",
-        "/market/report/latest",
-        "/market/reports",
-        "/market/reports/{id}",
-        "/analytics/digest/latest",
-        "/analytics/digest/reports",
-        "/analytics/digest/reports/{id}",
-        "/dashboard/overview (3 widgets empty)",
-        "web /api proxies of the above",
-        "web pages /market/signals, /market/signal-events, /market/opportunities, /market/report, /analytics/digest, /dashboard"
-      ],
-      "dependencies": [
-        "none added"
-      ],
-      "deployment_impact": "API and market-index-snapshot rebuild from the merge (Railway watch patterns read 2026-10-10 ~04:00Z); worker, beat and all 10 collectors watch only their own directories and are not rebuilt. No collector rollout requested, no migration (head stays f9e5b4a8c012), no variable, schedule, budget, writer or source-job change.",
-      "database_writes": 0,
-      "source_requests": 0,
-      "estimated_runtime_minutes": 30
-    },
-    "recovery": {
-      "artifact": "e9f9de9a90f9d64447e6fbeedc270a7b26f4e170",
-      "procedure": "Open a PR reverting this merge into staging; the API and frontend redeploy the previous code through the same delivery path. No database or provider-variable action.",
-      "trigger": "Admin market/digest pages fail for an admin session, any public catalogue/market route starts answering 401, the delivery verifier fails, or any collector deployment/digest/setting changes.",
-      "backup": "Not applicable: no persistent state, schema, variable or deployment-setting change.",
-      "validation": [
-        "services/api/tests/test_private_read_route_auth.py",
-        "services/api/tests/test_mutating_route_auth.py",
-        "apps/web/src/app/api/privateReadProxies.test.ts",
-        "apps/web/src/app/api/mutatingRouteAuth.test.ts"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/verify_snkr_published_discovery_component.py",
-        "scripts/verify_yuyu_raw_reader_component.py",
-        "scripts/generate_staging_state.py"
-      ],
-      "observation_window": "The staging delivery of this merge: API built at the merge, both component checks pass on 1b1b64d, no collector rollout; then unauthenticated GETs of the private routes and invalid-id writes answer 401 on API and web, public catalogue routes still 200, admin pages load, and all 10 collectors remain on their activation deployments and digests with daily-v1."
-    }
   }
 }
