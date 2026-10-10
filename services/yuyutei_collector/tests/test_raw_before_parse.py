@@ -57,7 +57,9 @@ IDENTITY_FAILURE = {
 }
 
 
-class RawBeforeParseTestCase(unittest.TestCase):
+class RawBeforeParseFixture(unittest.TestCase):
+    """SQLite collector database and faked Playwright; no tests of its own."""
+
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
         database_path = Path(self.tempdir.name) / "collector.sqlite3"
@@ -170,6 +172,8 @@ class RawBeforeParseTestCase(unittest.TestCase):
             self.assertEqual(len(snapshots), 1)
             self.assertEqual(attempt.raw_snapshot_id, snapshots[0].id)
 
+
+class RawBeforeParseTestCase(RawBeforeParseFixture):
     def test_success_persists_and_links_before_classification_and_parsing(self):
         def classify_after_persist(step, expected_markers):
             self._assert_snapshot_already_linked()

@@ -1,8 +1,11 @@
 """Opt-in nine-shard consumer of the shared service; no second queue/policy."""
 
+import functools
+
 from sqlalchemy import select
 
 from app.services.freshness_integration import CaptureResult, drain
+from yuyutei_collector.browser import log_event
 from yuyutei_collector.config import settings
 from yuyutei_collector.db import SessionLocal
 from yuyutei_collector.models import Source
@@ -41,18 +44,32 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
 
     if type(shard_index) is not int or not 0 <= shard_index < 9:
         raise ValueError("due collection requires one of the existing nine shards")
-    with session_factory() as session:
-        source_id = session.scalar(select(Source.id).where(Source.name == "yuyutei"))
-        return drain(
-            session,
-            source_id,
-            f"yuyutei-due-{shard_index}",
-            runner or run_one_mapping_detailed,
-            runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
-            mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
-            chunk_size=chunk_size,
-            max_work=settings.DUE_MAX_PRODUCTS_PER_RUN,
-            discovery_runner=run_discovery,
-            shard_index=shard_index,
-            delay_seconds=max(0, settings.YUYUTEI_REQUEST_DELAY_MS) / 1000,
-        )
+    # One warmed browser per scheduled turn (unless a caller supplies its own
+    # runner). Closed however the turn ends, including deadline paths.
+    turn = None
+    if runner is None:
+        from yuyutei_collector.browser import TurnBrowser
+
+        turn = TurnBrowser()
+        runner = functools.partial(run_one_mapping_detailed, turn=turn)
+    try:
+        with session_factory() as session:
+            source_id = session.scalar(select(Source.id).where(Source.name == "yuyutei"))
+            return drain(
+                session,
+                source_id,
+                f"yuyutei-due-{shard_index}",
+                runner,
+                runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
+                mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
+                chunk_size=chunk_size,
+                max_work=settings.DUE_MAX_PRODUCTS_PER_RUN,
+                discovery_runner=run_discovery,
+                shard_index=shard_index,
+                delay_seconds=max(0, settings.YUYUTEI_REQUEST_DELAY_MS) / 1000,
+            )
+    finally:
+        if turn is not None:
+            log_event("turn_browser_summary", shard_index=shard_index,
+                      launches=turn.launches, warmups=turn.warmups)
+            turn.close()

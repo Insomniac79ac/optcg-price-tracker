@@ -182,3 +182,78 @@ def warm_up_homepage(page: Page) -> dict:
 def _write_json_artifact(path: Path, data: dict) -> dict:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return {"name": path.name, "path": str(path), "size_bytes": path.stat().st_size}
+
+
+class TurnBrowser:
+    """One browser and one warmed context reused by a due-work turn.
+
+    Today's per-capture path launches a browser, warms the homepage and
+    throws both away for every product. A turn keeps the context (and so the
+    session the homepage established) across attempts: each attempt opens its
+    own page, is metered by exactly one bound Attempt through a single
+    context-level TurnMeter, and only an attempt that finds the turn cold pays
+    for a warm-up. Any failure discards the whole browser, so the next
+    attempt starts exactly as a fresh capture does today. Schedules, budgets,
+    reservations and pacing are untouched; there is simply less to request.
+    """
+
+    def __init__(self, playwright_factory=None, context_options=None):
+        self._playwright_factory = playwright_factory
+        self._context_options = dict(context_options or {})
+        self._playwright = None
+        self.browser = None
+        self.context = None
+        self.meter = None
+        self.warm = False
+        self.launches = 0
+        self.warmups = 0
+
+    def ensure(self):
+        """The live context, launching one if the turn has none. Call under
+        the caller's browser_launch deadline."""
+        if self.context is None:
+            from app.services.freshness_integration import TurnMeter
+
+            if self._playwright is None:
+                if self._playwright_factory is None:
+                    from playwright.sync_api import sync_playwright
+
+                    self._playwright_factory = sync_playwright
+                self._playwright = self._playwright_factory().start()
+            self.browser = self._playwright.chromium.launch(
+                headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
+            )
+            self.context = self.browser.new_context(
+                service_workers="block", **self._context_options
+            )
+            self.meter = TurnMeter()
+            self.meter.install(self.context)
+            self.warm = False
+            self.launches += 1
+        return self.context
+
+    def discard(self, reason=None):
+        """Close everything, innermost first, bounded and quiet. The next
+        attempt relaunches and warms up from scratch."""
+        if reason and self._playwright is not None:
+            log_event("turn_browser_discarded", reason=reason)
+        for label, handle, method in (
+            ("context", self.context, "close"),
+            ("browser", self.browser, "close"),
+            ("playwright", self._playwright, "stop"),
+        ):
+            if handle is None:
+                continue
+            try:
+                with deadline(settings.BROWSER_TEARDOWN_TIMEOUT_S, "browser_teardown"):
+                    getattr(handle, method)()
+            except Exception as exc:
+                log_event(
+                    "browser_teardown_error",
+                    handle=label,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+        self._playwright = self.browser = self.context = self.meter = None
+        self.warm = False
+
+    close = discard

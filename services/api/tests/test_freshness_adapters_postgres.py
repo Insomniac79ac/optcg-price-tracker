@@ -42,6 +42,7 @@ from app.models import (
     SourceDispatchBudget,
 )
 from app.services.freshness_integration import (
+    TurnMeter,
     Attempt,
     CaptureResult,
     CATEGORIES,
@@ -1316,3 +1317,87 @@ def test_disappeared_discovery_category_is_bounded_failure(monkeypatch):
     assert attempt.result.raw_snapshot_id == 102
     assert "404" in attempt.result.failure
     session.add.assert_not_called()
+
+
+def page_request(page, url="https://snkrdunk.com/apparels/123", *, main=True):
+    request = browser_request(url, main=main)
+    if main:
+        page.main_frame = request.frame
+    request.frame.page = page
+    return request
+
+
+def test_turn_meter_never_sends_or_charges_unbound_traffic(db):
+    factory, source, mid, pid = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        meter, context, page = TurnMeter(), MagicMock(), SimpleNamespace()
+        meter.install(context)
+        handler = context.route.call_args.args[1]
+        stray = MagicMock()
+        stray.request = page_request(page)
+        handler(stray)  # nothing bound yet
+        stray.fetch.assert_not_called()
+        stray.abort.assert_called_once()
+        meter.bind(attempt, page)
+        product = MagicMock()
+        product.request = page_request(page)
+        product.fetch.return_value.status = 200
+        handler(product)
+        product.fulfill.assert_called_once()
+        assert attempt.charged_cost == 1
+        meter.unbind(attempt)
+        late = MagicMock()
+        late.request = page_request(page, main=False)
+        handler(late)  # a late route after unbind
+        late.fetch.assert_not_called()
+        late.abort.assert_called_once()
+        assert attempt.charged_cost == 1
+
+
+def test_turn_meter_charges_only_the_bound_attempts_own_page(db):
+    factory, source, mid, pid = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        first = Attempt(session, picked, clock=lambda: T0)
+        meter, context = TurnMeter(), MagicMock()
+        meter.install(context)
+        handler = context.route.call_args.args[1]
+        old_page, new_page = SimpleNamespace(), SimpleNamespace()
+        meter.bind(first, new_page)
+        with pytest.raises(RuntimeError):
+            meter.bind(first, new_page)  # never two attempts at once
+        leftover = MagicMock()
+        leftover.request = page_request(old_page, main=False)
+        handler(leftover)  # an earlier attempt's closed page
+        leftover.fetch.assert_not_called()
+        detached = MagicMock()
+        detached.request = SimpleNamespace(url="https://snkrdunk.com/x")
+        handler(detached)  # no attributable frame/page
+        detached.fetch.assert_not_called()
+        detached.abort.assert_called_once()
+        assert first.charged_cost == 0
+
+
+def test_turn_meter_rebinds_after_settle_and_reuses_the_attempt_fence(db):
+    factory, source, mid, pid = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        meter, context, page = TurnMeter(), MagicMock(), MagicMock()
+        meter.install(context)
+        handler = context.route.call_args.args[1]
+        meter.bind(attempt, page)
+        attempt.settle_browser(page)  # no active routes; fences new traffic
+        fenced = MagicMock()
+        fenced.request = page_request(page, main=False)
+        handler(fenced)
+        fenced.fetch.assert_not_called()  # browser_closing fence still applies
+        meter.unbind(attempt)
+        assert meter.attempt is None
+        meter.bind(attempt, page)  # free to bind again after unbind
+        context.route_web_socket.assert_called_once()

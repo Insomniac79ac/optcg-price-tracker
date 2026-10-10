@@ -166,6 +166,55 @@ def _release_browser_objects(page, context, browser, *, mapping_id, batch_run_id
             )
 
 
+
+def _capture_in_turn(turn, freshness, navigate, result_holder) -> bool:
+    """Capture on a new page in the turn's warmed context.
+
+    The attempt is bound to the turn meter for exactly the lifetime of its
+    page, and settled before it is unbound, so no other attempt can be
+    charged for its traffic. Only an attempt that finds the turn cold warms
+    the homepage (and pays for it). Returns True only when the capture was
+    clean - homepage (if warmed) usable, product HTTP 200 and normal, attempt
+    neither stopped nor denied, routes settled, page closed - so the turn may
+    stay warm for the next attempt.
+    """
+    from app.services.freshness_integration import AdmissionStopped
+
+    with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
+        context = turn.ensure()
+        page = context.new_page()
+    turn.meter.bind(freshness, page)
+    try:
+        warm_up = not turn.warm
+        if warm_up:
+            turn.warmups += 1
+        homepage_ok = navigate(page, warm_up)
+        clean = (
+            homepage_ok
+            and result_holder["classification"] == "normal_product"
+            and result_holder["http_status"] == 200
+            and not freshness.stopped
+            and not freshness.denied
+        )
+        try:
+            freshness.settle_browser(page)
+        except AdmissionStopped:
+            # The stop is recorded on the attempt; the write path fences it
+            # exactly as before. The browser is discarded.
+            clean = False
+    finally:
+        turn.meter.unbind(freshness)
+    if clean:
+        try:
+            with deadline(settings.BROWSER_TEARDOWN_TIMEOUT_S, "browser_teardown"):
+                page.close()
+        except Exception:
+            clean = False
+    if clean:
+        turn.warm = True
+    return clean
+
+
 def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, Source | None, list[str]]:
     reasons: list[str] = []
     mapping = session.get(SourceCardMapping, mapping_id)
@@ -185,6 +234,7 @@ def run_one_mapping_detailed(
     validate_only: bool = False,
     batch_run_id: str | None = None,
     freshness=None,
+    turn=None,
 ) -> MappingOutcome:
     """Does the actual navigation/extraction/write work for one mapping and
     returns a structured MappingOutcome. Takes an already-open `session`
@@ -193,6 +243,8 @@ def run_one_mapping_detailed(
     rollback/commit touching a different connection."""
     if freshness is not None and validate_only:
         raise ValueError("due collection cannot use legacy validate-only")
+    if turn is not None and freshness is None:
+        raise ValueError("a reused turn browser requires a metered due attempt")
     mapping, source, load_reasons = _load_mapping(session, mapping_id)
     if load_reasons:
         log_event(
@@ -247,256 +299,279 @@ def run_one_mapping_detailed(
         "failure_stage": None,
     }
 
-    try:
-        with deadline(settings.TOTAL_RUN_TIMEOUT_S, "total_run"):
-            with sync_playwright() as p:
-                log_event("playwright_ready", playwright_version=pkg_version("playwright"))
-                # Bound before the launch so the finally below can close
-                # whatever actually came into existence - a launch that dies
-                # part-way leaves some of these set and the rest None.
-                browser = None
-                context = None
-                page = None
-                try:
-                    with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
-                        browser = p.chromium.launch(
-                            headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
-                        )
-                        context = browser.new_context(**({"service_workers": "block"} if freshness else {}))
-                        if freshness:
-                            freshness.install_browser(context)
-                        page = context.new_page()
+    def navigate(page, warm_up):
+        """Homepage gate (when warming) and product capture on `page`."""
+        # Same call discovery makes, so the two cannot drift apart -
+        # see browser.warm_up_homepage, which is this block moved
+        # verbatim (same constants, same helper, same deadline label
+        # and timeout).
+        if warm_up:
+            homepage_step = warm_up_homepage(page)
+            log_event(
+                "homepage_result",
+                mapping_id=mapping.id,
+                http_status=homepage_step.get("http_status"),
+                classification=homepage_step.get("classification"),
+                error=homepage_step.get("error"),
+                batch_run_id=batch_run_id,
+            )
 
-                    # Same call discovery makes, so the two cannot drift apart -
-                    # see browser.warm_up_homepage, which is this block moved
-                    # verbatim (same constants, same helper, same deadline label
-                    # and timeout).
-                    homepage_step = warm_up_homepage(page)
+            homepage_ok = homepage_session_ok(homepage_step)
+        else:
+            # A turn whose context the homepage already warmed: the session
+            # it established lives in that same context.
+            homepage_ok = True
+
+        if not homepage_ok:
+            # A denied/error homepage is the terminal response for
+            # this attempt. Preserve a real body when one was
+            # obtained; navigation failures contain no ``html`` and
+            # correctly leave the lineage NULL.
+            if not validate_only and "html" in homepage_step:
+                result_holder["failure_stage"] = "write"
+                persisted = persist_response_snapshot(
+                    bind=session.get_bind(),
+                    source_id=mapping.source_id,
+                    source_url=homepage_step.get("final_url") or HOMEPAGE_URL,
+                    http_status=homepage_step.get("http_status"),
+                    raw_content=homepage_step["html"],
+                    parser_version=PARSER_VERSION,
+                    batch_run_id=batch_run_id,
+                    source_card_mapping_id=mapping.id,
+                )
+                result_holder["raw_snapshot_id"] = persisted.raw_snapshot_id
+            result_holder["observed_classification"] = homepage_step.get("classification")
+            result_holder["failure_stage"] = "homepage"
+            log_event(
+                "homepage_gate_failed",
+                mapping_id=mapping.id,
+                reason=homepage_step.get("classification", "navigation_error"),
+                batch_run_id=batch_run_id,
+            )
+        else:
+            with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
+                product_step = goto_and_capture_raw(page, mapping.source_url)
+
+            # This is the raw-before-parse boundary. A captured body
+            # is committed and linked to the attempt before even
+            # page classification is allowed to inspect it.
+            if "html" in product_step and not validate_only:
+                result_holder["failure_stage"] = "write"
+                persisted = persist_response_snapshot(
+                    bind=session.get_bind(),
+                    source_id=mapping.source_id,
+                    source_url=mapping.source_url,
+                    http_status=product_step.get("http_status"),
+                    raw_content=product_step["html"],
+                    parser_version=PARSER_VERSION,
+                    batch_run_id=batch_run_id,
+                    source_card_mapping_id=mapping.id,
+                )
+                result_holder["raw_snapshot_id"] = persisted.raw_snapshot_id
+
+            product_step = classify_capture(product_step, product_expected_markers)
+            log_event(
+                "product_result",
+                mapping_id=mapping.id,
+                http_status=product_step.get("http_status"),
+                classification=product_step.get("classification"),
+                error=product_step.get("error"),
+                batch_run_id=batch_run_id,
+            )
+
+            result_holder["classification"] = product_step.get("classification")
+            result_holder["http_status"] = product_step.get("http_status")
+            result_holder["observed_classification"] = product_step.get("classification")
+            # Provisional: consulted only if the run ends without an
+            # extraction. Once extraction is attempted the stage is
+            # decided by the outcome instead (validation / written).
+            result_holder["failure_stage"] = "product"
+
+            if product_step.get("classification") == "normal_product" and "error" not in product_step:
+                html = product_step["html"]
+                result_holder["html"] = html
+                result_holder["failure_stage"] = "extraction"
+                extraction = extract_with_agreement(
+                    html, mapping.source_url, expected_card_code, expected_treatment
+                )
+                result_holder["extraction"] = extraction
+                log_event(
+                    "extraction_result",
+                    mapping_id=mapping.id,
+                    extraction_status=extraction["extraction_status"],
+                    fail_reasons=extraction["fail_reasons"],
+                    sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
+                    stock_status=(extraction.get("extracted") or {}).get("stock_status"),
+                    promotion_state=(extraction.get("extracted") or {}).get("promotion_state"),
+                    batch_run_id=batch_run_id,
+                )
+                # An indeterminate promotion verdict is a markup
+                # signal worth seeing, and it is invisible in
+                # extraction_status by design - it can never fail an
+                # extraction. Logged on its own so a Yuyu-Tei markup
+                # change shows up as a run of these lines rather than
+                # as silence, and only when the two markers actually
+                # disagreed: "none" and "sale" are both determined
+                # answers and say nothing worth a second line.
+                promotion = (
+                    ((extraction.get("raw") or {}).get("dom") or {}).get("promotion") or {}
+                )
+                if promotion.get("reason") == "no_product_container":
+                    # Already reported by extraction_fail_diagnostics
+                    # below - the container is missing for the price
+                    # too, so this would only duplicate it.
+                    pass
+                elif promotion.get("promotion_state") is None:
                     log_event(
-                        "homepage_result",
+                        "promotion_state_indeterminate",
                         mapping_id=mapping.id,
-                        http_status=homepage_step.get("http_status"),
-                        classification=homepage_step.get("classification"),
-                        error=homepage_step.get("error"),
+                        reason=promotion.get("reason"),
+                        sale_badge=promotion.get("sale_badge"),
+                        struck_price_element=promotion.get("struck_price_element"),
+                        # Restated so one line shows that the price
+                        # survived the disagreement, which is the
+                        # whole point of not gating on it.
+                        sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
+                        batch_run_id=batch_run_id,
+                    )
+                if extraction["extraction_status"] != "extracted":
+                    # Diagnostic-only detail (never used to accept a
+                    # value) - the raw stock/price element text so a
+                    # fail-closed disagreement can be root-caused
+                    # without re-fetching the page.
+                    dom = (extraction.get("raw") or {}).get("dom") or {}
+                    jsonld = (extraction.get("raw") or {}).get("jsonld") or {}
+                    log_event(
+                        "extraction_fail_diagnostics",
+                        mapping_id=mapping.id,
+                        dom_stock_element=dom.get("stock_element"),
+                        dom_price_candidates=dom.get("price_candidates"),
+                        jsonld_availability=jsonld.get("offers_availability"),
+                        jsonld_price=jsonld.get("offers_price"),
                         batch_run_id=batch_run_id,
                     )
 
-                    homepage_ok = homepage_session_ok(homepage_step)
+        return homepage_ok
 
-                    if not homepage_ok:
-                        # A denied/error homepage is the terminal response for
-                        # this attempt. Preserve a real body when one was
-                        # obtained; navigation failures contain no ``html`` and
-                        # correctly leave the lineage NULL.
-                        if not validate_only and "html" in homepage_step:
-                            result_holder["failure_stage"] = "write"
-                            persisted = persist_response_snapshot(
-                                bind=session.get_bind(),
-                                source_id=mapping.source_id,
-                                source_url=homepage_step.get("final_url") or HOMEPAGE_URL,
-                                http_status=homepage_step.get("http_status"),
-                                raw_content=homepage_step["html"],
-                                parser_version=PARSER_VERSION,
-                                batch_run_id=batch_run_id,
-                                source_card_mapping_id=mapping.id,
-                            )
-                            result_holder["raw_snapshot_id"] = persisted.raw_snapshot_id
-                        result_holder["observed_classification"] = homepage_step.get("classification")
-                        result_holder["failure_stage"] = "homepage"
-                        log_event(
-                            "homepage_gate_failed",
-                            mapping_id=mapping.id,
-                            reason=homepage_step.get("classification", "navigation_error"),
-                            batch_run_id=batch_run_id,
-                        )
-                    else:
-                        with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
-                            product_step = goto_and_capture_raw(page, mapping.source_url)
-
-                        # This is the raw-before-parse boundary. A captured body
-                        # is committed and linked to the attempt before even
-                        # page classification is allowed to inspect it.
-                        if "html" in product_step and not validate_only:
-                            result_holder["failure_stage"] = "write"
-                            persisted = persist_response_snapshot(
-                                bind=session.get_bind(),
-                                source_id=mapping.source_id,
-                                source_url=mapping.source_url,
-                                http_status=product_step.get("http_status"),
-                                raw_content=product_step["html"],
-                                parser_version=PARSER_VERSION,
-                                batch_run_id=batch_run_id,
-                                source_card_mapping_id=mapping.id,
-                            )
-                            result_holder["raw_snapshot_id"] = persisted.raw_snapshot_id
-
-                        product_step = classify_capture(product_step, product_expected_markers)
-                        log_event(
-                            "product_result",
-                            mapping_id=mapping.id,
-                            http_status=product_step.get("http_status"),
-                            classification=product_step.get("classification"),
-                            error=product_step.get("error"),
-                            batch_run_id=batch_run_id,
-                        )
-
-                        result_holder["classification"] = product_step.get("classification")
-                        result_holder["http_status"] = product_step.get("http_status")
-                        result_holder["observed_classification"] = product_step.get("classification")
-                        # Provisional: consulted only if the run ends without an
-                        # extraction. Once extraction is attempted the stage is
-                        # decided by the outcome instead (validation / written).
-                        result_holder["failure_stage"] = "product"
-
-                        if product_step.get("classification") == "normal_product" and "error" not in product_step:
-                            html = product_step["html"]
-                            result_holder["html"] = html
-                            result_holder["failure_stage"] = "extraction"
-                            extraction = extract_with_agreement(
-                                html, mapping.source_url, expected_card_code, expected_treatment
-                            )
-                            result_holder["extraction"] = extraction
-                            log_event(
-                                "extraction_result",
-                                mapping_id=mapping.id,
-                                extraction_status=extraction["extraction_status"],
-                                fail_reasons=extraction["fail_reasons"],
-                                sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
-                                stock_status=(extraction.get("extracted") or {}).get("stock_status"),
-                                promotion_state=(extraction.get("extracted") or {}).get("promotion_state"),
-                                batch_run_id=batch_run_id,
-                            )
-                            # An indeterminate promotion verdict is a markup
-                            # signal worth seeing, and it is invisible in
-                            # extraction_status by design - it can never fail an
-                            # extraction. Logged on its own so a Yuyu-Tei markup
-                            # change shows up as a run of these lines rather than
-                            # as silence, and only when the two markers actually
-                            # disagreed: "none" and "sale" are both determined
-                            # answers and say nothing worth a second line.
-                            promotion = (
-                                ((extraction.get("raw") or {}).get("dom") or {}).get("promotion") or {}
-                            )
-                            if promotion.get("reason") == "no_product_container":
-                                # Already reported by extraction_fail_diagnostics
-                                # below - the container is missing for the price
-                                # too, so this would only duplicate it.
-                                pass
-                            elif promotion.get("promotion_state") is None:
-                                log_event(
-                                    "promotion_state_indeterminate",
-                                    mapping_id=mapping.id,
-                                    reason=promotion.get("reason"),
-                                    sale_badge=promotion.get("sale_badge"),
-                                    struck_price_element=promotion.get("struck_price_element"),
-                                    # Restated so one line shows that the price
-                                    # survived the disagreement, which is the
-                                    # whole point of not gating on it.
-                                    sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
-                                    batch_run_id=batch_run_id,
+    turn_ok = False
+    try:
+        try:
+            with deadline(settings.TOTAL_RUN_TIMEOUT_S, "total_run"):
+                if turn is None:
+                    with sync_playwright() as p:
+                        log_event("playwright_ready", playwright_version=pkg_version("playwright"))
+                        # Bound before the launch so the finally below can close
+                        # whatever actually came into existence - a launch that dies
+                        # part-way leaves some of these set and the rest None.
+                        browser = None
+                        context = None
+                        page = None
+                        try:
+                            with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
+                                browser = p.chromium.launch(
+                                    headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
                                 )
-                            if extraction["extraction_status"] != "extracted":
-                                # Diagnostic-only detail (never used to accept a
-                                # value) - the raw stock/price element text so a
-                                # fail-closed disagreement can be root-caused
-                                # without re-fetching the page.
-                                dom = (extraction.get("raw") or {}).get("dom") or {}
-                                jsonld = (extraction.get("raw") or {}).get("jsonld") or {}
-                                log_event(
-                                    "extraction_fail_diagnostics",
-                                    mapping_id=mapping.id,
-                                    dom_stock_element=dom.get("stock_element"),
-                                    dom_price_candidates=dom.get("price_candidates"),
-                                    jsonld_availability=jsonld.get("offers_availability"),
-                                    jsonld_price=jsonld.get("offers_price"),
-                                    batch_run_id=batch_run_id,
-                                )
+                                context = browser.new_context(**({"service_workers": "block"} if freshness else {}))
+                                if freshness:
+                                    freshness.install_browser(context)
+                                page = context.new_page()
 
-                finally:
-                    # The one guaranteed step. Reached by every route out
-                    # of the block above: clean completion, the homepage
-                    # gate, any of the three deadline watchdogs, and any
-                    # Playwright error - so `sync_playwright().__exit__`
-                    # below can never again run `p.stop()` against a live
-                    # browser or an in-flight launch.
-                    _release_browser_objects(
-                        page,
-                        context,
-                        browser,
-                        mapping_id=mapping_id,
-                        batch_run_id=batch_run_id,
+                            navigate(page, True)
+
+                        finally:
+                            # The one guaranteed step. Reached by every route out
+                            # of the block above: clean completion, the homepage
+                            # gate, any of the three deadline watchdogs, and any
+                            # Playwright error - so `sync_playwright().__exit__`
+                            # below can never again run `p.stop()` against a live
+                            # browser or an in-flight launch.
+                            _release_browser_objects(
+                                page,
+                                context,
+                                browser,
+                                mapping_id=mapping_id,
+                                batch_run_id=batch_run_id,
+                            )
+                else:
+                    turn_ok = _capture_in_turn(
+                        turn, freshness, navigate, result_holder
                     )
-    except DeadlineExceeded as exc:
-        log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
-        return MappingOutcome(
-            mapping_id=mapping_id,
-            stage="operational_error",
-            failure_stage=_DEADLINE_LABEL_STAGES.get(str(exc)),
-            # A launch that never returned says nothing about this mapping and
-            # everything about the container: the next mapping will ask the
-            # same runtime for the same thing. Only this one label qualifies -
-            # a homepage or product watchdog leaves the browser fine.
-            browser_unusable=str(exc) == "browser_launch",
-            reasons=[f"watchdog_triggered:{exc}"],
-            raw_snapshot_id=result_holder["raw_snapshot_id"],
-        )
-    except RawSnapshotPersistenceError as exc:
-        session.rollback()
-        reason = f"raw_snapshot_persistence_failed:{exc}"
-        log_event(
-            "collection_raw_snapshot_failed",
-            mapping_id=mapping_id,
-            reason=reason,
-            batch_run_id=batch_run_id,
-        )
-        return MappingOutcome(
-            mapping_id=mapping_id,
-            stage="operational_error",
-            failure_stage="write",
-            reasons=[reason],
-        )
-    except PlaywrightError as exc:
-        # Reached only by a Playwright call OUTSIDE the guarded navigation
-        # helpers: goto_and_capture_raw already absorbs every navigation error
-        # (including page.title/page.content) into an {"error": ...} result,
-        # and teardown is consumed by _release_browser_objects. What is left -
-        # launch, new_context, new_page, and the TargetClosedError A11 raised
-        # once its browser had gone - is by elimination the plumbing itself.
-        session.rollback()
-        log_event(
-            "collection_error",
-            mapping_id=mapping_id,
-            error=f"{type(exc).__name__}: {exc}",
-            batch_run_id=batch_run_id,
-        )
-        return MappingOutcome(
-            mapping_id=mapping_id,
-            stage="operational_error",
-            failure_stage=result_holder["failure_stage"],
-            browser_unusable=True,
-            reasons=[f"{type(exc).__name__}: {exc}"],
-            raw_snapshot_id=result_holder["raw_snapshot_id"],
-        )
-    except Exception as exc:  # operational error - never leave a half-written row
-        session.rollback()
-        log_event(
-            "collection_error",
-            mapping_id=mapping_id,
-            error=f"{type(exc).__name__}: {exc}",
-            batch_run_id=batch_run_id,
-        )
-        reason = (
-            f"parser_failure:{type(exc).__name__}: {exc}"
-            if result_holder["failure_stage"] == "extraction"
-            else f"{type(exc).__name__}: {exc}"
-        )
-        return MappingOutcome(
-            mapping_id=mapping_id,
-            stage="operational_error",
-            failure_stage=result_holder["failure_stage"],
-            reasons=[reason],
-            raw_snapshot_id=result_holder["raw_snapshot_id"],
-        )
+        except DeadlineExceeded as exc:
+            log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
+            return MappingOutcome(
+                mapping_id=mapping_id,
+                stage="operational_error",
+                failure_stage=_DEADLINE_LABEL_STAGES.get(str(exc)),
+                # A launch that never returned says nothing about this mapping and
+                # everything about the container: the next mapping will ask the
+                # same runtime for the same thing. Only this one label qualifies -
+                # a homepage or product watchdog leaves the browser fine.
+                browser_unusable=str(exc) == "browser_launch",
+                reasons=[f"watchdog_triggered:{exc}"],
+                raw_snapshot_id=result_holder["raw_snapshot_id"],
+            )
+        except RawSnapshotPersistenceError as exc:
+            session.rollback()
+            reason = f"raw_snapshot_persistence_failed:{exc}"
+            log_event(
+                "collection_raw_snapshot_failed",
+                mapping_id=mapping_id,
+                reason=reason,
+                batch_run_id=batch_run_id,
+            )
+            return MappingOutcome(
+                mapping_id=mapping_id,
+                stage="operational_error",
+                failure_stage="write",
+                reasons=[reason],
+            )
+        except PlaywrightError as exc:
+            # Reached only by a Playwright call OUTSIDE the guarded navigation
+            # helpers: goto_and_capture_raw already absorbs every navigation error
+            # (including page.title/page.content) into an {"error": ...} result,
+            # and teardown is consumed by _release_browser_objects. What is left -
+            # launch, new_context, new_page, and the TargetClosedError A11 raised
+            # once its browser had gone - is by elimination the plumbing itself.
+            session.rollback()
+            log_event(
+                "collection_error",
+                mapping_id=mapping_id,
+                error=f"{type(exc).__name__}: {exc}",
+                batch_run_id=batch_run_id,
+            )
+            return MappingOutcome(
+                mapping_id=mapping_id,
+                stage="operational_error",
+                failure_stage=result_holder["failure_stage"],
+                browser_unusable=True,
+                reasons=[f"{type(exc).__name__}: {exc}"],
+                raw_snapshot_id=result_holder["raw_snapshot_id"],
+            )
+        except Exception as exc:  # operational error - never leave a half-written row
+            session.rollback()
+            log_event(
+                "collection_error",
+                mapping_id=mapping_id,
+                error=f"{type(exc).__name__}: {exc}",
+                batch_run_id=batch_run_id,
+            )
+            reason = (
+                f"parser_failure:{type(exc).__name__}: {exc}"
+                if result_holder["failure_stage"] == "extraction"
+                else f"{type(exc).__name__}: {exc}"
+            )
+            return MappingOutcome(
+                mapping_id=mapping_id,
+                stage="operational_error",
+                failure_stage=result_holder["failure_stage"],
+                reasons=[reason],
+                raw_snapshot_id=result_holder["raw_snapshot_id"],
+            )
+    finally:
+        # Anything but a clean capture discards the warmed browser, so the
+        # next attempt starts exactly as a fresh per-capture run does.
+        if turn is not None and not turn_ok:
+            turn.discard("attempt_not_clean")
 
     observed_classification = result_holder["observed_classification"]
     source_denied = observed_classification in SOURCE_DENIAL_CLASSIFICATIONS
