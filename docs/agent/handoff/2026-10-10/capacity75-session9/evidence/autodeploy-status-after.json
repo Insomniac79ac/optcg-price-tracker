@@ -1,0 +1,82 @@
+{
+ "observed_at": "2026-10-10T22:34:36.544895+00:00",
+ "read_only": true,
+ "services": {
+  "Postgres": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "Redis": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "beat": {
+   "auto_enabled": true,
+   "triggers": 1
+  },
+  "market-index-snapshot": {
+   "auto_enabled": true,
+   "triggers": 1
+  },
+  "optcg-price-tracker": {
+   "auto_enabled": true,
+   "triggers": 1
+  },
+  "snkrdunk-collector": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "tmp-yuyu-discovery-4b": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "tmp-yuyu-shard-rehearsal": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "worker": {
+   "auto_enabled": true,
+   "triggers": 1
+  },
+  "yuyutei-collector": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-0": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-1": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-2": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-3": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-5": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-6": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-7": {
+   "auto_enabled": false,
+   "triggers": 0
+  },
+  "yuyutei-collector-shard-8": {
+   "auto_enabled": false,
+   "triggers": 0
+  }
+ }
+}

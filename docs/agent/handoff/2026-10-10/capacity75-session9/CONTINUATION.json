@@ -1,0 +1,39 @@
+{
+ "status": "session9_complete",
+ "written_at": "2026-10-10T22:45:00Z",
+ "objective_complete": false,
+ "staging_only": true,
+ "production_accessed": false,
+ "psa10": "OFF (NOT READY)",
+ "collectors": {
+  "commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+  "unchanged_since": "2026-10-10T14:31:00Z (PR #98 rollout); no deployment this session",
+  "fleet": "../capacity75-session8/evidence/fleet-after-pr98.json",
+  "daily_v1": true,
+  "github_deployment_triggers": "removed on all 10 collectors (serviceInstanceAutoDeployUpdate enabled:false), see evidence/autodeploy-disable-*.json; rollback: tools/autodeploy_disable.py <name> <out> --restore",
+  "api_and_worker_triggers": "kept (API is delivered by its GitHub build; verify_staging_delivery.decide_api depends on it)"
+ },
+ "requests": {
+  "yuyu_per_capture": {"before_24h": 55.3, "after": 31.5, "after_p50": 29, "after_n": 356, "basis": "MEASURED freshness_attempts 14:31-22:13Z"},
+  "yuyu_window_peak": {"before_24h": 8458, "after": 2419, "limit": 9000},
+  "yuyu_mid_turn_discards": 0,
+  "snkr_per_attempt": {"before_24h": 160.3, "after": 88.6, "after_n": 127, "full_24h_due": "2026-10-11T14:31Z"},
+  "snkr_homepage_raw": {"before_per_day": 287, "after": "7 in 7 turns with work (466,789 bytes)"},
+  "snkr_backlog": "drained by 17:32Z; 89 due items all state=blocked (known blockers)",
+  "price_continuity": {"observations": 366, "identical_price_stock_promo": 366},
+  "denials_403_429_challenges": 0
+ },
+ "storage": {
+  "resize": "NOT DONE; owner approval recorded (staging only, 10->20 GB); see RESIZE_PREFLIGHT.md (dashboard-only Live Resize; newest backup 2026-09-30, no schedule)",
+  "volume_mb": {"2026-10-09T22:00Z": 3607.9, "2026-10-10T22:00Z": 3641.4},
+  "growth_24h_mb_day": 33.5,
+  "room_to_reserve_mb": 3137.6,
+  "runway_days": {"measured_33_5": 94, "steady_47_9": 65, "worst_116_7": 27},
+  "raw_snapshots_n_tup_upd": 5924,
+  "proposal_digest": "design + AMBER preflight only (PROPOSAL_DIGEST_PREFLIGHT.md); 2,164 versions/24h, 47 real changes; guard: 298 proofs"
+ },
+ "new100": {"verdict": "NOT APPROVED", "failed_guard": "storage headroom (needs 4.3-8.8 GB/90d + 887 MB images; room 3,137.6 MB)"},
+ "blockers": ["freshness-deadline-deficit", "snkrdunk-identity-quarantine (23)", "deployment-provenance-divergence"],
+ "never_replay": ["SNKR 3676/3677", "RAW recovery 35175", "Yuyu canary evidence", "deliveries PR77-99"],
+ "session10_first": ["test-merge result: 0 collector deployment records after this PR's merge", "SNKR 24h on a852244 (~10-11 14:31Z)", "resize per RESIZE_PREFLIGHT.md", "storage (c) release with 298-proof guard", "NEW100 re-evaluation", "durable trigger-absence preflight in deploy_staging_collectors.py"]
+}

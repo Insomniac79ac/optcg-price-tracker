@@ -1,0 +1,3 @@
+{"source_id": 1, "versions": 2164, "cand_changed": 0, "run_changed": 2164, "other_changed": 47, "other_changed_excl_cand": 47, "status_changed": 0}
+{"source_id": 1, "current": 4183, "total": 26967, "new_24h": 2164, "size": "50 MB"}
+{"source_id": 2, "current": 474, "total": 1120, "new_24h": 0, "size": "50 MB"}

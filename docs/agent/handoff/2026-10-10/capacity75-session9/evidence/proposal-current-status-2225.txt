@@ -1,0 +1,10 @@
+{"source_id": 1, "resolution_status": "ambiguous", "review_status": "pending", "count": 1326, "with_proof": 0}
+{"source_id": 1, "resolution_status": "conflict", "review_status": "pending", "count": 5, "with_proof": 0}
+{"source_id": 1, "resolution_status": "exact", "review_status": "approved", "count": 2019, "with_proof": 298}
+{"source_id": 1, "resolution_status": "exact", "review_status": "pending", "count": 3, "with_proof": 0}
+{"source_id": 1, "resolution_status": "release_unresolved", "review_status": "pending", "count": 451, "with_proof": 0}
+{"source_id": 1, "resolution_status": "unresolved_identity", "review_status": "pending", "count": 379, "with_proof": 0}
+{"source_id": 2, "resolution_status": "ambiguous", "review_status": "pending", "count": 218, "with_proof": 0}
+{"source_id": 2, "resolution_status": "exact", "review_status": "approved", "count": 151, "with_proof": 0}
+{"source_id": 2, "resolution_status": "exact", "review_status": "pending", "count": 82, "with_proof": 0}
+{"source_id": 2, "resolution_status": "release_unresolved", "review_status": "pending", "count": 23, "with_proof": 0}

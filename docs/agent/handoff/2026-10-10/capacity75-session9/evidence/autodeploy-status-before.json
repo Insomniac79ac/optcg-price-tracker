@@ -1,0 +1,393 @@
+{
+ "observed_at": "2026-10-10T22:14:42.880776+00:00",
+ "read_only": true,
+ "services": {
+  "Postgres": {
+   "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e",
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": [],
+   "source": {
+    "image": "ghcr.io/railwayapp-templates/postgres-ssl:18.6",
+    "repo": null
+   },
+   "watch": []
+  },
+  "Redis": {
+   "service_id": "bdc84418-d934-47f3-bb84-2f03cb7d8f5b",
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": [],
+   "source": {
+    "image": "redis:8.2.9",
+    "repo": null
+   },
+   "watch": []
+  },
+  "beat": {
+   "service_id": "fd28246d-50d2-40da-81dd-c6779e0d3faa",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "c4b22bf2-8384-4d2b-a6f2-a18fe4ad188f",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/worker/**",
+    "deploy/railway/beat.Dockerfile"
+   ]
+  },
+  "market-index-snapshot": {
+   "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2",
+   "auto": {
+    "canEnable": true,
+    "enabled": true,
+    "reason": null
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "b0a39ea6-9986-4f19-b9b5-5a3338ab812c",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": {
+    "image": null,
+    "repo": "Insomniac79ac/optcg-price-tracker"
+   },
+   "watch": [
+    "services/api/**",
+    "deploy/railway/api.Dockerfile"
+   ]
+  },
+  "optcg-price-tracker": {
+   "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
+   "auto": {
+    "canEnable": true,
+    "enabled": true,
+    "reason": null
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "24bbbf15-c774-49c5-b11a-0422a5b9aac9",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": {
+    "image": null,
+    "repo": "Insomniac79ac/optcg-price-tracker"
+   },
+   "watch": [
+    "services/api/**",
+    "deploy/railway/api.Dockerfile"
+   ]
+  },
+  "snkrdunk-collector": {
+   "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+   "auto": {
+    "canEnable": true,
+    "enabled": true,
+    "reason": null
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "4b3747d4-1c95-44ba-831f-d7c0556eab6f",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": {
+    "image": null,
+    "repo": "Insomniac79ac/optcg-price-tracker"
+   },
+   "watch": [
+    "services/snkrdunk_collector/**",
+    "deploy/railway/snkrdunk-collector.Dockerfile"
+   ]
+  },
+  "tmp-yuyu-discovery-4b": {
+   "service_id": "5bf4e6d8-a382-4c3a-af61-d0ec74ede5e4",
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": [],
+   "source": null,
+   "watch": []
+  },
+  "tmp-yuyu-shard-rehearsal": {
+   "service_id": "33675eb8-8707-4218-9322-b574f3af3c0b",
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": [],
+   "source": null,
+   "watch": []
+  },
+  "worker": {
+   "service_id": "0042350a-ee15-4bac-a210-3efa20a3fa8c",
+   "auto": {
+    "canEnable": true,
+    "enabled": true,
+    "reason": null
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "6f239714-9a65-4fa9-9d7d-aa75d9ad659e",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": {
+    "image": null,
+    "repo": "Insomniac79ac/optcg-price-tracker"
+   },
+   "watch": [
+    "services/worker/**",
+    "deploy/railway/worker.Dockerfile"
+   ]
+  },
+  "yuyutei-collector": {
+   "service_id": "72fe4e28-5b0e-4de8-a6eb-8fb0b58080b2",
+   "auto": {
+    "canEnable": true,
+    "enabled": false,
+    "reason": null
+   },
+   "triggers": [],
+   "source": {
+    "image": null,
+    "repo": "Insomniac79ac/optcg-price-tracker"
+   },
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-0": {
+   "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "1f425b89-1564-42cd-97b1-05542f16426f",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-1": {
+   "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "f19850c9-a616-4fa3-972e-10a888e68d34",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-2": {
+   "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "3e22bc14-de0f-4684-921b-b05e24f5cd9d",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-3": {
+   "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "580251ea-a5bd-4869-b540-50d2b7fb70bb",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "0050a3b5-df74-43f4-b4df-54e650d5fdda",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-5": {
+   "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "89f9d4f9-58fd-4f29-91ce-c3686baf6c99",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-6": {
+   "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "c7050ed3-da38-49c6-a3e3-6743331e2437",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-7": {
+   "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "4b4f0809-9fd0-4b6a-98a1-06422a9b7206",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  },
+  "yuyutei-collector-shard-8": {
+   "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "e5fd6c0f-49d3-4c5b-a1bd-fc8d0e355249",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "source": null,
+   "watch": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+   ]
+  }
+ }
+}

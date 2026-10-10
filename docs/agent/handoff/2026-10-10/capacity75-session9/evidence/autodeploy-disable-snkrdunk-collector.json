@@ -1,0 +1,123 @@
+{
+ "service": "snkrdunk-collector",
+ "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+ "environment": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+ "started_at": "2026-10-10T22:30:35.668730+00:00",
+ "steps": [
+  {
+   "at": "2026-10-10T22:30:38.319131+00:00",
+   "what": "pre",
+   "state": {
+    "auto": {
+     "canEnable": true,
+     "enabled": true,
+     "reason": null
+    },
+    "triggers": [
+     {
+      "branch": "staging",
+      "checkSuites": false,
+      "id": "4b3747d4-1c95-44ba-831f-d7c0556eab6f",
+      "provider": "github",
+      "repository": "Insomniac79ac/optcg-price-tracker"
+     }
+    ],
+    "deployment_ids": [
+     "879b32a4-bd8a-4dd7-9410-713620e7091c",
+     "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+     "eab461d0-c005-426f-bee7-d71ba05d9a23",
+     "691d7b15-306d-4d34-89be-01566729738c",
+     "bf28a669-1c48-4d79-9c67-30e3225170f8",
+     "31f6c4f2-bcbb-4bfe-a9e9-9683a499bfd9",
+     "54c78511-6790-44ed-9f2e-c010182abcab",
+     "df5d8fec-b931-4cd6-97eb-b412e55fea29",
+     "fa8d2c99-ed7c-42a8-bf18-9ee864bb5562",
+     "58a368cf-5d1c-4f1f-97a3-f28ab22a4dbf",
+     "8d7358fd-863f-4c61-b91a-7d880d94061e",
+     "2eb03a5b-65fe-4406-912f-d9ac5a34c6e4",
+     "e957af48-3b6a-4576-9de7-0b2aad5e3e64",
+     "39a506c0-46ae-4c64-96f9-5f6f446f801d",
+     "f0780629-95cc-4f5e-8d88-821f5d12de33",
+     "cd0a48f4-7505-4035-8f72-2ca1298fcfaa",
+     "13a65aff-ca9c-4922-843d-1d99bacded13",
+     "045f72f6-2b11-493c-a830-642f53627569",
+     "e9864d09-5d23-4869-aaa9-0302863f0ddd",
+     "c7156df2-557b-43dd-b454-eb7e2e7dd746"
+    ],
+    "staged_patch": {},
+    "latest": "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+    "latest_status": "SUCCESS",
+    "digest": "sha256:776a5cb43c680e287c3fc5826bc6513bba7056496daa7dd3ace589dbc1dbc334",
+    "cron": "27,57 * * * *",
+    "start_command_sha256": "f67b31ba08b3aa39f5e81e69dcaf93f0817f88591f197c53ddd0230c070b78c7"
+   }
+  },
+  {
+   "at": "2026-10-10T22:32:22.024541+00:00",
+   "what": "safe slot"
+  },
+  {
+   "at": "2026-10-10T22:32:23.424163+00:00",
+   "what": "serviceInstanceAutoDeployUpdate",
+   "result": {
+    "serviceInstanceAutoDeployUpdate": {
+     "enabled": false
+    }
+   }
+  },
+  {
+   "at": "2026-10-10T22:33:33.658330+00:00",
+   "what": "post",
+   "state": {
+    "auto": {
+     "canEnable": true,
+     "enabled": false,
+     "reason": null
+    },
+    "triggers": [],
+    "deployment_ids": [
+     "879b32a4-bd8a-4dd7-9410-713620e7091c",
+     "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+     "eab461d0-c005-426f-bee7-d71ba05d9a23",
+     "691d7b15-306d-4d34-89be-01566729738c",
+     "bf28a669-1c48-4d79-9c67-30e3225170f8",
+     "31f6c4f2-bcbb-4bfe-a9e9-9683a499bfd9",
+     "54c78511-6790-44ed-9f2e-c010182abcab",
+     "df5d8fec-b931-4cd6-97eb-b412e55fea29",
+     "fa8d2c99-ed7c-42a8-bf18-9ee864bb5562",
+     "58a368cf-5d1c-4f1f-97a3-f28ab22a4dbf",
+     "8d7358fd-863f-4c61-b91a-7d880d94061e",
+     "2eb03a5b-65fe-4406-912f-d9ac5a34c6e4",
+     "e957af48-3b6a-4576-9de7-0b2aad5e3e64",
+     "39a506c0-46ae-4c64-96f9-5f6f446f801d",
+     "f0780629-95cc-4f5e-8d88-821f5d12de33",
+     "cd0a48f4-7505-4035-8f72-2ca1298fcfaa",
+     "13a65aff-ca9c-4922-843d-1d99bacded13",
+     "045f72f6-2b11-493c-a830-642f53627569",
+     "e9864d09-5d23-4869-aaa9-0302863f0ddd",
+     "c7156df2-557b-43dd-b454-eb7e2e7dd746"
+    ],
+    "staged_patch": {},
+    "latest": "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+    "latest_status": "SUCCESS",
+    "digest": "sha256:776a5cb43c680e287c3fc5826bc6513bba7056496daa7dd3ace589dbc1dbc334",
+    "cron": "27,57 * * * *",
+    "start_command_sha256": "f67b31ba08b3aa39f5e81e69dcaf93f0817f88591f197c53ddd0230c070b78c7"
+   }
+  }
+ ],
+ "mutated": true,
+ "checks": {
+  "no_trigger": true,
+  "auto_deploy_disabled": true,
+  "no_new_deployment_record": true,
+  "same_active_deployment": true,
+  "same_verified_digest": true,
+  "cron_unchanged": true,
+  "start_command_unchanged": true,
+  "no_staged_changes": true,
+  "variables_unchanged": true
+ },
+ "result": "DISABLED",
+ "finished_at": "2026-10-10T22:33:37.750141+00:00"
+}
