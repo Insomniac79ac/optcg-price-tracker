@@ -93,7 +93,12 @@ def original_source(node, commit, image, read=delivery.read_deployment, listing=
             candidate = read(identity, node["serviceId"], commit)
         except state.VerificationError:
             continue
-        if candidate.get("canRedeploy") and digest(candidate) == image:
+        # A SKIPPED record can carry the marker but has no image (a delivery
+        # replay creates one per collector); skip it rather than abort the scan.
+        if (
+            candidate.get("canRedeploy")
+            and (candidate.get("meta") or {}).get("imageDigest") == image
+        ):
             return candidate
     raise state.VerificationError("No redeployable deployment of the verified upload image")
 
