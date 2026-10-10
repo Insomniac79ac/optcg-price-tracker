@@ -252,3 +252,19 @@ def test_recent_deployments_reaches_past_skipped_merge_records():
     assert cv.recent_deployments("svc", railway) == ["a"]
     assert f"first:{cv.RECENT_DEPLOYMENTS}," in queries[0]
     assert cv.RECENT_DEPLOYMENTS >= 100
+
+
+def test_marked_skipped_record_without_image_does_not_abort_the_recovery_scan():
+    # 2026-10-10: a delivery replay left a marked SKIPPED record (no imageDigest)
+    # newest on every collector; the scan raised instead of reaching the upload.
+    skipped = {"id": "skipped", "status": "SKIPPED", "canRedeploy": True,
+               "meta": {"cliMessage": cv.MARKER + COMMIT}}
+    upload = deployment("upload", "REMOVED", redeploy=True)
+    rows = {"skipped": skipped, "upload": upload}
+
+    def read(identity, service_id, commit):
+        return rows[identity]
+
+    found = cv.original_source({"serviceId": SID, "latestDeployment": {"id": "skipped"}},
+                               COMMIT, IMAGE, read=read, listing=lambda sid: ["skipped", "upload"])
+    assert found["id"] == "upload"

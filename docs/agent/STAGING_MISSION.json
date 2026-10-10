@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Capacity75 session 8 (2026-10-10): request efficiency - one warmed browser context per due-work turn for both collectors (sequential ten-collector release); schedules, budgets, reservations and pacing unchanged",
+  "mission": "Capacity75 session 8 (2026-10-10): deliver PR #96's per-turn browser code (already merged at 419210d) through the verified sequential rollout, after Railway's GitHub integration auto-built it on all ten collectors in parallel and they were restored to verified 05f099d images; recovery scan skips image-less marked records",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,8 +20,8 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/freshness_integration.py",
-        "services/api/tests/test_freshness_adapters_postgres.py"
+        "scripts/collector_variables.py",
+        "scripts/tests/test_collector_variables.py"
       ],
       "effects": [
         "application",
@@ -29,57 +29,16 @@
         "staging_deployment",
         "infrastructure"
       ],
-      "reason": "Attempt's browser route handler moves into a method unchanged; new TurnMeter installs one context route per turn and forwards only requests from the bound attempt's own page, aborting everything else before dispatch (never charged). In both collectors' import graph: ten-collector release."
+      "reason": "original_source skipped nothing when a marked SKIPPED record (no imageDigest) was newest: digest() raised and aborted the recovery scan (rollback attempt 1, 10:00-10:29Z, made no change). It now skips image-less candidates. Regression test. This PR's merge requests the ten-collector sequential release of the merged PR #96 code (AMBER)."
     },
     {
       "files": [
-        "services/yuyutei_collector/yuyutei_collector/browser.py",
-        "services/yuyutei_collector/yuyutei_collector/collect.py",
-        "services/yuyutei_collector/yuyutei_collector/due.py",
-        "services/yuyutei_collector/tests/test_raw_before_parse.py",
-        "services/yuyutei_collector/tests/test_turn_browser.py"
+        "docs/agent/STAGING_DELIVERY.md"
       ],
       "effects": [
-        "application",
-        "tests",
-        "staging_deployment"
+        "documentation"
       ],
-      "reason": "Yuyu TurnBrowser: one browser/context per turn, new page per attempt, homepage warm-up only when cold, discard after any non-clean capture, discovery discards the turn first. Legacy per-capture path unchanged."
-    },
-    {
-      "files": [
-        "services/snkrdunk_collector/snkrdunk_collector/browser.py",
-        "services/snkrdunk_collector/snkrdunk_collector/collect.py",
-        "services/snkrdunk_collector/snkrdunk_collector/due.py",
-        "services/snkrdunk_collector/tests/test_turn_discovery.py"
-      ],
-      "effects": [
-        "application",
-        "tests",
-        "staging_deployment"
-      ],
-      "reason": "SNKR TurnBrowser with identical context options; homepage stored and gated at each warm-up; recovery and explicit runners stay per-capture; discovery discards the turn first."
-    },
-    {
-      "files": [
-        ".github/workflows/ci.yml"
-      ],
-      "effects": [
-        "infrastructure",
-        "tests"
-      ],
-      "reason": "agent-state-tests now runs the pytest-style sequential-rollout and recovery-scan tests (previously never collected by the unittest steps)."
-    },
-    {
-      "files": [
-        "docs/agent/COLLECTOR_TURN_BROWSER.md",
-        "docs/agent/evidence/turn-warmed-context-preflight-20261010.json"
-      ],
-      "effects": [
-        "documentation",
-        "state_observation"
-      ],
-      "reason": "Design, expected effect, verification and AMBER preflight."
+      "reason": "Collector-directory merges deploy every collector at once via Railway watch patterns; deliver collector code with a scripts/docs-only follow-up PR; PR edits re-run delivery."
     }
   ],
   "deployment_verification": {
@@ -96,52 +55,52 @@
       {
         "name": "snkrdunk-collector",
         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "df5d8fec-b931-4cd6-97eb-b412e55fea29"
+        "recovery_deployment_id": "bf28a669-1c48-4d79-9c67-30e3225170f8"
       },
       {
         "name": "yuyutei-collector-shard-0",
         "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "9fcd896a-be94-438f-8aee-8f70e7aa2285"
+        "recovery_deployment_id": "6dbcce04-0e85-442b-883e-e01c1cf61d93"
       },
       {
         "name": "yuyutei-collector-shard-1",
         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "6fb87043-842b-45b1-8fac-88f421664d42"
+        "recovery_deployment_id": "19162cb7-ffa3-4451-af5e-9836b1dc77f3"
       },
       {
         "name": "yuyutei-collector-shard-2",
         "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4"
+        "recovery_deployment_id": "64001afc-7642-4c94-89ab-26bce593ec15"
       },
       {
         "name": "yuyutei-collector-shard-3",
         "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "eca877bc-7022-4a9d-82dd-7093ed3af3f7"
+        "recovery_deployment_id": "758cf426-b342-4f90-bb6d-140608e5d9f2"
       },
       {
         "name": "yuyutei-collector-shard-4-v2",
         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "cc31808f-1e04-4ed3-b116-ef57c86d34ef"
+        "recovery_deployment_id": "7b05fe37-ab03-453b-a824-9979947d8f98"
       },
       {
         "name": "yuyutei-collector-shard-5",
         "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e"
+        "recovery_deployment_id": "c0392329-5fca-40ab-85bf-078e13f60d4b"
       },
       {
         "name": "yuyutei-collector-shard-6",
         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "2c06c710-b05e-40fc-a4d9-f04e572ce5d3"
+        "recovery_deployment_id": "51ac2b1d-6fa1-4056-ab82-bbd0b74e9b6d"
       },
       {
         "name": "yuyutei-collector-shard-7",
         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "9855a237-c081-4ff9-9491-a156cfc3aa04"
+        "recovery_deployment_id": "8215f924-cd1d-4abe-afdb-082e6e1208d0"
       },
       {
         "name": "yuyutei-collector-shard-8",
         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6"
+        "recovery_deployment_id": "2bc75473-311c-4205-a9fd-ba20882b206c"
       }
     ]
   },
@@ -161,52 +120,52 @@
         {
           "name": "snkrdunk-collector",
           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "df5d8fec-b931-4cd6-97eb-b412e55fea29"
+          "recovery_deployment_id": "bf28a669-1c48-4d79-9c67-30e3225170f8"
         },
         {
           "name": "yuyutei-collector-shard-0",
           "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "9fcd896a-be94-438f-8aee-8f70e7aa2285"
+          "recovery_deployment_id": "6dbcce04-0e85-442b-883e-e01c1cf61d93"
         },
         {
           "name": "yuyutei-collector-shard-1",
           "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "6fb87043-842b-45b1-8fac-88f421664d42"
+          "recovery_deployment_id": "19162cb7-ffa3-4451-af5e-9836b1dc77f3"
         },
         {
           "name": "yuyutei-collector-shard-2",
           "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4"
+          "recovery_deployment_id": "64001afc-7642-4c94-89ab-26bce593ec15"
         },
         {
           "name": "yuyutei-collector-shard-3",
           "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "eca877bc-7022-4a9d-82dd-7093ed3af3f7"
+          "recovery_deployment_id": "758cf426-b342-4f90-bb6d-140608e5d9f2"
         },
         {
           "name": "yuyutei-collector-shard-4-v2",
           "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "cc31808f-1e04-4ed3-b116-ef57c86d34ef"
+          "recovery_deployment_id": "7b05fe37-ab03-453b-a824-9979947d8f98"
         },
         {
           "name": "yuyutei-collector-shard-5",
           "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e"
+          "recovery_deployment_id": "c0392329-5fca-40ab-85bf-078e13f60d4b"
         },
         {
           "name": "yuyutei-collector-shard-6",
           "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "2c06c710-b05e-40fc-a4d9-f04e572ce5d3"
+          "recovery_deployment_id": "51ac2b1d-6fa1-4056-ab82-bbd0b74e9b6d"
         },
         {
           "name": "yuyutei-collector-shard-7",
           "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "9855a237-c081-4ff9-9491-a156cfc3aa04"
+          "recovery_deployment_id": "8215f924-cd1d-4abe-afdb-082e6e1208d0"
         },
         {
           "name": "yuyutei-collector-shard-8",
           "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6"
+          "recovery_deployment_id": "2bc75473-311c-4205-a9fd-ba20882b206c"
         }
       ],
       "routes": [
@@ -215,20 +174,19 @@
       "dependencies": [
         "Freshness admission/reservation/settle fence unchanged per attempt; f9e5b4a8c012 schema; daily-v1 writer unchanged"
       ],
-      "deployment_impact": "Native ten-collector image update plus API (shared package), released ONE AT A TIME by the sequential delivery rollout, each in its own safe slot and verified before the next. Crons, start commands, budgets, reservations, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each.",
+      "deployment_impact": "This merge changes no collector watch path (scripts/docs only), so Railway builds no collector from GitHub. Its merge commit contains PR #96's code, which the sequential delivery uploads to each collector ONE AT A TIME in its own safe slot and verifies before the next. Crons, start commands, budgets, reservations, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 150
     },
     "recovery": {
       "artifact": "05f099db30e735605fb72b542699ac75559ad8d7",
-      "procedure": "python3 scripts/collector_variables.py --service <name> --commit 05f099db30e735605fb72b542699ac75559ad8d7 --expect-digest <fleet_preflight.services[name].image_digest> --restore --set RAW_DICTIONARY_STORAGE_ENABLED=true --set RAW_DICTIONARY_STORAGE_MODE=daily-v1 --set APP_ENV=staging --output <receipt>, one at a time; then native revert. Automatic during rollout: deploy_staging_collectors restores every touched collector newest-first to its recorded 05f099d image. No data rollback.",
-      "trigger": "any 403/429/challenge/source_denial; capture or parse regression; requests per capture not lower; reservation exceeded; lease/reservation leak; turn browser errors above baseline; freshness regression",
-      "backup": "No schema or stored-data change. 05f099d images retained and redeployable (fleet preflight 08:41Z).",
+      "procedure": "Automatic during rollout: every touched collector restored newest-first to its verified 05f099d image (deployments listed in collector_services, restored 10:35-11:00Z) via collector_variables.restore. After delivery: python3 scripts/collector_variables.py --service <name> --commit 05f099db30e735605fb72b542699ac75559ad8d7 --expect-digest <digest> --restore --set RAW_DICTIONARY_STORAGE_ENABLED=true --set RAW_DICTIONARY_STORAGE_MODE=daily-v1 --set APP_ENV=staging, one at a time. A native revert of PR #96 touches collector paths and would again auto-build every collector; avoid it, restore images instead and fix forward.",
+      "trigger": "any 403/429/challenge/source_denial; capture or parse regression; requests per capture not lower; reservation exceeded; lease/reservation leak; turn browser errors above baseline; freshness regression; deployment failure; schedule or flag drift",
+      "backup": "No schema or stored-data change. Verified 05f099d images restored and redeployable (evidence/live-after-rollback in the session-8 handoff).",
       "validation": [
-        "services/yuyutei_collector/tests/test_turn_browser.py",
-        "services/snkrdunk_collector/tests/test_turn_discovery.py",
-        "services/api/tests/test_freshness_adapters_postgres.py",
+        "scripts/tests/test_collector_variables.py",
+        "scripts/tests/test_deploy_staging_collectors.py",
         "docs/agent/evidence/turn-warmed-context-preflight-20261010.json"
       ]
     },
@@ -242,8 +200,8 @@
         "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: requests per capture and budget peak below baseline, captured/no_listing rates unchanged, identical prices on sampled URLs, 0 denials/403/429/challenges, optional_resource not rising, no lease or reservation leak, freshness unchanged, SNKR homepage RAW rows ~ warm-ups."
+      "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: requests per capture and budget peak below the 24h baseline (Yuyu 55.3, SNKR 160-172; peaks 94.0%/95.4%), identical prices on sampled mappings, 0 denials/403/429/challenges, no reservation overrun or lease leak, freshness unchanged, SNKR homepage RAW rows ~ warm-ups. Unverified-build evidence already measured: 56 Yuyu captures avg 30.6-33.5 requests, 56/56 identical prices."
     }
   },
-  "diff_sha256": "32ef18d909ac97afd3f705104a5aef447428cbcc80bb7b0e97477e423be0c6af"
+  "diff_sha256": "1872df15501feabc79fe4f3a6ac7d90293197bb6fc7a107face3e7481d3a593b"
 }

@@ -311,3 +311,47 @@ them **one at a time**, in manifest order:
 The receipt (`schema_version` 2) adds `sequential`, each collector's
 before-image, commit and flags, and the per-collector after-digest and
 verification time. The delivery jobs' timeout is now 180 minutes.
+
+### Collector-directory merges deploy every collector at once (2026-10-10, session 8)
+
+Railway's watch patterns for the collectors are their own directory and
+Dockerfile, for example `services/yuyutei_collector/**` and
+`deploy/railway/yuyutei-collector.Dockerfile`. A merge that changes those
+paths therefore makes Railway's GitHub integration build and deploy the merge
+on **every** matching collector at once. Those builds carry no exact-commit
+marker.
+
+This happened with PR #96 (419210d):
+- At 09:57:17Z, all ten collectors were rebuilt from GitHub in parallel.
+- The sequential rollout then refused before any upload ("Collector
+  identity/scheduled due-work configuration changed"), because the active
+  deployment was no longer a verified upload.
+- All ten were then restored, one at a time, to their verified 05f099d images
+  through `collector_variables.restore`.
+- The first restore attempt aborted before making any change: a marked
+  SKIPPED record with no image stopped the recovery scan.
+  `original_source` now skips such records.
+
+**Rule until the watch-pattern trigger is resolved.** Keep collector code
+changes out of the merge that requests the rollout, so that merge builds
+nothing on GitHub:
+1. Land the code with a manifest that requests no rollout. This is not
+   possible today, because continuity then fails.
+2. Or, as was done here: after a code merge has already landed, deliver it
+   with a follow-up PR that touches only `scripts/` or `docs/`. Its merge
+   commit contains the code, and the sequential rollout uploads it, verified,
+   one collector at a time.
+
+Disabling GitHub auto-deploys on the collector services would remove the
+trigger. That is a staging infrastructure change for a later session (AMBER),
+because the collectors are only ever delivered by `railway up`.
+
+**PR edits re-run delivery.** Editing a PR's title or description after
+opening it fires a `pull_request: edited` CI run. If the PR has merged by the
+time that run's delivery job holds the lock, the job takes the replay path and
+re-runs the collector rollout for the merged commit. For PR #95, a description
+edit at 08:04Z caused a second rollout of 05f099d from 09:00 to 09:29Z. Every
+upload came back SKIPPED and resolved to the deployments that were already
+active, so no collector was redeployed. It left marked SKIPPED records and held
+the delivery lock until 09:40Z. Do not edit a delivery PR after
+opening it; comment instead.
