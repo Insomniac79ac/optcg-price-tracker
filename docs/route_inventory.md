@@ -21,7 +21,7 @@ only links a reduced route set now).
 
 | Route | Purpose | Auth required | Expected status (healthy) | Nav-linked |
 |---|---|---|---|---|
-| `/dashboard` | Personalized portfolio/wishlist/grading overview plus shared market widgets | Google sign-in | 200 | Yes (primary nav, brand link) |
+| `/dashboard` | Personalized portfolio/wishlist/grading overview (the opportunity, market report and signal-event widgets are withheld: admin-only data) | Google sign-in | 200 | Yes (primary nav, brand link) |
 | `/search` | Card search (Ctrl/Cmd+K opens it) | No | 200 | Yes (primary nav) |
 | `/collection` | Collection tracker: items, valuation, CSV import/export, links to wishlist/grading | Google sign-in | 200 | Yes (primary nav) |
 | `/collection/vault` | Collector vault view: grid of owned cards (CardVaultTile), search/set/rarity/variant/status/condition filters, valuation mode, sort, density, saved views | Google sign-in | 200 | Yes (Collection's "Vault View" nav child; linked from `/collection` and `/dashboard`) |
@@ -33,10 +33,10 @@ only links a reduced route set now).
 | `/wishlist` | Wishlist tracker: target prices, CSV import/export, convert-to-collection | Google sign-in | 200 | Yes (primary nav) |
 | `/grading` | Grading submission tracker (PSA/BGS/CGC/ARS/other) | Google sign-in | 200 | Yes (primary nav) |
 | `/activity` | Collector activity timeline | No | 200 | Yes (primary nav) |
-| `/market/report` | Market intelligence report (opportunities, portfolio snapshot, signal summary) | No | 200 (empty state if no report generated yet) | Yes (primary nav; links to opportunities, signal events, admin actions, admin workflow runs, collection) |
-| `/market/opportunities` | Opportunity-scored market moves | No | 200 | Yes (primary nav) |
-| `/market/signals` | Deterministic market signals (price moves, spreads, floor-vs-retail gaps) | No | 200 | Yes (primary nav) |
-| `/market/signal-events` | Persistent signal events with watch/dismiss/resolve workflow | No | 200 | Yes (primary nav) |
+| `/market/report` | Market intelligence report (opportunities, portfolio snapshot, signal summary) | Admin session (collector session gets 404) | 200 (empty state if no report generated yet) | Yes (primary nav; links to opportunities, signal events, admin actions, admin workflow runs, collection) |
+| `/market/opportunities` | Opportunity-scored market moves | Admin session (collector session gets 404) | 200 | Yes (primary nav) |
+| `/market/signals` | Deterministic market signals (price moves, spreads, floor-vs-retail gaps) | Admin session (collector session gets 404) | 200 | Yes (primary nav) |
+| `/market/signal-events` | Persistent signal events with watch/dismiss/resolve workflow | Admin session (collector session gets 404) | 200 | Yes (primary nav) |
 | `/market/movers` | Public market-movers browsing page (the anonymous-visitor landing page) | No | 200 | Yes (admin dropdown - see note below) |
 | `/cards/[id]` | Single card detail: prices, history, signals | No | 200 (404 for an unknown id) | Linked from search/collection/market pages, not the top nav directly |
 
@@ -104,7 +104,9 @@ per-endpoint sweep.
 | `/analytics/*` | `GET /analytics/collection`, `GET /analytics/wishlist`, `GET /analytics/sell-decisions`, `GET /analytics/buy-decisions`, `GET /analytics/grading` | user | 200 (401 without a valid bearer token) |
 | `/saved-views/*` | `GET/POST /saved-views`, `GET/PATCH/DELETE /saved-views/{id}`, `POST /saved-views/{id}/use`, `POST /saved-views/{id}/set-default`, `POST /saved-views/clear-default` | user | 200 (401 without a valid bearer token) |
 | `/collector/*` | `GET/POST/PATCH/DELETE /collector/tags`, `/collector/groups`; `GET /collector/activity(/summary)`; `GET/POST/PATCH/DELETE /collector/notes` | none | 200 |
-| `/market/*` | `GET /market/movers`, `/market/signals`, `/market/signal-events(/{id})` + dismiss/watch/resolve, `/market/opportunities`, `/market/report/latest`, `/market/reports(/{id})` | none | 200 |
+| `/market/movers` | `GET /market/movers` | none | 200 |
+| `/market/*` (intelligence) | `GET /market/signals`, `/market/signal-events(/{id})` + PATCH/dismiss/watch/resolve, `/market/opportunities`, `/market/report/latest`, `/market/reports(/{id})` | admin | 200 (401 without `X-Admin-Token`): market-wide data carrying ownership/portfolio figures summed across every collection |
+| `/analytics/digest/*` (stored) | `GET /analytics/digest/latest`, `/analytics/digest/reports(/{id})` | admin | 200 (401 without `X-Admin-Token`); the caller's live `GET /analytics/digest` stays user-scoped |
 | `/admin/*` (+ `/snkrdunk/*`) | See "Admin routes" table above plus `/admin/actions/*` (7 POST triggers), `/admin/backup/{export,validate,restore}`, `/admin/db-backups`, `/admin/db-index-audit`, `/admin/performance/summary`, `/admin/alert-events(/{id})`, `/admin/alert-rules/{id}`, `/snkrdunk/candidates(/{id})` + match/reject | admin | 200 (401/403 without `X-Admin-Token`, 500 if `ADMIN_TOKEN` is unset outside development) |
 | `/admin/import-templates*`, `/admin/import-validation*` | `GET /admin/import-templates`, `GET /admin/import-templates/{type}.csv`, `POST /admin/import-validation/{import_type}` (dry-run only, never writes imported data), `GET /admin/import-validation/reports(/{id})` | admin | 200 (401/403 without `X-Admin-Token`) |
 

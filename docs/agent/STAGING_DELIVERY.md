@@ -268,3 +268,17 @@ deployment, schedule, budget or writer. Evidence:
 `evidence/collector-continuity-preflight-20261009.json`. The static set was
 compared with the `app` modules actually loaded by importing every collector
 module: SNKR 58 loaded, 62 static; Yuyu 65 loaded, 73 static; none missing.
+
+### Branch previews disabled (2026-10-10)
+
+`apps/web/vercel.json` now sets `git.deploymentEnabled` to `{"**": false,
+"staging": true}`. Vercel deploys a branch when any matching rule is true
+(minimatch), so only `staging` builds. `verify_staging_delivery.py` and the
+state generator read only the project's `production` target, which is the
+`staging` branch, so delivery is unchanged. Previews were already behind
+Vercel Authentication (`ssoProtection: all_except_custom_domains`): an
+unauthenticated GET of a preview URL answers 302 to Vercel SSO. No Preview
+environment variable applies to an arbitrary branch, and `ADMIN_TOKEN` is
+Production-only. Branch-scoped Preview variables remain for five legacy
+branches. Vercel reads `vercel.json` from the pushed commit, so a branch
+created before this change still builds a preview until it is rebased.

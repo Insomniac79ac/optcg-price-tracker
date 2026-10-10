@@ -22,9 +22,6 @@ export function MarketContextPanel({
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-text-primary">Market context</h2>
         <div className="flex flex-wrap gap-3 text-xs">
-          <Link href="/market/opportunities" className="text-sky-400 hover:text-sky-300">
-            Opportunities →
-          </Link>
           <Link href="/analytics/buy-decisions" className="text-sky-400 hover:text-sky-300">
             Buy decisions →
           </Link>

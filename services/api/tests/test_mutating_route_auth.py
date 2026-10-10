@@ -108,14 +108,6 @@ def test_signal_event_write_accepts_admin_token(raw_client, db_session, method, 
     assert response.json()["id"] == event.id
 
 
-def test_signal_event_reads_stay_public(raw_client, db_session):
-    """Out of scope for this fix: the GET routes keep their current access."""
-    event = make_event(db_session, status="open")
-
-    assert raw_client.get("/market/signal-events").status_code == 200
-    assert raw_client.get(f"/market/signal-events/{event.id}").status_code == 200
-
-
 # --- Inventory guard ---------------------------------------------------------
 
 MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}

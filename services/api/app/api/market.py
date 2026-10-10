@@ -67,7 +67,11 @@ def market_movers(
     )
 
 
-@router.get("/signals", response_model=MarketSignalsResponseOut)
+@router.get(
+    "/signals",
+    response_model=MarketSignalsResponseOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def market_signals(
     response: Response,
     signal_type: str | None = Query(default=None),
@@ -135,7 +139,11 @@ def _build_event_out(db: Session, event: MarketSignalEvent) -> MarketSignalEvent
     return event_to_out(db, event, card, owned_quantity)
 
 
-@router.get("/signal-events", response_model=MarketSignalEventListOut)
+@router.get(
+    "/signal-events",
+    response_model=MarketSignalEventListOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def list_market_signal_events(
     response: Response,
     status: str | None = Query(default=None),
@@ -258,7 +266,11 @@ def _load_market_signal_events(
     ).model_dump(mode="json")
 
 
-@router.get("/signal-events/{event_id}", response_model=MarketSignalEventOut)
+@router.get(
+    "/signal-events/{event_id}",
+    response_model=MarketSignalEventOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def get_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event = _get_event_or_404(db, event_id)
     return _build_event_out(db, event)
@@ -349,7 +361,11 @@ def resolve_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     return _build_event_out(db, event)
 
 
-@router.get("/opportunities", response_model=OpportunitiesResponseOut)
+@router.get(
+    "/opportunities",
+    response_model=OpportunitiesResponseOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def market_opportunities(
     response: Response,
     category: str | None = Query(default=None),
@@ -430,7 +446,11 @@ def _report_to_summary_out(report: MarketIntelligenceReport) -> MarketIntelligen
     )
 
 
-@router.get("/report/latest", response_model=MarketIntelligenceReportOut)
+@router.get(
+    "/report/latest",
+    response_model=MarketIntelligenceReportOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def get_latest_market_report(response: Response, db: Session = Depends(get_db)):
     def _load() -> dict:
         report = db.scalar(
@@ -449,7 +469,11 @@ def get_latest_market_report(response: Response, db: Session = Depends(get_db)):
     return value
 
 
-@router.get("/reports", response_model=MarketIntelligenceReportListOut)
+@router.get(
+    "/reports",
+    response_model=MarketIntelligenceReportListOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def list_market_reports(
     response: Response,
     limit: int = Query(default=30, ge=1, le=500),
@@ -480,7 +504,11 @@ def list_market_reports(
     return value
 
 
-@router.get("/reports/{report_id}", response_model=MarketIntelligenceReportOut)
+@router.get(
+    "/reports/{report_id}",
+    response_model=MarketIntelligenceReportOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def get_market_report(report_id: int, db: Session = Depends(get_db)):
     report = db.get(MarketIntelligenceReport, report_id)
     if report is None:

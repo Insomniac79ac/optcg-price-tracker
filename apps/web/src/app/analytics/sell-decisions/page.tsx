@@ -100,12 +100,6 @@ export default function SellDecisionsPage() {
             Collection Analytics →
           </Link>
           <Link
-            href="/market/opportunities"
-            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-          >
-            Market Opportunities →
-          </Link>
-          <Link
             href="/analytics/digest"
             className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
           >

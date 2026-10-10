@@ -244,9 +244,6 @@ export function SellDecisionCandidateTable({
                           Grading
                         </Link>
                       )}
-                      <Link href="/market/opportunities" className="text-sky-400 hover:text-sky-300">
-                        Opportunities
-                      </Link>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button
