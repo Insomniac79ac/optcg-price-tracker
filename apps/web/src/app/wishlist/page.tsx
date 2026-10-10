@@ -345,9 +345,6 @@ export default function WishlistPage() {
               <Link href="/analytics/buy-decisions" className="text-xs text-accent-teal underline decoration-accent-teal/40 underline-offset-2 hover:text-accent-teal-hover">
                 Buy decisions →
               </Link>
-              <Link href="/market/opportunities" className="text-xs text-accent-teal underline decoration-accent-teal/40 underline-offset-2 hover:text-accent-teal-hover">
-                Opportunities →
-              </Link>
             </span>
           }
           actions={

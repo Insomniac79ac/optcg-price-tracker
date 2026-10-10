@@ -2,12 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "feature/market-value-receipt-forward": false,
-      "feature/market-value-daily-pipeline": false,
-      "feature/collection-freshness-foundation": false,
-      "feature/collection-freshness-adapters": false,
-      "feature/collector-public-context": false,
-      "docs/card-pirate-autonomy": false
+      "**": false,
+      "staging": true
     }
   }
 }

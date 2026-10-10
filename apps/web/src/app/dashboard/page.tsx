@@ -19,7 +19,6 @@ import { WorkflowShortcutsSection } from "@/components/ui/WorkflowShortcutsSecti
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   DASHBOARD_TIMEFRAMES,
-  DASHBOARD_WIDGET_IDS,
   DEFAULT_DASHBOARD_PREFERENCES,
   type DashboardOverview,
   type DashboardTimeframe,
@@ -27,6 +26,7 @@ import {
   fetchDashboardOverview,
   updateDashboardPreferences,
 } from "@/lib/api";
+import { buildFullOrder, isShownWidget } from "@/lib/dashboardWidgets";
 import {
   cardDisplayName,
   formatDate,
@@ -73,15 +73,6 @@ const WIDGET_LINKS: Record<DashboardWidgetId, string> = {
   backup_status: "/admin/backup",
   workflow_status: "/admin/market-workflow-runs",
 };
-
-function buildFullOrder(layout: string[]): DashboardWidgetId[] {
-  const seen = new Set(layout);
-  const known = layout.filter((id): id is DashboardWidgetId =>
-    (DASHBOARD_WIDGET_IDS as readonly string[]).includes(id),
-  );
-  const missing = DASHBOARD_WIDGET_IDS.filter((id) => !seen.has(id));
-  return [...known, ...missing];
-}
 
 export default function DashboardPage() {
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
@@ -191,8 +182,7 @@ export default function DashboardPage() {
     if (!overview) return [];
     const { layout, hidden_widgets } = overview.preferences;
     return layout.filter(
-      (id): id is DashboardWidgetId =>
-        (DASHBOARD_WIDGET_IDS as readonly string[]).includes(id) && !hidden_widgets.includes(id),
+      (id): id is DashboardWidgetId => isShownWidget(id) && !hidden_widgets.includes(id),
     );
   }, [overview]);
 
@@ -202,7 +192,7 @@ export default function DashboardPage() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         <PageHeader
           title="Dashboard"
-          description="Your collection, wishlist, grading, and market signals in one view."
+          description="Your collection, wishlist, and grading in one view."
           actions={
             <ActionButton onClick={openCustomize} disabled={!overview}>
               Customize dashboard

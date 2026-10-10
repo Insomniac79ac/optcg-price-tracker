@@ -40,6 +40,11 @@ vi.mock("@/lib/api", async () => {
 
 import AnalyticsDigestPage from "./page";
 
+const ADMIN_SESSION = {
+  data: { user: { email: "admin@example.com", role: "admin" } },
+  status: "authenticated",
+};
+
 const EMPTY_DIGEST: AnalyticsDigest = {
   summary: {
     valuation_mode: "raw_market",
@@ -212,7 +217,31 @@ describe("AnalyticsDigestPage", () => {
     await waitFor(() =>
       expect(screen.getByText("No urgent buy, sell, grading, or data quality items to review.")).toBeInTheDocument(),
     );
-    expect(screen.getByText("No stored digests yet.")).toBeInTheDocument();
+  });
+
+  it("shows a collector only their live digest: no stored-report source or history", async () => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "collector@example.com" } },
+      status: "authenticated",
+    });
+    fetchAnalyticsDigest.mockResolvedValue(EMPTY_DIGEST);
+    fetchAnalyticsDigestReports.mockResolvedValue(HISTORY_WITH_ROWS);
+    render(<AnalyticsDigestPage />);
+
+    await waitFor(() => expect(fetchAnalyticsDigest).toHaveBeenCalled());
+    // Stored digests aggregate every collection and are admin-only.
+    expect(screen.queryByRole("button", { name: "Latest stored report" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Digest history")).not.toBeInTheDocument();
+    expect(fetchAnalyticsDigestReports).not.toHaveBeenCalled();
+    expect(fetchLatestAnalyticsDigest).not.toHaveBeenCalled();
+  });
+
+  it("shows an admin the empty stored-digest history", async () => {
+    useSessionMock.mockReturnValue(ADMIN_SESSION);
+    fetchAnalyticsDigest.mockResolvedValue(EMPTY_DIGEST);
+    render(<AnalyticsDigestPage />);
+
+    await waitFor(() => expect(screen.getByText("No stored digests yet.")).toBeInTheDocument());
   });
 
   it("renders null values cleanly, never as the literal 'null' or 'undefined'", async () => {
@@ -246,6 +275,7 @@ describe("AnalyticsDigestPage", () => {
   });
 
   it("switches to fetchLatestAnalyticsDigest when the data source toggle changes", async () => {
+    useSessionMock.mockReturnValue(ADMIN_SESSION);
     fetchAnalyticsDigest.mockResolvedValue(EMPTY_DIGEST);
     fetchLatestAnalyticsDigest.mockResolvedValue({ id: 1, created_at: "2026-07-20T09:00:00Z", ...EMPTY_DIGEST });
     render(<AnalyticsDigestPage />);
@@ -262,6 +292,7 @@ describe("AnalyticsDigestPage", () => {
   });
 
   it("renders digest history rows", async () => {
+    useSessionMock.mockReturnValue(ADMIN_SESSION);
     fetchAnalyticsDigest.mockResolvedValue(EMPTY_DIGEST);
     fetchAnalyticsDigestReports.mockResolvedValue(HISTORY_WITH_ROWS);
     render(<AnalyticsDigestPage />);

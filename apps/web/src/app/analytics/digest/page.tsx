@@ -61,13 +61,17 @@ export default function AnalyticsDigestPage() {
 
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
+  // Stored digest reports are admin-only (GET /analytics/digest/latest and
+  // /reports require an admin session): they aggregate every collection, not
+  // the caller's. A collector only ever sees their own live calculation.
+  const effectiveDataMode: DataMode = isAdmin ? dataMode : "live";
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const loadDigest = useCallback(() => {
     setStatus("loading");
     const request =
-      dataMode === "live"
+      effectiveDataMode === "live"
         ? fetchAnalyticsDigest({ valuation_mode: valuationMode })
         : fetchLatestAnalyticsDigest({ valuation_mode: valuationMode });
     request
@@ -80,9 +84,10 @@ export default function AnalyticsDigestPage() {
         else if (err instanceof AdminNotFoundError) setStatus("empty");
         else setStatus("error");
       });
-  }, [dataMode, valuationMode]);
+  }, [effectiveDataMode, valuationMode]);
 
   const loadHistory = useCallback(() => {
+    if (!isAdmin) return;
     setHistoryStatus("loading");
     fetchAnalyticsDigestReports({ limit: 30 })
       .then((res) => {
@@ -90,7 +95,7 @@ export default function AnalyticsDigestPage() {
         setHistoryStatus("ready");
       })
       .catch(() => setHistoryStatus("error"));
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     loadDigest();
@@ -180,27 +185,29 @@ export default function AnalyticsDigestPage() {
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
-              Data source
-            </label>
-            <div className="flex overflow-hidden rounded border border-border-default text-xs">
-              {(["live", "latest"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setDataMode(mode)}
-                  className={`px-2.5 py-1 ${
-                    dataMode === mode
-                      ? "bg-sky-500/20 text-sky-300"
-                      : "bg-bg-surface text-text-secondary hover:text-text-primary"
-                  }`}
-                >
-                  {mode === "live" ? "Live calculation" : "Latest stored report"}
-                </button>
-              ))}
+          {isAdmin && (
+            <div>
+              <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
+                Data source
+              </label>
+              <div className="flex overflow-hidden rounded border border-border-default text-xs">
+                {(["live", "latest"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setDataMode(mode)}
+                    className={`px-2.5 py-1 ${
+                      dataMode === mode
+                        ? "bg-sky-500/20 text-sky-300"
+                        : "bg-bg-surface text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    {mode === "live" ? "Live calculation" : "Latest stored report"}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {isAdmin && (
             <ActionButton variant="primary" onClick={handleGenerate} disabled={generating}>
@@ -241,7 +248,9 @@ export default function AnalyticsDigestPage() {
           </>
         )}
 
-        <DigestHistorySection status={historyStatus} history={history} onView={viewStoredReport} />
+        {isAdmin && (
+          <DigestHistorySection status={historyStatus} history={history} onView={viewStoredReport} />
+        )}
       </main>
     </div>
   );

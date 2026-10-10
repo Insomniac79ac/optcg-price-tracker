@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth import require_current_user
+from app.auth import require_admin_token, require_current_user
 from app.core.pagination import DEFAULT_LIMIT, MAX_LIMIT, pagination_response
 from app.db import get_db
 from app.models import AnalyticsDigestReport, User
@@ -631,7 +631,11 @@ def _digest_report_to_summary_out(report: AnalyticsDigestReport) -> AnalyticsDig
     )
 
 
-@router.get("/digest/latest", response_model=AnalyticsDigestReportOut)
+@router.get(
+    "/digest/latest",
+    response_model=AnalyticsDigestReportOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def get_latest_analytics_digest_endpoint(
     response: Response,
     valuation_mode: ValuationMode | None = Query(default=None),
@@ -655,7 +659,11 @@ def get_latest_analytics_digest_endpoint(
     return value
 
 
-@router.get("/digest/reports", response_model=AnalyticsDigestReportListOut)
+@router.get(
+    "/digest/reports",
+    response_model=AnalyticsDigestReportListOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def list_analytics_digest_reports_endpoint(
     response: Response,
     valuation_mode: ValuationMode | None = Query(default=None),
@@ -691,7 +699,11 @@ def list_analytics_digest_reports_endpoint(
     return value
 
 
-@router.get("/digest/reports/{report_id}", response_model=AnalyticsDigestReportOut)
+@router.get(
+    "/digest/reports/{report_id}",
+    response_model=AnalyticsDigestReportOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def get_analytics_digest_report_endpoint(report_id: int, db: Session = Depends(get_db)):
     report = db.get(AnalyticsDigestReport, report_id)
     if report is None:

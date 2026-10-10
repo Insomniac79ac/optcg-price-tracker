@@ -3,9 +3,9 @@ preference (dashboard_preferences.main_dashboard - not per-user, matching
 this table's schema) plus one compact "overview" payload that assembles
 already-existing widgets from the collection/wishlist/grading/market-signal
 subsystems. No new calculations - every widget just re-packages a call into
-an existing service (portfolio_valuation, wishlist, grading,
-opportunity_scoring, market_signal_events) so formulas never drift from
-their single source of truth.
+an existing service (portfolio_valuation, wishlist, grading) so formulas
+never drift from their single source of truth. The opportunity, market report
+and signal-event widgets are always empty: that data is admin-only.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -17,8 +17,6 @@ from app.models import (
     Card,
     CollectionItem,
     DashboardPreference,
-    MarketIntelligenceReport,
-    MarketSignalEvent,
     MarketWorkflowRun,
     PortfolioValuationSnapshot,
     PriceRefreshRun,
@@ -46,9 +44,7 @@ from app.schemas import (
 )
 from app.services.activity_timeline import get_recent_activity_events
 from app.services.grading import build_grading_summary
-from app.services.market_signal_events import event_to_out, owned_quantity_for_card
 from app.services.market_signals import get_market_signals
-from app.services.opportunity_scoring import get_opportunities
 from app.services.portfolio_valuation import get_portfolio_valuation
 from app.services.wishlist import get_wishlist_items, get_wishlist_summary
 
@@ -202,11 +198,6 @@ def _build_wishlist_targets(db: Session, user_id: int) -> WishlistTargetsWidgetO
     )
 
 
-def _build_top_opportunities(db: Session) -> TopOpportunitiesWidgetOut:
-    response = get_opportunities(db, limit=5, offset=0)
-    return TopOpportunitiesWidgetOut(opportunities=response.opportunities)
-
-
 def _build_grading_status(db: Session, user_id: int) -> GradingStatusWidgetOut:
     summary = build_grading_summary(db, user_id=user_id)
     submitted_or_grading = summary.by_status.get("submitted", 0) + summary.by_status.get("grading", 0)
@@ -215,32 +206,6 @@ def _build_grading_status(db: Session, user_id: int) -> GradingStatusWidgetOut:
         submitted_or_grading_count=submitted_or_grading,
         received_count=summary.by_status.get("received", 0),
         total_grading_cost_jpy=summary.total_grading_cost_jpy,
-    )
-
-
-def _build_market_report(db: Session) -> MarketReportWidgetOut:
-    report = db.scalar(
-        select(MarketIntelligenceReport).order_by(
-            MarketIntelligenceReport.created_at.desc(), MarketIntelligenceReport.id.desc()
-        )
-    )
-    if report is None:
-        return MarketReportWidgetOut(
-            report_id=None,
-            report_date=None,
-            total_opportunities=None,
-            highest_score=None,
-            deterministic_summary_lines=[],
-        )
-
-    payload = report.report_payload_json or {}
-    lines = payload.get("deterministic_summary_lines") or []
-    return MarketReportWidgetOut(
-        report_id=report.id,
-        report_date=report.report_date,
-        total_opportunities=report.total_opportunities,
-        highest_score=report.highest_score,
-        deterministic_summary_lines=list(lines[:3]),
     )
 
 
@@ -255,24 +220,21 @@ def _build_collection_quality(db: Session, user_id: int) -> CollectionQualityWid
     )
 
 
-def _build_recent_signal_events(db: Session) -> RecentSignalEventsWidgetOut:
-    events = db.scalars(
-        select(MarketSignalEvent)
-        .where(MarketSignalEvent.status.in_(("open", "watching")))
-        .order_by(MarketSignalEvent.last_seen_at.desc())
-        .limit(5)
-    ).all()
-
-    card_ids = {e.card_id for e in events if e.card_id is not None}
-    cards_by_id: dict[int, Card] = {}
-    if card_ids:
-        cards_by_id = {c.id: c for c in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()}
-
-    out_events = [
-        event_to_out(db, e, cards_by_id.get(e.card_id), owned_quantity_for_card(db, e.card_id))
-        for e in events
-    ]
-    return RecentSignalEventsWidgetOut(events=out_events)
+# Opportunities, market intelligence reports and signal events are admin-only
+# data (GET /market/opportunities, /market/report*, /market/signal-events all
+# require X-Admin-Token): they are market-wide, carry the global owned quantity
+# summed across every collection, and must not reach any signed-in collector
+# through this overview. The widget fields stay in the schema, always empty, so
+# saved layouts and older clients keep parsing.
+_ADMIN_ONLY_TOP_OPPORTUNITIES = TopOpportunitiesWidgetOut(opportunities=[])
+_ADMIN_ONLY_MARKET_REPORT = MarketReportWidgetOut(
+    report_id=None,
+    report_date=None,
+    total_opportunities=None,
+    highest_score=None,
+    deterministic_summary_lines=[],
+)
+_ADMIN_ONLY_RECENT_SIGNAL_EVENTS = RecentSignalEventsWidgetOut(events=[])
 
 
 def _build_data_freshness(db: Session) -> DataFreshnessWidgetOut:
@@ -349,11 +311,11 @@ def build_overview(db: Session, user_id: int) -> DashboardOverviewOut:
         portfolio_summary=_build_portfolio_summary(db, user_id),
         portfolio_chart=_build_portfolio_chart(db, preferences_out.default_timeframe),
         wishlist_targets=_build_wishlist_targets(db, user_id),
-        top_opportunities=_build_top_opportunities(db),
+        top_opportunities=_ADMIN_ONLY_TOP_OPPORTUNITIES,
         grading_status=_build_grading_status(db, user_id),
-        market_report=_build_market_report(db),
+        market_report=_ADMIN_ONLY_MARKET_REPORT,
         collection_quality=_build_collection_quality(db, user_id),
-        recent_signal_events=_build_recent_signal_events(db),
+        recent_signal_events=_ADMIN_ONLY_RECENT_SIGNAL_EVENTS,
         data_freshness=_build_data_freshness(db),
         backup_status=_build_backup_status(),
         workflow_status=_build_workflow_status(db),

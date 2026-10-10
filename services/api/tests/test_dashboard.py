@@ -246,7 +246,7 @@ def test_overview_includes_wishlist_targets(client, db_session):
     assert widget["items"][0]["card_code"] == "OP01-001"
 
 
-def test_overview_includes_top_opportunities(client, db_session):
+def test_overview_withholds_top_opportunities(client, db_session):
     from app.models import MarketSignalEvent
 
     card = make_card(db_session)
@@ -270,9 +270,9 @@ def test_overview_includes_top_opportunities(client, db_session):
     response = client.get("/dashboard/overview")
 
     assert response.status_code == 200
-    opportunities = response.json()["widgets"]["top_opportunities"]["opportunities"]
-    assert len(opportunities) == 1
-    assert opportunities[0]["card_id"] == card.id
+    # Opportunities are admin-only (GET /market/opportunities); the
+    # collector dashboard always withholds them.
+    assert response.json()["widgets"]["top_opportunities"]["opportunities"] == []
 
 
 def test_overview_includes_grading_status(client, db_session):
@@ -301,16 +301,18 @@ def test_overview_includes_grading_status(client, db_session):
     assert grading_widget["total_grading_cost_jpy"] == 3000
 
 
-def test_overview_includes_latest_market_report(client, db_session):
+def test_overview_withholds_latest_market_report(client, db_session):
     report = generate_market_report(db_session)
 
     response = client.get("/dashboard/overview")
 
     assert response.status_code == 200
+    # Market reports are admin-only (GET /market/report*); the collector
+    # dashboard always withholds them.
+    assert report.id is not None
     widget = response.json()["widgets"]["market_report"]
-    assert widget["report_id"] == report.id
-    assert widget["total_opportunities"] == report.total_opportunities
-    assert len(widget["deterministic_summary_lines"]) <= 3
+    assert widget["report_id"] is None
+    assert widget["deterministic_summary_lines"] == []
 
 
 def test_overview_includes_workflow_status(client, db_session):
