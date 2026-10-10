@@ -355,3 +355,26 @@ upload came back SKIPPED and resolved to the deployments that were already
 active, so no collector was redeployed. It left marked SKIPPED records and held
 the delivery lock until 09:40Z. Do not edit a delivery PR after
 opening it; comment instead.
+
+### A failed merge poll no longer drops the rollout (2026-10-10, session 8)
+
+PR #97's delivery job armed native auto-merge at 11:34:08Z and then polled
+the PR. One poll answered `HTTP 504` at 11:42:38Z, and `bash -e` failed the
+job. The cleanup step read `merged: false` and disarmed auto-merge, but
+GitHub merged the PR at 11:42:44Z anyway. Staging therefore held 3d8421b
+(PR #96's per-turn browser code) with **no rollout**: the collectors stayed
+on their verified 05f099d images, and no collector was rebuilt, since the
+merge touched no watch path (each collector gained one SKIPPED record).
+
+The merge-wait loops in `ci.yml` and `staging-delivery.yml` now treat a
+failed or unparsable PR read as one failed poll. They retry within the same
+120-poll (30-minute) budget. Every successful read is still checked for
+head, merged and open state exactly as before, so a closed PR or a moved
+head still fails. Arming and disarming are unchanged.
+
+**Remaining race (not fixed):** disarming auto-merge after a failure can
+lose to a merge already in flight. If a delivery job fails while its PR
+still merges, staging holds the code with no rollout. Recover with a
+follow-up PR that touches no collector watch path, as was done here (PR #98
+re-requests the same sequential release). Do not re-run the failed job: it
+would replay a merge it no longer owns.
