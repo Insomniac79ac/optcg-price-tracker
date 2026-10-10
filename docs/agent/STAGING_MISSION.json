@@ -234,5 +234,5 @@
       "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: every new encoded row lossless (verify_all), raw_snapshots n_tup_upd not increasing with encoded inserts, ledger rows/bytes within daily-v1 bounds, 0 denials/403/429/challenges, no lease or reservation leaks, freshness unchanged. Next collector release only after at least one natural turn per collector."
     }
   },
-  "diff_sha256": "c9050eb61917291b3b9271d71f61070b5636d16f8e88962815139f2bac3df0cf"
+  "diff_sha256": "98cf468bbb44ee4dee8b51c06517346e168a412adb3810ce5a06f215e3144770"
 }
