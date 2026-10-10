@@ -78,3 +78,22 @@ regression counted 202 body expression evaluations with the PR78 lookup and
 at most 34 with the revised lookup in the same 200-row plaintext fixture.
 The existing long encoded-chain test verifies oldest-anchor fallback. This
 query fix does not activate either mode or establish sustained savings.
+
+## Encode before the first INSERT (2026-10-10, session 8)
+
+Session 7 measured that the writer inserted each new snapshot as plaintext,
+then updated it to the envelope. PostgreSQL TOAST-stored the plaintext first
+and it stayed as dead tuples until autovacuum: about 167 MB/day written and
+then discarded. The writer now reserves the snapshot ID from its serial
+sequence only after admission, base and savings checks pass. It sets the
+envelope, verifies the attached reader reconstructs the original bytes and
+SHA, then inserts once. The ledger still records the original SHA256 and
+length, and `content_hash` stays the original SHA, so RAW-before-parse
+provenance is unchanged. A reconstruction mismatch now writes no row
+version at all. A plaintext fallback is still a single plaintext INSERT.
+Preflight: `evidence/raw-encode-before-insert-preflight-20261010.json`.
+
+`collector_variables.py` now scans a collector's last 100 deployments for a
+redeployable same-image source, not 20. Each staging merge adds a SKIPPED
+record per collector, which had pushed SNKR's only redeployable copy of its
+verified image out of the old window.

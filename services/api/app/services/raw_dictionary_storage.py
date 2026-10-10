@@ -174,9 +174,20 @@ def _encode_new_snapshot(session, snapshot):
     # physical base bytes, not an inflated uncompressed HTML denominator.
     if packed_bytes * 4 > current_stored_bytes * 3:
         return False
-    session.flush()
+    # Reserve the captured ID before the first INSERT, so the envelope is the
+    # only row version ever written. Inserting plaintext and then updating it
+    # left a dead TOAST body behind until vacuum. Reconstruction is verified
+    # before any write; a mismatch leaves no row and no ledger charge.
+    snapshot.id = session.scalar(
+        text("SELECT nextval(pg_get_serial_sequence(:table, 'id'))"),
+        {"table": model.__tablename__},
+    )
     if base.id >= snapshot.id:
         raise RawPayloadError("dictionary base must be older than the new snapshot")
+    snapshot._stored_raw_content = packed
+    if snapshot.raw_content.encode("utf-8") != body:
+        raise RawPayloadError("attached reader reconstruction mismatch")
+    session.flush()
     session.execute(
         text("""
         INSERT INTO raw_snapshot_dictionaries
@@ -193,10 +204,7 @@ def _encode_new_snapshot(session, snapshot):
             "packed": packed_bytes,
         },
     )
-    snapshot._stored_raw_content = packed
     session.flush()
-    if snapshot.raw_content.encode("utf-8") != body:
-        raise RawPayloadError("attached reader reconstruction mismatch")
     return True
 
 

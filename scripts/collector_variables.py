@@ -65,10 +65,16 @@ def digest(deployment):
     return value
 
 
+# Every staging merge adds a SKIPPED record to each collector, so the only
+# redeployable copy of a verified image can sit far behind newer records
+# (2026-10-10: 14-18 of each collector's last 20 were SKIPPED).
+RECENT_DEPLOYMENTS = 100
+
+
 def recent_deployments(service_id, railway=None):
     railway = railway or state.railway
     rows = railway(
-        f'query {{ deployments(first:20, input:{{projectId:"{state.PROJECT}", '
+        f'query {{ deployments(first:{RECENT_DEPLOYMENTS}, input:{{projectId:"{state.PROJECT}", '
         f'environmentId:"{state.ENVIRONMENT}", serviceId:"{service_id}"}}) '
         f'{{ edges {{ node {{ id }} }} }} }}'
     )["deployments"]["edges"]
