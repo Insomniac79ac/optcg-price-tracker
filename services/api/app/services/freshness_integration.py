@@ -222,123 +222,123 @@ class Attempt:
         source, conservatively. WebSockets are blocked (not a collection input).
         """
 
-        def route_request_inner(route):
-            response = None
-            request = route.request
-            if self.browser_closing or unnecessary_browser_resource(request):
-                try:
-                    route.abort()
-                except Exception:
-                    pass  # context may already be closing; nothing was sent
-                return  # no network dispatch, so no budget grant is consumed
-            # Iframes (advertising, embedded widgets) also report navigation.
-            # Only the main frame carries the physical product URL identity.
-            main_navigation = request.is_navigation_request() and (
-                request.frame == request.frame.page.main_frame
-            )
-            role, critical = browser_request_role(request, main_navigation)
-            url = request.url
-
-            def diagnostic(event, **fields):
-                print(
-                    json.dumps(
-                        {
-                            "event": event,
-                            "work_id": self.claim.work_id,
-                            "request_host_class": request_host_class(url),
-                            "request_role": role,
-                            "evidence_critical": critical,
-                            "resource_type": request.resource_type,
-                            "main_navigation": bool(main_navigation),
-                            "http_status": response.status if response else None,
-                            **fields,
-                        }
-                    ),
-                    flush=True,
-                )
-
-            try:
-                self.admit()
-                response = route.fetch(max_redirects=0, max_retries=0, timeout=30000)
-                redirects = 0
-                headers = dict(route.request.headers)
-                while 300 <= response.status < 400:
-                    if (
-                        main_navigation
-                        or route.request.method not in {"GET", "HEAD"}
-                        or redirects >= MAX_BROWSER_ASSET_REDIRECTS
-                    ):
-                        raise AdmissionStopped("unsupported browser redirect")
-                    location = response.headers.get("location")
-                    target = urljoin(url, location or "")
-                    parsed = urlsplit(target)
-                    if (
-                        not location
-                        or parsed.scheme not in {"http", "https"}
-                        or not parsed.hostname
-                        or parsed.username
-                        or parsed.password
-                    ):
-                        raise AdmissionStopped("invalid asset redirect location")
-                    if (urlsplit(url).scheme, urlsplit(url).netloc) != (
-                        parsed.scheme,
-                        parsed.netloc,
-                    ):
-                        headers = {
-                            k: v
-                            for k, v in headers.items()
-                            if k.lower()
-                            not in {"cookie", "authorization", "proxy-authorization"}
-                        }
-                    self.admit()
-                    response = route.fetch(
-                        url=target,
-                        headers=headers,
-                        max_redirects=0,
-                        max_retries=0,
-                        timeout=30000,
-                    )
-                    url = target
-                    redirects += 1
-                if response.status in {403, 429}:
-                    diagnostic("browser_response_denied", outcome_category="denial")
-                    if critical:
-                        self.record_http(response.status)
-                        self.deny()
-                    else:
-                        self.health["optional_resource"] += 1
-                route.fulfill(response=response)
-            except Exception as exc:
-                # A failed optional asset is a normal browser failure. It must
-                # not poison later product navigation. Admission refusal,
-                # denial and document failures still fence this attempt.
-                # admit()/deny() already set self.stopped for budget, lease,
-                # ownership and source-health refusals. A locally refused
-                # optional redirect (POST, invalid location, or hop limit)
-                # must abort that resource without poisoning the product.
-                if not self.stopped and not critical:
-                    self.health["optional_resource"] += 1
-                if self.stopped or critical:
-                    self.stopped = self.stopped or str(exc)
-                diagnostic(
-                    "browser_request_stopped",
-                    reason_category=type(exc).__name__,
-                    attempt_stopped=bool(self.stopped),
-                )
-                try:
-                    route.abort()
-                except Exception:
-                    pass  # teardown cannot revive a refused request
-
-        def route_request(route):
-            self.active_routes += 1
-            try:
-                route_request_inner(route)
-            finally:
-                self.active_routes -= 1
-
-        context.route("**/*", route_request)
+        context.route("**/*", self.route_request)
         context.route_web_socket("**/*", lambda socket: socket.close())
+
+    def route_request(self, route):
+        self.active_routes += 1
+        try:
+            self._route_request_inner(route)
+        finally:
+            self.active_routes -= 1
+
+    def _route_request_inner(self, route):
+        response = None
+        request = route.request
+        if self.browser_closing or unnecessary_browser_resource(request):
+            try:
+                route.abort()
+            except Exception:
+                pass  # context may already be closing; nothing was sent
+            return  # no network dispatch, so no budget grant is consumed
+        # Iframes (advertising, embedded widgets) also report navigation.
+        # Only the main frame carries the physical product URL identity.
+        main_navigation = request.is_navigation_request() and (
+            request.frame == request.frame.page.main_frame
+        )
+        role, critical = browser_request_role(request, main_navigation)
+        url = request.url
+
+        def diagnostic(event, **fields):
+            print(
+                json.dumps(
+                    {
+                        "event": event,
+                        "work_id": self.claim.work_id,
+                        "request_host_class": request_host_class(url),
+                        "request_role": role,
+                        "evidence_critical": critical,
+                        "resource_type": request.resource_type,
+                        "main_navigation": bool(main_navigation),
+                        "http_status": response.status if response else None,
+                        **fields,
+                    }
+                ),
+                flush=True,
+            )
+
+        try:
+            self.admit()
+            response = route.fetch(max_redirects=0, max_retries=0, timeout=30000)
+            redirects = 0
+            headers = dict(route.request.headers)
+            while 300 <= response.status < 400:
+                if (
+                    main_navigation
+                    or route.request.method not in {"GET", "HEAD"}
+                    or redirects >= MAX_BROWSER_ASSET_REDIRECTS
+                ):
+                    raise AdmissionStopped("unsupported browser redirect")
+                location = response.headers.get("location")
+                target = urljoin(url, location or "")
+                parsed = urlsplit(target)
+                if (
+                    not location
+                    or parsed.scheme not in {"http", "https"}
+                    or not parsed.hostname
+                    or parsed.username
+                    or parsed.password
+                ):
+                    raise AdmissionStopped("invalid asset redirect location")
+                if (urlsplit(url).scheme, urlsplit(url).netloc) != (
+                    parsed.scheme,
+                    parsed.netloc,
+                ):
+                    headers = {
+                        k: v
+                        for k, v in headers.items()
+                        if k.lower()
+                        not in {"cookie", "authorization", "proxy-authorization"}
+                    }
+                self.admit()
+                response = route.fetch(
+                    url=target,
+                    headers=headers,
+                    max_redirects=0,
+                    max_retries=0,
+                    timeout=30000,
+                )
+                url = target
+                redirects += 1
+            if response.status in {403, 429}:
+                diagnostic("browser_response_denied", outcome_category="denial")
+                if critical:
+                    self.record_http(response.status)
+                    self.deny()
+                else:
+                    self.health["optional_resource"] += 1
+            route.fulfill(response=response)
+        except Exception as exc:
+            # A failed optional asset is a normal browser failure. It must
+            # not poison later product navigation. Admission refusal,
+            # denial and document failures still fence this attempt.
+            # admit()/deny() already set self.stopped for budget, lease,
+            # ownership and source-health refusals. A locally refused
+            # optional redirect (POST, invalid location, or hop limit)
+            # must abort that resource without poisoning the product.
+            if not self.stopped and not critical:
+                self.health["optional_resource"] += 1
+            if self.stopped or critical:
+                self.stopped = self.stopped or str(exc)
+            diagnostic(
+                "browser_request_stopped",
+                reason_category=type(exc).__name__,
+                attempt_stopped=bool(self.stopped),
+            )
+            try:
+                route.abort()
+            except Exception:
+                pass  # teardown cannot revive a refused request
 
     def settle_browser(self, page, *, monotonic=time.monotonic):
         """Fence new traffic and settle granted routes before disposing context.
@@ -453,6 +453,50 @@ class Attempt:
         except Exception:
             self.session.rollback()
             raise
+
+
+
+class TurnMeter:
+    """One context-level route for a due-work turn that reuses its browser.
+
+    A turn keeps one warmed context across attempts, but every request is still
+    metered by exactly one Attempt: the one bound with the page it opened.
+    Unbound traffic, and traffic from any other page (including a closed
+    page from an earlier attempt), is aborted before dispatch and never
+    charged. Callers settle the bound attempt on its page before unbinding,
+    so no granted route of one attempt is still active when the next binds.
+    """
+
+    def __init__(self):
+        self.attempt = None
+        self.page = None
+
+    def install(self, context):
+        context.route("**/*", self.route_request)
+        context.route_web_socket("**/*", lambda socket: socket.close())
+
+    def bind(self, attempt, page):
+        if self.attempt is not None:
+            raise RuntimeError("turn meter is already bound to an attempt")
+        self.attempt, self.page = attempt, page
+
+    def unbind(self, attempt):
+        if self.attempt is attempt:
+            self.attempt = self.page = None
+
+    def route_request(self, route):
+        attempt, page = self.attempt, self.page
+        try:
+            owned = attempt is not None and route.request.frame.page is page
+        except Exception:
+            owned = False  # no attributable page (worker, detached frame)
+        if not owned:
+            try:
+                route.abort()
+            except Exception:
+                pass  # context may be closing; nothing was sent
+            return  # no network dispatch, so no budget grant is consumed
+        attempt.route_request(route)
 
 
 def price_facts(session, work_id, *, clock=utc_now):

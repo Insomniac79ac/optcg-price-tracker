@@ -1,5 +1,7 @@
 """Opt-in shared due-work adapter. Legacy batches never import this module."""
 
+import functools
+
 from sqlalchemy import select
 
 from app.services.freshness_integration import CaptureResult, drain
@@ -89,6 +91,13 @@ def write_capture(session, mapping, holder, attempt):
     )
 
 
+def _discovery_outside_turn(turn, run_discovery, *args, **kwargs):
+    # Discovery starts its own sync Playwright, which cannot start while the
+    # turn's is running in this thread; the next capture warms up afresh.
+    turn.discard("discovery")
+    return run_discovery(*args, **kwargs)
+
+
 def run_due(
     *,
     chunk_size=70,
@@ -129,16 +138,32 @@ def run_due(
             recovery = consume_planned_recovery(session, source_id, runner=runner)
             if recovery is not None:
                 return [recovery]  # ordinary checks resume on the next scheduled turn
-            return drain(
-                session,
-                source_id,
-                "snkrdunk-due",
-                runner or run_one_mapping_detailed,
-                runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
-                mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
-                chunk_size=chunk_size,
-                max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,
-                discovery_runner=run_discovery,
-                delay_seconds=max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000,
-                ownership_check=assert_lock_owned,
-            )
+            # One warmed browser per scheduled turn (unless a caller supplies
+            # its own runner). Closed however the turn ends.
+            turn = None
+            if runner is None:
+                from snkrdunk_collector.browser import TurnBrowser, log_event
+
+                turn = TurnBrowser()
+                runner = functools.partial(run_one_mapping_detailed, turn=turn)
+            discovery_runner = run_discovery if turn is None else functools.partial(
+                _discovery_outside_turn, turn, run_discovery)
+            try:
+                return drain(
+                    session,
+                    source_id,
+                    "snkrdunk-due",
+                    runner,
+                    runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
+                    mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
+                    chunk_size=chunk_size,
+                    max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,
+                    discovery_runner=discovery_runner,
+                    delay_seconds=max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000,
+                    ownership_check=assert_lock_owned,
+                )
+            finally:
+                if turn is not None:
+                    log_event("turn_browser_summary", launches=turn.launches,
+                              warmups=turn.warmups)
+                    turn.close()

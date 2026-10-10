@@ -187,3 +187,84 @@ def fetch_bytes(page: Page, url: str) -> bytes | None:
         return response.body()
     except Exception:  # noqa: BLE001
         return None
+
+
+TURN_TEARDOWN_TIMEOUT_S = 10
+
+
+class TurnBrowser:
+    """One browser and one warmed desktop context reused by a due-work turn.
+
+    The per-capture path launches a browser and captures the homepage (stored
+    as RAW, and the source-wide denial canary) for every product. A turn keeps
+    the context across attempts: each attempt opens its own page and is
+    metered by exactly one bound Attempt through a context-level TurnMeter;
+    only an attempt that finds the turn cold captures the homepage, which is
+    still stored and still gates that attempt. Any unclean capture discards
+    the whole browser, so the next attempt starts as a fresh capture does.
+    Schedules, budgets, reservations and pacing are untouched.
+    """
+
+    def __init__(self, playwright_factory=None):
+        self._playwright_factory = playwright_factory
+        self._playwright = None
+        self.browser = None
+        self.context = None
+        self.meter = None
+        self.warm = False
+        self.launches = 0
+        self.warmups = 0
+
+    def ensure(self):
+        """The live context, launching one if the turn has none. Call under
+        the caller's browser_launch deadline."""
+        if self.context is None:
+            from app.services.freshness_integration import TurnMeter
+            from snkrdunk_collector.config import settings
+
+            if self._playwright is None:
+                if self._playwright_factory is None:
+                    from playwright.sync_api import sync_playwright
+
+                    self._playwright_factory = sync_playwright
+                self._playwright = self._playwright_factory().start()
+            self.browser = self._playwright.chromium.launch(
+                headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
+            )
+            self.context = self.browser.new_context(
+                user_agent=DESKTOP_CHROME_UA,
+                viewport=DESKTOP_VIEWPORT,
+                locale="ja-JP",
+                extra_http_headers={"Accept-Language": DESKTOP_ACCEPT_LANGUAGE},
+                service_workers="block",
+            )
+            self.meter = TurnMeter()
+            self.meter.install(self.context)
+            self.warm = False
+            self.launches += 1
+        return self.context
+
+    def discard(self, reason=None):
+        """Close everything, innermost first, bounded and quiet."""
+        if reason and self._playwright is not None:
+            log_event("turn_browser_discarded", reason=reason)
+        for label, handle, method in (
+            ("context", self.context, "close"),
+            ("browser", self.browser, "close"),
+            ("playwright", self._playwright, "stop"),
+        ):
+            if handle is None:
+                continue
+            try:
+                with deadline(TURN_TEARDOWN_TIMEOUT_S, "browser_teardown"):
+                    getattr(handle, method)()
+            except Exception as exc:
+                log_event(
+                    "browser_teardown_error",
+                    handle=label,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+        self._playwright = self.browser = self.context = self.meter = None
+        self.warm = False
+
+    close = discard
