@@ -1,0 +1,19 @@
+## select s.name, to_char(to_timestamp(extract(epoch from timestamptz '2026-10-10 07:23:57.124648+00') + 1800*floor((extrac
+{"name": "snkrdunk", "win": "10-10 14:23", "n": 33, "req": 2855}
+{"name": "snkrdunk", "win": "10-10 14:53", "n": 12, "req": 1112}
+{"name": "snkrdunk", "win": "10-10 15:23", "n": 6, "req": 582}
+{"name": "snkrdunk", "win": "10-10 15:53", "n": 32, "req": 2808}
+{"name": "snkrdunk", "win": "10-10 16:23", "n": 21, "req": 1808}
+{"name": "snkrdunk", "win": "10-10 16:53", "n": 4, "req": 427}
+{"name": "snkrdunk", "win": "10-10 17:23", "n": 19, "req": 1692}
+{"name": "yuyutei", "win": "10-10 18:23", "n": 8, "req": 259}
+{"name": "yuyutei", "win": "10-10 18:53", "n": 8, "req": 258}
+{"name": "yuyutei", "win": "10-10 19:23", "n": 51, "req": 1638}
+{"name": "yuyutei", "win": "10-10 19:53", "n": 77, "req": 2419}
+{"name": "yuyutei", "win": "10-10 20:23", "n": 46, "req": 1466}
+{"name": "yuyutei", "win": "10-10 20:53", "n": 70, "req": 2188}
+{"name": "yuyutei", "win": "10-10 21:23", "n": 58, "req": 1789}
+{"name": "yuyutei", "win": "10-10 21:53", "n": 42, "req": 1323}
+## select s.name, count(*) filter (where w.next_due_at < now()) due_now, count(*) filter (where w.next_due_at < now()+inter
+{"name": "yuyutei", "due_now": 54, "due_3h": 527, "total": 3204}
+{"name": "snkrdunk", "due_now": 89, "due_3h": 89, "total": 379}

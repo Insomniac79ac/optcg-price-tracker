@@ -1,0 +1,123 @@
+{
+ "service": "yuyutei-collector-shard-4-v2",
+ "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+ "environment": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+ "started_at": "2026-10-10T22:22:46.037201+00:00",
+ "steps": [
+  {
+   "at": "2026-10-10T22:22:48.664086+00:00",
+   "what": "pre",
+   "state": {
+    "auto": {
+     "canEnable": false,
+     "enabled": true,
+     "reason": "NO_REPO"
+    },
+    "triggers": [
+     {
+      "branch": "staging",
+      "checkSuites": false,
+      "id": "0050a3b5-df74-43f4-b4df-54e650d5fdda",
+      "provider": "github",
+      "repository": "Insomniac79ac/optcg-price-tracker"
+     }
+    ],
+    "deployment_ids": [
+     "87554810-6be1-4cf1-963d-c625345c3641",
+     "26808284-572d-4fea-bc93-f2fdefe51e85",
+     "857d27f5-23e8-46d4-aef6-788b75592745",
+     "9e302b0a-0c09-4d74-bb64-a8b945ed1514",
+     "7b05fe37-ab03-453b-a824-9979947d8f98",
+     "0e128047-32d4-410b-9895-3ac1bc148962",
+     "e3fa58c4-3084-4788-afc4-1e5188639d8d",
+     "cc31808f-1e04-4ed3-b116-ef57c86d34ef",
+     "05c9a7ed-b203-4360-b70e-a647da1bee9c",
+     "7e7a3622-ac50-4373-99e8-cd86f34708aa",
+     "0c0a903f-26e1-4a26-b9d9-00fbd3657bc5",
+     "ccec6f5f-46d8-4b52-b196-a6b8a2bc71f0",
+     "a96afa9f-a8e9-4845-aa3a-6041050deaf1",
+     "de59ea1c-4f2d-4938-bb4b-8aa367f87980",
+     "52ec0f62-4859-441a-ad02-38e01feef2d0",
+     "1f3e5fd3-9680-4a25-b52a-80331f1d70ff",
+     "a2e21e1e-5007-42bc-913c-8b761a334c62",
+     "f5830758-a0c7-4ded-be80-1966ef53e223",
+     "89f0d1a0-8d61-43ab-adc6-d50e6d30bca7",
+     "c2e89e68-a22b-4bad-a727-9ac04134b56b"
+    ],
+    "staged_patch": {},
+    "latest": "26808284-572d-4fea-bc93-f2fdefe51e85",
+    "latest_status": "SUCCESS",
+    "digest": "sha256:4a4c3bbea57e449ee7a1f6543da52a81d1c45f9d70f60ba9edeb01441d466ae2",
+    "cron": "12,42 * * * *",
+    "start_command_sha256": "c445cd8c3a088b6c4301595b321f23d34cf254e632450288620be87044af0dec"
+   }
+  },
+  {
+   "at": "2026-10-10T22:22:52.202486+00:00",
+   "what": "safe slot"
+  },
+  {
+   "at": "2026-10-10T22:22:52.927703+00:00",
+   "what": "serviceInstanceAutoDeployUpdate",
+   "result": {
+    "serviceInstanceAutoDeployUpdate": {
+     "enabled": false
+    }
+   }
+  },
+  {
+   "at": "2026-10-10T22:24:02.954960+00:00",
+   "what": "post",
+   "state": {
+    "auto": {
+     "canEnable": false,
+     "enabled": false,
+     "reason": "NO_REPO"
+    },
+    "triggers": [],
+    "deployment_ids": [
+     "87554810-6be1-4cf1-963d-c625345c3641",
+     "26808284-572d-4fea-bc93-f2fdefe51e85",
+     "857d27f5-23e8-46d4-aef6-788b75592745",
+     "9e302b0a-0c09-4d74-bb64-a8b945ed1514",
+     "7b05fe37-ab03-453b-a824-9979947d8f98",
+     "0e128047-32d4-410b-9895-3ac1bc148962",
+     "e3fa58c4-3084-4788-afc4-1e5188639d8d",
+     "cc31808f-1e04-4ed3-b116-ef57c86d34ef",
+     "05c9a7ed-b203-4360-b70e-a647da1bee9c",
+     "7e7a3622-ac50-4373-99e8-cd86f34708aa",
+     "0c0a903f-26e1-4a26-b9d9-00fbd3657bc5",
+     "ccec6f5f-46d8-4b52-b196-a6b8a2bc71f0",
+     "a96afa9f-a8e9-4845-aa3a-6041050deaf1",
+     "de59ea1c-4f2d-4938-bb4b-8aa367f87980",
+     "52ec0f62-4859-441a-ad02-38e01feef2d0",
+     "1f3e5fd3-9680-4a25-b52a-80331f1d70ff",
+     "a2e21e1e-5007-42bc-913c-8b761a334c62",
+     "f5830758-a0c7-4ded-be80-1966ef53e223",
+     "89f0d1a0-8d61-43ab-adc6-d50e6d30bca7",
+     "c2e89e68-a22b-4bad-a727-9ac04134b56b"
+    ],
+    "staged_patch": {},
+    "latest": "26808284-572d-4fea-bc93-f2fdefe51e85",
+    "latest_status": "SUCCESS",
+    "digest": "sha256:4a4c3bbea57e449ee7a1f6543da52a81d1c45f9d70f60ba9edeb01441d466ae2",
+    "cron": "12,42 * * * *",
+    "start_command_sha256": "c445cd8c3a088b6c4301595b321f23d34cf254e632450288620be87044af0dec"
+   }
+  }
+ ],
+ "mutated": true,
+ "checks": {
+  "no_trigger": true,
+  "auto_deploy_disabled": true,
+  "no_new_deployment_record": true,
+  "same_active_deployment": true,
+  "same_verified_digest": true,
+  "cron_unchanged": true,
+  "start_command_unchanged": true,
+  "no_staged_changes": true,
+  "variables_unchanged": true
+ },
+ "result": "DISABLED",
+ "finished_at": "2026-10-10T22:24:05.990955+00:00"
+}

@@ -1,0 +1,65 @@
+{
+ "read_only": true,
+ "source_requests": 0,
+ "window": [
+  "2026-10-10T14:31:00Z",
+  "now"
+ ],
+ "observed_at": "2026-10-10 22:12:44.960531",
+ "per_capture": [
+  {
+   "name": "snkrdunk",
+   "kind": "refresh",
+   "outcome": "captured",
+   "n": 7,
+   "avg_cost": "85.6",
+   "p50": 85.0,
+   "min_cost": 80,
+   "max_cost": 95,
+   "max_reserved": 300,
+   "over_reservation": 0
+  },
+  {
+   "name": "snkrdunk",
+   "kind": "refresh",
+   "outcome": "no_listing",
+   "n": 120,
+   "avg_cost": "89.0",
+   "p50": 86.0,
+   "min_cost": 66,
+   "max_cost": 179,
+   "max_reserved": 300,
+   "over_reservation": 0
+  },
+  {
+   "name": "yuyutei",
+   "kind": "refresh",
+   "outcome": "captured",
+   "n": 356,
+   "avg_cost": "31.5",
+   "p50": 29.0,
+   "min_cost": 29,
+   "max_cost": 56,
+   "max_reserved": 300,
+   "over_reservation": 0
+  }
+ ],
+ "window_peaks": [
+  {
+   "name": "snkrdunk",
+   "peak": 2855,
+   "avg_window": "1612",
+   "windows": 7
+  },
+  {
+   "name": "yuyutei",
+   "peak": 2419,
+   "avg_window": "1403",
+   "windows": 8
+  }
+ ],
+ "snkr_homepage_raw": {
+  "n": 7,
+  "stored_bytes": 466789
+ }
+}
