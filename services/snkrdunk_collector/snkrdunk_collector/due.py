@@ -91,6 +91,13 @@ def write_capture(session, mapping, holder, attempt):
     )
 
 
+def _discovery_outside_turn(turn, run_discovery, *args, **kwargs):
+    # Discovery starts its own sync Playwright, which cannot start while the
+    # turn's is running in this thread; the next capture warms up afresh.
+    turn.discard("discovery")
+    return run_discovery(*args, **kwargs)
+
+
 def run_due(
     *,
     chunk_size=70,
@@ -139,6 +146,8 @@ def run_due(
 
                 turn = TurnBrowser()
                 runner = functools.partial(run_one_mapping_detailed, turn=turn)
+            discovery_runner = run_discovery if turn is None else functools.partial(
+                _discovery_outside_turn, turn, run_discovery)
             try:
                 return drain(
                     session,
@@ -149,7 +158,7 @@ def run_due(
                     mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
                     chunk_size=chunk_size,
                     max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,
-                    discovery_runner=run_discovery,
+                    discovery_runner=discovery_runner,
                     delay_seconds=max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000,
                     ownership_check=assert_lock_owned,
                 )

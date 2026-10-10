@@ -161,8 +161,29 @@ class TurnBrowserTests(fixture.RawBeforeParseFixture):
         self.assertIsInstance(seen["turn"], TurnBrowser)
         close.assert_called_once()
 
+    def test_discovery_never_runs_beside_a_live_turn_browser(self):
+        # A second sync Playwright cannot start while the turn's runs in the
+        # same thread ("Sync API inside the asyncio loop"), so discovery must
+        # discard the turn first; the next capture warms up afresh.
+        order = []
+
+        def drain(session, source_id, owner, runner, **kwargs):
+            turn = runner.keywords["turn"]
+            turn.context = object()
+            with patch.object(TurnBrowser, "discard",
+                              side_effect=lambda *a, **k: order.append("discard")):
+                with patch.object(due, "run_discovery",
+                                  side_effect=lambda *a, **k: order.append("discovery")):
+                    kwargs["discovery_runner"]("session", "claim", freshness="attempt")
+            return []
+
+        with patch.object(due, "drain", side_effect=drain), patch.object(TurnBrowser, "close"):
+            due.run_due(shard_index=0, session_factory=self.Session)
+        self.assertEqual(order, ["discard", "discovery"])
+
     def test_explicit_runner_keeps_per_capture_behaviour(self):
         runner = MagicMock()
         with patch.object(due, "drain", return_value=[]) as drain:
             due.run_due(shard_index=0, session_factory=self.Session, runner=runner)
         self.assertIs(drain.call_args.args[3], runner)
+        self.assertIs(drain.call_args.kwargs["discovery_runner"], due.run_discovery)
