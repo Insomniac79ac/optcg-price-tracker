@@ -627,3 +627,103 @@ def test_large_historical_ledger_and_encoded_chain_keep_bounded_admission(
         assert not storage.encode_new_snapshot(
             session, other
         )  # today's charge retained
+
+
+def record_raw_writes(connection):
+    """Log every row version PostgreSQL writes, including TOAST-bound bodies."""
+    connection.execute(text("""
+        CREATE TABLE raw_write_log (op text, id integer, encoded boolean)
+    """))
+    # Sequences are not transactional: a write later rolled back still counts.
+    connection.execute(text("CREATE SEQUENCE raw_write_count MINVALUE 0 START 0"))
+    connection.execute(text(f"""
+        CREATE FUNCTION log_raw_write() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+            PERFORM nextval('raw_write_count');
+            INSERT INTO raw_write_log
+            VALUES (TG_OP, NEW.id, starts_with(NEW.raw_content, '{PREFIX}'));
+            RETURN NEW;
+        END $$
+    """))
+    connection.execute(text("""
+        CREATE TRIGGER raw_write_log BEFORE INSERT OR UPDATE ON raw_snapshots
+        FOR EACH ROW EXECUTE FUNCTION log_raw_write()
+    """))
+
+
+def raw_write_attempts(session):
+    value, called = session.execute(
+        text("SELECT last_value, is_called FROM raw_write_count")
+    ).one()
+    return value + 1 if called else 0
+
+
+def raw_writes(session, snapshot_id=None):
+    rows = session.execute(text("SELECT op, id, encoded FROM raw_write_log")).all()
+    return [tuple(r) for r in rows if snapshot_id is None or r.id == snapshot_id]
+
+
+def test_encoded_capture_never_writes_a_plaintext_row_version(database):
+    # A plaintext INSERT followed by an encoded UPDATE leaves a dead TOAST
+    # body behind until vacuum. The envelope must be the only version written.
+    with Session(database) as session:
+        base_id = base_row(session).id
+    with database.begin() as connection:
+        record_raw_writes(connection)
+    with Session(database) as session:
+        original = mock_body().replace("</body>", "PRICE-CHANGED</body>")
+        child = row(original)
+        session.add(child)
+        assert storage.encode_new_snapshot(session, child)
+        session.commit()
+        assert child.id > base_id
+        assert raw_writes(session) == [("INSERT", child.id, True)]
+        assert raw_write_attempts(session) == 1
+        ledger = session.execute(
+            text("""
+                SELECT base_snapshot_id, original_sha256, original_bytes
+                FROM raw_snapshot_dictionaries WHERE id=:id
+            """),
+            {"id": child.id},
+        ).one()
+        # RAW-before-parse provenance: the original bytes stay verifiable.
+        assert tuple(ledger) == (base_id, sha256(original.encode()), len(original.encode()))
+        assert child.content_hash == sha256(original.encode())
+        child_id = child.id
+    with Session(database) as session:
+        assert session.get(Snapshot, child_id).raw_content == original
+
+
+def test_plaintext_fallback_is_still_a_single_insert(database):
+    with database.begin() as connection:
+        record_raw_writes(connection)
+    with Session(database) as session:
+        first = row()
+        session.add(first)
+        assert not storage.encode_new_snapshot(session, first)  # no base yet
+        session.commit()
+        assert raw_writes(session) == [("INSERT", first.id, False)]
+
+
+def test_reconstruction_mismatch_fails_before_any_write(database, monkeypatch):
+    with Session(database) as session:
+        base = base_row(session)
+        base_id = base.id
+    with database.begin() as connection:
+        record_raw_writes(connection)
+    other = mock_body().replace("</body>", "NOT-THE-CAPTURE</body>")
+    real_encode = storage.encode
+    monkeypatch.setattr(
+        storage,
+        "encode",
+        lambda body, **kw: real_encode(other.encode(), **kw),
+    )
+    with Session(database) as session:
+        child = row(mock_body().replace("</body>", "PRICE-CHANGED</body>"))
+        session.add(child)
+        with pytest.raises(RawPayloadError):
+            storage.encode_new_snapshot(session, child)
+        session.rollback()
+        assert raw_write_attempts(session) == 0  # not even a rolled-back INSERT
+        assert session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) == 0
+        assert session.scalar(select(func.max(Snapshot.id))) == base_id

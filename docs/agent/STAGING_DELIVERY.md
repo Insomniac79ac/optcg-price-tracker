@@ -282,3 +282,32 @@ environment variable applies to an arbitrary branch, and `ADMIN_TOKEN` is
 Production-only. Branch-scoped Preview variables remain for five legacy
 branches. Vercel reads `vercel.json` from the pushed commit, so a branch
 created before this change still builds a preview until it is rebased.
+
+### Collector releases roll out one at a time (2026-10-10, session 8)
+
+`deploy_staging_collectors.py` previously uploaded every requested collector
+at once and polled them together, with no automatic rollback. It now releases
+them **one at a time**, in manifest order:
+
+1. **Before any change**, for every requested collector: the active deployment
+   must be SUCCESS and carry an exact-commit marker. Its image digest, commit,
+   schedule, start command and writer flags are recorded, and
+   `collector_variables.original_source` must find a redeployable copy of that
+   exact image. A collector without a proven rollback refuses the whole
+   release before any upload.
+2. A forward release may start only between 06:00 and 23:00 UTC, so the
+   180-minute delivery job cannot reach the 02:00-06:00 UTC busy window.
+3. Each collector is uploaded only in its own safe slot: at least 5 minutes
+   after a scheduled fire, at least 8 minutes before the next, and with no open
+   `freshness_attempts` claim of its own (read-only query).
+4. It is followed to SUCCESS (one bounded build retry and one watched-snapshot
+   redeploy, as before). Then marker, SUCCESS, schedule, start command and
+   writer flags are re-verified before the next collector is touched.
+5. **Any failure** restores every collector touched so far, newest first,
+   through `collector_variables.restore` to its recorded original image and
+   flags, verifying each. Rollback slots ignore the busy window. A success
+   receipt is never written; the error states whether rollback was complete.
+
+The receipt (`schema_version` 2) adds `sequential`, each collector's
+before-image, commit and flags, and the per-collector after-digest and
+verification time. The delivery jobs' timeout is now 180 minutes.

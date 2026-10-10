@@ -309,6 +309,27 @@ class HealthTests(unittest.TestCase):
 
 
 class CollectorRolloutTests(unittest.TestCase):
+    def setUp(self):
+        # Sequential-rollout seams (tested in test_deploy_staging_collectors):
+        # pre-change capture, safe slot, per-collector verification, rollback.
+        import deploy_staging_collectors as deploy
+
+        def capture(row, service):
+            return {"service_id": row["service_id"], "start_command": service["startCommand"],
+                    "schedule_utc": service["cronSchedule"],
+                    "deployment_id": service["latestDeployment"]["id"],
+                    "commit": "c" * 40, "digest": "sha256:old", "variables": {}}
+
+        for name, value in (("capture_before", capture), ("wait_for_slot", lambda *a, **k: None),
+                            ("verify_released", lambda *a, **k: "sha256:new"),
+                            ("outside_busy_window", lambda *a, **k: None)):
+            patcher = patch.object(deploy, name, side_effect=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        patcher = patch.object(deploy, "roll_back", return_value={})
+        self.roll_back = patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_selection_rejects_production_and_unknown_services(self):
         import deploy_staging_collectors as deploy
 
@@ -400,7 +421,7 @@ class CollectorRolloutTests(unittest.TestCase):
             ):
                 with self.assertRaisesRegex(
                     deploy.state.VerificationError,
-                    "Staging collector upload failed: snkrdunk-collector",
+                    "Collector rollout failed at snkrdunk-collector; every released",
                 ):
                     deploy.main(
                         [
@@ -416,6 +437,7 @@ class CollectorRolloutTests(unittest.TestCase):
                 (root / "services/api/app/services/collector_build.py").exists()
             )
             self.assertFalse((root / "result.json").exists())
+            self.assertEqual(self.roll_back.call_args.args[0], ["snkrdunk-collector"])
 
     def test_successful_rollout_receipt_hashes_provider_commands(self):
         import deploy_staging_collectors as deploy

@@ -240,3 +240,15 @@ class OnlyPathTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_recent_deployments_reaches_past_skipped_merge_records():
+    queries = []
+
+    def railway(query):
+        queries.append(query)
+        return {"deployments": {"edges": [{"node": {"id": "a"}}]}}
+
+    assert cv.recent_deployments("svc", railway) == ["a"]
+    assert f"first:{cv.RECENT_DEPLOYMENTS}," in queries[0]
+    assert cv.RECENT_DEPLOYMENTS >= 100

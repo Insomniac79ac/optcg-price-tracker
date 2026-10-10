@@ -66,7 +66,8 @@ jobs:
     needs: [policy-gate, staging-credential-presence]
     if: github.event_name == 'pull_request' && github.repository == 'Insomniac79ac/optcg-price-tracker' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && vars.STAGING_AUTONOMY_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Collectors roll out one at a time, each in its own safe slot (~10 x 3-16 min).
+    timeout-minutes: 180
     environment: staging-delivery
     concurrency:
       group: card-pirate-staging-delivery
