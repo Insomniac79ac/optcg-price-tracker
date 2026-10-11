@@ -67,6 +67,38 @@ def image_body(row, expected):
     return digest, pixels
 
 
+def bound_evidence_digest(plan, proof, cursor):
+    """The digest this review is bound to, if it is bound to the plan's evidence.
+
+    Native: the review's baseline equals the current (1.3) digest. Bridge for
+    reviews recorded under resolver 1.2, whose digest also hashed the discovery
+    run that last saw the listing: accept only when the capture's own stored
+    evidence summary hashes to the baseline under 1.2 AND equals the current
+    evidence in every field except the run-scoped ones. Any real evidence change
+    (price, availability, listing text, release, siblings, ...) refuses, so a
+    review never transfers to different evidence.
+    """
+    from app.services.source_mapping_proposals import (
+        legacy_evidence_digest,
+        listing_evidence,
+    )
+
+    baseline = proof.get("baseline_evidence_digest")
+    if baseline == plan.evidence_digest:
+        return baseline
+    stored = cursor.get("evidence_summary")
+    current = getattr(plan, "evidence_summary", None)
+    if (
+        not isinstance(stored, dict)
+        or not isinstance(current, dict)
+        or legacy_evidence_digest(stored) != baseline
+        or cursor.get("evidence_digest") != baseline
+        or listing_evidence(stored) != listing_evidence(current)
+    ):
+        raise ValueError("review is not bound to the current evidence")
+    return baseline
+
+
 def validate(session, plan, siblings, proof):
     """Fail closed on stale corpus, lineage, review or same-art ambiguity."""
     if (
@@ -74,7 +106,6 @@ def validate(session, plan, siblings, proof):
         or plan.resolution_status != "ambiguous"
         or proof.get("source_candidate_id") != plan.source_candidate_id
         or proof.get("source_url") != plan.source_url
-        or proof.get("baseline_evidence_digest") != plan.evidence_digest
         or proof.get("release_product_id") != plan.release_product_id
         or proof.get("language") != "jp"
         or proof.get("review_method")
@@ -107,9 +138,10 @@ def validate(session, plan, siblings, proof):
         raise ValueError("physical catalogue identity changed")
     work = session.get(FreshnessWork, proof["work_id"])
     cursor = (work.resume_cursor or {}) if work is not None else {}
+    bound = bound_evidence_digest(plan, proof, cursor)
     version = cursor.get("version", 1)
     expected_scope = identity_evidence_scope(
-        plan.source_candidate_id, plan.evidence_digest, version
+        plan.source_candidate_id, bound, version
     )
     if (
         work is None
@@ -122,7 +154,7 @@ def validate(session, plan, siblings, proof):
     ):
         raise ValueError("one successful metered evidence capture required")
     if (
-        cursor.get("evidence_digest") != plan.evidence_digest
+        cursor.get("evidence_digest") != bound
         or cursor.get("candidate_id") != plan.source_candidate_id
         or cursor.get("release_product_id") != plan.release_product_id
         or cursor.get("considered_print_ids") != ids

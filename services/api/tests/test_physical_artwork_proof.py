@@ -407,3 +407,58 @@ def test_capture_scope_refuses_noncanonical_versions_and_digests(version, digest
 
     with pytest.raises(ValueError):
         identity_evidence_scope(1, digest, version)
+
+
+def _legacy_bound(evidence, plan_summary, stored_summary):
+    """A review recorded under resolver 1.2: its baseline hashed the full summary,
+    including the discovery run that last saw the listing."""
+    from app.services.source_mapping_proposals import evidence_digest, legacy_evidence_digest
+
+    baseline = legacy_evidence_digest(stored_summary)
+    evidence.plan.evidence_summary = plan_summary
+    evidence.plan.evidence_digest = evidence_digest(plan_summary)  # 1.3, run-independent
+    evidence.proof["baseline_evidence_digest"] = baseline
+    evidence.work.resume_cursor["evidence_digest"] = baseline
+    evidence.work.resume_cursor["evidence_summary"] = stored_summary
+
+
+LISTING = {"candidate_id": 1, "price_jpy": 1280, "availability": "in_stock",
+           "raw_listing_digest": "a" * 64, "eligible_print_identity": [{"card_print_id": 10}]}
+
+
+def test_review_bound_under_1_2_reattaches_to_identical_evidence_from_a_later_run(
+    evidence, monkeypatch
+):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    _legacy_bound(evidence, {**LISTING, "discovery_run_id": 900}, {**LISTING, "discovery_run_id": 143})
+    assert evidence.proof["baseline_evidence_digest"] != evidence.plan.evidence_digest
+    selected, digest, actor = proof_module.resolve(evidence.session, evidence.plan, evidence.siblings)
+    assert selected == 11 and len(digest) == 64
+
+
+@pytest.mark.parametrize("field,value", [("price_jpy", 1480), ("availability", "sold_out"),
+                                         ("raw_listing_digest", "b" * 64),
+                                         ("eligible_print_identity", [{"card_print_id": 11}])])
+def test_review_bound_under_1_2_never_transfers_across_real_evidence_change(
+    evidence, monkeypatch, field, value
+):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    _legacy_bound(evidence, {**LISTING, field: value, "discovery_run_id": 900},
+                  {**LISTING, "discovery_run_id": 143})
+    assert proof_module.resolve(evidence.session, evidence.plan, evidence.siblings) is None
+
+
+@pytest.mark.parametrize("tamper", ["baseline", "cursor_digest", "no_stored_summary"])
+def test_legacy_bridge_requires_the_capture_own_stored_evidence(evidence, monkeypatch, tamper):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    _legacy_bound(evidence, {**LISTING, "discovery_run_id": 900}, {**LISTING, "discovery_run_id": 143})
+    if tamper == "baseline":
+        evidence.proof["baseline_evidence_digest"] = "f" * 64
+    elif tamper == "cursor_digest":
+        evidence.work.resume_cursor["evidence_digest"] = "f" * 64
+    else:
+        del evidence.work.resume_cursor["evidence_summary"]
+    assert proof_module.resolve(evidence.session, evidence.plan, evidence.siblings) is None
