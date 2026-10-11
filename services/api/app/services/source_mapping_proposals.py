@@ -38,7 +38,13 @@ from app.services.snkrdunk_urls import listing_id as snkrdunk_listing_id
 from app.services.yuyutei_urls import listing_identity as yuyutei_listing_identity
 
 
-RESOLVER_VERSION = "source-mapping-proposals/1.2"
+RESOLVER_VERSION = "source-mapping-proposals/1.3"
+# 1.2 hashed the whole evidence summary, including the discovery run that last
+# saw the listing, so every recurring run re-versioned unchanged listings.
+LEGACY_RESOLVER_VERSION = "source-mapping-proposals/1.2"
+# Recorded in evidence_summary_json (provenance of the run that created the
+# version) but excluded from evidence_digest: not evidence about the listing.
+RUN_SCOPED_EVIDENCE = frozenset({"discovery_run_id"})
 SUPPORTED_SOURCES = ("yuyutei", "snkrdunk")
 TARGET_LANGUAGE = "jp"
 _ASSET_VARIANT = re.compile(r"^(?:base|[pr][1-9][0-9]*)$")
@@ -61,6 +67,21 @@ def _norm(value: str | None) -> str | None:
 def _digest(payload: dict[str, Any]) -> str:
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def listing_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
+    """The evidence about the listing itself, without run-scoped provenance."""
+    return {key: value for key, value in evidence.items() if key not in RUN_SCOPED_EVIDENCE}
+
+
+def evidence_digest(evidence: dict[str, Any]) -> str:
+    """1.3 digest: identical for an unchanged listing across discovery runs."""
+    return _digest(listing_evidence(evidence))
+
+
+def legacy_evidence_digest(evidence: dict[str, Any]) -> str:
+    """1.2 digest over the full summary; only for re-reading 1.2-bound records."""
+    return _digest(evidence)
 
 
 def _text_digest(value: str | None) -> str | None:
@@ -245,7 +266,7 @@ def _make_plan(
         release_product_id=release.id if release else None,
         resolution_status=status,
         resolver_version=RESOLVER_VERSION,
-        evidence_digest=_digest(evidence),
+        evidence_digest=evidence_digest(evidence),
         evidence_summary=evidence,
         resolution_reasons=tuple(reasons),
         alternatives=tuple(alternatives),
@@ -609,7 +630,7 @@ def analyse_source_mapping_proposals(
                             plan,
                             resolution_status=status,
                             evidence_summary=evidence,
-                            evidence_digest=_digest(evidence),
+                            evidence_digest=evidence_digest(evidence),
                             resolution_reasons=(
                                 *plan.resolution_reasons,
                                 "retained_positive_unique_physical_artwork_review",

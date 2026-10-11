@@ -799,3 +799,122 @@ def test_refresh_preserves_reviewed_decision_without_analysis(db_session):
         result = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
     assert result["reviewed_preserved"] == 1 and result["created"] == 0
     assert group.review_status == "rejected" and group.superseded_at is None
+
+
+def _current(db):
+    return db.scalars(
+        select(SourceMappingProposalGroup).where(SourceMappingProposalGroup.superseded_at.is_(None))
+    ).all()
+
+
+def test_unchanged_listing_seen_by_a_new_discovery_run_is_reused_not_reversioned(db_session):
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+    from app.services.source_mapping_proposals import RESOLVER_VERSION
+
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-002")
+    _print(db_session, family, release)
+    _print(db_session, family, release, "p1")  # ambiguous: the common recurring case
+    first_run = _run(db_session, "op17")
+    candidate = _yuyu(db_session, first_run, "op17", 500, family.card_code, price_jpy=1280)
+    refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    (group,) = _current(db_session)
+    digest = group.evidence_digest
+
+    for _ in range(3):  # recurring runs re-observe the identical listing
+        candidate.discovery_run_id = _run(db_session, "op17").id
+        result = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+        assert result["created"] == result["superseded"] == 0
+    assert _current(db_session) == [group]
+    assert group.evidence_digest == digest
+    # Provenance kept: the version still records the run that created it.
+    assert group.evidence_summary_json["discovery_run_id"] == first_run.id
+    assert db_session.query(SourceMappingProposalGroup).count() == 1
+    assert group.resolver_version == RESOLVER_VERSION == "source-mapping-proposals/1.3"
+
+
+@pytest.mark.parametrize("field,value", [("price_jpy", 1480), ("availability", "out_of_stock"),
+                                         ("name_jp", "changed listing text")])
+def test_real_listing_change_in_a_new_run_still_creates_a_new_version(db_session, field, value):
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-002")
+    _print(db_session, family, release)
+    _print(db_session, family, release, "p1")
+    candidate = _yuyu(db_session, _run(db_session, "op17"), "op17", 500, family.card_code,
+                      price_jpy=1280, availability="in_stock")
+    refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    (old,) = _current(db_session)
+    candidate.discovery_run_id = _run(db_session, "op17").id
+    setattr(candidate, field, value)
+    result = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    assert result["superseded"] == 1 and result["created"] == 1
+    (new,) = _current(db_session)
+    assert new.id != old.id and new.evidence_digest != old.evidence_digest
+    assert old.superseded_at is not None  # history kept, never overwritten
+
+
+def test_digest_upgrade_never_touches_approved_exact_groups_or_their_physical_proofs(db_session):
+    """Hard guard for the 1.2 -> 1.3 release: every approved exact group that
+    carries a positive physical artwork proof keeps its row, approval and proof
+    link through recurring discovery under the new digest. Fails if any is
+    superseded, re-versioned, demoted or loses its proof."""
+    from datetime import datetime, timezone
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+    from app.services.source_mapping_proposals import LEGACY_RESOLVER_VERSION
+
+    yuyu, _ = _base(db_session)
+    release = _release(db_session, "OP-17")
+    proofs = []
+    for product_id, code in ((600, "OP17-010"), (601, "OP17-011")):
+        family = _family(db_session, code)
+        base = _print(db_session, family, release)
+        _print(db_session, family, release, "p1")
+        candidate = _yuyu(db_session, _run(db_session, "op17"), "op17", product_id, code)
+        evidence = {"candidate_id": candidate.id, "discovery_run_id": candidate.discovery_run_id,
+                    "positive_physical_artwork_proof": {"digest": "d" * 64, "actor": "codex:fixture",
+                                                        "card_print_id": base.id}}
+        mapping = SourceCardMapping(
+            source_id=yuyu.id, source_card_id=code, source_url=candidate.source_url,
+            card_print_id=base.id, review_status="approved", is_active=True)
+        db_session.add(mapping)
+        group = SourceMappingProposalGroup(
+            source_id=yuyu.id, canonical_source_listing_identity=f"yuyutei:op17:{product_id}",
+            source_url=candidate.source_url, source_candidate_type="yuyutei_candidate",
+            source_candidate_id=candidate.id, canonical_card_id=family.id,
+            release_product_id=release.id, resolution_status="exact", review_status="pending",
+            resolver_version=LEGACY_RESOLVER_VERSION, evidence_digest=f"{product_id:064x}",
+            evidence_summary_json=evidence, resolution_reasons_json=[],
+            alternatives=[SourceMappingProposalAlternative(
+                card_print_id=base.id, recommended=True, supporting_evidence_json=[],
+                missing_evidence_json=[], conflict_reasons_json=[], review_disposition="pending")],
+        )
+        db_session.add(group)
+        db_session.flush()
+        now = datetime.now(timezone.utc)
+        group.review_status, group.reviewed_at, group.reviewed_by = "approved", now, "codex:fixture"
+        group.selected_alternative_id = group.alternatives[0].id
+        group.decision_basis_updated_at = now
+        group.resulting_source_card_mapping_id = mapping.id
+        proofs.append((group, candidate))
+    db_session.flush()
+
+    def approved_with_proof():
+        return sorted(
+            (g.id, g.evidence_digest, g.resolver_version)
+            for g in _current(db_session)
+            if g.review_status == "approved" and g.resolution_status == "exact"
+            and "positive_physical_artwork_proof" in g.evidence_summary_json
+        )
+
+    before = approved_with_proof()
+    assert len(before) == 2
+    for group, candidate in proofs:
+        candidate.discovery_run_id = _run(db_session, "op17").id
+        result = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+        assert result["created"] == result["superseded"] == 0
+    assert approved_with_proof() == before  # same rows, digests, versions, approvals, proofs
+    assert all(g.superseded_at is None for g, _ in proofs)
