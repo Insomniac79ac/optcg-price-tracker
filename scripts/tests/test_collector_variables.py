@@ -45,7 +45,8 @@ class Harness:
         self.redeployed = []
 
     def inspect(self):
-        return {"snkrdunk-collector": node(self.latest)}
+        others = {n: {"serviceId": "other-" + n} for n in cv.delivery.NAMES}
+        return {**others, "snkrdunk-collector": node(self.latest)}
 
     def read(self, identity, service_id, commit):
         row = self.deployments[identity]
@@ -83,6 +84,7 @@ class Harness:
         return dict(self.vars)
 
     def change(self, assignments=None, **kw):
+        kw.setdefault("triggers", lambda sid: {"triggers": [], "auto_deploy": False})
         return cv.change(
             "snkrdunk-collector", assignments or {"RAW_DICTIONARY_STORAGE_ENABLED": "true"},
             COMMIT, inspect=self.inspect, read=self.read, run=self.run, railway=self.railway,
@@ -197,6 +199,26 @@ class ImageReuseTests(unittest.TestCase):
             fake.change(self.ENABLE, expect_digest=self.REBUILT)
         self.assertEqual(fake.redeployed, [])
         self.assertEqual([c for c in fake.commands if c[-1] != "--help"], [])
+
+    def test_github_trigger_on_any_collector_refuses_before_staging(self):
+        fake = Harness()
+        trigger = {"id": "t", "provider": "github", "repository": "r", "branch": "staging"}
+
+        def triggers(sid):
+            on = sid == "other-yuyutei-collector-shard-3"
+            return {"triggers": [trigger] if on else [], "auto_deploy": False}
+
+        with self.assertRaisesRegex(cv.state.VerificationError, "yuyutei-collector-shard-3"):
+            fake.change(triggers=triggers)
+        self.assertEqual(fake.redeployed, [])
+        self.assertFalse([c for c in fake.commands if c[-1] != "--help"])  # nothing staged
+
+    def test_no_trigger_anywhere_proceeds(self):
+        fake = Harness()
+        seen = []
+        receipt = fake.change(triggers=lambda sid: seen.append(sid) or {"triggers": [], "auto_deploy": False})
+        self.assertEqual(len(seen), len(cv.delivery.NAMES))  # every collector checked
+        self.assertEqual(receipt["status"], "SUCCESS")
 
     def test_restore_puts_original_digest_back_over_a_rebuilt_active(self):
         fake = Harness()

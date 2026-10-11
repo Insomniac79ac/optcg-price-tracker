@@ -58,6 +58,45 @@ def inspect():
     }
 
 
+def deploy_triggers(service_id, railway=None):
+    """Read-only: the service's Railway deployment triggers and auto-deploy status."""
+    railway = railway or state.railway
+    p, e = state.PROJECT, state.ENVIRONMENT
+    data = railway(
+        f'query {{ deploymentTriggers(projectId:"{p}", environmentId:"{e}", serviceId:"{service_id}") '
+        "{ edges { node { id provider repository branch } } } "
+        f'serviceInstanceAutoDeployStatus(environmentId:"{e}", projectId:"{p}", serviceId:"{service_id}") '
+        "{ enabled } }")
+    return {"triggers": [edge["node"] for edge in data["deploymentTriggers"]["edges"]],
+            "auto_deploy": data["serviceInstanceAutoDeployStatus"]["enabled"]}
+
+
+def refuse_github_triggers(live, *, read=None):
+    """Refuse any collector release while ANY collector can be built by a push.
+
+    Session 9 removed the Railway GitHub triggers that let one merge build every
+    collector at once (PR #96). A re-enabled trigger would silently restore that
+    path, so each forward release checks every collector, not only the requested
+    ones. Fails closed: a missing collector or an unreadable status refuses.
+    Rollback (restore) never calls this, so recovery is never blocked.
+    """
+    read = read or deploy_triggers
+    missing = sorted(NAMES - set(live))
+    if missing:
+        raise state.VerificationError("Collector services missing from live state: " + ", ".join(missing))
+    found = {}
+    for name in sorted(NAMES):
+        status = read(live[name]["serviceId"])
+        if status["triggers"] or status["auto_deploy"] is not False:
+            found[name] = status
+    if found:
+        raise state.VerificationError(
+            "Collector GitHub deploy trigger or auto-deploy present on "
+            + ", ".join(sorted(found))
+            + "; refusing collector release (remove it first, see session-9 autodeploy_disable.py)")
+    return {name: "no trigger, auto-deploy disabled" for name in sorted(NAMES)}
+
+
 def upload(row, expected):
     branch = state.command_json(
         ["gh", "api", f"repos/{state.REPOSITORY}/branches/staging"]
@@ -396,6 +435,7 @@ def main(argv=None):
         )
     outside_busy_window()
     live = inspect()
+    trigger_check = refuse_github_triggers(live)
     before = {row["name"]: capture_before(row, live.get(row["name"], {})) for row in requested}
     # This build-only module is copied into the installed shared package. It
     # identifies actual uploaded source without trusting a stale runtime env var.
@@ -448,6 +488,7 @@ def main(argv=None):
         "completed_at": state.timestamp(),
         "source_sha": args.expected,
         "sequential": True,
+        "github_trigger_preflight": trigger_check,
         "before": {
             name: {
                 "service_id": row["service_id"],

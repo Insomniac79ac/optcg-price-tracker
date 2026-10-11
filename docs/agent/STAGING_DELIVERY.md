@@ -378,3 +378,26 @@ still merges, staging holds the code with no rollout. Recover with a
 follow-up PR that touches no collector watch path, as was done here (PR #98
 re-requests the same sequential release). Do not re-run the failed job: it
 would replay a merge it no longer owns.
+
+### Collector releases refuse while any collector has a GitHub trigger (2026-10-11, session 10)
+
+Session 9 removed the Railway GitHub deployment trigger from all ten collectors
+(`serviceInstanceAutoDeployUpdate(enabled:false)`), so a merge that touches a
+collector watch path no longer builds every collector at once. A re-enabled
+trigger would silently restore that path.
+
+Both forward release paths now refuse first:
+- `deploy_staging_collectors.py` (sequential rollout), right after the live
+  read and before any pre-change capture, slot wait or upload;
+- `collector_variables.change` (settings-only redeploy), before staging any
+  variable.
+
+`refuse_github_triggers` reads, for **every** delivered collector (not only the
+requested ones), `deploymentTriggers` and `serviceInstanceAutoDeployStatus`.
+Any trigger, auto-deploy not exactly `false`, an unreadable status or a
+collector missing from live state refuses the release. The rollout receipt
+records the result as `github_trigger_preflight`. Rollback
+(`collector_variables.restore` and the rollout's automatic restore) never runs
+the check, so recovery is never blocked. The API, worker, beat and
+market-index-snapshot keep their GitHub triggers by design: the API is
+delivered by its GitHub build.
