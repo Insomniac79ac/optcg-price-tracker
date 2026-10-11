@@ -5,6 +5,12 @@ Status: **PLAN ONLY**, for owner review. Written 2026-10-09 on base `origin/stag
 application was made. Research used public pages, robots.txt files, terms pages,
 one public Cardmarket price-guide download and a few public product pages only.
 
+**Amended 2026-10-11** (base `origin/staging` c086b8b): adds §H (first customer:
+PSA10 + partner API v1), reframes decision G1 with measured SNKRDUNK dependence,
+makes the legal-opinion scope specific, marks the signal-events write defect resolved
+(PR #93/#94) and updates §F. Staging numbers added on 2026-10-11 come from read-only
+queries (`default_transaction_read_only=on`) at 08:27-09:30Z.
+
 Every number is **MEASURED** (with its source and time) or **ESTIMATED**. Legal
 statements are **research, not legal advice**. **INFERRED** means not directly
 verified. Quoted terms were read on 2026-10-09 unless marked otherwise.
@@ -66,11 +72,21 @@ receipt-gated Market Value and immutable history.
    - Today staging uses 3,568 of 10,000 MB, with a 3 GiB reserve.
    - Any new page-scraping source needs the capacity mission's storage verdict
      first. The Cardmarket file is tiny.
-7. **Owner actions:**
-   - send 4 permission emails (Yuyu-Tei, SODA, Cardmarket, Aucfan); drafts are in §G;
-   - get a short legal opinion;
-   - decide the SNKRDUNK question;
-   - choose the first design-partner customer.
+7. **Owner actions (amended 2026-10-11):**
+   - get a short legal opinion first (§G-actions 6);
+   - send 3 permission emails (Yuyu-Tei, Cardmarket, Aucfan); drafts are in §G;
+   - hold the SODA email until G1 is decided (default G1-B);
+   - reply to the requesting website (§H5).
+8. **First customer (§H, added 2026-10-11).** A website wants Card Pirate data
+   including PSA10.
+   - **Now:** questions, an honest note, and a sandbox with made-up sample data.
+   - **After written permission** (or an accepted legal opinion) **and a production
+     decision:** raw index values.
+   - **PSA10 never without SNKRDUNK's permission.** It is a single SNKRDUNK asking
+     price, OFF today, with 0 rows.
+9. **SNKRDUNK matters less to the Index than assumed.** On 2026-10-10 it contributed to
+   only 32 of 2,398 priced cards (3.7% of tracked value, MEASURED). It matters mainly for
+   PSA10. Recommended G1: legal opinion before asking SODA (§G1).
 
 ---
 
@@ -91,9 +107,9 @@ receipt-gated Market Value and immutable history.
 | Auth | Admin `X-Admin-Token`; users via bearer JWT. **No API-key mechanism** | route_inventory.md:86-91 |
 | Rate limits | In-memory per-IP fixed window, single process. public_read 300 / 5 min | core/rate_limit.py; settings.py:59-64 |
 | Caching | Redis on `/market/*`, `/analytics` (TTL 120 s). None on `prints.py` or `market_value.py` | cache_headers.py; settings.py:89-96 |
-| Defect found | `PATCH/POST /market/signal-events/*` writes have **no auth dependency** | api/market.py:266-335 |
+| Defect found (2026-10-09) | Resolved: admin auth added to the signal-event writes, PR #93/#94 (merged on staging) | docs/agent/handoff/2026-10-10/authfix/NOTE.md |
 | RAW | Postgres `raw_snapshots`, with dictionary encoding (daily-v1, ≤8,192 rows / 32 MiB per day). Private R2 bucket `cardpirate-atlas-evidence-staging` (494 MB, quota unknown) is not used for collector RAW | RAW_STORAGE_WRITER.md; RAW_STORAGE_DAILY_ADMISSION.md:9-11; RAW_STORAGE_READERS.md:13 |
-| Continuity rule | `SNKR_PATHS` includes `services/api`, so any `services/api` change is a collector release | scripts/verify_snkr_published_discovery_component.py:20-38 |
+| Continuity rule | **Superseded by PR #91 (2026-10-09):** continuity now uses the collectors' actual import graph (`scripts/collector_runtime_inputs.py`). A `services/api` change is a collector release only if it touches an imported `app` module (all of `app/models/*`, `app/settings.py`, 20 services), package data or packaging. New modules no collector imports, `alembic/` and `tests/` are not collector releases. Railway GitHub auto-deploy is disabled on all 10 collectors (session 9) | STAGING_DELIVERY.md; capacity75-session9/HANDOFF.md §2 |
 
 **Capacity (MEASURED, newest handoff capacity75-session7a NOTE.md, 2026-10-08 22:12Z):**
 
@@ -690,9 +706,8 @@ The **sale/promo policy generalizes to every source**:
   - CORS off by default (server-to-server).
   - Keys never logged; the existing redaction covers `api_key`.
   - Abuse handling: revoke the key.
-- **Fix noted:** the unauthenticated `/market/signal-events` writes in
-  `services/api` should be fixed in their own security PR. That is RED-adjacent
-  (auth policy) and **separate from this plan**. Flagged in Risks.
+- The `/market/signal-events` write routes are resolved: admin auth was added in
+  PR #93/#94.
 
 ### E4. Endpoints v1 (proposal)
 
@@ -714,35 +729,49 @@ GET /v1/bulk/{date}.jsonl.gz                          redirect to signed R2 URL
 
 ## F. Sequencing
 
-**Combined order.** "Cap" = capacity mission, "OC" = onchain Phase 1 plan
-sessions, "CV1" = collector-v1 accounts plan. CV1 is not yet on any branch
-(checked 2026-10-09), so its slots are placeholders.
+**Combined order (amended 2026-10-11).** "Cap" = capacity mission, "OC" = onchain
+Phase 1 plan sessions, "CV1" = collector-v1 accounts plan (now on branch
+`plan/collector-v1`, 8 build sessions, none a collector release). "H" steps serve the
+first-customer request (§H).
+
+Changes since 2026-10-09:
+- Step 2 is resolved by PR #91 (import-graph continuity).
+- Steps 1 and 3 are re-gated on the capacity mission's newest handoff.
+- DP-1 is pulled forward and extended (H-2).
+- PSA10 activation is re-gated on G1.
 
 | # | Step | Class | Migration | Collector redeploy? | Blocked by |
 |---|---|---|---|---|---|
-| 0 | **Owner:** decide G1 (SNKRDUNK); send permission emails (G-drafts); request legal opinion | RED (owner) | — | — | — |
+| 0 | **Owner:** decide G1 (default G1-B); request the legal opinion (§G-actions 6); send Yuyu-Tei, Cardmarket and Aucfan emails (Aucfan with the PSA10 question); **hold SODA** | RED (owner) | — | — | — |
+| H-1 | **Owner:** reply to the requesting website with §H5 questions and the honest PSA10 note | RED (owner; external communication) | — | — | — |
 | 1 | Cap session 7: 24 h daily-v1 assessment, 30/90-day storage forecast, storage verdict | (Cap) | — | Rollback only | 2026-10-09 13:56Z |
-| 2 | Cap: continuity narrowing of `SNKR_PATHS` (option b), or confirm option (a) | AMBER | No | Yes (verifier) | Step 1 passes |
-| 3 | OC session 1: Merkle builder, proof endpoint, OTS, `publication_anchors` | AMBER | 1 table | Yes under (a) | Step 1 (quiet windows) |
+| 2 | ~~Cap: continuity narrowing~~ **Done: PR #91** (collectors' import graph). New modules no collector imports, Alembic migrations and tests are not collector releases | — | — | — | — |
+| 3 | OC session 1: Merkle builder, proof endpoint, OTS, `publication_anchors` | AMBER | 1 table | No if the table lives in a module no collector imports (PR #91 rule; verify) | Capacity mission's newest handoff (quiet windows) |
 | 4 | CV1 first slice (accounts), per its own plan | per CV1 | per CV1 | per CV1 | Its plan |
-| 5 | **DP-1** `services/data_api` on staging: `/v1` read endpoints (index, MV, releases, CPI, manifest), read-only role, API keys + scopes, Redis limits, metering. **Internal keys only** | AMBER (new service + additive tables); auth design RED-approved via this plan | `api_clients`, `api_keys`, `api_usage_daily` | Migrations only (batched with 3 under (a)) | Step 2 or a scheduled release |
-| 6 | **DP-2** bulk daily files + manifests to R2 (staging bucket), proof endpoint wired from OC session 1 | AMBER | No | No | Steps 3, 5 |
+| H-2 | **DP-1+ partner API scaffold** (§H4): `services/data_api`, keys/licences tables in a non-collector module, licence-gated `/v1` schema with `contributing_sources` and a `psa10_ask` object, synthetic sandbox (shareable), internal staging sandbox, OpenAPI docs. **Replaces step 5** | AMBER (additive migration); auth design RED-approved via this plan | `api_clients`, `api_keys`, `api_licences`, `api_usage_daily` | **No** (verify with `collector_runtime_inputs.py`) | Plan approval only |
+| H-3 | PSA10 availability estimate: offline re-parse of retained SNKRDUNK RAW (no requests, no writes) | GREEN (read-only) | No | No | — |
+| 5 | (superseded by H-2) **DP-1** `services/data_api` on staging: `/v1` read endpoints (index, MV, releases, CPI, manifest), read-only role, API keys + scopes, Redis limits, metering. **Internal keys only** | AMBER (new service + additive tables); auth design RED-approved via this plan | `api_clients`, `api_keys`, `api_usage_daily` | Migrations only (batched with 3 under (a)) | Step 2 or a scheduled release |
+| 6 | **DP-2** bulk daily files + manifests to R2 (staging bucket), proof endpoint wired from OC session 1 | AMBER | No | No | Steps 3, H-2 |
 | 7 | **DP-3** invariant amendment (native currency) + `regional_price_observations` + `fx_rates` (ECB) | RED decision → AMBER build | 2 tables | Migrations only | Owner G2a |
 | 8 | **DP-4** Cardmarket price-guide ingest (Japanese expansions; EUR; context-only) + V.n curation queue; site display behind a flag | AMBER (new source) | No (uses DP-3) | No (separate cron service) | Step 7; Cardmarket written confirmation **or** owner accepting the public-file statement (G3) |
-| 9 | **DP-5 first customer pilot** (external delivery needs production, so RED): one design partner, evaluation licence, daily API + bulk + proofs | **RED** (legal, production, new external party) | — | — | Written permission from **Yuyu-Tei and SNKRDUNK** (or a legal opinion the owner accepts); steps 5–6 verified |
-| 10 | OC sessions 5/6 (PSA10 activation, onchain ingestion), per that plan | AMBER | per OC | Yes | Cap pass |
+| H-4 | **PSA10 activation** (OC session 5 scope: gated planner wiring, flag enforcement, instrument entry, series/API field, verifiers) | AMBER build; activation **blocked under G1-B** | No | **Yes: collector release** (`freshness_integration.py` is collector-imported); sequential rollout in quiet windows | G1 outcome permits PSA10 (SODA permission or accepted opinion (d)); capacity mission pass |
+| 9 | **DP-5 first customer pilot** (now: the requesting website first, Collector Crypt second) (external delivery needs a production environment, provisioned fresh from staging only by owner decision, so RED): one design partner, evaluation licence, daily API + bulk + proofs | **RED** (legal, production, new external party) | — | — | Written permission from **Yuyu-Tei and SNKRDUNK** (or a legal opinion the owner accepts); steps 5–6 verified |
+| 10 | OC session 6 (onchain ingestion), per that plan; OC session 5 is now H-4 | AMBER | per OC | Yes | Cap pass |
 | 11 | **DP-6** licensed Japanese sold feed (Aucfan) as context, then a methodology proposal to add it to the Index | AMBER ingest; **RED** methodology | small | No | Aucfan contract (new paid service, RED) |
 | 12 | **DP-7** first permitted page-capture shop (Torecolo or Card Rush) | AMBER (new source, substantial volume) | No | No (new collector service) | Written permission; storage verdict or RAW→R2 |
 | 13 | DP-8 English catalogue (`bandai_en` releases, `language='en'` prints), separate coverage denominator | AMBER (large bulk insert) | No | No | Licensed EN price source in sight (G2b) |
 | 14 | DP-9 webhooks + signed manifests (Ed25519) | RED (new signing secret) → AMBER | small | No | OC Base-key decision |
 | 15 | eBay | **RED** (licence) | — | — | Signed eBay agreement. Default: not pursued |
 
-**First data-product milestone that could serve a real customer: step 9.**
+**First data-product milestone that could serve a real customer: step 9**, for the
+requesting website (§H). Before then, H-2's synthetic sandbox lets them build against the
+format. Raw index values can go live after written permission (or an accepted opinion) and
+the production decision. PSA10 additionally needs H-4.
 - What it delivers: the "Card Pirate JP Index v1" pilot, with daily per-print
   Market Index (JPY), Market Value series, release aggregates, the Card Pirate
   Index, a bulk daily file and per-value proofs anchored by OpenTimestamps, for
   one onchain design partner.
-- Engineering prerequisites: steps 3, 5 and 6.
+- Engineering prerequisites: steps 3, H-2 and 6 (H-4 for PSA10).
 - Hard gates: written source permission, then the owner's RED go-ahead for
   production.
 
@@ -765,18 +794,58 @@ sessions, "CV1" = collector-v1 accounts plan. CV1 is not yet on any branch
 
 ### G-decisions (recommended default first)
 
-**G1. SNKRDUNK terms vs current collection (RED, new).** Options:
-- **(a) Recommended:**
-  - keep current collection unchanged (no volume increase, no new SNKR endpoints);
-  - email SODA for consent now;
-  - get a short legal opinion;
-  - pause SNKR if SODA objects.
-  - Tradeoff: continued exposure while waiting.
-- (b) Pause SNKR collection now.
-  - The Index drops to Yuyu-only, which is a methodology and coverage impact
-    (RED). It would also stall the 75% mission (334 both-source prints).
-- (c) Continue without asking. **Not recommended.** It blocks any paid product
-  forever.
+**G1. SNKRDUNK terms vs current collection (RED). Reframed 2026-10-11.**
+
+**The real tradeoff.** Asking SODA for consent also tells SNKRDUNK what Card Pirate
+does. A "no" leaves only two paths: stop, or continue after an explicit refusal, which
+is a worse legal position than today's unclear one. The ask can't be undone.
+
+**What SNKRDUNK actually contributes today (MEASURED, read-only, 2026-10-11,
+`market_index_snapshots.provenance`, contributing sources only):**
+
+| Snapshot date | Priced cards | With a SNKRDUNK contribution | Share of tracked JPY value from those cards |
+|---|---|---|---|
+| 2026-09-25 | 639 | 26 | 78% (¥207,609 of ¥265,539) |
+| 2026-10-05 | 1,917 | 32 | 5.0% |
+| **2026-10-10** | **2,398** | **32** (27 with Yuyu-Tei too, 5 SNKRDUNK-only) | **3.7%** (¥210,702 of ¥5,679,322) |
+
+So the earlier assumption that SNKRDUNK is "roughly half of index inputs" no longer
+holds for the Index. It held in September, before Yuyu-Tei coverage grew. The reason
+is coverage: 278 of 353 SNKRDUNK work items are `no_listing` (CARRIED FORWARD,
+session-9 handoff §6). SNKRDUNK still matters for:
+- **PSA10:** it is the only PSA10 source (§H).
+- **The 75% coverage mission:** it counts SNKRDUNK mappings (359 active, MEASURED).
+- **High-value cards:** the dual-source cards it does price.
+
+| Option | Index continuity | PSA10 and the first customer (§H) | Legal position | Reversibility |
+|---|---|---|---|---|
+| **G1-A: Ask SODA now** | Unchanged unless SODA says no. A "no" removes SNKRDUNK from 32 cards: 5 lose their price, 27 change median. Market Value steps exclude contributor changes (coverage-neutral), so Overall stays publishable (3.5% of value, above the 80% guard); a few small releases may break for a step | Yes: PSA10 and SNKRDUNK-derived delivery possible, on SODA's terms. No: PSA10 is gone for good from this source | Best if yes. If no: stop, or continue against an explicit refusal (worst) | **Irreversible**: the disclosure can't be withdrawn |
+| **G1-B: Legal opinion first, then decide whether and how to ask. External delivery stays off** | Unchanged while waiting | PSA10 waits (it is OFF anyway). Customer gets the honest note and a schedule, not data | Same as today while waiting (2-6 weeks ESTIMATED), but the next step is informed. Counsel can shape the ask (for example, framed as a referral partnership) or advise stopping | **Fully reversible**: nothing disclosed or changed |
+| **G1-C: Reduce dependence first (Aucfan, shops), then ask** | Unchanged while sourcing; a later "no" is survivable for raw. **Adding sources to the Index is itself a methodology change (RED)** | Only helps PSA10 if a licensed Japanese graded source exists. None is confirmed (§H3). Slow: months | Same as today meanwhile. Contacting Aucfan and shops reveals nothing to SNKRDUNK | Reversible; costs time and possibly fees (RED if paid) |
+| **G1-D: Pause SNKRDUNK collection now** (methodology change, RED) | Small measured impact now: 5 cards lose prices, 27 change median, segment rules hold for Overall (above) | PSA10 impossible from SNKRDUNK. The customer's PSA10 request can't be met unless another source appears | Cleanest. Ends ongoing exposure under 第7条(13). Past collection is not undone | Technically reversible (restart collectors). Commercially it ends the SNKRDUNK route unless permission comes later |
+
+**Recommendation: G1-B, with G1-C's outreach running in parallel**, because contacting
+Aucfan and shops tells SNKRDUNK nothing. Keep SNKRDUNK at today's scope while the
+opinion is pending:
+- no volume increase, no new SNKRDUNK endpoints;
+- PSA10 stays OFF;
+- no external delivery of anything SNKRDUNK-derived, paid or free.
+
+Reasoning:
+1. A is the only irreversible option, and it is being weighed before anyone knows how
+   strong the terms are against a logged-out reader. A short opinion (§G-actions 6)
+   costs less than a permanent "no".
+2. The measured dependence (1.3% of priced cards) makes D cheap for the Index if counsel
+   advises it. So prepare D as a ready runbook (pause the SNKRDUNK cron, keep RAW, record
+   the methodology-version note) to execute within a day of a negative opinion.
+3. C alone is too slow for this customer and does not solve PSA10.
+
+**Not recommended:** continuing external delivery of SNKRDUNK-derived data without
+written permission or an accepted legal opinion. This plan does not propose it under
+any option.
+
+**Owner decision needed now:** accept G1-B (default), or choose A, C or D.
+D needs a methodology entry in `DECISIONS.md` before execution.
 
 **G2a. Native-currency invariant amendment.**
 - Default: approve the new-table design (§D2).
@@ -808,7 +877,8 @@ sessions, "CV1" = collector-v1 accounts plan. CV1 is not yet on any branch
 - Alternative: a usage-metered model. Not recommended before metering exists.
 
 **G6. Approach sources for commercial agreements?**
-- **Default: yes, all four now**: Yuyu-Tei, SODA, Cardmarket and Aucfan.
+- **Default (amended 2026-10-11): Yuyu-Tei, Cardmarket and Aucfan now; SODA only per
+  G1** (default G1-B: after the legal opinion).
   Torecolo and Card Rush follow after step 8.
 - eBay: no for now. Its licence gives eBay ownership of derived outputs and bans
   price modelling.
@@ -865,8 +935,9 @@ attribution; (2) may we license aggregates that include your prices, and on what
 terms; (3) do you have a preferred access method or frequency? We will not resell
 your individual prices and will change or stop collection if you prefer.
 
-**2. SNKRDUNK / 株式会社SODA.** Send to bd@soda-inc.jp (unverified; cc
-information@snkrdunk.com).
+**2. SNKRDUNK / 株式会社SODA. HOLD: do not send until G1 is decided.** Under the
+default G1-B, the legal opinion comes first and may change this draft or advise
+not sending. Address: bd@soda-inc.jp (unverified; cc information@snkrdunk.com).
 
 > 件名：取引相場データの利用許諾・提携のご相談（Card Pirate）
 >
@@ -942,14 +1013,57 @@ transactions. We will stop if you object.
 Partner Network application plus a written-consent request for "pricing tools"
 under licence §8.5. Note that eBay would own the derived outputs.
 
-**6. Legal opinion.** A short engagement with a Japanese IT/data lawyer.
-Questions to ask:
-- Do the browsewrap terms (Yuyu-Tei 適用範囲, SNKRDUNK EN Art. 1(3)) bind a
-  logged-out collector?
-- Does 「無断での転載を禁止」 reach bare price facts and derived medians?
-- What is the tort exposure for systematic collection (翼システム line)?
-- Is licensing derived indices that mix two sources' facts permissible?
-- Which law applies to the SNKRDUNK EN terms (Singapore)?
+**6. Legal opinion (send first under G1-B).** A short, fixed-fee written opinion
+(簡易意見書) from a Japanese lawyer who works on IT, data and terms of service.
+
+**Scope.** Japanese law, plus the SNKRDUNK EN terms' Singapore choice of law where
+relevant (flag it if a separate Singapore view is needed). The opinion covers the
+Yuyu-Tei terms (「如何なる場合であっても無断での転載を禁止」, 適用範囲) and the SNKRDUNK
+terms (JP 第1条3項, 第7条(6)(13)(16), 第9条1項; EN Art. 1(3), 3, 4(4)), for four
+activities:
+
+- **(a) Current collection.** Logged-out, low-frequency automated reading of public
+  product pages (Yuyu-Tei about once a day per card; SNKRDUNK about once per 23h per
+  mapped card), storing raw pages as evidence.
+  - Does browsewrap or registration-tied consent bind Card Pirate?
+  - Is there contract, tort (the 翼システム line) or unfair-competition exposure?
+  - What is the realistic consequence of continuing until asked to stop?
+- **(b) Public display of derived index values.** Showing a per-card median ("Market
+  Index") and aggregates (Market Value) computed partly from these prices, with source
+  names, but no images or text.
+  - Are bare price facts and medians 「転載」 or "information obtained from the Service"?
+- **(c) Commercial licensing of derived values.** Selling or licensing those medians
+  and aggregates to other businesses (API, daily files).
+  - Is this permissible without consent?
+  - Does mixing two sources' facts into one median change the answer?
+  - What contract terms protect Card Pirate and its customer?
+- **(d) PSA10 asking prices.** Storing, displaying and licensing the single SNKRDUNK
+  PSA10 asking price per card. This is single-source, so it is closer to raw resale
+  than (c).
+
+**Ask for:**
+- a yes/no/risk rating per item;
+- what to change to lower the risk;
+- whether and how to approach SODA without worsening Card Pirate's position;
+- a fixed fee and turnaround (ESTIMATED 2-4 weeks; budget unknown, RED as a paid
+  service).
+
+**How to find one (fixed-fee short opinion):**
+- **弁護士ドットコム (bengo4.com):** search 「IT・インターネット」 or 「知的財産」 lawyers in
+  Tokyo, then message 3 of them asking for a fixed-fee quote (見積り) for a 簡易意見書 on
+  the four questions above. Many list fixed fees or free first consultations.
+- **日本弁護士連合会's ひまわりサーチ:** the official directory. Filter by IT, intellectual
+  property or data.
+- **Tokyo bar associations' 法律相談センター:** low-cost first consultation, useful to
+  test the questions before paying for a written opinion.
+- **For English correspondence:** ask the firm for English-capable counsel. Many Tokyo
+  IT boutiques offer it.
+- **What to send:** this plan's §A2-A3 clause tables, a one-page description of the
+  collectors (frequency, logged-out, raw evidence kept), sample public pages, and the
+  first-customer request (§H).
+
+Fees, turnaround and named services above are UNVERIFIED and must be checked when
+contacting.
 
 **7. Collector Crypt.** Add one paragraph to the existing onchain outreach (onchain
 plan G2): "We are also preparing a daily, anchored Japanese One Piece fair-value
@@ -958,14 +1072,227 @@ a design partner?"
 
 ---
 
+## H. First customer: PSA10 + Partner API v1 (added 2026-10-11)
+
+A website has asked to integrate Card Pirate data, **including PSA10 prices**. This is a
+real inbound request, separate from the Collector Crypt pilot idea (G9).
+
+### H0. What we know about the request
+
+| Item | Known |
+|---|---|
+| Cards | unknown |
+| Price types | PSA10 required; raw likely |
+| Freshness / frequency | unknown |
+| Delivery (API, file, widget) | unknown |
+| Display with attribution, or internal use | unknown |
+| Commercial terms | unknown |
+| Timeline | unknown |
+
+The questions in §H5 fill these in.
+
+### H1. PSA10 facts (MEASURED from repo at c086b8b and staging, 2026-10-11)
+
+**What exists:**
+- Parse: `extract_psa10` reads the exact PSA10 chip from the same SNKRDUNK product page
+  as the raw price (`services/snkrdunk_collector/snkrdunk_collector/extractor.py:142-170,264,325`).
+- Writer: stores `price_type='psa10_asking'`, `condition_label='PSA10'`
+  (`writer.py:416-480`). Due-work handles a `psa10` category outcome (`due.py:19-80`).
+- Category model: `freshness_integration.CATEGORIES["snkrdunk"]["psa10"]`
+  (`services/api/app/services/freshness_integration.py:38-44`).
+- Exclusion: PSA10 is excluded from Index, Market Value and CPI (onchain plan §D,
+  `market_index.py:653-657`).
+
+**What it is:** a **single asking price on one Japanese marketplace (SNKRDUNK)**. It is
+not a sale, not a median across sellers, and not across marketplaces.
+
+**Live state:**
+- **0** `psa10*` observations on staging.
+- Live SNKRDUNK work items carry only the `floor` category (**353** `freshness_price_states`
+  rows, all `floor`), and Yuyu-Tei 2,619 `sell`.
+- 359 active SNKRDUNK mappings.
+- PSA10 is **OFF** (PROJECT_HANDOVER §18/§40).
+
+**What is missing to serve PSA10:**
+
+1. **Planner wiring, gated.** No live code plans the `psa10` category. The only caller of
+   `plan_product`, which would include PSA10 because it passes every SNKRDUNK category, is
+   a test (`tests/test_freshness_adapters_postgres.py:865-877`). Planning must add `psa10`
+   explicitly, behind a gate, with budget accounting.
+   - `freshness_integration.py` is in the collector import graph, so this is a
+     **collector release** (sequential rollout, quiet windows).
+2. **Gating actually checked.** `PSA10_ENABLED` / `SNKRDUNK_PSA10_ENABLED` are read by
+   no application code (MEASURED grep; only `scripts/snkr_storage_canary.py:33` and handoff
+   tools). The flag must be enforced in planner and writer.
+3. **Instrument entry.** A `reference_type` for the PSA10 ask in the source instrument
+   registry, so provenance never confuses it with raw `listing_floor`.
+4. **Series and API.**
+   - A distinct graded series (onchain plan §D: `/prints/{id}/series?series=psa10_ask`).
+   - `/prices` must label or exclude it.
+   - A `psa10_ask` field in the Partner API (§H4), never mixed with the raw Index.
+5. **Verifiers.**
+   - The state generator only counts rows (`scripts/generate_staging_state.py:322,604`).
+     It needs a PSA10 freshness and health section.
+   - The canary's assertion "0 psa10 price states" (`snkr_storage_canary.py:135`) must be
+     retired deliberately.
+   - A check that 0 PSA10 rows reach Index/MV inputs.
+6. **UI category** for the public site, if PSA10 is ever displayed (not needed for an
+   internal API pilot).
+
+**Cost of activation:**
+- **Requests: +0.** It is parsed from the page already fetched for raw. SNKRDUNK runs
+  88.6 requests per attempt (MEASURED, session-9 §1).
+- **RAW: +0.**
+- **Rows:** at most one per SNKRDUNK capture with a PSA10 ask listed, so ≤353 a day.
+  `price_observations` averages **390 B/row** including indexes (14,401,536 B / 36,965 rows,
+  MEASURED 2026-10-11). That is **≤138 KB/day, ≤50 MB/year** (ESTIMATED upper bound),
+  against measured growth of 33.5 MB/day (CARRIED FORWARD).
+- One-time: +353 `freshness_price_states` rows (negligible).
+
+**Coverage ceiling:** PSA10 can exist only for SNKRDUNK-mapped cards: 359 of 4,316 (8.3%,
+MEASURED). The share of those with a live PSA10 ask is **unknown**. Raw SNKRDUNK is already
+`no_listing` for 278 of 353 (CARRIED FORWARD). An offline re-parse of retained RAW (§H4) can
+estimate it with no new requests.
+
+### H2. Licensing reality for this request
+
+PSA10 comes **only** from SNKRDUNK, the most restrictive source:
+- JP 第7条(6): profit-making use without prior consent.
+- JP 第7条(13): crawling or scraping.
+- EN Art. 3: "…publishing, licensing, … or selling any information … obtained from the
+  Service".
+
+A PSA10 ask is one SNKRDUNK value per card, passed through. It is not even an aggregate, so
+it sits closest to raw resale (§A7: SNKRDUNK raw resale **N**).
+
+| Deliverable to this website | Today | After Yuyu-Tei written permission only | After SNKRDUNK (SODA) written permission, or an accepted legal opinion | Never without permission |
+|---|---|---|---|---|
+| Schema, docs, synthetic sample data (made-up numbers) | **Yes** | Yes | Yes | — |
+| Raw Market Index values, all cards | **No.** The Index mixes Yuyu-Tei and SNKRDUNK (§A8). Even free external delivery waits | Only for cards whose index uses Yuyu-Tei alone: **2,366 of 2,398 priced** on 2026-10-10 (MEASURED), with the 32 SNKRDUNK-contributed cards withheld (owner decision H-Q1). **Caveat:** with one contributor, the index value equals Yuyu-Tei's own price, so the permission must cover per-card values, not only aggregates | Yes, all priced cards, under both licences | Yes |
+| Market Value / release aggregates | **No** (both sources in the basket) | No: aggregates include SNKRDUNK-contributed cards. Recomputing without them would be a methodology change (RED) | Yes | Yes |
+| **PSA10 asking prices** | **No** (and OFF) | **No** | Only if SODA's permission explicitly covers PSA10 asks and their resale or licensing, or counsel accepts (d). Plus PSA10 activation (H1) | **Yes. Never without SODA's permission** |
+| Per-source raw quotes (Yuyu sell, SNKR floor) | No | Only if Yuyu-Tei's licence grants resale | Only if SODA grants resale | Yes |
+
+**Also required for any external delivery:** a production environment, provisioned fresh
+from staging by owner decision (RED), plus an outbound licence (§B4).
+
+### H3. Alternative PSA10 sources (brief research 2026-10-11; all UNVERIFIED)
+
+| Candidate | What it might give | Status / risk |
+|---|---|---|
+| **Aucfan (オークファン)** | Japanese sold/closed-auction data (Yahoo! Auctions, Rakuten and others). Says it provides 相場データ externally and launched an MCP server over ~70bn records ([netshop.impress.co.jp](https://netshop.impress.co.jp/index%2Ephp/r/prtimes/items/000000478.000008833)) | Graded/PSA coverage for One Piece **unknown**. Contract and fee unknown (paid → RED). Sold data would be better evidence than asks. Already in §G-actions 4; **add a PSA10 question** |
+| **Japanese shops selling graded cards** (Card Rush, Torecolo, magi listings, specialist 鑑定品 shops) | Shop asking prices for PSA10 slabs; might grant permission | Card Rush and magi terms need written permission (§A7). Torecolo has no clause found. Each is a separate ask and a new collector (storage verdict needed) |
+| **PSA (psacard.com)** | Cert lookup (identity, population); Auction Prices Realized / price guide | Public cert API is "for the sole purpose of confirming data" (§A7). No PSA licensing programme for APR found ([search](https://apify.com/lexis-solutions/psacard-com-scraper) shows only third-party scrapers, which are not licensed). APR is mostly US auctions/eBay, not the Japanese market |
+| **Card Ladder** | Sold-price history incl. Japanese One Piece PSA10 ([cardladder.com showcase](https://www.cardladder.com/showcase/card/KEPKIE2tTbtXHQSTUkZF-qsACbzbq53ygoN6OnSx5)) | Consumer product; no API offer found. Ownership by PSA's parent is background knowledge, UNVERIFIED. US/eBay-sourced, so eBay licence issues (§A5) |
+| **price-base.com** | Shows Japanese One Piece PSA10 "latest prices" ([example](https://price-base.com/onepiece/card/roronoazoroalternateart-op01-001/)) | A competing aggregator, likely marketplace-derived. Not a licensable primary source; a signal that demand exists |
+| **eBay sold** | Many Japanese PSA10 sales | **N**: licence bans price modelling and aggregates (§A5) |
+| **Mercari / Yahoo! Auctions direct** | Japanese sold graded cards | **N / high risk** (§A6/A7) |
+
+**Conclusion:** no licensed or permission-friendly Japanese PSA10 source is confirmed
+today. Aucfan is the only plausible licensed route and is unproven for graded cards.
+
+### H4. What can be built on staging now (no external delivery)
+
+Goal: when permission arrives, go-live needs only:
+1. the permission or accepted opinion;
+2. PSA10 activation (H1, a collector release in a quiet window);
+3. the owner's production decision.
+
+These items are DP-1 from §F, pulled forward and extended:
+
+- **Service scaffold** `services/data_api` (FastAPI): read-only Postgres role,
+  `statement_timeout` 5 s, pool ≤5 (§E3).
+- **Tables** `api_clients`, `api_keys`, `api_usage_daily`, plus `api_licences(id, name,
+  upstream_permissions[])`.
+  - The models go in a new module that **no collector imports** (not `app/models/__init__.py`).
+  - Migration in `services/api/alembic`.
+  - Under the import-graph continuity rule (PR #91) this is **not** a collector release.
+    The build session confirms with `scripts/collector_runtime_inputs.py`.
+  - AMBER (additive migration). Auth design RED-approved via this plan (§E3).
+- **Schema `/v1` with licence-gated fields.**
+  - Every value carries `contributing_sources` (from snapshot provenance).
+  - A key's licence decides what is returned: a value whose contributors are not all
+    covered is returned as `{"status":"not_licensed"}`, never silently dropped or
+    recomputed.
+  - `psa10_ask` exists in the schema as a separate object (`price_kind: "asking"`,
+    `marketplace: "SNKRDUNK"`, `observed_at`) and returns `{"status":"not_available"}`
+    until PSA10 is active and licensed.
+  - Gaps return `{"status":"gap"}`.
+- **Two sandboxes:**
+  1. **Synthetic sandbox**: same schema, made-up deterministic values, clearly labelled.
+     **Shareable with the customer now** because it contains no source-derived data.
+  2. **Staging sandbox** on real raw Market Index values with `cp_test_` keys. **Internal
+     only.** Giving the customer a key would be external delivery.
+- **Docs:** OpenAPI and a short integration guide covering field meanings, "asking vs
+  sold", freshness, gaps, attribution, licence fields.
+- **PSA10 availability estimate:** re-parse retained SNKRDUNK RAW offline with
+  `extract_psa10` to count mapped cards with a PSA10 ask.
+  - No source request, no observation written. Reparse is not a source check (INVARIANTS).
+  - Answers "how many cards could we give PSA10 for" before anyone asks SODA.
+  - GREEN, read-only.
+- **Not built now:**
+  - PSA10 planner activation (collector release; G1-B keeps PSA10 OFF until the opinion);
+  - production;
+  - customer keys;
+  - signing secrets (RED, §B3).
+
+### H5. Ready-to-send questions for the customer
+
+> Thanks for your interest in Card Pirate data. To scope this properly, could you tell us:
+>
+> 1. **Cards:** which cards matter: all Japanese One Piece singles, specific sets, or a list
+>    (card codes, and which versions: regular art, alternate art, parallels)?
+> 2. **Fields:** which values do you need: PSA10, raw (ungraded) market value, history, set-level
+>    figures? Asking prices are OK, or do you need sold prices only?
+> 3. **Freshness:** how fresh must values be (daily, several times a day)? Do you need history,
+>    and how far back?
+> 4. **Volume:** roughly how many cards and requests per day?
+> 5. **Delivery:** API, a daily file, or an embeddable widget?
+> 6. **Use:** will you show the values to your users (with attribution "Prices: Card Pirate"),
+>    or use them internally only (e.g. pricing, analytics)? Will any value be used for lending,
+>    collateral, or financial products?
+> 7. **Restrictions you can accept:** no resale or redistribution to third parties, attribution
+>    on display, caching only while subscribed, possible removal of a field if an upstream source
+>    withdraws permission.
+> 8. **Budget:** do you have a monthly budget range in mind?
+> 9. **Timeline:** when do you want to launch, and is a sandbox with sample data useful first?
+> 10. **Your site:** URL, audience (countries), and who we'd be contracting with.
+
+**Honest note to include:**
+
+> One thing to be clear about up front: our PSA10 values, when available, are **asking prices
+> from a single Japanese marketplace (SNKRDUNK)**, not completed sales and not an average across
+> shops. They only exist for cards that marketplace lists. They are not live in our data yet,
+> and we can't share them until we have the source's permission. Our ungraded values are a daily
+> median of Japanese retail and marketplace prices, with coverage stated per card. We can share a
+> sandbox with sample (not real) data now so you can build against the format.
+
+### H6. Owner decisions for this request
+
+- **H-Q1:** if Yuyu-Tei permits and SODA does not (or hasn't answered), offer the
+  Yuyu-Tei-only-contributor subset (2,366 of 2,398 priced cards, MEASURED 2026-10-10, values
+  unchanged, the rest marked `not_licensed`)?
+  - Default: **yes, as an interim, only if Yuyu-Tei's written permission covers per-card
+    values**. For single-contributor cards the index equals Yuyu-Tei's price. No
+    recomputation, so no methodology change.
+  - Tradeoff: customers see gaps on some high-value cards.
+- **H-Q2:** reply to the customer now with §H5 and the honest note?
+  - Default: **yes, this week**. It commits to nothing and filters out mismatched needs
+    (for example, sold-only PSA10).
+- **H-Q3:** add a PSA10 question to the Aucfan email (§G-actions 4)?
+  - Default: **yes**.
+
+---
+
 ## Risks
 
 1. **SNKRDUNK terms vs the current collector (high, existing).**
    - The no-scraping clause (第7条(13)) applies to today's operation, not only to
      the future product.
-   - Enforceability is unclear (registration-tied consent), but a cease request
-     would remove half the Index inputs.
-   - Mitigation: G1(a), the consent request and a legal opinion.
+   - Enforceability is unclear (registration-tied consent). A cease request would
+     remove SNKRDUNK from 32 of 2,398 priced cards (1.3%, 3.7% of tracked value,
+     MEASURED 2026-10-10, §G1) and all PSA10, the first customer's key field.
+   - Mitigation: G1-B (legal opinion first), with G1-C sourcing in parallel.
 2. **No permission, no product.**
    - Every paid path depends on written permission from at least two parties who
      may refuse or ask for revenue share.
@@ -998,9 +1325,7 @@ a design partner?"
      denominators, no defaulting.
 9. **Security.**
    - New API keys and a new public surface.
-   - Also an **existing** unauthenticated write route
-     (`/market/signal-events/*`, api/market.py:266-335), which should get its own
-     security fix (RED auth policy), outside this plan.
+   - The unauthenticated `/market/signal-events/*` writes: resolved, PR #93/#94.
 10. **Customer misuse.**
     - FMV used for lending or liquidation.
     - Mitigation: licence exclusion, daily granularity only, no webhooks on
@@ -1022,6 +1347,15 @@ a design partner?"
 ---
 
 ## Sources (fetched 2026-10-09 unless marked)
+
+Added 2026-10-11 (§H, G1):
+- Staging read-only queries 2026-10-11 08:27-09:30Z: `market_index_snapshots.provenance`,
+  `freshness_price_states`, `price_observations`, `source_card_mappings`.
+- Aucfan external data / MCP: https://netshop.impress.co.jp/index%2Ephp/r/prtimes/items/000000478.000008833
+- PSA APR scraper listing (shows no official licence path found): https://apify.com/lexis-solutions/psacard-com-scraper
+- Card Ladder showcase: https://www.cardladder.com/showcase/card/KEPKIE2tTbtXHQSTUkZF-qsACbzbq53ygoN6OnSx5
+- price-base PSA10 page: https://price-base.com/onepiece/card/roronoazoroalternateart-op01-001/
+
 
 - Yuyu-Tei terms: http://web.archive.org/web/20261005051001id_/https://yuyu-tei.jp/info/rule ·
   robots: http://web.archive.org/web/20260501083637/https://yuyu-tei.jp/robots.txt ·
