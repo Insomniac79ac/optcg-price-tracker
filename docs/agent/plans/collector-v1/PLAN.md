@@ -1,5 +1,8 @@
 # Collector Accounts v1: plan (PLAN ONLY)
 
+**Status: APPROVED by the owner, 2026-10-11**, with the answers recorded in §I. The owner starts
+S1 separately. Sections changed by the answers: §C3, §C4, §D1, §D2, §F, §F2, §G, §H, §I, Risks.
+
 Prepared 2026-10-11 from `origin/staging` at `c086b8b` (PR #100 merge), worktree
 `/workspaces/cp-collector-v1`, branch `plan/collector-v1`. STAGING ONLY. Production RED.
 PSA10 OFF. Nothing in this session changed code, staging, Vercel, Railway or Google.
@@ -26,10 +29,11 @@ page that the build session must re-check.
    dashboard, grading, activity, signed-in search) are deleted.
 4. It takes **8 build sessions**, plus one later clean-up session that needs your decision. None
    of the 8 should redeploy the price collectors.
-5. **You need to:** create a Google sign-in client (steps in §D2, about 20 minutes); choose a
-   site-analytics and error-tracking option (§F2; recommended default is free); review the draft
-   privacy policy and terms before sign-in opens to the public; decide on a custom domain (see §I,
-   Q1). Google may not accept a privacy-policy link on `vercel.app`.
+5. **You need to:** create a Google sign-in client (steps in §D2, about 20 minutes); create free
+   Vercel Web Analytics and Sentry Developer accounts (§F2, decided); buy the custom domain
+   (decided, §I Q1); choose the contact email and governing law and review the draft privacy
+   policy and terms before sign-in opens to the public; move to Vercel Pro before any revenue
+   (§H pre-launch gate).
 6. Open decisions with recommended defaults are in §I. Storage impact is small: about 73 KB per
    active collector per year (ESTIMATED), well under 1% of today's daily database growth.
 
@@ -271,7 +275,8 @@ never 0%.
 Market Value's **count thresholds** (≥300 comparable versions for Overall, size-aware release
 gates) are population rules and would make every personal collection permanently unavailable. v1
 drops them for personal collections and keeps the 80% value guard. This is a new derived measure,
-not a change to Market Value. **Owner decision Q4** (default: approve).
+not a change to Market Value. **Owner approved Q4 (2026-10-11):** keep the 80% value guard, drop the minimum card counts for
+personal collections.
 
 The September 27-28 gap predates any collection, so it can only affect the preview in §C4. There
 it breaks the line like the Market chart does.
@@ -292,8 +297,8 @@ it breaks the line like the Market chart does.
   liquidation.
 - **Day-one preview** (optional, derive-on-read, zero storage): "How your current cards moved over
   the last 30 days", using current holdings over archived snapshots, labelled as a preview and
-  visually separate from the collection's own recorded history. **Owner decision Q5** (default:
-  include, because otherwise a new user sees an empty chart for a week).
+  visually separate from the collection's own recorded history. **Owner approved Q5 (2026-10-11):**
+  include it, clearly labelled as a preview.
 
 ### C5. Implementation reuse
 
@@ -312,7 +317,7 @@ proven by the existing Market Value test suite and the A2 oracle tests.
   sign-in. The admin `Credentials` provider stays as is (4h role expiry, server-only
   `ADMIN_TOKEN`). The admin allowlist migration (`docs/staging_deployment.md` §13 "Migration path")
   is **not** in v1.
-- **Recommended hardening (S5, owner decision Q2, because it changes auth policy):**
+- **Approved hardening (S5; owner approved Q2 on 2026-10-11, all four items below):**
   1. Stop putting `apiToken` on the session object. Collector pages call Next route handlers
      (`/api/me/**`) that mint a short-lived (5 min) API JWT server-side and call `API_INTERNAL_URL`.
      The browser never holds a bearer token.
@@ -326,6 +331,12 @@ proven by the existing Market Value test suite and the A2 oracle tests.
 
 ### D2. What the owner must do for Google sign-in (plain language)
 
+**Owner decision Q1 (2026-10-11):** a custom domain will be bought (name TBD, likely through
+Cloudflare Registrar). Until it exists, sign-in stays in Google **Testing** mode on the staging
+`vercel.app` URL, so the steps below use the staging URL. When the domain is live, add its origin
+and redirect URI to the same client (step 6), verify it in Google Search Console, and move the
+Branding links (step 3) to it before **Publish app**.
+
 You need a Google account. Nothing here costs money. Do it in a normal browser; don't paste the
 secret into a chat with an AI agent.
 
@@ -336,7 +347,7 @@ secret into a chat with an AI agent.
    - Audience: **External**
    - Contact email: your email
 3. Under **Branding**, add the app home page, privacy policy and terms links:
-   - Home page: `https://optcg-price-tracker-staging.vercel.app` (or your custom domain, see Q1)
+   - Home page: `https://optcg-price-tracker-staging.vercel.app` (the custom domain once bought, Q1)
    - Privacy policy: `…/privacy`
    - Terms: `…/terms`
 
@@ -353,7 +364,7 @@ secret into a chat with an AI agent.
    `Card Pirate staging`.
    - Authorized JavaScript origins: `https://optcg-price-tracker-staging.vercel.app`
    - Authorized redirect URIs: `https://optcg-price-tracker-staging.vercel.app/api/auth/callback/google`
-     (add the custom-domain versions too if you take Q1).
+     (add the custom-domain versions when the domain is live, Q1).
    - Click **Create**. Google shows a **Client ID** and **Client secret**.
 7. In **vercel.com**, open project `optcg-price-tracker-staging`, then **Settings → Environment
    Variables**. Add both with the **Production** environment ticked (this project's "Production"
@@ -484,8 +495,8 @@ see **Appendix F** below. Summary of decisions:
 | `/dashboard` | page, layout; `DashboardPortfolioChart`, `VaultHighlightsSection`, `WorkflowShortcutsSection`, `lib/dashboardWidgets` | overview, preferences | `api/dashboard.py` (`main.py:38,197`) | `services/dashboard.py` | **Delete**; → `/collection` (fixes shared preference + global widgets) |
 | `/activity` | page, layout | none | `collector_activity.py` `/summary` only | — | **Delete page + `/summary`**; keep `GET /collector/activity` until S8 (legacy `/cards/[id]` uses it), then delete; → `/collection` |
 | `/search` (signed-in) | page, layout; `SearchTypeBadge` | search, suggestions | `api/search.py` (`main.py:50,224`) | `search.py`; trim `search_ownership.py` (keep `require_user_id`); drop `search_health_probe` from `system_check.py` | **Delete**; `/search?q=` → `/cards?q=` |
-| Market workflow | — | admin run action | `admin_actions.py:340-403`, `market_workflow_trigger.py`, `market_workflow_runs.py` | worker `run_market_workflow.py`, beat entry `celery_app.py:71-84`, signal/report steps in `refresh_prices.py:415-450`, worker copies of signal/report modules | **Delete** (staging flag is off; owner Q7 confirms dropping the admin run history page) |
-| Not on the list: `/analytics/collection`, `/analytics/wishlist` | legacy-keyed, finance language | | | | **Delete in S8** with the legacy collection; redirect → `/collection`, `/watchlist` (owner Q6) |
+| Market workflow | — | admin run action | `admin_actions.py:340-403`, `market_workflow_trigger.py`, `market_workflow_runs.py` | worker `run_market_workflow.py`, beat entry `celery_app.py:71-84`, signal/report steps in `refresh_prices.py:415-450`, worker copies of signal/report modules | **Delete** (staging flag is off; owner approved Q7 2026-10-11, including the admin run history page; S1 first proves no MV/CPI/`market-index-snapshot` reader, §H) |
+| Not on the list: `/analytics/collection`, `/analytics/wishlist` | legacy-keyed, finance language | | | | **Delete in S8** with the legacy collection; redirect → `/collection`, `/watchlist` (owner approved Q6 2026-10-11) |
 
 **Keep, with reasons:**
 - `/analytics` index: it is the public Market page (sitemap, nav).
@@ -536,13 +547,13 @@ and are **UNVERIFIED** until the build session re-checks the vendor pricing page
 | **PostHog Cloud** | 1M events/mo free ([PostHog FAQ](https://posthog.com/faq)) | Cookies by default; cookieless needs config; session replay must be switched off | US or EU | Medium | Separate project |
 | **Sentry** (errors) | Developer plan free: 1 user, 5k errors/mo (third-party summaries) | Error events only, no cookies set by default; turn off replay and PII | US or EU (choose at sign-up) | Low for Next (`@sentry/nextjs`); API via rule A5 | `environment=staging` tag |
 
-**Recommendation (default, all free tiers):**
+**Decision (owner approved Q3, 2026-10-11; all free tiers):**
 - **Site analytics:** Vercel Web Analytics on the current plan.
 - **Errors:** Sentry Developer for the web app (client and server), plus the FastAPI API through
   `requirements-observability.txt`.
-- **Owner confirmation needed:** Vercel's Hobby plan is for non-commercial use (UNVERIFIED wording;
-  check the project's plan). If Card Pirate counts as commercial, the free path is **Umami Cloud
-  Hobby**, and the paid path is Vercel Pro.
+- **Hosting plan (separate from analytics):** Vercel Hobby is for non-commercial use. Moving to
+  **Vercel Pro** is a hosting decision required **before any revenue starts** (gacha fees, partner
+  API). It is a pre-launch gate in §H, not an S2 task. Umami is no longer the fallback.
 - **RED:** any paid plan is an owner decision. Free tiers need only an account the owner creates.
 
 **Banner:** cookieless analytics plus error tracking without PII should not need a consent banner
@@ -570,7 +581,8 @@ language. Legal pages ship marked "Draft – under review" and stay noindex unti
 approves the text. Public Google sign-in (Publish app) waits for that approval.
 
 - **About** (`/about`): what Card Pirate is (independent price tracker for Japanese One Piece Card
-  Game singles); not affiliated with Bandai, Shueisha or Toei; who runs it; contact.
+  Game singles); not affiliated with Bandai, Shueisha or Toei; operated by "Card Pirate"; contact
+  (placeholder).
 - **How we price cards / Methodology** (`/methodology`): exact versions (regular art, alternate
   art, parallels are separate); sources (Yuyu-Tei listed and buy prices, SNKRDUNK listings and
   sales, as currently used); sale prices never used; Market Index per card; Market Value for the
@@ -578,13 +590,13 @@ approves the text. Public Google sign-in (Publish app) waits for that approval.
   collection value and change are computed (§C); PSA10 not included. Derived from
   `docs/market_value.md` and `docs/market_index.md`; no methodology change.
 - **Privacy policy** (`/privacy`) outline:
-  1. Who we are and contact.
+  1. Who we are ("Card Pirate") and contact (`[CONTACT EMAIL]` placeholder).
   2. What we collect: Google name, email, avatar and Google account id; collection and watchlist
      entries and anything you enter (what you paid, notes); preferences.
-  3. Analytics (provider, cookieless, no personal data) and error tracking (provider, what an error
-     report contains).
-  4. Hosting providers and locations: Vercel, Railway, Google sign-in, the analytics and error
-     vendors.
+  3. Analytics (Vercel Web Analytics, cookieless, no personal data) and error tracking (Sentry,
+     what an error report contains).
+  4. Hosting providers and locations: Vercel, Railway, Cloudflare R2 (card images), Google
+     sign-in, Vercel Web Analytics and Sentry.
   5. Purpose and legal basis.
   6. Retention: account data until you delete it; logs per provider.
   7. Your rights: access/export, correction, deletion (self-serve), complaints; PDPA (Malaysia),
@@ -602,11 +614,14 @@ approves the text. Public Google sign-in (Publish app) waits for that approval.
   5. Third-party trademarks; independent publisher.
   6. Liability limits.
   7. Termination and deletion.
-  8. Governing law (owner chooses; Malaysia default).
+  8. Governing law: `[GOVERNING LAW]` placeholder (owner decides before public launch).
   9. Changes and contact.
 
-The owner must confirm the operator name, contact email and governing law (§I Q8). A lawyer review
-is recommended before public launch (RED: legal/compliance).
+**Owner decision Q8 (2026-10-11):** drafts name the operator as **"Card Pirate"** and use
+placeholders `[CONTACT EMAIL]` and `[GOVERNING LAW]` (the terms' "Malaysia default" is a suggestion
+only, not written into the draft). No personal name appears in any draft. The owner fills the
+placeholders before public launch. A lawyer review is recommended before public launch (RED:
+legal/compliance).
 
 ---
 
@@ -626,54 +641,70 @@ Global rules for every session:
 
 | # | Session | Scope | Level | Migration / rollback | Tests | Staging verification | Collectors |
 |---|---|---|---|---|---|---|---|
-| **S1** | Legacy deletion (code) | All of §F except the S8 items and S9 deferrals. Redirects. Admin page trims. Docs. Delete the old `fix/admin-auth-mutating-routes` branch. Seed presets removed. | GREEN (deleting code; no data) | No migration. Rollback = revert PR (API/web redeploy). | Full web (`vitest`) and API (`pytest`) suites; redirect tests; proxy matcher parity; import-graph test | Every deleted URL 308s to its target or 404s; admin pages load; `/analytics`, `/cards`, `/prints` unchanged; delivery receipt shows collectors untouched | None |
-| **S2** | Info pages + analytics + errors | About, Methodology (final, owner skims), Privacy and Terms **drafts** (noindex), footer links. Install chosen analytics plus Sentry (web, API via A5). Events per §F2. | GREEN for pages; **RED gate**: provider choice (Q3) before install | No DB. Rollback = revert; remove env vars | Page render and metadata tests; analytics no-PII unit test (event payload allowlist); Sentry `beforeSend` scrubbing test | Pages live on staging alias; a test error appears in Sentry tagged `staging`; analytics shows a page view | None |
-| **S3** | Accounts data + API (dark) | `app/accounts/` models (B1), Alembic migration, legacy copy CLI (dry run), `/me/collection`, `/me/watchlist`, `/me/preferences`, `/me/export`, `DELETE /me`, valuation service (C1, C2, C4 current/movers/by-release/paid) behind `COLLECTOR_ACCOUNTS_ENABLED` (in `accounts/config.py`) | **AMBER** (additive migration) | Preflight: backup present (capacity handoff notes the newest Postgres backup is 2026-09-30; take a fresh one or confirm the resize backup). Migration only creates tables; rollback = `alembic downgrade` dropping the new empty tables. | Tenant isolation (user A never sees B); FK cascade on delete; unresolved rows never priced; unpriced ≠ 0; Yuyu sale excluded (fixture); struck price not substituted; coverage math; import-graph test; Postgres tests | `alembic current` on staging = new head; tables exist and are empty; legacy dry-run report (expect 0/0); endpoints 404/401 while flag off | None |
-| **S4** | Collection value history | Daily pipeline stage writing `collection_value_points` after the receipt gate; 7D/30D/ALL read; day-one preview (Q5) | **AMBER** (changes the daily `market-index-snapshot` job's work; additive) | Stage is independent: its failure cannot block Market Value or CPI (same pattern as existing stages). Rollback = revert; delete rows by `methodology_version` (non-published, private, reversible). | Step/window math vs an oracle; quantity changes never count as gain or loss; missing day = break; 80% guard; idempotent rerun; MV and CPI stage results unchanged | Observe the next natural 20:00Z run: JSON report shows the new stage; MV and CPI inserted counts unchanged in pattern; points written for test users only | None |
-| **S5** | Auth + account section | BFF route handlers, `apiToken` off the session (Q2), CORS restricted, collector-only session guard, `/account` (D4), signed-out invites (D5), sign-in page copy, delete stale Vercel branch vars + rotate `AUTH_SECRET`, enable flag. **Owner must have finished D2 steps 1-7** (Testing mode). | **RED gate** (auth/security policy, Q2) then AMBER (env changes) | Rollback = revert; unset `COLLECTOR_ACCOUNTS_ENABLED`; Google client can be disabled by the owner | Auth unit tests (collector vs admin session, expired admin, no token in client bundle or session JSON); export contents; delete cascades; CSRF on mutating routes | Owner test account signs in on staging; export downloads; delete removes the user (verified by read-only count); admin login still works; browser devtools show no bearer token | None |
+| **S1** | Legacy deletion (code) | **Preflight (Q7):** prove by code search plus a read-only staging check that nothing in Market Value, the Card Pirate Index or `market-index-snapshot` reads the market workflow's output (its tables, rows or files). If anything does, S1 stops and reports; nothing is deleted. Then: all of §F except the S8 items and S9 deferrals. Redirects. Admin page trims. Docs. Delete the old `fix/admin-auth-mutating-routes` branch. Seed presets removed. | GREEN (deleting code; no data) | No migration. Rollback = revert PR (API/web redeploy). | Full web (`vitest`) and API (`pytest`) suites; redirect tests; proxy matcher parity; import-graph test | Every deleted URL 308s to its target or 404s; admin pages load; `/analytics`, `/cards`, `/prints` unchanged; delivery receipt shows collectors untouched | None |
+| **S2** | Info pages + analytics + errors | About, Methodology (final, owner skims), Privacy and Terms **drafts** (noindex), footer links. Install Vercel Web Analytics plus Sentry Developer (web, API via A5), free tiers (Q3 approved). Events per §F2. Legal drafts use operator "Card Pirate" with contact-email and governing-law placeholders (Q8). | GREEN for pages; provider gate cleared (Q3 approved 2026-10-11); owner creates the free accounts | No DB. Rollback = revert; remove env vars | Page render and metadata tests; analytics no-PII unit test (event payload allowlist); Sentry `beforeSend` scrubbing test | Pages live on staging alias; a test error appears in Sentry tagged `staging`; analytics shows a page view | None |
+| **S3** | Accounts data + API (dark) | `app/accounts/` models (B1), Alembic migration, legacy copy CLI (dry run), `/me/collection`, `/me/watchlist`, `/me/preferences`, `/me/export`, `DELETE /me`, valuation service (C1, C2, C4 current/movers/by-release/paid) behind `COLLECTOR_ACCOUNTS_ENABLED` (in `accounts/config.py`) | **AMBER** (additive migration) | **Preflight: confirm a completed Railway Postgres backup less than 24 h old** (owner is enabling daily Railway backups). If none, stop and ask the owner to take a manual backup; do not migrate. Migration only creates tables; rollback = `alembic downgrade` dropping the new empty tables. | Tenant isolation (user A never sees B); FK cascade on delete; unresolved rows never priced; unpriced ≠ 0; Yuyu sale excluded (fixture); struck price not substituted; coverage math; import-graph test; Postgres tests | `alembic current` on staging = new head; tables exist and are empty; legacy dry-run report (expect 0/0); endpoints 404/401 while flag off | None |
+| **S4** | Collection value history | Daily pipeline stage writing `collection_value_points` after the receipt gate; 7D/30D/ALL read with the 80% value guard and no minimum card counts (Q4 approved); day-one preview, clearly labelled (Q5 approved) | **AMBER** (changes the daily `market-index-snapshot` job's work; additive) | Stage is independent: its failure cannot block Market Value or CPI (same pattern as existing stages). Rollback = revert; delete rows by `methodology_version` (non-published, private, reversible). | Step/window math vs an oracle; quantity changes never count as gain or loss; missing day = break; 80% guard; idempotent rerun; MV and CPI stage results unchanged | Observe the next natural 20:00Z run: JSON report shows the new stage; MV and CPI inserted counts unchanged in pattern; points written for test users only | None |
+| **S5** | Auth + account section | BFF route handlers, `apiToken` off the session (Q2), CORS restricted, collector-only session guard, `/account` (D4), signed-out invites (D5), sign-in page copy, delete stale Vercel branch vars + rotate `AUTH_SECRET`, enable flag. **Owner must have finished D2 steps 1-7** (Testing mode on the staging `vercel.app` URL until the custom domain exists, Q1). | Auth policy gate cleared (Q2 approved 2026-10-11); AMBER (env changes) | Rollback = revert; unset `COLLECTOR_ACCOUNTS_ENABLED`; Google client can be disabled by the owner | Auth unit tests (collector vs admin session, expired admin, no token in client bundle or session JSON); export contents; delete cascades; CSRF on mutating routes | Owner test account signs in on staging; export downloads; delete removes the user (verified by read-only count); admin login still works; browser devtools show no bearer token | None |
 | **S6** | Card-page actions (UI tranche 1) | §E1 + `/cards/[id]` retirement | GREEN | No migration. Rollback = revert. | Component tests; redirect mapping tests (exact-unique only) | ATLAS: tranche contract, before/after desktop and mobile screenshots, fresh visual reviewer, staging alias verified | None |
 | **S7** | Collection page (UI tranche 2) | §E2 | GREEN | Revert | Component tests incl. unavailable states, unpriced, coverage, 320/390px | ATLAS as above | None |
-| **S8** | Watchlist + legacy collection removal (UI tranche 3) | §E3; delete legacy `/collection/vault`, old collection/wishlist pages, `/analytics/collection`, `/analytics/wishlist`, legacy collection/wishlist/grading/tags/groups/notes/activity/CSV FastAPI routers and services, worker portfolio snapshot (check `check_alerts` first) | GREEN (0 rows; code only) | Revert | Full suites; redirects | ATLAS; deleted endpoints 404; staging delivery receipt | None |
-| **S9** | Deferred clean-up (owner decision) | Remove legacy models and settings flags; backup format bump; worker mirrors; table drops from B5 if approved | **RED** (destructive migration) + collector release | Fresh backup; drop migration with a tested restore path; collector rollout per `STAGING_DELIVERY.md` (06:00-23:00Z, per-collector safe slot, sequential, auto-restore) | Full suites; backup/restore round trip | Collectors SUCCESS on new verified digests; lossless and continuity checks per capacity tooling | **YES** |
+| **S8** | Watchlist + legacy collection removal (UI tranche 3) | §E3; delete legacy `/collection/vault`, old collection/wishlist pages, `/analytics/collection`, `/analytics/wishlist` (Q6 approved; redirected to `/collection`, `/watchlist`), legacy collection/wishlist/grading/tags/groups/notes/activity/CSV FastAPI routers and services, worker portfolio snapshot (check `check_alerts` first) | GREEN (0 rows; code only) | Revert | Full suites; redirects | ATLAS; deleted endpoints 404; staging delivery receipt | None |
+| **S9** | Deferred clean-up (**DEFERRED**, Q9: revisit after v1 has run 30 days; not scheduled) | Remove legacy models and settings flags; backup format bump; worker mirrors; table drops from B5 if approved | **RED** (destructive migration) + collector release | Fresh backup; drop migration with a tested restore path; collector rollout per `STAGING_DELIVERY.md` (06:00-23:00Z, per-collector safe slot, sequential, auto-restore) | Full suites; backup/restore round trip | Collectors SUCCESS on new verified digests; lossless and continuity checks per capacity tooling | **YES** |
 
-**Public launch gate** (not a session): owner approves Privacy and Terms (and lawyer review if
-chosen), the legal pages lose their draft banner and noindex, and the owner presses **Publish app**
-in Google. Before that, sign-in is limited to test users.
+**Public launch gate** (not a session): the custom domain is bought, live on Vercel and verified in
+Google Search Console, and the Google Branding links point to it (Q1); the owner fills the
+contact-email and governing-law placeholders (Q8) and approves Privacy and Terms (and lawyer review
+if chosen); the legal pages lose their draft banner and noindex; then the owner presses **Publish
+app** in Google. Before that, sign-in is limited to test users on the staging `vercel.app` URL.
+
+**Pre-revenue hosting gate** (not a session; separate from analytics): Vercel Hobby is
+non-commercial. Before any revenue starts (gacha fees, partner API), the owner moves the web
+project to **Vercel Pro** (RED: paid, owner decision). No revenue feature ships to the public while
+the project is on Hobby.
+
+**Card images (Q1, related, outside v1 sessions):** the custom domain will also serve the R2 card
+images, replacing the rate-limited `r2.dev` public URL. Switching `R2_PUBLIC_BASE_URL` belongs to
+the card-images R2 work, not to S1-S8.
 
 Order dependencies: S2 before S5 (privacy URL and disclosures). S3 before S4-S8. S1 can run in
 parallel with S2/S3. S6-S8 are visual tranches and run one at a time with `/clear` between them.
 
 ---
 
-## I. Open questions for the owner (recommended default first)
+## I. Owner decisions (answered 2026-10-11; plan APPROVED)
 
-1. **Custom domain?** Default: **yes**, buy one (for example `cardpirate.<tld>`, about $10-15 a
-   year, ESTIMATED, RED: paid). Google's consent screen needs the home page and privacy URL on a
-   domain you can verify; `*.vercel.app` probably can't be verified (UNVERIFIED third-party report).
-   Without a domain, sign-in can stay in Testing mode (up to 100 named users) indefinitely.
-2. **Move the user's API token off the browser and restrict CORS (D1)?** Default: **yes**.
-   Tradeoff: about a day more work in S5; removes a bearer token readable by any script on the page.
-3. **Analytics and error provider (F2)?** Default: **Vercel Web Analytics + Sentry Developer, both
-   free**. If the Vercel plan is Hobby and the site counts as commercial: Umami Cloud free instead.
-   Paid plans only with your approval.
-4. **Personal-collection change rule (C3):** keep Market Value's 80% value guard but drop its
-   minimum card counts for personal collections? Default: **yes**. Otherwise almost every
-   collection would never show a change.
-5. **Day-one preview chart ("how your current cards moved over 30 days")?** Default: **yes**,
-   clearly labelled. Tradeoff: one more concept on the page versus an empty chart for the first
-   week.
-6. **Also delete `/analytics/collection` and `/analytics/wishlist`** (not on your list; legacy and
-   finance-worded)? Default: **yes, in S8**, redirected to the new pages.
-7. **Drop the market workflow and its admin run-history page** (it only fed signals, reports and the
-   digest; off on staging)? Default: **yes**.
-8. **Operator name, contact email, governing law for Privacy and Terms?** Default: your name or
-   business name, a dedicated contact address, Malaysian law. Lawyer review before public launch:
-   **recommended**.
-9. **Table drops (B5) and the S9 collector release:** Default: **approve after v1 has run for 30
-   days**. Tradeoff: about 1.5 MB saved and cleaner code, versus a destructive migration plus one
-   collector release in a quiet window.
-10. **Grading:** v1 has no grading. Default: **accept**; legacy grading data (0 rows on staging)
-    goes with the legacy collection. PSA10 stays OFF.
+Each question kept its recommended default except where noted. Original tradeoffs are in git
+history (`ac4c4bf`).
+
+1. **Custom domain: YES.** The owner will buy one (name TBD, likely via Cloudflare Registrar;
+   about $10-15 a year, ESTIMATED, RED: paid). Until then, Google sign-in stays in **Testing** mode
+   on the staging `vercel.app` URL (§D2). The domain will also serve the R2 card images, instead of
+   `r2.dev`, which Cloudflare rate-limits (§H, card images).
+2. **API token off the browser: YES.** `apiToken` off the session, BFF route handlers, CORS
+   restricted to the staging origin, collector-only session guard (§D1, S5).
+3. **Analytics and errors: Vercel Web Analytics + Sentry Developer, free tiers** (§F2, S2).
+   Vercel Hobby is non-commercial: moving to Vercel Pro is a hosting decision required before
+   revenue starts (gacha fees, partner API). Recorded as a separate pre-revenue gate in §H.
+4. **Personal-collection change rule: YES.** Keep the 80% value guard; drop the minimum card counts
+   for personal collections (§C3, S4).
+5. **Day-one preview chart: YES**, clearly labelled as a preview (§C4, S4).
+6. **Delete `/analytics/collection` and `/analytics/wishlist`: YES, in S8**, redirected to
+   `/collection` and `/watchlist` (§F, §H).
+7. **Drop the market workflow and its admin run-history page: YES**, on one condition: S1 first
+   proves, by code search plus a read-only staging check, that nothing in Market Value, the Card
+   Pirate Index or `market-index-snapshot` reads the market workflow's output. If anything does, S1
+   stops and reports (§F, §H S1).
+8. **Operator, contact, governing law:** drafts use **"Card Pirate"** as operator, with placeholders
+   for contact email and governing law. No personal name in drafts. The owner decides before public
+   launch (§G, §H launch gate). Lawyer review before public launch: still recommended.
+9. **Table drops (B5) and the S9 collector release: DEFERRED.** Revisit after v1 has run 30 days.
+   S9 is not scheduled (§H).
+10. **Grading: ACCEPT.** No grading in v1; legacy grading data (0 rows on staging) goes with the
+    legacy collection. PSA10 stays OFF.
+
+Also recorded: **S3 preflight** must confirm a completed Railway Postgres backup less than 24 h old
+(the owner is enabling daily Railway backups); if there is none, S3 stops and asks the owner to take
+a manual backup (§H S3).
 
 ---
 
@@ -689,16 +720,27 @@ parallel with S2/S3. S6-S8 are visual tranches and run one at a time with `/clea
 - **Daily pipeline coupling (S4):** a bug in the new stage could delay Market Value publication.
   Mitigation: an independent stage after MV and CPI, its own transaction and lock, failure never
   blocks them, observed on a natural 20:00Z run.
-- **Google consent screen domain:** may block public launch without a custom domain (Q1).
+- **Google consent screen domain:** mitigated by the owner's decision to buy a custom domain
+  (Q1). Until it is live and verified, sign-in stays in Testing mode (up to 100 named users), so
+  public launch waits on the domain.
+- **Commercial use on Vercel Hobby:** Hobby is non-commercial. Any revenue feature (gacha fees,
+  partner API) before the move to Vercel Pro would breach the plan terms. Mitigation: the §H
+  pre-revenue hosting gate.
+- **Market workflow removal (S1):** if any Market Value, CPI or `market-index-snapshot` path reads
+  workflow output, deleting it could break daily publication. Mitigation: the S1 preflight proof
+  (Q7); S1 stops on any reader.
+- **Migration without a fresh backup (S3):** mitigated by the S3 preflight (completed backup
+  < 24 h old or stop).
 - **Auth change surface (S5):** BFF and CORS changes could break remaining per-user pages. Mitigation:
   legacy per-user pages are deleted by S8; tests check that no bearer token is exposed; admin login
   is regression-tested.
 - **Wrong identity:** only exact-unique legacy mappings are copied; unresolved rows are never priced;
   ownership is always on an exact CardPrint chosen on its own page.
-- **Legal:** privacy and terms are drafts until the owner approves; analytics banner judgement is
-  UNVERIFIED.
-- **Vendor terms:** Vercel Hobby's commercial-use limit and free-tier caps (analytics collection
-  pauses at the cap) are UNVERIFIED and must be re-checked.
+- **Legal:** privacy and terms are drafts with "Card Pirate" as operator and placeholders for
+  contact email and governing law until the owner decides and approves; analytics banner judgement
+  is UNVERIFIED.
+- **Vendor terms:** free-tier caps (Vercel analytics collection pauses at 50k events/mo; Sentry
+  5k errors/mo) are UNVERIFIED and must be re-checked in S2.
 
 ---
 
