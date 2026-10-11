@@ -1,0 +1,9 @@
+{
+ "proofs": 298,
+ "approved_exact_with_proof_current": 298,
+ "cursor_found": 298,
+ "cursor_digest_eq_baseline": 298,
+ "legacy_digest_of_stored_summary_eq_baseline": 298,
+ "stored_summary_has_run_id": 298,
+ "failures": []
+}

@@ -1,0 +1,249 @@
+{
+ "observed_at": "2026-10-11T23:05:03.116596+00:00",
+ "expected_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+ "since": "2026-10-11T15:00:00Z",
+ "services": {
+  "snkrdunk-collector": {
+   "latest": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "27,57 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:02:22.064Z",
+     "id": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-0": {
+   "latest": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "0,30 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:05:13.722Z",
+     "id": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-1": {
+   "latest": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "3,33 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:08:22.378Z",
+     "id": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-2": {
+   "latest": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "6,36 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:11:22.828Z",
+     "id": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-3": {
+   "latest": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "9,39 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:14:03.963Z",
+     "id": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "latest": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "12,42 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:17:07.682Z",
+     "id": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-5": {
+   "latest": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "15,45 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:20:07.884Z",
+     "id": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-6": {
+   "latest": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "18,48 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:23:07.689Z",
+     "id": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-7": {
+   "latest": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "21,51 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:26:22.458Z",
+     "id": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+     "status": "SUCCESS"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-8": {
+   "latest": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+   "status": "SUCCESS",
+   "latest_is_pr98_active": false,
+   "marker": false,
+   "digest_verified": false,
+   "error": "Uploaded deployment destination/source mismatch",
+   "cron": "24,54 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-11T16:29:12.788Z",
+     "id": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+     "status": "SUCCESS"
+    }
+   ]
+  }
+ },
+ "all_ok": false,
+ "deployments_since_total": 10
+}

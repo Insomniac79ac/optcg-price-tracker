@@ -1,0 +1,133 @@
+{
+ "code_root": "/tmp/claude-1000/-workspaces-optcg-price-tracker/28bc36c4-3b82-4b17-b003-8701e18f4186/scratchpad/base-c086b8b",
+ "module_file": "/tmp/claude-1000/-workspaces-optcg-price-tracker/28bc36c4-3b82-4b17-b003-8701e18f4186/scratchpad/base-c086b8b/services/api/app/services/source_mapping_proposals.py",
+ "resolver_version": "source-mapping-proposals/1.2",
+ "sample": 20,
+ "read_only": true,
+ "exact_with_proof": 0,
+ "statuses": {
+  "ambiguous": 20
+ },
+ "rows": [
+  {
+   "candidate": 1,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "5ffbf2d8fa5b9554324bcc4155d7ce1d0188f2086769fd48d952bcd13ca11594"
+  },
+  {
+   "candidate": 29,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "cbe7e334b876283a800a540f5dbe3733b0e6a6cb29fe051a772bc7c575d055bc"
+  },
+  {
+   "candidate": 333,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "39cdbba4b52532d955751d4fec4411de605c6c3366a6043ca8d8734db5a12af0"
+  },
+  {
+   "candidate": 407,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "2f9d5ac71f18031113353a7c3c64ba8332657ae4e604bf1dcab0058c26b19375"
+  },
+  {
+   "candidate": 438,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "4b3a42d084cf2977ce8ac7dcbe2a738424f4c991f130af6cdfcdd890e8e51e4f"
+  },
+  {
+   "candidate": 1219,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "137f3456396f1bb274552a747e4fc6b56e07713545dc267b574ab56eb88060a8"
+  },
+  {
+   "candidate": 1342,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "68c0f7756710589ec547c67ad5d1d64385de12c85396075c343ddb824fdfe61b"
+  },
+  {
+   "candidate": 1436,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "92fdd4419d20d72ba12c13a2851f55b8ba93579900d8bd390f1482ef330ea6ea"
+  },
+  {
+   "candidate": 1527,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "0c475373ed860069a345849c14f8e882dba4a7cc7e959092c68dcf8a85b0ef54"
+  },
+  {
+   "candidate": 1643,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "8616157c4e46f50e585a34d261b40b9231842a133a8051396b03f0533c75d73d"
+  },
+  {
+   "candidate": 1671,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "11e7213bb9047edd13fb9e3ca2a5a4e971bc65c2caa979f0a4179cc4257d84b2"
+  },
+  {
+   "candidate": 1818,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "8413a4ca7c7082b1c1ea9e86f14f232d45a540d6cf824a9eecca434082da0bdf"
+  },
+  {
+   "candidate": 1949,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "c719fc682014c833a22f41626f2f6f09e53dd9de1106168f949584b6cb7ede4a"
+  },
+  {
+   "candidate": 1993,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "4bb8b50ece3db937cfa8d4eb9c99d55942c533cc7e6ef546cb5ad2d8177e006b"
+  },
+  {
+   "candidate": 2125,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "03949b9cc0b77c11d6c5b9e57fada594c9925c48b141823a4986752c83231c3d"
+  },
+  {
+   "candidate": 2251,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "c89f21bd90643f59bd8d7dabf1d2e27dabc13d62678f5095431a9b160655939c"
+  },
+  {
+   "candidate": 2282,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "640ff878ad20159fa750e63e8a2aa62e4f2e0f5d7649b6bf0d9cca5e10d3b35f"
+  },
+  {
+   "candidate": 2425,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "8cb9bdd69d736eba8f6033fe1d5ed22f5689b796a5c23810b5287aa76b8276ac"
+  },
+  {
+   "candidate": 2450,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "9a4f097448553d9e1211125879e72fbdb586d0c132036229a07d75e284369be0"
+  },
+  {
+   "candidate": 2585,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "7e43366f078dd6ead333e12096656ef6afe7f5abe7636b29d1629f0b221864cc"
+  }
+ ]
+}

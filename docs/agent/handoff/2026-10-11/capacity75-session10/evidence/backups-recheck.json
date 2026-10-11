@@ -1,0 +1,131 @@
+{
+ "observed_at": "2026-10-11T14:54:39.621956+00:00",
+ "volumes": {
+  "postgres-volume": {
+   "instance": "60f9c775-1cc0-4fa3-9d33-4cd6149792b4",
+   "current_mb": 3569.8524159999997,
+   "size_mb": 10000,
+   "schedules": [],
+   "backups": [
+    {
+     "createdAt": "2026-09-30T11:38:38.047Z",
+     "expiresAt": null,
+     "id": "99114c3e-09c5-4874-8400-dd34c4259abd",
+     "name": "pre-freshness-c4e8a1d7b902-staging-20260930T113837Z",
+     "referencedMB": 1518,
+     "usedMB": 68,
+     "age_hours": 267.27
+    },
+    {
+     "createdAt": "2026-09-29T15:23:59.925Z",
+     "expiresAt": null,
+     "id": "7c1c5f82-b73f-4d26-a0bc-5949559052a8",
+     "name": "pre-market-value-forward-20260929-1523Z",
+     "referencedMB": 1492,
+     "usedMB": 50,
+     "age_hours": 287.51
+    },
+    {
+     "createdAt": "2026-09-29T11:51:42.650Z",
+     "expiresAt": null,
+     "id": "c03811e6-89ce-4fde-bc62-635ac15a4c80",
+     "name": "pre-c1b0-e6a8b0c3d5f7-staging-20260929",
+     "referencedMB": 1485,
+     "usedMB": 63,
+     "age_hours": 291.05
+    },
+    {
+     "createdAt": "2026-09-27T09:26:38.139Z",
+     "expiresAt": null,
+     "id": "d1622796-aa47-435c-878e-b41ba63894ef",
+     "name": "pre-market-value-a3b2-20260927T092626Z",
+     "referencedMB": 1416,
+     "usedMB": 75,
+     "age_hours": 341.47
+    },
+    {
+     "createdAt": "2026-09-24T16:42:24.916Z",
+     "expiresAt": null,
+     "id": "de6655a3-fbf1-4c6c-a881-1d06f56e2aaa",
+     "name": "pre-release-chronology-20260924-164224Z",
+     "referencedMB": 1323,
+     "usedMB": 70,
+     "age_hours": 406.2
+    },
+    {
+     "createdAt": "2026-09-24T02:08:14.142Z",
+     "expiresAt": null,
+     "id": "95a65c86-34be-4b20-af79-8a01ea862594",
+     "name": "pre-exact-rollout-batch1-20260924T020625Z",
+     "referencedMB": 1306,
+     "usedMB": 59,
+     "age_hours": 420.77
+    },
+    {
+     "createdAt": "2026-09-23T16:18:37.786Z",
+     "expiresAt": null,
+     "id": "312693a9-ed9b-43d5-aeb5-8aa66738fd7a",
+     "name": "pre-canonical-duplicate-repair-20260923-161732Z",
+     "referencedMB": 1290,
+     "usedMB": 61,
+     "age_hours": 430.6
+    },
+    {
+     "createdAt": "2026-09-22T10:09:54.807Z",
+     "expiresAt": null,
+     "id": "12f9ef8d-8f81-4de8-ba24-ffa511f20ce1",
+     "name": "post-exact-approval-pilot-forensic-20260922-095249Z",
+     "referencedMB": 1251,
+     "usedMB": 78,
+     "age_hours": 460.75
+    },
+    {
+     "createdAt": "2026-09-21T03:41:22.788Z",
+     "expiresAt": null,
+     "id": "70bdf69c-579a-4ad1-9580-1b000193c06d",
+     "name": "post-source-mapping-materialization-20260921-034047Z",
+     "referencedMB": 1211,
+     "usedMB": 75,
+     "age_hours": 491.22
+    },
+    {
+     "createdAt": "2026-09-19T14:41:10.513Z",
+     "expiresAt": null,
+     "id": "42b6895c-8c10-454f-80a3-ee5e458c3024",
+     "name": "pre-source-mapping-foundation-20260919-143614Z",
+     "referencedMB": 1148,
+     "usedMB": 72,
+     "age_hours": 528.22
+    },
+    {
+     "createdAt": "2026-09-16T01:30:58.208Z",
+     "expiresAt": null,
+     "id": "a744b757-195b-4c57-a332-9162db040911",
+     "name": "Online resize to 10000MB",
+     "referencedMB": 476,
+     "usedMB": 69,
+     "age_hours": 613.39
+    },
+    {
+     "createdAt": "2026-08-29T12:00:25.700Z",
+     "expiresAt": "2026-09-28T12:00:25.337Z",
+     "id": "ae70145f-812a-4b34-b73e-cdedbdc30d71",
+     "name": "Pre-Security-Patch Backup",
+     "referencedMB": 197,
+     "usedMB": 93,
+     "age_hours": 1034.9
+    }
+   ]
+  }
+ },
+ "newest": {
+  "createdAt": "2026-09-30T11:38:38.047Z",
+  "expiresAt": null,
+  "id": "99114c3e-09c5-4874-8400-dd34c4259abd",
+  "name": "pre-freshness-c4e8a1d7b902-staging-20260930T113837Z",
+  "referencedMB": 1518,
+  "usedMB": 68,
+  "age_hours": 267.27
+ },
+ "gate_backup_under_24h": false
+}

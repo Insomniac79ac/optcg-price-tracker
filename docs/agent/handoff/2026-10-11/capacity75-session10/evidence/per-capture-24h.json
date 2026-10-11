@@ -1,0 +1,68 @@
+{
+ "window": [
+  "2026-10-10T14:31:00Z",
+  "2026-10-11T14:31:00Z"
+ ],
+ "per_source_refresh": [
+  {
+   "name": "snkrdunk",
+   "attempts": 318,
+   "raw_row_bytes": 1442376,
+   "ledger_all_bytes": 6984818,
+   "obs_bytes": "3762",
+   "attempt_bytes": 171552
+  },
+  {
+   "name": "yuyutei",
+   "attempts": 2617,
+   "raw_row_bytes": 5562252,
+   "ledger_all_bytes": 6984818,
+   "obs_bytes": "226004",
+   "attempt_bytes": 928656
+  }
+ ],
+ "raw_snapshots_all_in_window": [
+  {
+   "name": "yuyutei",
+   "n": 2752,
+   "bytes": 10437837
+  },
+  {
+   "name": "snkrdunk",
+   "n": 334,
+   "bytes": 2520876
+  }
+ ],
+ "relation_sizes": [
+  {
+   "relname": "raw_snapshots",
+   "total": 2615959552,
+   "heap": 15630336
+  },
+  {
+   "relname": "price_observations",
+   "total": 14450688,
+   "heap": 3850240
+  },
+  {
+   "relname": "app_log_events",
+   "total": 13197312,
+   "heap": 12181504
+  },
+  {
+   "relname": "source_mapping_proposal_groups",
+   "total": 56991744,
+   "heap": 45932544
+  },
+  {
+   "relname": "freshness_attempts",
+   "total": 17719296,
+   "heap": 13336576
+  },
+  {
+   "relname": "raw_snapshot_dictionaries",
+   "total": 2564096,
+   "heap": 1843200
+  }
+ ]
+}

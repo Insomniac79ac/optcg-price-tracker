@@ -1,0 +1,100 @@
+{
+ "unit_basis": "session-9 (Railway GB x 1024, conservative); Railway MB basis also given",
+ "volume_mb_2026-10-11T14:00Z": 3655.3,
+ "volume_mb_railway_basis": 3569.7,
+ "reserve_mb": 3221.2,
+ "room_to_reserve_mb": 3123.4,
+ "room_to_reserve_mb_railway_basis": 3209.1,
+ "growth_mb_day": {
+  "24h_10-10T14_to_10-11T14": 18.83,
+  "since_s9_16h": 20.77,
+  "42h": 23.77,
+  "max_rolling_24h_in_series": 34.18,
+  "s9_24h_CF": 33.5,
+  "s8_steady_CF": 47.9,
+  "s7_worst_CF": 116.7
+ },
+ "runway_days": {
+  "24h": 165.9,
+  "42h": 131.4,
+  "max_rolling_24h": 91.4,
+  "s9_CF_33.5": 93.2,
+  "s8_CF_47.9": 65.2,
+  "s7_worst_CF_116.7": 26.8
+ },
+ "new100_one_off_mb": {
+  "hard_bound_mb": 887.0,
+  "estimate_avg_mb": 133.1,
+  "observed_max_mb": 193.0,
+  "html_mb": 6.4
+ },
+ "new100_recurring": {
+  "per_capture_all_in_kb": 6.27,
+  "mb_per_day": 0.63,
+  "mb_90d": 56.4
+ },
+ "new100_90d_check": [
+  {
+   "base_rate": "24h",
+   "images": "hard_bound_mb",
+   "need_90d_mb": 2638.2,
+   "margin_mb": 485.2,
+   "fits": true
+  },
+  {
+   "base_rate": "24h",
+   "images": "estimate_avg_mb",
+   "need_90d_mb": 1884.3,
+   "margin_mb": 1239.2,
+   "fits": true
+  },
+  {
+   "base_rate": "42h",
+   "images": "hard_bound_mb",
+   "need_90d_mb": 3082.7,
+   "margin_mb": 40.8,
+   "fits": true
+  },
+  {
+   "base_rate": "42h",
+   "images": "estimate_avg_mb",
+   "need_90d_mb": 2328.7,
+   "margin_mb": 794.7,
+   "fits": true
+  },
+  {
+   "base_rate": "max_rolling_24h",
+   "images": "hard_bound_mb",
+   "need_90d_mb": 4019.7,
+   "margin_mb": -896.2,
+   "fits": false
+  },
+  {
+   "base_rate": "max_rolling_24h",
+   "images": "estimate_avg_mb",
+   "need_90d_mb": 3265.7,
+   "margin_mb": -142.3,
+   "fits": false
+  },
+  {
+   "base_rate": "s9_CF_33.5",
+   "images": "hard_bound_mb",
+   "need_90d_mb": 3958.5,
+   "margin_mb": -835.0,
+   "fits": false
+  },
+  {
+   "base_rate": "s9_CF_33.5",
+   "images": "estimate_avg_mb",
+   "need_90d_mb": 3204.5,
+   "margin_mb": -81.1,
+   "fits": false
+  }
+ ],
+ "largest_batch_hard_bound": {
+  "24h": 100,
+  "42h": 100,
+  "max_rolling_24h": 5,
+  "s9_CF_33.5": 11
+ }
+}

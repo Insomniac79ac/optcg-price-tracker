@@ -1,0 +1,301 @@
+{
+ "observed_at": "2026-10-11T23:23:41.786244+00:00",
+ "label": "CROSS-CHECK of ORIGINAL receipt (not reconstructed)",
+ "github": {
+  "pr": 103,
+  "merged_at": "2026-10-11T15:51:23Z",
+  "merge_commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "receipt_source_sha_matches_merge": true,
+  "ci_run": {
+   "id": 38151886392,
+   "head_sha": "34507ddba8e9bf019f138f6bdece6bb3212c7dd3",
+   "conclusion": "success",
+   "created_at": "2026-10-11T15:35:08Z",
+   "updated_at": "2026-10-11T16:56:17Z"
+  },
+  "artifacts": [
+   {
+    "id": 11709366163,
+    "name": "staging-delivery-a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "size_in_bytes": 50392,
+    "created_at": "2026-10-11T16:56:14Z",
+    "expires_at": "2027-01-09T15:35:09Z"
+   },
+   {
+    "id": 11706856727,
+    "name": "staging-credential-probe-34507ddba8e9bf019f138f6bdece6bb3212c7dd3",
+    "size_in_bytes": 423,
+    "created_at": "2026-10-11T15:36:31Z",
+    "expires_at": "2027-01-09T15:35:09Z"
+   }
+  ]
+ },
+ "receipt": {
+  "started_at": "2026-10-11T15:52:38.697375+00:00",
+  "completed_at": "2026-10-11T16:31:08.684579+00:00",
+  "source_sha": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "sequential": true,
+  "natural_runs_not_yet_verified": true,
+  "production_accessed": false
+ },
+ "services": {
+  "snkrdunk-collector": {
+   "new_deployment": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:02:22.064Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:04:50.690847+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:02:22.064Z"
+    }
+   ],
+   "rollback_target_deployment": "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:776a5cb43c680e287c3fc5826bc6513bba7056496daa7dd3ace589dbc1dbc334",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-0": {
+   "new_deployment": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:05:13.722Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:06:39.281981+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:05:13.722Z"
+    }
+   ],
+   "rollback_target_deployment": "209fc53c-8e15-4fc1-aac0-cdd2b3380ed4",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:e6ab33e19814f2afd66a9bc41ec403d35545d0ecc7f4440e43d94172a13785a3",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-1": {
+   "new_deployment": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:08:22.378Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:10:19.873331+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:08:22.378Z"
+    }
+   ],
+   "rollback_target_deployment": "cb8156c3-d4e4-4320-9a17-51cacd139f79",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:e526c096507b85ed4c65e6e477bf01e0844888178fe073d3abd3540dd0ff0e15",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-2": {
+   "new_deployment": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:11:22.828Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:13:20.918292+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:11:22.828Z"
+    }
+   ],
+   "rollback_target_deployment": "f572ef86-6e19-4909-9a9b-a4009f42108c",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:a8c0fde18f03e80f206531de4f42cf78a7133900bac3433d12d3a93a048d5b64",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-3": {
+   "new_deployment": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:14:03.963Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:15:44.666614+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:14:03.963Z"
+    }
+   ],
+   "rollback_target_deployment": "8a5889b1-c269-415b-a8ac-331cc6fbeb0b",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:d5cf429053b54f794efc24faea97283348f2539142ace6848add0c208c6fe7f5",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "new_deployment": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:17:07.682Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:19:04.871379+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:17:07.682Z"
+    }
+   ],
+   "rollback_target_deployment": "26808284-572d-4fea-bc93-f2fdefe51e85",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:4a4c3bbea57e449ee7a1f6543da52a81d1c45f9d70f60ba9edeb01441d466ae2",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-5": {
+   "new_deployment": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:20:07.884Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:22:04.498490+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:20:07.884Z"
+    }
+   ],
+   "rollback_target_deployment": "a47093dc-ad60-4ede-ade4-7a42253a252a",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:1dc3c30fc4c87ac8db15b09379f1a5bf439fdff3dfdb7e6024389b1bdc254fbf",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-6": {
+   "new_deployment": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:23:07.689Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:25:19.426787+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:23:07.689Z"
+    }
+   ],
+   "rollback_target_deployment": "7dd74cd4-5073-4e0a-ad6c-7beb181db582",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:fe9e066ae266b5bda5853b1c8a018ea5613e26c1b2e0a23abed555d00a5901ab",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-7": {
+   "new_deployment": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:26:22.458Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:28:49.869112+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:26:22.458Z"
+    }
+   ],
+   "rollback_target_deployment": "d2c50819-5970-4935-b77e-cb3a3f66b64b",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:e3955b6ff3eb4e1a2762c6b78bec0b9cbe08573d2a89b32ffd7f7ff646571c5f",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  },
+  "yuyutei-collector-shard-8": {
+   "new_deployment": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+   "railway_new_found": true,
+   "railway_new_status": "SUCCESS",
+   "railway_new_created_at": "2026-10-11T16:29:12.788Z",
+   "railway_new_digest_matches_receipt": true,
+   "railway_new_cli_message_has_sha": true,
+   "receipt_verified_at": "2026-10-11T16:31:08.684114+00:00",
+   "deployments_since_merge": [
+    {
+     "id": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-11T16:29:12.788Z"
+    }
+   ],
+   "rollback_target_deployment": "f98f53b9-237b-48f1-9bf7-b8ce19acdfb1",
+   "rollback_target_commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "rollback_target_digest": "sha256:0ff26d968a45eea0904c57aa767c31ddc46cc0d716d95c293d698228bfad5eec",
+   "rollback_target_equals_session8_active": true,
+   "rollback_target_digest_equals_session8": true,
+   "railway_rollback_target_found": true,
+   "railway_rollback_target_status": "REMOVED",
+   "railway_rollback_target_digest_matches": true
+  }
+ },
+ "summary": {
+  "all_new_found_success_digest_match": true,
+  "exactly_one_deployment_per_collector_since_merge": true,
+  "rollback_targets_equal_session8": true,
+  "rollback_targets_present_in_railway": true,
+  "trigger_preflight_in_receipt": {
+   "snkrdunk-collector": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-0": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-1": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-2": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-3": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-4-v2": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-5": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-6": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-7": "no trigger, auto-deploy disabled",
+   "yuyutei-collector-shard-8": "no trigger, auto-deploy disabled"
+  }
+ }
+}

@@ -1,0 +1,19 @@
+{
+  "base": "7503d719f202c5b68714923765272b5b8355194f",
+  "merge": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "decision": "full",
+  "files": [
+    "docs/agent/STAGING_MISSION.json",
+    "services/api/app/services/physical_artwork_proof.py",
+    "services/api/app/services/source_mapping_proposals.py",
+    "services/api/tests/test_physical_artwork_proof.py",
+    "services/api/tests/test_source_mapping_proposals.py"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    "services/api/app/services/physical_artwork_proof.py",
+    "services/api/app/services/source_mapping_proposals.py",
+    "services/api/tests/test_physical_artwork_proof.py",
+    "services/api/tests/test_source_mapping_proposals.py"
+  ]
+}

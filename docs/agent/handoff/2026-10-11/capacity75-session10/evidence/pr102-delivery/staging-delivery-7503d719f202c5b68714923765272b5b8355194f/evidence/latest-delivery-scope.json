@@ -1,0 +1,22 @@
+{
+  "base": "c086b8be800f609e727549aa69d63cb18a05e2f1",
+  "merge": "7503d719f202c5b68714923765272b5b8355194f",
+  "decision": "full",
+  "files": [
+    "docs/agent/STAGING_DELIVERY.md",
+    "docs/agent/STAGING_MISSION.json",
+    "scripts/collector_variables.py",
+    "scripts/deploy_staging_collectors.py",
+    "scripts/tests/test_collector_variables.py",
+    "scripts/tests/test_deploy_staging_collectors.py",
+    "scripts/tests/test_operational_health.py"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    "scripts/collector_variables.py",
+    "scripts/deploy_staging_collectors.py",
+    "scripts/tests/test_collector_variables.py",
+    "scripts/tests/test_deploy_staging_collectors.py",
+    "scripts/tests/test_operational_health.py"
+  ]
+}
