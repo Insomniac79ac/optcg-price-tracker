@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Refuse collector releases while any collector has a Railway GitHub deploy trigger (capacity75 session 10, tooling and tests only)",
+ "mission": "Capacity75 session 10 (2026-10-11): resolver 1.3 - stop discovery_run_id from re-versioning unchanged source-mapping proposals (2,164 versions/24h vs 47 real changes), with a strict bridge so physical-artwork reviews bound under 1.2 never lose their link and never transfer across a real evidence change; sequential collector release",
  "target": "staging",
- "classification": "GREEN",
+ "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -17,39 +17,31 @@
   "significant_recurring_cost": false,
   "yuyu_sale_policy": false
  },
+ "diff_sha256": "0c13ad90a9d710fb7d6f447bf5796cab5fdbed1bdcc21db70df1290509c3dac1",
  "impacts": [
   {
    "files": [
-    "scripts/collector_variables.py",
-    "scripts/deploy_staging_collectors.py"
+    "services/api/app/services/physical_artwork_proof.py",
+    "services/api/app/services/source_mapping_proposals.py"
    ],
    "effects": [
-    "application"
+    "application",
+    "staging_deployment",
+    "infrastructure"
    ],
-   "reason": "Delivery tooling only (scripts/, outside every collector and API runtime import graph): deploy_staging_collectors.refuse_github_triggers reads every collector's deployment triggers and auto-deploy status (read-only GraphQL) and refuses a forward collector release on any trigger, enabled auto-deploy, unreadable status or missing collector; collector_variables.change calls it before staging. Restore paths skip it. No collector rollout requested; no Railway collector build (collectors have no GitHub trigger since session 9)."
+   "reason": "Collector runtime code (both images import source_mapping_proposals). evidence_digest excludes discovery_run_id (still recorded in evidence_summary_json); RESOLVER_VERSION 1.3; physical_artwork_proof bridge accepts a 1.2 review only if the capture cursor stored summary hashes to its baseline (1.2) and equals current evidence except discovery_run_id. Delivered to all ten collectors one at a time; API by its GitHub build. No identity guard, resolution, approval fence, sale policy, schedule, budget, pacing or freshness change; nothing auto-approved."
   },
   {
    "files": [
-    "scripts/tests/test_collector_variables.py",
-    "scripts/tests/test_deploy_staging_collectors.py",
-    "scripts/tests/test_operational_health.py"
+    "services/api/tests/test_physical_artwork_proof.py",
+    "services/api/tests/test_source_mapping_proposals.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Regression tests: trigger present on a non-requested collector refuses before any slot/upload; auto-deploy enabled refuses; missing collector or unreadable status fails closed; no trigger proceeds and the receipt records the check for all ten; rollback never runs the check; settings-only change refuses before staging."
-  },
-  {
-   "files": [
-    "docs/agent/STAGING_DELIVERY.md"
-   ],
-   "effects": [
-    "documentation"
-   ],
-   "reason": "STAGING_DELIVERY.md section documenting the preflight."
+   "reason": "Unchanged listing across runs reused; real change re-versions; hard guard: approved exact groups with physical proofs keep row/digest/version/approval/proof (fails on 1.2 code); 1.2 review bridge re-attaches only on identical evidence and refuses on any change or cursor tampering."
   }
  ],
- "diff_sha256": "ee18d333591ed95c72e8021dd70ca9e9c6414190d0f6211332af3ad4f82061b1",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "f9e5b4a8c012",
@@ -57,8 +49,160 @@
    "scripts/verify_snkr_published_discovery_component.py",
    "scripts/verify_yuyu_raw_reader_component.py"
   ],
-  "snkr_component": "a8522447c6933d05e94e01d5789cdcd5160c10da",
-  "yuyu_reader_component": "a8522447c6933d05e94e01d5789cdcd5160c10da",
-  "yuyu_capacity_cadence": true
+  "snkr_component": "merge",
+  "yuyu_reader_component": "merge",
+  "yuyu_capacity_cadence": true,
+  "collector_services": [
+   {
+    "name": "snkrdunk-collector",
+    "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+    "recovery_deployment_id": "59171f15-ee6b-4489-8470-f520b9e5e5f7"
+   },
+   {
+    "name": "yuyutei-collector-shard-0",
+    "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+    "recovery_deployment_id": "209fc53c-8e15-4fc1-aac0-cdd2b3380ed4"
+   },
+   {
+    "name": "yuyutei-collector-shard-1",
+    "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+    "recovery_deployment_id": "cb8156c3-d4e4-4320-9a17-51cacd139f79"
+   },
+   {
+    "name": "yuyutei-collector-shard-2",
+    "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+    "recovery_deployment_id": "f572ef86-6e19-4909-9a9b-a4009f42108c"
+   },
+   {
+    "name": "yuyutei-collector-shard-3",
+    "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+    "recovery_deployment_id": "8a5889b1-c269-415b-a8ac-331cc6fbeb0b"
+   },
+   {
+    "name": "yuyutei-collector-shard-4-v2",
+    "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+    "recovery_deployment_id": "26808284-572d-4fea-bc93-f2fdefe51e85"
+   },
+   {
+    "name": "yuyutei-collector-shard-5",
+    "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+    "recovery_deployment_id": "a47093dc-ad60-4ede-ade4-7a42253a252a"
+   },
+   {
+    "name": "yuyutei-collector-shard-6",
+    "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+    "recovery_deployment_id": "7dd74cd4-5073-4e0a-ad6c-7beb181db582"
+   },
+   {
+    "name": "yuyutei-collector-shard-7",
+    "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+    "recovery_deployment_id": "d2c50819-5970-4935-b77e-cb3a3f66b64b"
+   },
+   {
+    "name": "yuyutei-collector-shard-8",
+    "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+    "recovery_deployment_id": "f98f53b9-237b-48f1-9bf7-b8ce19acdfb1"
+   }
+  ]
+ },
+ "safeguards": {
+  "impact": {
+   "resources": [
+    {
+     "name": "Staging Postgres (no migration; ordinary scheduled captures only)",
+     "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+     "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+     "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
+    },
+    {
+     "name": "Staging API",
+     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+    },
+    {
+     "name": "snkrdunk-collector",
+     "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+     "recovery_deployment_id": "bf28a669-1c48-4d79-9c67-30e3225170f8"
+    },
+    {
+     "name": "yuyutei-collector-shard-0",
+     "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+     "recovery_deployment_id": "6dbcce04-0e85-442b-883e-e01c1cf61d93"
+    },
+    {
+     "name": "yuyutei-collector-shard-1",
+     "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+     "recovery_deployment_id": "19162cb7-ffa3-4451-af5e-9836b1dc77f3"
+    },
+    {
+     "name": "yuyutei-collector-shard-2",
+     "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+     "recovery_deployment_id": "64001afc-7642-4c94-89ab-26bce593ec15"
+    },
+    {
+     "name": "yuyutei-collector-shard-3",
+     "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+     "recovery_deployment_id": "758cf426-b342-4f90-bb6d-140608e5d9f2"
+    },
+    {
+     "name": "yuyutei-collector-shard-4-v2",
+     "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+     "recovery_deployment_id": "7b05fe37-ab03-453b-a824-9979947d8f98"
+    },
+    {
+     "name": "yuyutei-collector-shard-5",
+     "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+     "recovery_deployment_id": "c0392329-5fca-40ab-85bf-078e13f60d4b"
+    },
+    {
+     "name": "yuyutei-collector-shard-6",
+     "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+     "recovery_deployment_id": "51ac2b1d-6fa1-4056-ab82-bbd0b74e9b6d"
+    },
+    {
+     "name": "yuyutei-collector-shard-7",
+     "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+     "recovery_deployment_id": "8215f924-cd1d-4abe-afdb-082e6e1208d0"
+    },
+    {
+     "name": "yuyutei-collector-shard-8",
+     "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+     "recovery_deployment_id": "2bc75473-311c-4205-a9fd-ba20882b206c"
+    }
+   ],
+   "routes": [
+    "Existing admitted recurring Yuyu discovery turns persist proposals; no new source request, endpoint or manual invocation"
+   ],
+   "dependencies": [
+    "source_mapping_proposal_groups (no schema change; f9e5b4a8c012); positive_physical_artwork.json registry unchanged; freshness admission unchanged"
+   ],
+   "deployment_impact": "Collectors have no GitHub trigger (session 9; enforced by the PR #102 preflight), so this merge builds no collector. The sequential delivery uploads the merge to each collector ONE AT A TIME in its own safe slot and verifies before the next; any failure restores every touched collector to its verified a852244 image. One-time re-version of current pending proposal groups (~2.2k rows, ~4-5 MB ESTIMATE), then ~47/day. Approved groups are never re-planned (mapped listings produce no plan; reviewed groups preserved).",
+   "database_writes": 2700,
+   "source_requests": 0,
+   "estimated_runtime_minutes": 150
+  },
+  "recovery": {
+   "artifact": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "procedure": "Automatic during rollout: every touched collector restored newest-first to its verified a852244 image (deployments in collector_services) via collector_variables.restore. After delivery: python3 scripts/collector_variables.py --service <name> --commit a8522447c6933d05e94e01d5789cdcd5160c10da --expect-digest <digest from session-8 fleet-after-pr98.json> --restore --set RAW_DICTIONARY_STORAGE_ENABLED=true --set RAW_DICTIONARY_STORAGE_MODE=daily-v1 --set APP_ENV=staging, one at a time. Rows written under 1.3 remain valid history; 1.2 code re-versions pending groups once more.",
+   "trigger": "any drop in approved exact (2,019 Yuyu / 151 SNKR) or approved-with-proof (298) counts; any stored proposal differs RuntimeError; any discovery failure; any 403/429/challenge; deployment failure; schedule or flag drift; re-versioning still > 200/day after the first full discovery cycle",
+   "backup": "No schema change. Completed manual staging Postgres backup 2135eec8 at 2026-10-11T15:20:25Z (<1h old at release) plus daily schedule 09:22Z (session-10 handoff evidence/backups-final.json). Verified a852244 images active and redeployable at 15:32Z (evidence/live-after-pr102.json).",
+   "validation": [
+    "scripts/tests/test_collector_variables.py",
+    "scripts/tests/test_deploy_staging_collectors.py",
+    "services/api/tests/test_source_mapping_proposals.py",
+    "services/api/tests/test_physical_artwork_proof.py"
+   ]
+  },
+  "verification": {
+   "required_checks": [
+    "engineering-gate"
+   ],
+   "post_change": [
+    "scripts/verify_staging_delivery.py",
+    "scripts/verify_snkr_published_discovery_component.py",
+    "scripts/verify_yuyu_raw_reader_component.py",
+    "scripts/generate_staging_state.py"
+   ],
+   "observation_window": "Delivery artifact plus one completed natural discovery turn per Yuyu shard on the new code. Then: approved exact 2,019/151 and approved-with-proof 298 unchanged; one-time re-version of pending groups only; second-cycle versions ~ changed listings only (rollback if > 200/day); 0 stored-proposal-differs errors; 0 discovery failures; lossless green; proposal table growth over 24h."
+  }
  }
 }
