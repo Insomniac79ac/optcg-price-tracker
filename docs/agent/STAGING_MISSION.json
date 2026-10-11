@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Land 2026-10-10 capacity75 session-9 handoff, evidence, resize and proposal-digest preflights on staging (documentation only)",
+ "mission": "Refuse collector releases while any collector has a Railway GitHub deploy trigger (capacity75 session 10, tooling and tests only)",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,54 +20,36 @@
  "impacts": [
   {
    "files": [
-    "docs/agent/handoff/2026-10-10/capacity75-session9/CONTINUATION.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/CURRENT_STATE-start.yaml",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/HANDOFF.md",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/PROPOSAL_DIGEST_PREFLIGHT.md",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/RESIZE_PREFLIGHT.md",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-0.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-1.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-2.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-3.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-4-v2.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-5.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-6.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-7.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-shard-8.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-disable-snkrdunk-collector.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-status-after.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/autodeploy-status-before.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/live-after-autodeploy.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/live-state-start.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/natural-turns-a852244-2215.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/price-continuity-a852244-2215.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/proposal-current-status-2225.txt",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/proposal-versions-24h-2225.txt",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/requests-after-a852244-2215.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/staging-state-faf2470f5e18595e.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/verify-lossless-final.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/volume-2220.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/volume-backups-2220.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/volume-series-26h.json",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/evidence/window-series-2215.txt",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/autodeploy_disable.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/bloat.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/db.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/live_now.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/natural_turns.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/price_continuity.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/requests_window.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/storage_stats.py",
-    "docs/agent/handoff/2026-10-10/capacity75-session9/tools/verify_all.py"
+    "scripts/collector_variables.py",
+    "scripts/deploy_staging_collectors.py"
    ],
    "effects": [
-    "documentation",
-    "state_observation"
+    "application"
    ],
-   "reason": "Session-9 handoff, read-only evidence, preflight designs and read-only measurement tools under docs/agent/handoff/ only. No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout, no Railway build. Also the test merge for the collector GitHub-trigger removal: expected 0 collector deployment records."
+   "reason": "Delivery tooling only (scripts/, outside every collector and API runtime import graph): deploy_staging_collectors.refuse_github_triggers reads every collector's deployment triggers and auto-deploy status (read-only GraphQL) and refuses a forward collector release on any trigger, enabled auto-deploy, unreadable status or missing collector; collector_variables.change calls it before staging. Restore paths skip it. No collector rollout requested; no Railway collector build (collectors have no GitHub trigger since session 9)."
+  },
+  {
+   "files": [
+    "scripts/tests/test_collector_variables.py",
+    "scripts/tests/test_deploy_staging_collectors.py",
+    "scripts/tests/test_operational_health.py"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Regression tests: trigger present on a non-requested collector refuses before any slot/upload; auto-deploy enabled refuses; missing collector or unreadable status fails closed; no trigger proceeds and the receipt records the check for all ten; rollback never runs the check; settings-only change refuses before staging."
+  },
+  {
+   "files": [
+    "docs/agent/STAGING_DELIVERY.md"
+   ],
+   "effects": [
+    "documentation"
+   ],
+   "reason": "STAGING_DELIVERY.md section documenting the preflight."
   }
  ],
- "diff_sha256": "efc8d6f9756301b1faf2f9e88508210024b197992016e2ccbf2669a6f55a2b39",
+ "diff_sha256": "ee18d333591ed95c72e8021dd70ca9e9c6414190d0f6211332af3ad4f82061b1",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "f9e5b4a8c012",

@@ -311,7 +311,8 @@ class HealthTests(unittest.TestCase):
 class CollectorRolloutTests(unittest.TestCase):
     def setUp(self):
         # Sequential-rollout seams (tested in test_deploy_staging_collectors):
-        # pre-change capture, safe slot, per-collector verification, rollback.
+        # pre-change capture, safe slot, per-collector verification, rollback,
+        # and the collector GitHub-trigger preflight.
         import deploy_staging_collectors as deploy
 
         def capture(row, service):
@@ -322,7 +323,8 @@ class CollectorRolloutTests(unittest.TestCase):
 
         for name, value in (("capture_before", capture), ("wait_for_slot", lambda *a, **k: None),
                             ("verify_released", lambda *a, **k: "sha256:new"),
-                            ("outside_busy_window", lambda *a, **k: None)):
+                            ("outside_busy_window", lambda *a, **k: None),
+                            ("refuse_github_triggers", lambda *a, **k: {})):
             patcher = patch.object(deploy, name, side_effect=value)
             patcher.start()
             self.addCleanup(patcher.stop)

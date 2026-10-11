@@ -61,6 +61,7 @@ EXPECTED = "a" * 40
 OLD = "c" * 40
 NAMES = ["snkrdunk-collector", "yuyutei-collector-shard-0", "yuyutei-collector-shard-1"]
 IDS = {n: f"{i:08d}-0000-0000-0000-000000000000" for i, n in enumerate(NAMES)}
+OTHER_IDS = {n: f"{i:08d}-1111-0000-0000-000000000000" for i, n in enumerate(sorted(delivery.NAMES))}
 FLAGS = {"RAW_DICTIONARY_STORAGE_ENABLED": "true", "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
          "APP_ENV": "staging"}
 
@@ -132,7 +133,9 @@ class Fleet:
                                      "meta": {"cliMessage": delivery.MARKER + commit}}}
 
     def inspect(self):
-        return {n: self.node(n) for n in NAMES}
+        # The trigger preflight reads every delivered collector, not only the requested three.
+        others = {n: {"serviceId": OTHER_IDS[n]} for n in delivery.NAMES if n not in NAMES}
+        return {**others, **{n: self.node(n) for n in NAMES}}
 
     def read(self, identity, service_id, commit):
         return {"id": identity, "status": "SUCCESS", "canRedeploy": True,
@@ -161,7 +164,12 @@ class Fleet:
         return {"service": name}
 
 
-def run_main(fleet, tmp_path, monkeypatch, source=None):
+NO_TRIGGER = {"triggers": [], "auto_deploy": False}
+TRIGGER = {"triggers": [{"id": "t", "provider": "github", "repository": "Insomniac79ac/optcg-price-tracker",
+                         "branch": "staging"}], "auto_deploy": False}
+
+
+def run_main(fleet, tmp_path, monkeypatch, source=None, triggers=None):
     import collector_variables as cv
 
     for path in ("services/api/app/services", "services/yuyutei_collector/yuyutei_collector",
@@ -180,6 +188,7 @@ def run_main(fleet, tmp_path, monkeypatch, source=None):
     monkeypatch.setattr(delivery, "upload", fleet.upload)
     monkeypatch.setattr(delivery, "wait_for_slot", fleet.slot)
     monkeypatch.setattr(delivery, "outside_busy_window", lambda: None)
+    monkeypatch.setattr(delivery, "deploy_triggers", triggers or (lambda sid: NO_TRIGGER))
     monkeypatch.setattr(delivery.time, "sleep", lambda s: None)
     monkeypatch.setattr(cv, "read_variables", fleet.variables)
     monkeypatch.setattr(cv, "original_source",
@@ -243,6 +252,73 @@ def test_missing_rollback_source_refuses_before_any_upload(tmp_path, monkeypatch
     else:
         raise AssertionError("must refuse without a proven rollback")
     assert not [s for s in fleet.log if s[0] == "upload"]
+
+
+def test_github_trigger_on_any_collector_refuses_before_any_upload(tmp_path, monkeypatch):
+    fleet = Fleet()
+    shard_8 = OTHER_IDS["yuyutei-collector-shard-8"]  # not a requested collector
+    try:
+        run_main(fleet, tmp_path, monkeypatch,
+                 triggers=lambda sid: TRIGGER if sid == shard_8 else NO_TRIGGER)
+    except delivery.state.VerificationError as error:
+        assert "yuyutei-collector-shard-8" in str(error)
+    else:
+        raise AssertionError("a collector GitHub trigger must refuse the release")
+    assert fleet.log == []  # no slot wait, no upload, no restore
+    assert not (tmp_path / "receipt.json").exists()
+
+
+def test_auto_deploy_enabled_refuses_like_a_trigger(tmp_path, monkeypatch):
+    fleet = Fleet()
+    try:
+        run_main(fleet, tmp_path, monkeypatch,
+                 triggers=lambda sid: {"triggers": [], "auto_deploy": True})
+    except delivery.state.VerificationError:
+        pass
+    else:
+        raise AssertionError("auto-deploy enabled must refuse")
+    assert fleet.log == []
+
+
+def test_no_trigger_proceeds_and_receipt_records_the_check(tmp_path, monkeypatch):
+    fleet = Fleet()
+    checked = []
+    code, output = run_main(fleet, tmp_path, monkeypatch,
+                            triggers=lambda sid: checked.append(sid) or NO_TRIGGER)
+    assert code == 0
+    assert len(set(checked)) == len(delivery.NAMES) == 10  # all ten, not only the requested three
+    receipt = json.loads(output.read_text())
+    assert set(receipt["github_trigger_preflight"]) == delivery.NAMES
+
+
+def test_missing_collector_or_unreadable_status_fails_closed():
+    live = {n: {"serviceId": OTHER_IDS[n]} for n in delivery.NAMES}
+    partial = dict(live)
+    partial.pop("snkrdunk-collector")
+    for args, read in ((partial, lambda sid: NO_TRIGGER),
+                       (live, lambda sid: {"triggers": [], "auto_deploy": None})):
+        try:
+            delivery.refuse_github_triggers(args, read=read)
+        except delivery.state.VerificationError:
+            pass
+        else:
+            raise AssertionError("must fail closed")
+
+
+def test_rollback_restore_never_runs_the_trigger_check(tmp_path, monkeypatch):
+    fleet = Fleet(fail_on="yuyutei-collector-shard-1")
+    calls = []
+
+    def triggers(sid):
+        calls.append(sid)
+        return NO_TRIGGER
+
+    try:
+        run_main(fleet, tmp_path, monkeypatch, triggers=triggers)
+    except delivery.state.VerificationError:
+        pass
+    assert len(calls) == len(delivery.NAMES)  # once, in the preflight; restores add none
+    assert [s for s in fleet.log if s[0] == "restore"]
 
 
 if __name__ == "__main__":

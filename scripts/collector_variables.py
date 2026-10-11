@@ -220,7 +220,8 @@ def deploy_verified(name, values, commit, image, *, before, inspect, read, run, 
 
 def change(name, assignments, commit, *, expect_digest=None, inspect=delivery.inspect,
            read=delivery.read_deployment, run=subprocess.run, railway=None, variables=read_variables,
-           listing=None, clock=time.monotonic, sleep=time.sleep, wait_seconds=600):
+           listing=None, clock=time.monotonic, sleep=time.sleep, wait_seconds=600,
+           triggers=None):
     """Apply a settings-only change on the original verified image, or roll back.
 
     Any failed invariant after the redeploy restores the previous effective values
@@ -231,6 +232,10 @@ def change(name, assignments, commit, *, expect_digest=None, inspect=delivery.in
     if not skip_deploys_supported(run):
         raise state.VerificationError("Railway CLI lacks --skip-deploys; refusing")
     listing = listing or (lambda service_id: recent_deployments(service_id, railway))
+    # A forward change is a collector release: refuse while any collector has a
+    # GitHub deploy trigger. restore() deliberately skips this so rollback works.
+    delivery.refuse_github_triggers(
+        inspect(), read=triggers or (lambda service_id: delivery.deploy_triggers(service_id, railway)))
     node = service_node(name, inspect)
     before = {"schedule": node.get("cronSchedule"), "start": node.get("startCommand")}
     active, _ = verified_active(node, commit, read, listing, expect_digest)
