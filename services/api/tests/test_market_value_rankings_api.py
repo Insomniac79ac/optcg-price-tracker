@@ -200,7 +200,9 @@ def test_http_select_only_bounded_archive_and_no_external_calls(
     assert len(archive) == 1
     assert "snapshot_date IN" in archive[0][0]
     assert tuple(archive[0][1][: len(dates)]) == dates
-    assert len(statements) <= 7
+    # 8 = the original 7 plus one batched card_print_image_assets read (the
+    # verified R2 copies of the official images, app.services.display_image).
+    assert len(statements) <= 8
     assert sum("source_card_mappings" in sql for sql, _ in statements) == 1
 
 

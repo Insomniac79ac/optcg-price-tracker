@@ -18,6 +18,8 @@ describe("brand", () => {
   it("never claims official status in the legal disclaimer", () => {
     expect(brand.legalDisclaimer).toMatch(/independent collector tool/i);
     expect(brand.legalDisclaimer).toMatch(/not affiliated with/i);
+    expect(brand.imageCredit).toMatch(/shown unmodified for identification/i);
+    expect(brand.imageCredit).toMatch(/Bandai, Eiichiro Oda \/ Shueisha, Toei Animation/);
   });
 
   it("retains functional (non-novelty) public navigation labels", () => {

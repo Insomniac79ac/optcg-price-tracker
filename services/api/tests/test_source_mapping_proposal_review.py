@@ -699,6 +699,9 @@ def test_list_query_count_is_bounded_for_1_25_and_100_rows(db_session):
         event.remove(db_session.get_bind(), "before_cursor_execute", capture_one)
     assert len(one["items"]) == 1
     assert len(one_statements) <= 7
-    assert measurements[25][0] <= 7
-    assert measurements[100][0] <= 7
+    # 8 = the original 7 plus one batched card_print_image_assets read
+    # (verified R2 copies of official images, app.services.display_image);
+    # still constant in the row count, as the equality below pins.
+    assert measurements[25][0] <= 8
+    assert measurements[100][0] <= 8
     assert measurements[25][0] == measurements[100][0]
