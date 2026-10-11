@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Record the outcome of the Railway production deletion: GitHub Production environment recreated, PR #107 delivery receipts (documentation only)",
+ "mission": "Self-host official Bandai card images on R2 (owner decision 2026-10-11): additive card_print_image_assets table, verified paced mirror, R2 serving with proxy fallback, image credit. Staging only; no collector release.",
  "target": "staging",
- "classification": "GREEN",
+ "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,34 +20,59 @@
  "impacts": [
   {
    "files": [
-    "docs/agent/handoff/2026-10-12/production-deletion/HANDOFF.md",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-after-pr107.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/collector-records-after-pr107.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-credential-probe-52066339e199145d232ae517fce49ff5c420b976/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-a28b44f6883d9eef.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/plans/production-deprecation/INVENTORY.md"
+    "services/api/alembic/env.py",
+    "services/api/alembic/versions/6c2242f6f439_add_card_print_image_assets.py",
+    "services/api/app/check_official_images.py",
+    "services/api/app/mirror_official_images.py",
+    "services/api/app/official_images/__init__.py",
+    "services/api/app/official_images/health.py",
+    "services/api/app/official_images/mirror.py",
+    "services/api/app/official_images/models.py",
+    "services/api/app/services/display_image.py"
    ],
    "effects": [
-    "documentation",
-    "state_observation"
+    "application",
+    "migration"
    ],
-   "reason": "Outcome paragraph in INVENTORY.md section 8 and handoff index, plus read-only evidence under docs/agent/handoff/2026-10-12/production-deletion/ (downloaded PR #107 CI delivery artifacts, post-merge staging baseline, collector deployment record count). No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
+   "reason": "New app/official_images package (not imported by any collector; verified with scripts/collector_runtime_inputs.py at base and head: 0 collector runtime files). Additive migration 6c2242f6f439 creates one empty insert-only table. display_image serves the verified R2 copy of the canonical Bandai image when its digest equals artwork_key, otherwise the original URL (proxied by the web app). No identity, price, Market Index or Market Value change; Yuyu-Tei/SNKRDUNK display images unchanged."
+  },
+  {
+   "files": [
+    "services/api/tests/test_market_value_rankings_api.py",
+    "services/api/tests/test_official_images.py",
+    "services/api/tests/test_source_mapping_proposal_review.py"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Mirror/read-path/health tests; two pinned statement bounds raised by exactly one batched card_print_image_assets read (7 -> 8), still constant in row count."
+  },
+  {
+   "files": [
+    "apps/web/src/app/prints/[id]/PrintClient.tsx",
+    "apps/web/src/components/Footer.tsx",
+    "apps/web/src/lib/brand.test.ts",
+    "apps/web/src/lib/brand.ts"
+   ],
+   "effects": [
+    "application",
+    "tests"
+   ],
+   "reason": "Image credit in the footer and under the card on print pages (brand.imageCredit). Image resolution unchanged: R2 URLs already pass through, Bandai URLs still use /api/card-image with its exact host allowlist."
+  },
+  {
+   "files": [
+    "docs/official_images.md"
+   ],
+   "effects": [
+    "documentation"
+   ],
+   "reason": "Operations doc for the mirror, health check, rollback, r2.dev caveat and the partner-API no-image rule."
   }
  ],
- "diff_sha256": "abeb631d6c3e259e5dad2cf38e3429a2a6e497513dc15086818ac6af271e70fd",
  "deployment_verification": {
   "api_sha": "merge",
-  "revision": "f9e5b4a8c012",
+  "revision": "6c2242f6f439",
   "checks": [
    "scripts/verify_snkr_published_discovery_component.py",
    "scripts/verify_yuyu_raw_reader_component.py"
@@ -55,5 +80,62 @@
   "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
- }
+ },
+ "safeguards": {
+  "impact": {
+   "resources": [
+    {
+     "name": "Staging Postgres: one new empty table card_print_image_assets (migration applied before merge via documented alembic upgrade)",
+     "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+     "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+     "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
+    },
+    {
+     "name": "Staging API",
+     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+    },
+    {
+     "name": "R2 bucket cardpirate-atlas-assets: new content-addressed objects only; existing 42 objects never overwritten or deleted"
+    },
+    {
+     "name": "Vercel staging frontend (image credit)"
+    }
+   ],
+   "routes": [
+    "Public print, catalogue, Market Value, CPI mover and share responses: display_image.url for canonical Bandai images becomes the R2 copy when verified; fallback unchanged",
+    "One-time backfill to www.onepiece-cardgame.com: one request at a time, >= 1 s apart, backoff with Retry-After, stop after 5 consecutive transient failures"
+   ],
+   "dependencies": [
+    "R2_PUBLIC_BASE_URL on API and Vercel (already set; used by the 20 existing owned assets)",
+    "card_prints.artwork_key as first-party digest",
+    "f9e5b4a8c012 parent revision"
+   ],
+   "deployment_impact": "API and web redeploy on merge through their normal GitHub triggers. No collector watch path or collector-imported module changes, so no collector build or rollout; collector_services is empty. The migration is additive and applied before this PR leaves draft, so the verifier sees revision 6c2242f6f439.",
+   "database_writes": 4316,
+   "source_requests": 4400,
+   "estimated_runtime_minutes": 100
+  },
+  "recovery": {
+   "artifact": "3ec8a7ab2404fb06b73ba8a20f54eb4c747d50da",
+   "procedure": "Native revert of this PR: the read path serves every canonical image through the existing proxy again. Rows and R2 objects are insert-only and stay (harmless). Dropping the table would be a separate destructive decision (alembic downgrade f9e5b4a8c012).",
+   "trigger": "broken or missing images on sampled public pages; display_image regressions; any 403/429/challenge from Bandai during backfill (run stops itself); verifier failure",
+   "backup": "No existing row or object is modified: the migration only creates an empty table, and objects are written only to empty content-addressed keys. Postgres backup not applicable to this change; newest volume backup recorded in the capacity handoff.",
+   "validation": [
+    "services/api/tests/test_official_images.py",
+    "docs/official_images.md"
+   ]
+  },
+  "verification": {
+   "required_checks": [
+    "engineering-gate"
+   ],
+   "post_change": [
+    "scripts/verify_staging_delivery.py",
+    "scripts/generate_staging_state.py",
+    "services/api/app/check_official_images.py"
+   ],
+   "observation_window": "Delivery receipt with no collector rollout; then the backfill run summary (mirrored/reused/failed), check_official_images healthy, and sampled pages (home, /cards, /analytics, a /prints page, a share image) loading card art from the R2 origin with a fallback print still loading through /api/card-image."
+  }
+ },
+ "diff_sha256": "26854b41860a49cfe0739f57441d52ef4c35f3bbcafd40f96e12f567df9fe854"
 }
