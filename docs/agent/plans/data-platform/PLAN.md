@@ -56,9 +56,13 @@ receipt-gated Market Value and immutable history.
      never changed afterwards.
    - The first customers are onchain card platforms. None of them has an
      independent Japanese One Piece fair-value feed today.
-4. **Permission comes first.**
-   - Email Yuyu-Tei and SNKRDUNK's operator (SODA) asking for written permission
-     to publish and license derived prices. Get a short legal review.
+4. **Permission comes first, and the lawyer goes before the asking (owner decision
+   2026-10-11).**
+   - Get a short legal opinion first. Only then decide whether and how to ask Yuyu-Tei
+     and SNKRDUNK's operator (SODA) for written permission to publish and license
+     derived prices. Asking can't be undone, and a refusal from Yuyu-Tei would put
+     about 99% of the Index at risk.
+   - Cardmarket and Aucfan can be emailed now: neither is an Index input today.
    - The engineering work can be built on staging in parallel. Selling, or giving
      data to any outside party, waits for written permission.
 5. **New sources should be added slowly and in a fixed order.**
@@ -74,8 +78,9 @@ receipt-gated Market Value and immutable history.
      first. The Cardmarket file is tiny.
 7. **Owner actions (amended 2026-10-11):**
    - get a short legal opinion first (§G-actions 6);
-   - send 3 permission emails (Yuyu-Tei, Cardmarket, Aucfan); drafts are in §G;
-   - hold the SODA email until G1 is decided (default G1-B);
+   - send 2 emails now: Cardmarket, and Aucfan with the PSA10 question; drafts are in §G;
+   - **hold the Yuyu-Tei and SODA emails until the legal opinion** (G1-B applies to
+     both index sources, owner decision 2026-10-11);
    - reply to the requesting website (§H5).
 8. **First customer (§H, added 2026-10-11).** A website wants Card Pirate data
    including PSA10.
@@ -86,7 +91,9 @@ receipt-gated Market Value and immutable history.
      price, OFF today, with 0 rows.
 9. **SNKRDUNK matters less to the Index than assumed.** On 2026-10-10 it contributed to
    only 32 of 2,398 priced cards (3.7% of tracked value, MEASURED). It matters mainly for
-   PSA10. Recommended G1: legal opinion before asking SODA (§G1).
+   PSA10. **Yuyu-Tei is the real dependency:** it feeds 2,366 of 2,398 priced cards
+   (MEASURED 2026-10-10). Owner decision 2026-10-11: G1-B for both index sources (legal
+   opinion before asking Yuyu-Tei or SODA), with G1-C outreach in parallel (§G1).
 
 ---
 
@@ -742,7 +749,7 @@ Changes since 2026-10-09:
 
 | # | Step | Class | Migration | Collector redeploy? | Blocked by |
 |---|---|---|---|---|---|
-| 0 | **Owner:** decide G1 (default G1-B); request the legal opinion (§G-actions 6); send Yuyu-Tei, Cardmarket and Aucfan emails (Aucfan with the PSA10 question); **hold SODA** | RED (owner) | — | — | — |
+| 0 | **Owner:** G1-B decided for both index sources (2026-10-11); request the legal opinion (§G-actions 6); send Cardmarket and Aucfan emails now (Aucfan with the PSA10 question); **hold Yuyu-Tei and SODA until the legal opinion** | RED (owner) | — | — | — |
 | H-1 | **Owner:** reply to the requesting website with §H5 questions and the honest PSA10 note | RED (owner; external communication) | — | — | — |
 | 1 | Cap session 7: 24 h daily-v1 assessment, 30/90-day storage forecast, storage verdict | (Cap) | — | Rollback only | 2026-10-09 13:56Z |
 | 2 | ~~Cap: continuity narrowing~~ **Done: PR #91** (collectors' import graph). New modules no collector imports, Alembic migrations and tests are not collector releases | — | — | — | — |
@@ -824,8 +831,8 @@ session-9 handoff §6). SNKRDUNK still matters for:
 | **G1-C: Reduce dependence first (Aucfan, shops), then ask** | Unchanged while sourcing; a later "no" is survivable for raw. **Adding sources to the Index is itself a methodology change (RED)** | Only helps PSA10 if a licensed Japanese graded source exists. None is confirmed (§H3). Slow: months | Same as today meanwhile. Contacting Aucfan and shops reveals nothing to SNKRDUNK | Reversible; costs time and possibly fees (RED if paid) |
 | **G1-D: Pause SNKRDUNK collection now** (methodology change, RED) | Small measured impact now: 5 cards lose prices, 27 change median, segment rules hold for Overall (above) | PSA10 impossible from SNKRDUNK. The customer's PSA10 request can't be met unless another source appears | Cleanest. Ends ongoing exposure under 第7条(13). Past collection is not undone | Technically reversible (restart collectors). Commercially it ends the SNKRDUNK route unless permission comes later |
 
-**Recommendation: G1-B, with G1-C's outreach running in parallel**, because contacting
-Aucfan and shops tells SNKRDUNK nothing. Keep SNKRDUNK at today's scope while the
+**Recommendation: G1-B for both index sources, with G1-C outreach in parallel**, because
+contacting Aucfan and shops tells neither Yuyu-Tei nor SNKRDUNK anything. Keep SNKRDUNK at today's scope while the
 opinion is pending:
 - no volume increase, no new SNKRDUNK endpoints;
 - PSA10 stays OFF;
@@ -844,8 +851,13 @@ Reasoning:
 written permission or an accepted legal opinion. This plan does not propose it under
 any option.
 
-**Owner decision needed now:** accept G1-B (default), or choose A, C or D.
-D needs a methodology entry in `DECISIONS.md` before execution.
+**Owner decision (2026-10-11): G1-B, applied to Yuyu-Tei as well as SODA.** Yuyu-Tei
+feeds 2,366 of 2,398 priced cards (MEASURED 2026-10-10). A refusal from Yuyu-Tei puts
+about 99% of the Index at risk; a refusal from SODA costs 3.7% of value and PSA10.
+Asking is the step that cannot be undone, so the legal opinion comes first for both.
+The same irreversibility reasoning as for SODA above applies to Yuyu-Tei, with far
+larger stakes. Cardmarket and Aucfan are not Index inputs and are contacted now.
+D still needs a methodology entry in `DECISIONS.md` before execution.
 
 **G2a. Native-currency invariant amendment.**
 - Default: approve the new-table design (§D2).
@@ -877,8 +889,8 @@ D needs a methodology entry in `DECISIONS.md` before execution.
 - Alternative: a usage-metered model. Not recommended before metering exists.
 
 **G6. Approach sources for commercial agreements?**
-- **Default (amended 2026-10-11): Yuyu-Tei, Cardmarket and Aucfan now; SODA only per
-  G1** (default G1-B: after the legal opinion).
+- **Decided (amended again 2026-10-11): Cardmarket and Aucfan now; Yuyu-Tei and SODA
+  only after the legal opinion** (G1-B for both index sources).
   Torecolo and Card Rush follow after step 8.
 - eBay: no for now. Its licence gives eBay ownership of derived outputs and bans
   price modelling.
@@ -898,7 +910,9 @@ D needs a methodology entry in `DECISIONS.md` before execution.
 
 ### G-actions (owner sends; drafts below; nothing has been sent)
 
-**1. Yuyu-Tei.** Send to info@yuyu-tei.jp (the contact form needs an order
+**1. Yuyu-Tei. HOLD: do not send until the legal opinion (G1-B, owner decision
+2026-10-11).** Yuyu-Tei feeds about 99% of priced cards, so counsel decides whether and
+how to ask, and may change this draft. Address when sent: info@yuyu-tei.jp (the contact form needs an order
 number). Japanese first, English for the owner's reference.
 
 > 件名：価格データの掲載・ライセンスに関するご相談（Card Pirate）
@@ -935,8 +949,8 @@ attribution; (2) may we license aggregates that include your prices, and on what
 terms; (3) do you have a preferred access method or frequency? We will not resell
 your individual prices and will change or stop collection if you prefer.
 
-**2. SNKRDUNK / 株式会社SODA. HOLD: do not send until G1 is decided.** Under the
-default G1-B, the legal opinion comes first and may change this draft or advise
+**2. SNKRDUNK / 株式会社SODA. HOLD: do not send until the legal opinion (G1-B,
+decided 2026-10-11).** The legal opinion comes first and may change this draft or advise
 not sending. Address: bd@soda-inc.jp (unverified; cc information@snkrdunk.com).
 
 > 件名：取引相場データの利用許諾・提携のご相談（Card Pirate）
@@ -1013,7 +1027,7 @@ transactions. We will stop if you object.
 Partner Network application plus a written-consent request for "pricing tools"
 under licence §8.5. Note that eBay would own the derived outputs.
 
-**6. Legal opinion (send first under G1-B).** A short, fixed-fee written opinion
+**6. Legal opinion (send first under G1-B; it gates the Yuyu-Tei and SODA emails).** A short, fixed-fee written opinion
 (簡易意見書) from a Japanese lawyer who works on IT, data and terms of service.
 
 **Scope.** Japanese law, plus the SNKRDUNK EN terms' Singapore choice of law where
@@ -1044,7 +1058,8 @@ activities:
 **Ask for:**
 - a yes/no/risk rating per item;
 - what to change to lower the risk;
-- whether and how to approach SODA without worsening Card Pirate's position;
+- whether and how to approach Yuyu-Tei and SODA, in which order, and how to frame the
+  ask, without worsening Card Pirate's position;
 - a fixed fee and turnaround (ESTIMATED 2-4 weeks; budget unknown, RED as a paid
   service).
 
@@ -1286,51 +1301,59 @@ These items are DP-1 from §F, pulled forward and extended:
 
 ## Risks
 
-1. **SNKRDUNK terms vs the current collector (high, existing).**
+1. **Yuyu-Tei concentration (top dependency risk, existing).**
+   - Yuyu-Tei is the single source for about 99% of priced cards (2,366 of 2,398,
+     MEASURED 2026-10-10).
+   - If Yuyu-Tei blocks access, refuses permission or changes its site, the Index has
+     no fallback for those cards.
+   - Mitigation: G1-B (legal opinion before any ask, owner decision 2026-10-11); G1-C
+     sourcing in parallel (Aucfan, other Japanese shops, Cardmarket for English).
+     Adding any of them to the Index is a methodology change (RED).
+2. **SNKRDUNK terms vs the current collector (high, existing).**
    - The no-scraping clause (第7条(13)) applies to today's operation, not only to
      the future product.
    - Enforceability is unclear (registration-tied consent). A cease request would
      remove SNKRDUNK from 32 of 2,398 priced cards (1.3%, 3.7% of tracked value,
      MEASURED 2026-10-10, §G1) and all PSA10, the first customer's key field.
    - Mitigation: G1-B (legal opinion first), with G1-C sourcing in parallel.
-2. **No permission, no product.**
+3. **No permission, no product.**
    - Every paid path depends on written permission from at least two parties who
      may refuse or ask for revenue share.
    - The engineering (DP-1, DP-2) stays useful for the consumer site and the
      onchain verifier either way.
-3. **Methodology lock-in.**
+4. **Methodology lock-in.**
    - If a source refuses, changing Index inputs is RED and breaks the history
      comparability that customers buy.
    - Mitigation: version the methodology; never silently swap inputs.
-4. **Cardmarket language and condition mixing.**
+5. **Cardmarket language and condition mixing.**
    - "(Non-English)" expansions may blend Japanese and Simplified Chinese, and
      the file has no condition split.
    - Mitigation: display only, `mixed_language_aggregate` flag, never an Index
      input.
-5. **eBay licence traps.**
+6. **eBay licence traps.**
    - eBay owns derived works, bans price modelling and requires 6 h freshness.
    - Any eBay use could taint the data product. Kept out by default.
-6. **Storage.**
+7. **Storage.**
    - About 3.2 GB of headroom, and the forecast is pending.
    - A careless page-capture source could consume weeks of headroom. Volumes
      cannot shrink, and a resize is RED.
    - Mitigation: storage rule §E1, RAW to R2.
-7. **Continuity rule bottleneck.**
+8. **Continuity rule bottleneck.**
    - Three plans need `services/api` changes, so collector releases pile up
      inside narrow windows.
    - Mitigation: G8 / step 2.
-8. **Identity drift across languages.**
+9. **Identity drift across languages.**
    - English expansion adds about 5,000 near-duplicate codes.
    - Mitigation: language evidence required on every mapping, separate
      denominators, no defaulting.
-9. **Security.**
+10. **Security.**
    - New API keys and a new public surface.
    - The unauthenticated `/market/signal-events/*` writes: resolved, PR #93/#94.
-10. **Customer misuse.**
+11. **Customer misuse.**
     - FMV used for lending or liquidation.
     - Mitigation: licence exclusion, daily granularity only, no webhooks on
       price moves.
-11. **Unverified research.**
+12. **Unverified research.**
     - Yuyu-Tei terms are from the Wayback copy and not live.
     - The Card Rush policy comes from a snippet.
     - The bd@soda-inc.jp address is unverified.
@@ -1338,7 +1361,7 @@ These items are DP-1 from §F, pulled forward and extended:
     - The Cardmarket robots.txt is unknown.
     - The PSA EUA is unread.
     - Re-check all of these before any build.
-12. **Stale docs.**
+13. **Stale docs.**
     - `docs/yuyutei_collector_operations.md` still describes a once-daily cron.
     - `CURRENT_STATE.yaml` dates from 2026-10-06.
     - Partners reading docs could be misled. Refresh them before any external
