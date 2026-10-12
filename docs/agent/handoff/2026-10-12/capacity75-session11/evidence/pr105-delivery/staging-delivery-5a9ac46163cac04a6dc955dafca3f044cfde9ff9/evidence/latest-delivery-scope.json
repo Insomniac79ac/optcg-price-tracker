@@ -1,0 +1,19 @@
+{
+  "base": "e6d0ca7e387c23d70bcd7351a6d199c87beefc84",
+  "merge": "5a9ac46163cac04a6dc955dafca3f044cfde9ff9",
+  "decision": "full",
+  "files": [
+    "apps/web/src/app/admin/(protected)/import-validation/page.test.tsx",
+    "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx",
+    "apps/web/src/app/prints/[id]/analytics.test.tsx",
+    "apps/web/src/components/ui/PrintAnalyticsSection.tsx",
+    "docs/agent/STAGING_MISSION.json"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    "apps/web/src/app/admin/(protected)/import-validation/page.test.tsx",
+    "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx",
+    "apps/web/src/app/prints/[id]/analytics.test.tsx",
+    "apps/web/src/components/ui/PrintAnalyticsSection.tsx"
+  ]
+}

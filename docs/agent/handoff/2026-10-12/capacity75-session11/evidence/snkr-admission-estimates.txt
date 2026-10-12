@@ -1,0 +1,7 @@
+## select kind, estimated_request_cost, count(*) n from freshness_work where source_id=2 group by 1,2 order by 3 desc limit
+{"kind": "refresh", "estimated_request_cost": 300, "n": 353}
+{"kind": "validation", "estimated_request_cost": 300, "n": 22}
+{"kind": "discovery", "estimated_request_cost": 300, "n": 2}
+{"kind": "validation", "estimated_request_cost": 600, "n": 2}
+## select max(a.reserved_request_cost) max_reserved, round(avg(a.reserved_request_cost)) avg_reserved from freshness_attemp
+{"max_reserved": 300, "avg_reserved": "300"}

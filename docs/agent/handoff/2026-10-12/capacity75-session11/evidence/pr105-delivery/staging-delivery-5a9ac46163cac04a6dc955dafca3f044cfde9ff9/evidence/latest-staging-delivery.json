@@ -1,0 +1,63 @@
+{
+  "verified_at": "2026-10-12T05:55:36.412929+00:00",
+  "expected_commit": "5a9ac46163cac04a6dc955dafca3f044cfde9ff9",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_5KnLfv5sP4ks38NFYsgeMYvUqMZn",
+    "status": "READY",
+    "sha": "5a9ac46163cac04a6dc955dafca3f044cfde9ff9"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "df8d896923a203b2916bf090d37f133b015a7ffde61d347e91f5bc96448f3fb3",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "e6d0ca7e387c23d70bcd7351a6d199c87beefc84",
+    "merge": "5a9ac46163cac04a6dc955dafca3f044cfde9ff9",
+    "decision": "full",
+    "files": [
+      "apps/web/src/app/admin/(protected)/import-validation/page.test.tsx",
+      "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx",
+      "apps/web/src/app/prints/[id]/analytics.test.tsx",
+      "apps/web/src/components/ui/PrintAnalyticsSection.tsx",
+      "docs/agent/STAGING_MISSION.json"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      "apps/web/src/app/admin/(protected)/import-validation/page.test.tsx",
+      "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx",
+      "apps/web/src/app/prints/[id]/analytics.test.tsx",
+      "apps/web/src/components/ui/PrintAnalyticsSection.tsx"
+    ]
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}

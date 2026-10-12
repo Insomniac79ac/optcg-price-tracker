@@ -401,3 +401,35 @@ records the result as `github_trigger_preflight`. Rollback
 the check, so recovery is never blocked. The API, worker, beat and
 market-index-snapshot keep their GitHub triggers by design: the API is
 delivered by its GitHub build.
+
+### Handoff checklist: delivery receipts (2026-10-12, session 11)
+
+Every delivery's receipt is already persisted: the CI delivery job uploads it
+as a run artifact (`staging-delivery-<merge sha>`, plus
+`staging-credential-probe-<head sha>`), kept for 90 days. A handoff must not
+depend on that retention or on local scratch space. Session 10 briefly
+reported the PR #103 rollout receipt as lost: only local `/tmp` had been
+searched, and a Codespace restart had wiped it. Every handoff therefore does
+the following.
+
+1. List every delivery that merged since the previous handoff was written,
+   including that handoff's own PR, whose receipt only exists after it
+   merges.
+2. For each one, download all of its CI run's artifacts into the handoff's
+   evidence folder, one directory per PR:
+   `evidence/pr<N>-delivery/<artifact name>/` (for example
+   `gh run download <run id> -n <artifact name> -D evidence/pr<N>-delivery/<artifact name>`).
+3. Record in the handoff, for each delivery: PR, merge commit, CI run id,
+   artifact names, ids and expiry, delivery scope (`skip` or `full`), and the
+   collector deployment count. For `full` scope, the count comes from
+   `latest-collector-rollout.json` when a rollout was requested. When none was
+   requested, there is no such file and the count is 0; confirm it from
+   Railway deployment records.
+4. Keep all working files (tools, intermediate output, downloads) in the
+   session worktree under `/workspaces`, never in `/tmp`.
+5. Name any receipt that is still pending, normally the handoff PR's own, in
+   the handoff and in `CONTINUATION.json`, so the next session downloads it
+   first.
+
+This is a documentation and operator routine only. No workflow, script or
+artifact retention setting changes.

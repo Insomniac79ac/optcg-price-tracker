@@ -1,0 +1,109 @@
+{
+ "observed_at": "2026-10-12T06:10:43.934695+00:00",
+ "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+ "services": {
+  "snkrdunk-collector": {
+   "latest": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:19423bbcdbe0869c1c6040f94abece76fc5e2d06722eb180ffbc75145b6dc66a",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-0": {
+   "latest": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:fc8c991c49d40c851ee67c59d226f53bc04837c9691fd86439db28782bc15e13",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-1": {
+   "latest": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:5f4a320fa136bd9cbe5be877ecfdc6cb610f1adfca2012eea63f1155b03121d9",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-2": {
+   "latest": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:8baef84c6f0e1eb0689cebf731a8f1a51d319458a2d0dd9f1c954e93e3252731",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-3": {
+   "latest": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:9a3247bd9c29b16e548013a27fd9c33926235cc0ff9310c7c886009dbd2f7244",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "latest": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:a8519de6ddcea4ed70871a79e28b874e0f50bdbe5571eee97ff9e0ad904e56c0",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-5": {
+   "latest": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:393a00a63f1cbf62c023c3c133c35ca30033d4cc55d9f012cc60b15ec03922bd",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-6": {
+   "latest": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:6ddede32f78ed57ce5031d6aec1ca2152f6ea455a36b27978c034748f8cd56e7",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-7": {
+   "latest": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:0b6bb48cbc672aee4e520bbf8d2ac199c7e4f106a48f4c34b4c5bd816f51d0ca",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-8": {
+   "latest": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:a65534d459933229b524ea1d7a1b801d5c423aaeda2a1046763fb9eaa05ff247",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars_unchanged": true
+  }
+ },
+ "trigger_preflight": {
+  "snkrdunk-collector": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-0": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-1": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-2": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-3": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-4-v2": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-5": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-6": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-7": "no trigger, auto-deploy disabled",
+  "yuyutei-collector-shard-8": "no trigger, auto-deploy disabled"
+ },
+ "all_ok": true
+}
