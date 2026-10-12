@@ -1,0 +1,25 @@
+{
+  "base": "c19c72648c587f17ed8d66f2bc9e26825a58d459",
+  "merge": "3ec8a7ab2404fb06b73ba8a20f54eb4c747d50da",
+  "decision": "skip",
+  "files": [
+    "docs/agent/STAGING_MISSION.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/HANDOFF.md",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-after-pr107.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/collector-records-after-pr107.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-credential-probe-52066339e199145d232ae517fce49ff5c420b976/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-a28b44f6883d9eef.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/plans/production-deprecation/INVENTORY.md"
+  ],
+  "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"
+}

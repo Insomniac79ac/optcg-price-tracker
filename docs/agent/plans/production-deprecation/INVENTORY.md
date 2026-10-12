@@ -412,6 +412,29 @@ writes for each deployment of the staging frontend (latest record `e1e2a0b`,
   08:27Z except the expected absence of production and normal database growth
   (2689 → 2690 MB).
 
+**Follow-up PR #108 (outcome record): Vercel failure and fix.**
+- #108 merged 2026-10-12 11:42Z as `3ec8a7a` (docs only; scope `skip`;
+  0 collector deployment records).
+- Vercel deployment `dpl_7zGufJU5wJPeEMrKxqKCxBjp8kkC` for `3ec8a7a` errored at
+  11:42:53Z before building: "Git information retrieval failed for this
+  deployment." The CI verifier (run 38242731191, `staging-automerge`) waited
+  15 min and failed at 11:58Z ("Expected native staging deployments did not
+  become ready"); receipts under `evidence/pr108-delivery/`. The frontend kept
+  serving `c19c726` (HTTP 200) throughout.
+- Not attributed to the deletions: #107's deploy at 10:44Z, after every
+  deletion, built and verified green. Root cause of the Git-fetch error not
+  determined.
+- Fix (owner-authorized, staging frontend only): `vercel redeploy` of that
+  deployment at 12:19Z → `dpl_GbuEaW7HjSCbFJLZaonxTu9Et9E8` READY at 12:20Z,
+  aliased to optcg-price-tracker-staging.vercel.app, serving `3ec8a7a`.
+- Read-only verifier for `3ec8a7a` **green** at 12:33:18Z: frontend READY, API
+  skipped and still on `a504e47`, sale invariant holds, 0 timeout retries
+  (`verify-3ec8a7a-after-redeploy.json`).
+
+**Owner decisions (2026-10-12).** Staging `ADMIN_TOKEN`: no rotation now; it is
+rotated in collector-v1 S5. The `scripts/staging_db_read_check.py` comment below
+is folded into collector-v1 S1.
+
 **Left for later.** `scripts/staging_db_read_check.py` should get a clarifying
 comment (port 21415 was the production proxy, now removed). `scripts/` is not on
 the docs-only allowlist, so it goes in its own small PR outside quiet windows or
