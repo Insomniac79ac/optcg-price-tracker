@@ -10,7 +10,7 @@ STAGING ONLY. Production RED, untouched. PSA10 OFF.
 - **One delivery:** this handoff (docs only).
 
 Numbers are **MEASURED** (source under `evidence/`, read-only tools in `tools/`) unless marked
-CARRIED FORWARD (CF) or ESTIMATE. The session ran 06:09-06:4xZ, after the 06:00Z start gate.
+CARRIED FORWARD (CF) or ESTIMATE. The session ran 06:09-06:31Z, after the 06:00Z start gate.
 
 ## 0. Start gate (06:10-06:12Z)
 
