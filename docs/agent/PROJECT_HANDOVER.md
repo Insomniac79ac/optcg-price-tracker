@@ -226,8 +226,10 @@ Environment status (owner statement, 2026-10-09):
   05d1eac2-510d-4bd3-999e-fea9ead766b7) is THE working environment.
 - Vercel has a single environment: the frontend at
   optcg-price-tracker-staging.vercel.app. There is no live Vercel production.
-- The Railway production environment is obsolete and will be deprecated
-  (owner decision, executed separately).
+- The Railway production environment is obsolete and was DELETED by the
+  owner on 2026-10-12 (09:50:07Z), after its two TCP proxies (:21415, :48223)
+  were removed. Staging was verified unchanged before and after. Record:
+  docs/agent/plans/production-deprecation/INVENTORY.md §8.
 - The main branch (last updated 2026-07-23) is stale and is not a release
   source.
 - A future production, if any, will be provisioned fresh from staging when
@@ -1176,8 +1178,11 @@ PSA10 NOT READY
 PRODUCTION IS RED.
 
 Status (owner statement, 2026-10-09): there is no live production. The Railway
-production environment is obsolete and will be deprecated by a separate,
-owner-authorized action. The main branch (last updated 2026-07-23) is stale
+production environment was deleted by the owner on 2026-10-12 (09:50:07Z;
+INVENTORY.md §8 in docs/agent/plans/production-deprecation/). The GitHub
+deployment environment "glistening-peace / production" was deleted the same
+day. The production copy of ADMIN_TOKEN went with the environment; rotating
+the (formerly identical) staging ADMIN_TOKEN remains an owner decision. The main branch (last updated 2026-07-23) is stale
 and is not a release source. A future production, if any, will be provisioned
 fresh from staging when the owner decides.
 
