@@ -1,0 +1,90 @@
+{
+  "verified_at": "2026-10-12T23:34:11.999708+00:00",
+  "expected_commit": "ceb41024324baa3285e2761330cbaa22e02b7b8a",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_DvjeFBiq6TMdNcRh7Nf8Fk546zyX",
+    "status": "READY",
+    "sha": "ceb41024324baa3285e2761330cbaa22e02b7b8a"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "6c2242f6f439",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "89a1634738b4734c88a14c111ba176082ef3592385a2bd74a9766063f3062b58",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "0b5c3871f58755c740a1ee1c832ad6ced9eaf413",
+    "merge": "ceb41024324baa3285e2761330cbaa22e02b7b8a",
+    "decision": "skip",
+    "files": [
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/CONTINUATION.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/REPORT-2026-10-12.md",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backfill-batch25.log",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backfill-full.log",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backfill-full.started",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backfill-resume.log",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backfill-resume.started",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backfill-resume2.log",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backfill-resume2.started",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/backups-before-migration.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/collector-records-after-pr101.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/display-census-after-backfill.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/display-census-before-backfill.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/fallback-probe-before-copy.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/health-after-backfill.txt",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/import-graph-check.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/migration-6c2242f6f439.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pages-after-backfill-browser.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pages-after-backfill.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pages-after-merge-before-backfill.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pages-before-merge.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-credential-probe-c653e0cd1e80491ba4e588c4b06d1111bddfa8ba/latest-staging-credential-probe.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/CURRENT_STATE.yaml",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/latest-delivery-scope.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/latest-staging-delivery.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-25c54499ae7392a9.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-283aa82e7283f0d3.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-3391abad5c997c5a.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-62809ffe916fe79b.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-8dcfbf959cb15f6a.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-a05c36274c28de29.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-c09334b69a28b1a7.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/pr101-delivery/staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413/evidence/staging-state-fd971c33147502ea.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/evidence/r2-totals-after-backfill.json",
+      "docs/agent/handoff/2026-10-12/r2-official-images/tools/browse.py",
+      "docs/agent/handoff/2026-10-12/r2-official-images/tools/cards.py",
+      "docs/agent/handoff/2026-10-12/r2-official-images/tools/pages.py"
+    ],
+    "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "0b5c3871f58755c740a1ee1c832ad6ced9eaf413",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}
