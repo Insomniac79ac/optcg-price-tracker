@@ -392,7 +392,25 @@ writes for each deployment of the staging frontend (latest record `e1e2a0b`,
 - Any secrets or protection rules stored on the GitHub `Production` environment
   are gone (deletion is irreversible); none are referenced by the repository.
 - Expected: Vercel's next production deployment recreates `Production`
-  automatically. The outcome is recorded in the follow-up below.
+  automatically. Confirmed, see the outcome below.
+
+**Outcome after the docs PR (#107, merged 2026-10-12 10:43:18Z as `c19c726`).**
+- Auto-merge did not stall. All PR checks, `engineering-gate` and
+  `staging-automerge` succeeded.
+- GitHub `Production` was **recreated automatically** at 10:44:44Z
+  (id 24071586610, 0 protection rules) by `vercel[bot]`'s deployment of
+  `c19c726`. No manual action was needed. Any settings the old environment had
+  remain lost; none were referenced.
+- Delivery scope `skip` (documentation only); **0 collector deployment records**
+  after the merge (`collector-records-after-pr107.json`).
+- CI staging verifier **green** at 10:54:38Z on `c19c726`: frontend READY, API
+  skipped and still on `a504e47`, sale invariant holds, 0 timeout retries,
+  `production_accessed: false`. Receipts: run 38237073559, artifacts 11742225731
+  (staging-delivery) and 11741646404 (credential probe), expiring 2027-01-10,
+  under `evidence/pr107-delivery/`.
+- Staging baseline at 11:25Z (`baseline-after-pr107.json`): identical to
+  08:27Z except the expected absence of production and normal database growth
+  (2689 → 2690 MB).
 
 **Left for later.** `scripts/staging_db_read_check.py` should get a clarifying
 comment (port 21415 was the production proxy, now removed). `scripts/` is not on

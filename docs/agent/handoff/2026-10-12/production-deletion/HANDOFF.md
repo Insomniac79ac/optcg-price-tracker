@@ -11,8 +11,11 @@ Full record and before/after table: `docs/agent/plans/production-deprecation/INV
 - `evidence/ports-after-proxies.txt`: protocol-level port probe.
 - `evidence/production-env-tombstone.json`: soft-deleted environment record.
 
+- `evidence/pr107-delivery/`: PR #107 CI delivery receipts; `baseline-after-pr107.json`,
+  `collector-records-after-pr107.json`: post-merge checks.
+
 Pending for the next session:
-- This PR's own delivery receipt.
+- The outcome PR's own delivery receipt.
 - `scripts/staging_db_read_check.py` comment (port 21415 was the production proxy,
   now removed): separate small PR outside quiet windows, or with the next release.
 - Staging `ADMIN_TOKEN` rotation: owner decision.

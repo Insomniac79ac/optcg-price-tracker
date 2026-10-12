@@ -1,0 +1,64 @@
+{
+  "verified_at": "2026-10-12T10:54:38.784120+00:00",
+  "expected_commit": "c19c72648c587f17ed8d66f2bc9e26825a58d459",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_DRYmoYPi3HVKipzeeph55v75h5Vu",
+    "status": "READY",
+    "sha": "c19c72648c587f17ed8d66f2bc9e26825a58d459"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "a28b44f6883d9eef41fef897cda062cbd654a626c3325caa70cd1210a60158bc",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "e1e2a0bebae7650b7048f08485a2a0441cb88637",
+    "merge": "c19c72648c587f17ed8d66f2bc9e26825a58d459",
+    "decision": "skip",
+    "files": [
+      "docs/agent/PROJECT_HANDOVER.md",
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/handoff/2026-10-12/production-deletion/HANDOFF.md",
+      "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-after-env.json",
+      "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-after-proxies.json",
+      "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-before.json",
+      "docs/agent/handoff/2026-10-12/production-deletion/evidence/ports-after-proxies.txt",
+      "docs/agent/handoff/2026-10-12/production-deletion/evidence/production-env-tombstone.json",
+      "docs/agent/handoff/2026-10-12/production-deletion/evidence/verify-after-env.json",
+      "docs/agent/handoff/2026-10-12/production-deletion/evidence/verify-before.json",
+      "docs/agent/handoff/2026-10-12/production-deletion/tools/baseline.py",
+      "docs/agent/plans/production-deprecation/INVENTORY.md"
+    ],
+    "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}
