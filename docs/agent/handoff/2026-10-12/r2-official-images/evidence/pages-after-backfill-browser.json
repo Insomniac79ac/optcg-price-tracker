@@ -1,0 +1,169 @@
+{
+ "observed_at": "2026-10-12T22:48:35.343185+00:00",
+ "pages": {
+  "/ [desktop]": {
+   "status": 200,
+   "images": 11,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 11,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/ [mobile]": {
+   "status": 200,
+   "images": 11,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 11,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/cards [desktop]": {
+   "status": 200,
+   "images": 48,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 48,
+     "broken": 18
+    }
+   },
+   "broken": [
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/44/44d23567f792f4a00496aade8ed802f9eb18c65d1b60e863b2adf40111db93b0.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/2d/2d9f162c59e473ce12a4f3639523795024d5128599123093293683d08adcac0b.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/cb/cbbc3a58b61266233fe5232de5eee69d2ed6dc03aef0c207b04aefe7bc716f83.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/bb/bb32afc5389aa70584006461bffe1cbf6331de9950cbbf4d16d7a05b855754ae.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/5e/5ea42c5a8ad00662304ba2672c32f11f6311808f27ef3115ffc8485fcbc250b2.png"
+   ],
+   "http_image_errors": []
+  },
+  "/cards [mobile]": {
+   "status": 200,
+   "images": 48,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 48,
+     "broken": 24
+    }
+   },
+   "broken": [
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/49/4940ee4c05f9bd2431a62b1d0a03ccc2ff02d57e4634ba6bf3bdb19f694e8809.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/db/db93214184a7ceb36a949b8a06a8609d22cc431a2b92c36404c6482ef1166e1b.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/b4/b40ee54130a1c2f3d1bafc977c91ad93f4c6b6889de477e5962a2284fb968258.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/17/1777bab3a2eadee7ea2285e9a20e71116f728d204f7a9b7bd7a2f877bcf07132.png",
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/8d/8d197718857d58cd333508a7d0d7e9ae6dc5df5801da359043aded65392adc59.png"
+   ],
+   "http_image_errors": []
+  },
+  "/analytics [desktop]": {
+   "status": 200,
+   "images": 7,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 7,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/analytics [mobile]": {
+   "status": 200,
+   "images": 7,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 7,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/prints/5661 [desktop]": {
+   "status": 200,
+   "images": 1,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 1,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/prints/5661 [mobile]": {
+   "status": 200,
+   "images": 1,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 1,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/prints/6827 [desktop]": {
+   "status": 200,
+   "images": 3,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 3,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/prints/6827 [mobile]": {
+   "status": 200,
+   "images": 3,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 3,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/collection [desktop]": {
+   "status": 200,
+   "images": 2,
+   "by_origin": {
+    "next-image->other:optcg-price-tracker-staging.vercel.app/brand/cardpirate-atlas-mark.png": {
+     "n": 1,
+     "broken": 0
+    },
+    "next-image->other:optcg-price-tracker-staging.vercel.app/brand/cardpirate-atlas-logo.png": {
+     "n": 1,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  },
+  "/collection [mobile]": {
+   "status": 200,
+   "images": 2,
+   "by_origin": {
+    "next-image->other:optcg-price-tracker-staging.vercel.app/brand/cardpirate-atlas-mark.png": {
+     "n": 1,
+     "broken": 0
+    },
+    "next-image->other:optcg-price-tracker-staging.vercel.app/brand/cardpirate-atlas-logo.png": {
+     "n": 1,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "http_image_errors": []
+  }
+ }
+}

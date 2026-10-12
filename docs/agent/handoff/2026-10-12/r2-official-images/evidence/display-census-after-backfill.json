@@ -1,0 +1,10 @@
+{
+ "observed_at": "2026-10-12T22:47:27.328360+00:00",
+ "signature": "(db: 'Session', prints: 'list[CardPrint]') -> 'dict[int, DisplayImageOut]'",
+ "prints_with_image_url": 4316,
+ "resolved": 4316,
+ "by_source_and_host": {
+  "bandai|pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev": 4316
+ },
+ "non_bandai_public": []
+}

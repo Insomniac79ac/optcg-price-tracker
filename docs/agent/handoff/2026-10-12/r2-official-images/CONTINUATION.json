@@ -1,0 +1,24 @@
+{
+ "status": "r2_official_images_complete_on_staging",
+ "written_at": "2026-10-12T23:05:00Z",
+ "staging_only": true,
+ "production_accessed": false,
+ "pr": 101,
+ "merge": "0b5c3871f58755c740a1ee1c832ad6ced9eaf413",
+ "migration_revision": "6c2242f6f439",
+ "prints_with_verified_copy": 4316,
+ "pending": 0,
+ "health": "check_official_images silent, exit 0 (2026-10-12T22:47Z)",
+ "r2_public_host": "pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev (r2.dev: rate limited, not for production; custom domain pending owner)",
+ "collector_deployments_since_merge": 0,
+ "receipts": {
+  "pr101": {"ci_run": 38252107405, "artifacts": ["staging-delivery-0b5c3871f58755c740a1ee1c832ad6ced9eaf413", "staging-credential-probe-c653e0cd1e80491ba4e588c4b06d1111bddfa8ba"], "downloaded": "evidence/pr101-delivery/"},
+  "pending": "this record's own docs-only PR: download its staging-delivery-<merge sha> artifact first"
+ },
+ "not_built_scope_gaps": [
+  "STEP 4: no automatic mirror for new prints / new image_url versions (manual CLI only)",
+  "STEP 4: check_official_images not scheduled",
+  "STEP 5: image credit missing on share/OG images and under the card on /cards/[id]",
+  "STEP 5: no partner API exists; exclusion rule is documentation only"
+ ]
+}

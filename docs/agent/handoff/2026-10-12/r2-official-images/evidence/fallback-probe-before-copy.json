@@ -1,0 +1,51 @@
+{
+ "observed_at": "2026-10-12T22:26:48.358971+00:00",
+ "pages": {
+  "/prints/6827": {
+   "status": 200,
+   "images": 3,
+   "by_origin": {
+    "proxy:/api/card-image": {
+     "n": 3,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "sample": [
+    "https://optcg-price-tracker-staging.vercel.app/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FST05-014_p3.png%3F260821",
+    "https://optcg-price-tracker-staging.vercel.app/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FST05-014_p3.png%3F260821",
+    "https://optcg-price-tracker-staging.vercel.app/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FST05-014.png%3F260821"
+   ],
+   "og_image": [
+    {
+     "url": "https://optcg-price-tracker-staging.vercel.app/share/print/6827",
+     "status": 200,
+     "type": "image/png",
+     "bytes": 280527
+    }
+   ]
+  },
+  "/prints/5661": {
+   "status": 200,
+   "images": 1,
+   "by_origin": {
+    "r2:pub-74ceb3c7": {
+     "n": 1,
+     "broken": 0
+    }
+   },
+   "broken": [],
+   "sample": [
+    "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/c1/c11cd55f9f797dc206edbbe1b9546779fb3b09bfaa372142f1cbfe7dfd3680fb.png"
+   ],
+   "og_image": [
+    {
+     "url": "https://optcg-price-tracker-staging.vercel.app/share/print/5661",
+     "status": 200,
+     "type": "image/png",
+     "bytes": 290461
+    }
+   ]
+  }
+ }
+}

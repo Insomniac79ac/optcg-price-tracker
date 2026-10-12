@@ -1,0 +1,27 @@
+{
+ "observed_at": "2026-10-12T13:22:16.834642+00:00",
+ "since": "2026-10-12T12:55:00Z",
+ "records": {
+  "snkrdunk-collector": [],
+  "snkrdunk-collector_latest": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+  "yuyutei-collector-shard-0": [],
+  "yuyutei-collector-shard-0_latest": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+  "yuyutei-collector-shard-1": [],
+  "yuyutei-collector-shard-1_latest": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+  "yuyutei-collector-shard-2": [],
+  "yuyutei-collector-shard-2_latest": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+  "yuyutei-collector-shard-3": [],
+  "yuyutei-collector-shard-3_latest": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+  "yuyutei-collector-shard-4-v2": [],
+  "yuyutei-collector-shard-4-v2_latest": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+  "yuyutei-collector-shard-5": [],
+  "yuyutei-collector-shard-5_latest": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+  "yuyutei-collector-shard-6": [],
+  "yuyutei-collector-shard-6_latest": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+  "yuyutei-collector-shard-7": [],
+  "yuyutei-collector-shard-7_latest": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+  "yuyutei-collector-shard-8": [],
+  "yuyutei-collector-shard-8_latest": "ee64bf59-544e-47c3-a604-2fa2041f3baf"
+ },
+ "count": 0
+}
