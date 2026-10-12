@@ -1,0 +1,31 @@
+{
+ "started_at": "2026-10-12T12:54:56.895727+00:00",
+ "proxy_port": 12258,
+ "before": {
+  "alembic": "f9e5b4a8c012",
+  "tables": 54,
+  "card_prints": 4316,
+  "atlas_index_ix_raw_dictionary_created": 1,
+  "image_assets_table": false
+ },
+ "alembic_exit": 0,
+ "alembic_log": [
+  "INFO  [alembic.runtime.migration] Running upgrade f9e5b4a8c012 -> 6c2242f6f439, Add card_print_image_assets: verified R2 copies of official card images."
+ ],
+ "after": {
+  "alembic": "6c2242f6f439",
+  "tables": 55,
+  "card_prints": 4316,
+  "atlas_index_ix_raw_dictionary_created": 1,
+  "image_assets_table": true,
+  "image_assets_rows": 0,
+  "image_assets_columns": 13,
+  "image_assets_indexes": [
+   "card_print_image_assets_pkey",
+   "ix_card_print_image_assets_card_print_id",
+   "ix_card_print_image_assets_sha256",
+   "uq_card_print_image_assets_print_source"
+  ]
+ },
+ "finished_at": "2026-10-12T12:55:07.895006+00:00"
+}

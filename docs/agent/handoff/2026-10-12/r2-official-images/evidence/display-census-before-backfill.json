@@ -1,0 +1,10 @@
+{
+ "observed_at": "2026-10-12T12:58:08.869552+00:00",
+ "prints_with_image_url": 4316,
+ "resolved": 4316,
+ "by_source_and_host": {
+  "bandai|r2.dev": 20,
+  "bandai|www.onepiece-cardgame.com": 4296
+ },
+ "non_bandai_public": []
+}

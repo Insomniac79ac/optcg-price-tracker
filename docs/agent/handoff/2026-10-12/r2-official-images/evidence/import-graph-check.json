@@ -1,0 +1,44 @@
+{
+ "observed_at": "2026-10-12T12:39:06.745325+00:00",
+ "installed_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+ "head": "c653e0cd1e80491ba4e588c4b06d1111bddfa8ba",
+ "pr_files": [
+  "apps/web/src/app/prints/[id]/PrintClient.tsx",
+  "apps/web/src/components/Footer.tsx",
+  "apps/web/src/lib/brand.test.ts",
+  "apps/web/src/lib/brand.ts",
+  "docs/agent/STAGING_MISSION.json",
+  "docs/official_images.md",
+  "services/api/alembic/env.py",
+  "services/api/alembic/versions/6c2242f6f439_add_card_print_image_assets.py",
+  "services/api/app/check_official_images.py",
+  "services/api/app/mirror_official_images.py",
+  "services/api/app/official_images/__init__.py",
+  "services/api/app/official_images/health.py",
+  "services/api/app/official_images/mirror.py",
+  "services/api/app/official_images/models.py",
+  "services/api/app/services/display_image.py",
+  "services/api/tests/test_market_value_rankings_api.py",
+  "services/api/tests/test_official_images.py",
+  "services/api/tests/test_source_mapping_proposal_review.py"
+ ],
+ "collectors": {
+  "snkrdunk": {
+   "basis": "import-graph",
+   "changed_runtime_inputs": [],
+   "pr_files_in_import_set": [],
+   "import_set_size": 62,
+   "models_init_imported": true,
+   "settings_imported": true
+  },
+  "yuyutei": {
+   "basis": "import-graph",
+   "changed_runtime_inputs": [],
+   "pr_files_in_import_set": [],
+   "import_set_size": 73,
+   "models_init_imported": true,
+   "settings_imported": true
+  }
+ },
+ "pr_touches_models_init_or_settings": []
+}

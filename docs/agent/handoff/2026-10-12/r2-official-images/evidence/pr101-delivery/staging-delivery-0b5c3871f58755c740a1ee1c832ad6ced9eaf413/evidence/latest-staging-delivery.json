@@ -1,0 +1,101 @@
+{
+  "verified_at": "2026-10-12T13:21:05.384294+00:00",
+  "expected_commit": "0b5c3871f58755c740a1ee1c832ad6ced9eaf413",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_FwACAPV9mLAzK7MeaeiyveovcVot",
+    "status": "READY",
+    "sha": "0b5c3871f58755c740a1ee1c832ad6ced9eaf413"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "6c2242f6f439",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "fd971c33147502ea3de72afd8b3416b7d76048ad6447d1d6020b3fd7f54c1beb",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "3ec8a7ab2404fb06b73ba8a20f54eb4c747d50da",
+    "merge": "0b5c3871f58755c740a1ee1c832ad6ced9eaf413",
+    "decision": "full",
+    "files": [
+      "apps/web/src/app/prints/[id]/PrintClient.tsx",
+      "apps/web/src/components/Footer.tsx",
+      "apps/web/src/lib/brand.test.ts",
+      "apps/web/src/lib/brand.ts",
+      "docs/agent/STAGING_MISSION.json",
+      "docs/official_images.md",
+      "services/api/alembic/env.py",
+      "services/api/alembic/versions/6c2242f6f439_add_card_print_image_assets.py",
+      "services/api/app/check_official_images.py",
+      "services/api/app/mirror_official_images.py",
+      "services/api/app/official_images/__init__.py",
+      "services/api/app/official_images/health.py",
+      "services/api/app/official_images/mirror.py",
+      "services/api/app/official_images/models.py",
+      "services/api/app/services/display_image.py",
+      "services/api/tests/test_market_value_rankings_api.py",
+      "services/api/tests/test_official_images.py",
+      "services/api/tests/test_source_mapping_proposal_review.py"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      "apps/web/src/app/prints/[id]/PrintClient.tsx",
+      "apps/web/src/components/Footer.tsx",
+      "apps/web/src/lib/brand.test.ts",
+      "apps/web/src/lib/brand.ts",
+      "services/api/alembic/env.py",
+      "services/api/alembic/versions/6c2242f6f439_add_card_print_image_assets.py",
+      "services/api/app/check_official_images.py",
+      "services/api/app/mirror_official_images.py",
+      "services/api/app/official_images/__init__.py",
+      "services/api/app/official_images/health.py",
+      "services/api/app/official_images/mirror.py",
+      "services/api/app/official_images/models.py",
+      "services/api/app/services/display_image.py",
+      "services/api/tests/test_market_value_rankings_api.py",
+      "services/api/tests/test_official_images.py",
+      "services/api/tests/test_source_mapping_proposal_review.py"
+    ]
+  },
+  "api_expectation": {
+    "mode": "build",
+    "sha": "0b5c3871f58755c740a1ee1c832ad6ced9eaf413",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": [
+      "services/api/alembic/env.py",
+      "services/api/alembic/versions/6c2242f6f439_add_card_print_image_assets.py",
+      "services/api/app/check_official_images.py",
+      "services/api/app/mirror_official_images.py",
+      "services/api/app/official_images/__init__.py",
+      "services/api/app/official_images/health.py",
+      "services/api/app/official_images/mirror.py",
+      "services/api/app/official_images/models.py",
+      "services/api/app/services/display_image.py",
+      "services/api/tests/test_market_value_rankings_api.py",
+      "services/api/tests/test_official_images.py",
+      "services/api/tests/test_source_mapping_proposal_review.py"
+    ]
+  },
+  "production_accessed": false
+}
