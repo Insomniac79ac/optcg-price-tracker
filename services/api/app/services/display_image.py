@@ -62,6 +62,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import CardPrint, Source, SourceCardMapping
+from app.official_images.models import CardPrintImageAsset
 from app.schemas import (
     DisplayImageCanvasOut,
     DisplayImageCardBoxOut,
@@ -384,6 +385,41 @@ def _owned_asset_url(payload: dict, card_print_id: int) -> str | None:
         return None
 
 
+def _official_copy_urls(db: Session, print_ids: list[int]) -> dict[int, str]:
+    """Our own R2 copy of each print's *current* official image, where one was
+    verified: same exact image_url (Bandai's ?version suffix included) and a
+    digest equal to the print's artwork_key. Compared in SQL, so this is one
+    statement regardless of how the caller loaded its prints, and no network
+    call.
+
+    Rows are insert-only and versioned by source_url, so a print whose
+    image_url changed simply has no row for the new version yet and keeps the
+    original URL (which the frontend proxies) until the mirror records it.
+    """
+    if not print_ids:
+        return {}
+    rows = db.execute(
+        select(CardPrintImageAsset.card_print_id, CardPrintImageAsset.sha256, CardPrintImageAsset.object_key)
+        .join(CardPrint, CardPrint.id == CardPrintImageAsset.card_print_id)
+        .where(
+            CardPrintImageAsset.card_print_id.in_(print_ids),
+            CardPrintImageAsset.source_url == CardPrint.image_url,
+            CardPrintImageAsset.sha256 == CardPrint.artwork_key,
+        )
+    ).all()
+    urls: dict[int, str] = {}
+    for card_print_id, digest, key in rows:
+        try:
+            validate_object_key(key)
+            extension = key.rsplit(".", 1)[-1]
+            if extension not in OBJECT_KEY_MEDIA_TYPES or key != build_object_key(digest, extension):
+                continue
+            urls[card_print_id] = public_url_for_key(key)
+        except (InvalidObjectKey, R2ConfigurationError):
+            continue
+    return urls
+
+
 def get_display_images_for_prints(
     db: Session, prints: list[CardPrint]
 ) -> dict[int, DisplayImageOut]:
@@ -437,19 +473,25 @@ def get_display_images_for_prints(
             ),
         )
 
+    official_copies = _official_copy_urls(
+        db, [p.id for p in prints if p.id not in best]
+    )
     for print_row in prints:
         chosen = best.get(print_row.id)
         if chosen is not None:
             by_print[print_row.id] = chosen[1]
         elif print_row.image_url:
-            # The canonical fallback: the print's own image_url, hotlinked.
-            # Same `source` string as a selected official asset, which is why
-            # owned_asset_selected has to be explicit here.
+            # The canonical image: our verified R2 copy of it when one exists
+            # (same bytes, digest == artwork_key), else the print's own
+            # image_url, which the frontend re-serves through its proxy. Same
+            # `source` string either way, which is why owned_asset_selected
+            # has to be explicit here.
+            copy_url = official_copies.get(print_row.id)
             by_print[print_row.id] = DisplayImageOut(
-                url=print_row.image_url,
+                url=copy_url or print_row.image_url,
                 source=BANDAI,
                 exact_print_verified=True,
-                owned_asset_selected=False,
+                owned_asset_selected=copy_url is not None,
             )
     return by_print
 

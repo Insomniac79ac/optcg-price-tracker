@@ -27,6 +27,7 @@ import { SourceConstraintNote } from "@/components/ui/SourceConstraintNote";
 import { SourceContributionNote } from "@/components/ui/SourceContributionNote";
 import { ApiError } from "@/lib/api";
 import { formatJpy } from "@/lib/format";
+import { brand } from "@/lib/brand";
 import { resolveCardImageUrl } from "@/lib/cardImage";
 import styles from "@/components/ui/PrintDetail.module.css";
 import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
@@ -356,6 +357,7 @@ function CardStage({ print }: { print: PrintUiModel }) {
           {provenance}
         </p>
       )}
+      <p className={styles.provenance}>{brand.imageCredit}</p>
     </div>
   );
 }

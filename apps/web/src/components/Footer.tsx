@@ -20,6 +20,7 @@ export function Footer() {
     <footer className="mt-16 border-t border-border-muted px-4 py-7 text-xs">
       <div className="mx-auto flex max-w-7xl flex-col gap-2.5">
         <p className="max-w-3xl leading-relaxed text-text-muted">{brand.legalDisclaimer}</p>
+        <p className="max-w-3xl leading-relaxed text-text-muted">{brand.imageCredit}</p>
         <p className="flex flex-wrap items-baseline gap-x-1.5 text-text-muted">
           <span className="font-medium text-text-secondary">{brand.productName}</span>
           <span aria-hidden className="text-text-faint">

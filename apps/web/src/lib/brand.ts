@@ -47,6 +47,12 @@ export const brand = {
   legalDisclaimer:
     "Card Pirate is an independent collector tool. It is not affiliated with, endorsed by, or sponsored by Bandai, Shueisha, Toei Animation, or any other rights holder connected to One Piece.",
 
+  /** Credit wherever official card art is shown. Card Pirate stores copies of
+   * the official card list images so pages don't depend on Bandai's servers;
+   * the images stay their owners' and are never altered. */
+  imageCredit:
+    "Card images are the property of their respective rights holders (Bandai, Eiichiro Oda / Shueisha, Toei Animation) and are shown unmodified for identification.",
+
   /** Canonical public navigation labels - functional, not novelty-themed
    * (docs/brand.md "Copy principles" - retained regardless of tone pass). */
   nav: {
