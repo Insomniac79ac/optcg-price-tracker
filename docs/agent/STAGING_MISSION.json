@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Fix flaky exact-print chart export test by holding export until the chosen window's analytics land (web only)",
+ "mission": "Land 2026-10-12 capacity75 session-11 handoff, evidence, read-only tools and the handoff receipt checklist on staging (documentation only)",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,26 +20,79 @@
  "impacts": [
   {
    "files": [
-    "apps/web/src/components/ui/PrintAnalyticsSection.tsx"
+    "docs/agent/STAGING_DELIVERY.md",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/CONTINUATION.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/CURRENT_STATE-end.yaml",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/CURRENT_STATE-start.yaml",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/HANDOFF.md",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/backups-start.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/coverage-start.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/fleet-vs-receipt-start.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/identity-capture-requests.txt",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/identity-capture-sizes.txt",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/live-state-start.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/new100-replan.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/new100-storage.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-credential-probe-5527765440b02250b8bff633b16872c69d80b307/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-10e34e1ffa6cd903.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr104-delivery/staging-delivery-e6d0ca7e387c23d70bcd7351a6d199c87beefc84/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-credential-probe-64f68a31703a719510f0e815d8c2afcea5feddc9/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/pr105-delivery/staging-delivery-5a9ac46163cac04a6dc955dafca3f044cfde9ff9/evidence/staging-state-df8d896923a203b2.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/proposal-digest-verify-0615Z.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/proposal-digest-verify-end.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/requests-24h-a504e47.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/reversion-check-0616Z.txt",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/snkr-24h-detail.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/snkr-admission-estimates.txt",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/staging-state-88a3b552bc932e22.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/staging-state-f998000adfd6da30.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/storage-rates.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/trigger-status-start.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/verify-lossless-from-47829.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/volume-series.json",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/evidence/yuyu-shard-balance.txt",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/backups.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/coverage.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/db.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/fleet_vs_receipt.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/live_a504e47.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/new100_replan.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/new100_storage.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/proposal_digest_verify.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/requests_window.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/snkr24h.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/storage_rates.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/trigger_status.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/verify_all.py",
+    "docs/agent/handoff/2026-10-12/capacity75-session11/tools/volume_series.py"
    ],
    "effects": [
-    "application"
+    "documentation",
+    "state_observation"
    ],
-   "reason": "Download chart is aria-disabled with a stated reason while a window change is in flight, so it can no longer save the superseded (dimmed) window. Client-only UI behaviour; no request, API, pricing or data change."
-  },
-  {
-   "files": [
-    "apps/web/src/app/admin/(protected)/import-validation/page.test.tsx",
-    "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx",
-    "apps/web/src/app/prints/[id]/analytics.test.tsx"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Tests sync on the rendered answer instead of the request being issued; adds a regression test for the in-flight export gap. Test-only."
+   "reason": "Session-11 handoff under docs/agent/handoff/ (read-only evidence including the downloaded PR #104/#105 CI delivery artifacts, regenerated state snapshots, read-only measurement tools) plus a handoff receipt checklist section in docs/agent/STAGING_DELIVERY.md. No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
   }
  ],
- "diff_sha256": "2922c1e236a242aaf972cb1993e97366a21bf91ef0e044582f4693cef72054bf",
+ "diff_sha256": "5ac496dc77261aaad683482e6c5e0cda3b842bddb7ee8bf05dce0bb0cd679b6a",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "f9e5b4a8c012",
