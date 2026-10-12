@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Record the owner-executed Railway production deletion (2026-10-12) with before/after staging evidence (documentation only)",
+ "mission": "Record the outcome of the Railway production deletion: GitHub Production environment recreated, PR #107 delivery receipts (documentation only)",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,26 +20,31 @@
  "impacts": [
   {
    "files": [
-    "docs/agent/PROJECT_HANDOVER.md",
     "docs/agent/handoff/2026-10-12/production-deletion/HANDOFF.md",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-after-env.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-after-proxies.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-before.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/ports-after-proxies.txt",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/production-env-tombstone.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/verify-after-env.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/evidence/verify-before.json",
-    "docs/agent/handoff/2026-10-12/production-deletion/tools/baseline.py",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/baseline-after-pr107.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/collector-records-after-pr107.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-credential-probe-52066339e199145d232ae517fce49ff5c420b976/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-a28b44f6883d9eef.json",
+    "docs/agent/handoff/2026-10-12/production-deletion/evidence/pr107-delivery/staging-delivery-c19c72648c587f17ed8d66f2bc9e26825a58d459/evidence/staging-state-c09334b69a28b1a7.json",
     "docs/agent/plans/production-deprecation/INVENTORY.md"
    ],
    "effects": [
     "documentation",
     "state_observation"
    ],
-   "reason": "Production-deletion record: INVENTORY.md section 8 (brought onto staging from plan/production-deprecation), two PROJECT_HANDOVER status lines, and read-only evidence plus the read-only baseline tool under docs/agent/handoff/2026-10-12/production-deletion/. The deletion itself was performed by the owner in the Railway and GitHub dashboards; this PR changes no production or staging resource. No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
+   "reason": "Outcome paragraph in INVENTORY.md section 8 and handoff index, plus read-only evidence under docs/agent/handoff/2026-10-12/production-deletion/ (downloaded PR #107 CI delivery artifacts, post-merge staging baseline, collector deployment record count). No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
   }
  ],
- "diff_sha256": "df92b5879b7823520db396483fd7d77f9c75aa129ed5a709a7d80756783d1775",
+ "diff_sha256": "abeb631d6c3e259e5dad2cf38e3429a2a6e497513dc15086818ac6af271e70fd",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "f9e5b4a8c012",
