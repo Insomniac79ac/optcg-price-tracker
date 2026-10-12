@@ -1,0 +1,9 @@
+2026-10-12 ~09:36Z protocol-level probe (Postgres SSLRequest / Redis PING; no credentials sent)
+PG-prod       sakura.proxy.rlwy.net:21415  TCP accept, then ConnectionResetError (no backend)
+PG-staging    sakura.proxy.rlwy.net:12258  b'S' (live Postgres)
+PG-random     sakura.proxy.rlwy.net:23456  TCP accept, then ConnectionResetError (unassigned-port control)
+Redis-prod    tokaido.proxy.rlwy.net:48223 TCP accept, then ConnectionResetError (no backend)
+Redis-staging sakura.proxy.rlwy.net:48429  -NOAUTH (live Redis)
+Redis-random  tokaido.proxy.rlwy.net:34567 TCP accept, no reply (unassigned-port control)
+Railway API: tcpProxies(production, Postgres) = [], tcpProxies(production, Redis) = []
+Note: Railway's edge accepts a TCP handshake on any port, so a bare connect is not a valid "closed" test.

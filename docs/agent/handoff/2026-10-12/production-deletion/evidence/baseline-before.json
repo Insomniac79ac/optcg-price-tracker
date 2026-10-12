@@ -1,0 +1,639 @@
+{
+ "observed_at": "2026-10-12T08:27:26.897718+00:00",
+ "read_only": true,
+ "expected_collector_commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+ "project_name": "glistening-peace",
+ "environments": [
+  [
+   "production",
+   "d84d1abf-04c5-4315-841c-1c8838ebec89"
+  ],
+  [
+   "staging",
+   "05d1eac2-510d-4bd3-999e-fea9ead766b7"
+  ]
+ ],
+ "production_env_present": true,
+ "project_services": [
+  [
+   "Postgres",
+   "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
+  ],
+  [
+   "Redis",
+   "bdc84418-d934-47f3-bb84-2f03cb7d8f5b"
+  ],
+  [
+   "beat",
+   "fd28246d-50d2-40da-81dd-c6779e0d3faa"
+  ],
+  [
+   "market-index-snapshot",
+   "8d2ee55a-992f-42e0-99a1-99e17df44dd2"
+  ],
+  [
+   "optcg-price-tracker",
+   "5290becf-6956-4c5c-ab16-01d865587e07"
+  ],
+  [
+   "snkrdunk-collector",
+   "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a"
+  ],
+  [
+   "tmp-yuyu-discovery-4b",
+   "5bf4e6d8-a382-4c3a-af61-d0ec74ede5e4"
+  ],
+  [
+   "tmp-yuyu-shard-rehearsal",
+   "33675eb8-8707-4218-9322-b574f3af3c0b"
+  ],
+  [
+   "worker",
+   "0042350a-ee15-4bac-a210-3efa20a3fa8c"
+  ],
+  [
+   "yuyutei-collector",
+   "72fe4e28-5b0e-4de8-a6eb-8fb0b58080b2"
+  ],
+  [
+   "yuyutei-collector-shard-0",
+   "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67"
+  ],
+  [
+   "yuyutei-collector-shard-1",
+   "8912a70e-0bc3-4e2f-89dd-8fab56af5acd"
+  ],
+  [
+   "yuyutei-collector-shard-2",
+   "0169974d-e181-4454-8a0d-65733a76cdb3"
+  ],
+  [
+   "yuyutei-collector-shard-3",
+   "5150aeb3-108b-40ef-8091-7c796edb299a"
+  ],
+  [
+   "yuyutei-collector-shard-4-v2",
+   "2f4b87da-369d-4b95-8341-0123e6c1c442"
+  ],
+  [
+   "yuyutei-collector-shard-5",
+   "9666f7cb-516b-4bdd-a4dc-10ded8276b2e"
+  ],
+  [
+   "yuyutei-collector-shard-6",
+   "54051b0c-359d-47ec-8dcb-32535350c35f"
+  ],
+  [
+   "yuyutei-collector-shard-7",
+   "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3"
+  ],
+  [
+   "yuyutei-collector-shard-8",
+   "f83b902e-f79c-49f4-a2f6-b13018be1926"
+  ]
+ ],
+ "staging_instances": {
+  "Postgres": {
+   "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e",
+   "latest": "176a0445-1ce8-4e4d-84cc-51dae3f6ec31",
+   "latest_status": "SUCCESS",
+   "active": [
+    "176a0445-1ce8-4e4d-84cc-51dae3f6ec31"
+   ],
+   "cron": null,
+   "replicas": null,
+   "start_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "Redis": {
+   "service_id": "bdc84418-d934-47f3-bb84-2f03cb7d8f5b",
+   "latest": "bb0fba59-638c-48c9-8f24-b418c7d193cf",
+   "latest_status": "SUCCESS",
+   "active": [
+    "bb0fba59-638c-48c9-8f24-b418c7d193cf"
+   ],
+   "cron": null,
+   "replicas": null,
+   "start_sha256": "38dbff10a7f6f9e3fbe227158c7ed6efd59e01b64dae4303ba937fd72e5f9df9"
+  },
+  "beat": {
+   "service_id": "fd28246d-50d2-40da-81dd-c6779e0d3faa",
+   "latest": "f73a4465-7aa0-4157-b173-0614bb23ecf0",
+   "latest_status": "SUCCESS",
+   "active": [
+    "f73a4465-7aa0-4157-b173-0614bb23ecf0"
+   ],
+   "cron": null,
+   "replicas": null,
+   "start_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "market-index-snapshot": {
+   "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2",
+   "latest": "8716e738-2de2-4e10-94be-b365daba7940",
+   "latest_status": "SUCCESS",
+   "active": [
+    "8716e738-2de2-4e10-94be-b365daba7940"
+   ],
+   "cron": "0 20 * * *",
+   "replicas": 1,
+   "start_sha256": "3bc6f3ecf045fb3a9189fb0e7de3f9976b37f45472770c2e9ad55a700cdcd11c"
+  },
+  "optcg-price-tracker": {
+   "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
+   "latest": "33bed368-b8a8-4c44-bb1a-e3b9f60c2de8",
+   "latest_status": "SUCCESS",
+   "active": [
+    "33bed368-b8a8-4c44-bb1a-e3b9f60c2de8"
+   ],
+   "cron": null,
+   "replicas": null,
+   "start_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "snkrdunk-collector": {
+   "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+   "latest": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+   "latest_status": "SUCCESS",
+   "active": [
+    "a8fa2cca-0c8e-4050-a67b-8c6e50485f97"
+   ],
+   "cron": "27,57 * * * *",
+   "replicas": 1,
+   "start_sha256": "f67b31ba08b3aa39f5e81e69dcaf93f0817f88591f197c53ddd0230c070b78c7"
+  },
+  "tmp-yuyu-discovery-4b": {
+   "service_id": "5bf4e6d8-a382-4c3a-af61-d0ec74ede5e4",
+   "latest": "f7ecde7b-3d13-438b-bf98-0db0a1c83c97",
+   "latest_status": "SUCCESS",
+   "active": [
+    "f7ecde7b-3d13-438b-bf98-0db0a1c83c97"
+   ],
+   "cron": null,
+   "replicas": null,
+   "start_sha256": "37a79ba13a43b79bfb850978d84b9e7d7ce66218f251871894742880619081c7"
+  },
+  "tmp-yuyu-shard-rehearsal": {
+   "service_id": "33675eb8-8707-4218-9322-b574f3af3c0b",
+   "latest": "a549db5a-331b-4f21-8452-502f51c97612",
+   "latest_status": "SUCCESS",
+   "active": [
+    "a549db5a-331b-4f21-8452-502f51c97612"
+   ],
+   "cron": null,
+   "replicas": null,
+   "start_sha256": "92ebe1801fa04a597103ee145c5f16c2ccd18f928c7a61322bb55b259fc5ecc2"
+  },
+  "worker": {
+   "service_id": "0042350a-ee15-4bac-a210-3efa20a3fa8c",
+   "latest": "0f1a943f-6691-4806-8ae6-9ba87a3c6db8",
+   "latest_status": "SUCCESS",
+   "active": [
+    "0f1a943f-6691-4806-8ae6-9ba87a3c6db8"
+   ],
+   "cron": null,
+   "replicas": null,
+   "start_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "yuyutei-collector": {
+   "service_id": "72fe4e28-5b0e-4de8-a6eb-8fb0b58080b2",
+   "latest": "fcc01380-e40c-403b-a7da-69f6509eeebf",
+   "latest_status": "SUCCESS",
+   "active": [
+    "fcc01380-e40c-403b-a7da-69f6509eeebf"
+   ],
+   "cron": null,
+   "replicas": 1,
+   "start_sha256": "143df386177b62752a17d542f939f9a92323ea6473144206783eaf4154847f07"
+  },
+  "yuyutei-collector-shard-0": {
+   "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+   "latest": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+   "latest_status": "SUCCESS",
+   "active": [
+    "0a3c7f35-d282-4e25-8197-70f8f3283bfa"
+   ],
+   "cron": "0,30 * * * *",
+   "replicas": 1,
+   "start_sha256": "e2fac55c87565739857a67cac1da4bd14e6ab1f292d063ff592e8500cd7627c4"
+  },
+  "yuyutei-collector-shard-1": {
+   "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+   "latest": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+   "latest_status": "SUCCESS",
+   "active": [
+    "ef57061d-cf9d-4b2b-9630-13aa391f0b0a"
+   ],
+   "cron": "3,33 * * * *",
+   "replicas": 1,
+   "start_sha256": "8f3d2eb2c515546c9aebb2a55deaa9c6f42672406a188a744ce839d9b8c0aa41"
+  },
+  "yuyutei-collector-shard-2": {
+   "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+   "latest": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+   "latest_status": "SUCCESS",
+   "active": [
+    "ac493f4b-bf25-4598-bd48-5f73c9d2c011"
+   ],
+   "cron": "6,36 * * * *",
+   "replicas": 1,
+   "start_sha256": "635aac2bcd3a6c4059182c7c67e2ce2a9f06a288b52b6a1f073856381502041d"
+  },
+  "yuyutei-collector-shard-3": {
+   "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+   "latest": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+   "latest_status": "SUCCESS",
+   "active": [
+    "e42e9c4a-b54d-495d-9010-072ecdaa3241"
+   ],
+   "cron": "9,39 * * * *",
+   "replicas": 1,
+   "start_sha256": "cca60cb052e9556a09ef5c82ffb561dbcf1e06e89cedd1288b064de67950027d"
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+   "latest": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+   "latest_status": "SUCCESS",
+   "active": [
+    "548d1a23-9bc2-49d4-9d15-62a08edeca0d"
+   ],
+   "cron": "12,42 * * * *",
+   "replicas": 1,
+   "start_sha256": "c445cd8c3a088b6c4301595b321f23d34cf254e632450288620be87044af0dec"
+  },
+  "yuyutei-collector-shard-5": {
+   "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+   "latest": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+   "latest_status": "SUCCESS",
+   "active": [
+    "06d64d9a-6bfa-4f27-b75a-732b446bedbf"
+   ],
+   "cron": "15,45 * * * *",
+   "replicas": 1,
+   "start_sha256": "47f35f535a1536f6b36ca6f832f488fbae45ebe4ebd790dd27e2e8de968a73f4"
+  },
+  "yuyutei-collector-shard-6": {
+   "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+   "latest": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+   "latest_status": "SUCCESS",
+   "active": [
+    "5b4ff8a2-9465-4619-b321-8df037bcf925"
+   ],
+   "cron": "18,48 * * * *",
+   "replicas": 1,
+   "start_sha256": "85093ee9b6abbfb52ce62866e16cf9cab27fa35d2861bb441daa231ed3eb3cdd"
+  },
+  "yuyutei-collector-shard-7": {
+   "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+   "latest": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+   "latest_status": "SUCCESS",
+   "active": [
+    "fd0c2ac5-80d4-48e4-8529-e3dd943fe823"
+   ],
+   "cron": "21,51 * * * *",
+   "replicas": 1,
+   "start_sha256": "856bba9ff4f6473ac7c061839f2188e6d3b721fa8330e011db44d3ea8df447a0"
+  },
+  "yuyutei-collector-shard-8": {
+   "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+   "latest": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+   "latest_status": "SUCCESS",
+   "active": [
+    "ee64bf59-544e-47c3-a604-2fa2041f3baf"
+   ],
+   "cron": "24,54 * * * *",
+   "replicas": 1,
+   "start_sha256": "f700e31ca8f1c484d71aeb8d1dd79086d3052330da6571dd2b6e40446a3d439f"
+  }
+ },
+ "collectors": {
+  "snkrdunk-collector": {
+   "latest": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:19423bbcdbe0869c1c6040f94abece76fc5e2d06722eb180ffbc75145b6dc66a",
+   "same_as_session11_start": true,
+   "cron": "27,57 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-0": {
+   "latest": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:fc8c991c49d40c851ee67c59d226f53bc04837c9691fd86439db28782bc15e13",
+   "same_as_session11_start": true,
+   "cron": "0,30 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-1": {
+   "latest": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:5f4a320fa136bd9cbe5be877ecfdc6cb610f1adfca2012eea63f1155b03121d9",
+   "same_as_session11_start": true,
+   "cron": "3,33 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-2": {
+   "latest": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:8baef84c6f0e1eb0689cebf731a8f1a51d319458a2d0dd9f1c954e93e3252731",
+   "same_as_session11_start": true,
+   "cron": "6,36 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-3": {
+   "latest": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:9a3247bd9c29b16e548013a27fd9c33926235cc0ff9310c7c886009dbd2f7244",
+   "same_as_session11_start": true,
+   "cron": "9,39 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "latest": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:a8519de6ddcea4ed70871a79e28b874e0f50bdbe5571eee97ff9e0ad904e56c0",
+   "same_as_session11_start": true,
+   "cron": "12,42 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-5": {
+   "latest": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:393a00a63f1cbf62c023c3c133c35ca30033d4cc55d9f012cc60b15ec03922bd",
+   "same_as_session11_start": true,
+   "cron": "15,45 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-6": {
+   "latest": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:6ddede32f78ed57ce5031d6aec1ca2152f6ea455a36b27978c034748f8cd56e7",
+   "same_as_session11_start": true,
+   "cron": "18,48 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-7": {
+   "latest": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:0b6bb48cbc672aee4e520bbf8d2ac199c7e4f106a48f4c34b4c5bd816f51d0ca",
+   "same_as_session11_start": true,
+   "cron": "21,51 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  },
+  "yuyutei-collector-shard-8": {
+   "latest": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+   "status": "SUCCESS",
+   "marker": true,
+   "digest": "sha256:a65534d459933229b524ea1d7a1b801d5c423aaeda2a1046763fb9eaa05ff247",
+   "same_as_session11_start": true,
+   "cron": "24,54 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "daily_v1": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true
+  }
+ },
+ "collectors_all_ok": true,
+ "triggers": {
+  "Postgres": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "Redis": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "beat": {
+   "triggers": [
+    {
+     "branch": "staging",
+     "id": "c4b22bf2-8384-4d2b-a6f2-a18fe4ad188f",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "auto_deploy": true
+  },
+  "market-index-snapshot": {
+   "triggers": [
+    {
+     "branch": "staging",
+     "id": "b0a39ea6-9986-4f19-b9b5-5a3338ab812c",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "auto_deploy": true
+  },
+  "optcg-price-tracker": {
+   "triggers": [
+    {
+     "branch": "staging",
+     "id": "24bbbf15-c774-49c5-b11a-0422a5b9aac9",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "auto_deploy": true
+  },
+  "snkrdunk-collector": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "tmp-yuyu-discovery-4b": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "tmp-yuyu-shard-rehearsal": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "worker": {
+   "triggers": [
+    {
+     "branch": "staging",
+     "id": "6f239714-9a65-4fa9-9d7d-aa75d9ad659e",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ],
+   "auto_deploy": true
+  },
+  "yuyutei-collector": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-0": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-1": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-2": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-3": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-5": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-6": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-7": {
+   "triggers": [],
+   "auto_deploy": false
+  },
+  "yuyutei-collector-shard-8": {
+   "triggers": [],
+   "auto_deploy": false
+  }
+ },
+ "collector_trigger_count": 0,
+ "trigger_preflight": "PASS",
+ "api_health": {
+  "status": 200,
+  "body": {
+   "status": "ok",
+   "app_env": "staging",
+   "database_connected": true,
+   "redis_connected": true,
+   "version": "0.1.0",
+   "git_commit": "unknown"
+  }
+ },
+ "staging_proxies": {
+  "Postgres": [
+   {
+    "id": "81e99553-8e38-47c5-9bde-51cd5614a1a4",
+    "domain": "sakura.proxy.rlwy.net",
+    "proxyPort": 12258,
+    "applicationPort": 5432
+   }
+  ],
+  "Redis": [
+   {
+    "id": "7da16109-e05e-4d27-83ae-d9674759b083",
+    "domain": "sakura.proxy.rlwy.net",
+    "proxyPort": 48429,
+    "applicationPort": 6379
+   }
+  ]
+ },
+ "postgres": {
+  "port": 12258,
+  "read_only": "on",
+  "alembic": "f9e5b4a8c012",
+  "tables": 54,
+  "db_size": "2689 MB"
+ },
+ "redis": {
+  "port": 48429,
+  "ping": true
+ },
+ "production_proxies": {
+  "Postgres": [
+   {
+    "id": "021a39f9-d6c1-4eeb-97d8-f2bcc318ddce",
+    "domain": "sakura.proxy.rlwy.net",
+    "proxyPort": 21415,
+    "applicationPort": 5432
+   }
+  ],
+  "Redis": [
+   {
+    "id": "1db5f145-2f8c-40f5-b74a-460b16f6b1ef",
+    "domain": "tokaido.proxy.rlwy.net",
+    "proxyPort": 48223,
+    "applicationPort": 6379
+   }
+  ]
+ },
+ "production_ports": {
+  "sakura.proxy.rlwy.net:21415": "OPEN",
+  "tokaido.proxy.rlwy.net:48223": "OPEN"
+ }
+}

@@ -1,0 +1,16 @@
+{
+  "data": {
+    "environment": {
+      "createdAt": "2026-07-23T15:37:25.478Z",
+      "deletedAt": "2026-10-12T09:50:07.198Z",
+      "id": "d84d1abf-04c5-4315-841c-1c8838ebec89",
+      "name": "production-5f2011e3-1eaa-4197-bf04-0d7a68382ee2",
+      "serviceInstances": {
+        "edges": []
+      },
+      "volumeInstances": {
+        "edges": []
+      }
+    }
+  }
+}

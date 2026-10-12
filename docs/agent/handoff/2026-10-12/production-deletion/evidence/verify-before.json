@@ -1,0 +1,45 @@
+{
+  "verified_at": "2026-10-12T08:43:24.921558+00:00",
+  "expected_commit": "e1e2a0bebae7650b7048f08485a2a0441cb88637",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_DDpyo19gdUiHsLgJHXYPPEehQdnZ",
+    "status": "READY",
+    "sha": "e1e2a0bebae7650b7048f08485a2a0441cb88637"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "beae0ed1d4015bc5b888e9fe814200b45f645df1b1572cdee1ee76ebe3fc0898",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": null,
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}
