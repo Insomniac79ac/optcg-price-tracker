@@ -1,0 +1,4954 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-07T23:28:42.601427+00:00",
+  "read_only": true,
+  "source_requests": 0,
+  "database_writes": 0,
+  "operational_at_preflight": 2630,
+  "minimum_operational_before_apply": 2590,
+  "proof_status": "Unresolved; metadata selection only. No full-image review or physical selection.",
+  "planned_count": 100,
+  "records": [
+    {
+      "candidate_id": 548,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op10/10029",
+      "card_code": "OP10-022",
+      "release_product_id": 179,
+      "considered_print_ids": [
+        4667,
+        4668
+      ],
+      "evidence_digest": "f02435935800b83a1a0585eb7163881ae31e543587d99a253ab165acfeac82e7",
+      "scope_key": "yuyu-identity:548:sha256:f02435935800b83a1a0585eb7163881ae31e543587d99a253ab165acfeac82e7",
+      "evidence_summary": {
+        "candidate_id": 548,
+        "discovery_run_id": 291,
+        "set_slug": "op10",
+        "product_id": "10029",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op10/10029",
+        "detected_card_code": "OP10-022",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30c8\u30e9\u30d5\u30a1\u30eb\u30ac\u30fc\u30fb\u30ed\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op10/10029.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "c2168ce2cac9e3b0c20ff48d54c226738826067226fea091ca4cc23a187cf27e",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6482,
+        "resolved_release_product_id": 179,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4667,
+            "release_product_id": 179,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4668,
+            "release_product_id": 179,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 549,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op10/10053",
+      "card_code": "OP10-042",
+      "release_product_id": 179,
+      "considered_print_ids": [
+        4691,
+        4692
+      ],
+      "evidence_digest": "6d19d40b738f464ca407cad62c80fb7398080d8474b54b4c6ce73fae040a7591",
+      "scope_key": "yuyu-identity:549:sha256:6d19d40b738f464ca407cad62c80fb7398080d8474b54b4c6ce73fae040a7591",
+      "evidence_summary": {
+        "candidate_id": 549,
+        "discovery_run_id": 291,
+        "set_slug": "op10",
+        "product_id": "10053",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op10/10053",
+        "detected_card_code": "OP10-042",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30a6\u30bd\u30c3\u30d7(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op10/10053.jpg",
+        "price_jpy": 1280,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "e2342b7bc858d96e802bd91c090251a8eb4858fb4125af4533d36d69adbe1acc",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6502,
+        "resolved_release_product_id": 179,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4691,
+            "release_product_id": 179,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4692,
+            "release_product_id": 179,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 550,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op10/10119",
+      "card_code": "OP10-099",
+      "release_product_id": 179,
+      "considered_print_ids": [
+        4757,
+        4758
+      ],
+      "evidence_digest": "c977532f29b201e89006ddc2a407fd9872437021ebfa630b58cf3020f922d860",
+      "scope_key": "yuyu-identity:550:sha256:c977532f29b201e89006ddc2a407fd9872437021ebfa630b58cf3020f922d860",
+      "evidence_summary": {
+        "candidate_id": 550,
+        "discovery_run_id": 291,
+        "set_slug": "op10",
+        "product_id": "10119",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op10/10119",
+        "detected_card_code": "OP10-099",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30e6\u30fc\u30b9\u30bf\u30b9\u30fb\u30ad\u30c3\u30c9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op10/10119.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "94824fcd1e27817d07281df960bbdc205443a36252bfb5d5f99a18d1ac6c00df",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6559,
+        "resolved_release_product_id": 179,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4757,
+            "release_product_id": 179,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4758,
+            "release_product_id": 179,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2731,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10144",
+      "card_code": "OP11-118",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4627,
+        4628,
+        4629
+      ],
+      "evidence_digest": "83ce651e4b8fae5977d15a175bf191eee501ec50d90a9aca90d2f9dfb4ab8899",
+      "scope_key": "yuyu-identity:2731:sha256:83ce651e4b8fae5977d15a175bf191eee501ec50d90a9aca90d2f9dfb4ab8899",
+      "evidence_summary": {
+        "candidate_id": 2731,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10144",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10144",
+        "detected_card_code": "OP11-118",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10144.jpg",
+        "price_jpy": 1980,
+        "availability": "in_stock",
+        "raw_listing_digest": "48256ff58c1935b3b3c8be63076bafd07ce094065927df6cb3602c3d13568632",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6697,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4627,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4628,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4629,
+            "release_product_id": 180,
+            "official_asset_variant": "p2",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2733,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10147",
+      "card_code": "OP11-119",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4630,
+        4631
+      ],
+      "evidence_digest": "a4569cf920e1bc36525d0fcd98a1ef2956afcbad992cb9005e919f6cfd6350a4",
+      "scope_key": "yuyu-identity:2733:sha256:a4569cf920e1bc36525d0fcd98a1ef2956afcbad992cb9005e919f6cfd6350a4",
+      "evidence_summary": {
+        "candidate_id": 2733,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10147",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10147",
+        "detected_card_code": "OP11-119",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30b3\u30d3\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10147.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "99bd9c1a5c8248ff3ebd7412763af59c17e91cd488a39480470cca1095e7b496",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6698,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4630,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4631,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2736,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10006",
+      "card_code": "OP11-004",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4489,
+        4490
+      ],
+      "evidence_digest": "1412580764143fc2c91961d6c8d3256ba0089ca6ce04f98ff59f949451368ddb",
+      "scope_key": "yuyu-identity:2736:sha256:1412580764143fc2c91961d6c8d3256ba0089ca6ce04f98ff59f949451368ddb",
+      "evidence_summary": {
+        "candidate_id": 2736,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10006",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10006",
+        "detected_card_code": "OP11-004",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u5b54\u96c0(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10006.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "68fd858bacff99a4a4d47c51d4adae2b061ac38f22a8148f0f66cabbedd3fac4",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6583,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4489,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4490,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2737,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10014",
+      "card_code": "OP11-010",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4497,
+        4498
+      ],
+      "evidence_digest": "fd5a8ca162afc44b1719610316fd85b65db255a138f92beb35907f1afad96681",
+      "scope_key": "yuyu-identity:2737:sha256:fd5a8ca162afc44b1719610316fd85b65db255a138f92beb35907f1afad96681",
+      "evidence_summary": {
+        "candidate_id": 2737,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10014",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10014",
+        "detected_card_code": "OP11-010",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u3072\u3070\u308a(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10014.jpg",
+        "price_jpy": 780,
+        "availability": "in_stock",
+        "raw_listing_digest": "35669a8ab9f1ffde31c9b525fe34d2c603aa43a8f01e4cc45efaab404f7b7f19",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6589,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4497,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4498,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2738,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10040",
+      "card_code": "OP11-031",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4523,
+        4524
+      ],
+      "evidence_digest": "f94d6f64512907ee5f521f1c6ac888e05ef9e89402bb7975105b75f1ef3d5ebb",
+      "scope_key": "yuyu-identity:2738:sha256:f94d6f64512907ee5f521f1c6ac888e05ef9e89402bb7975105b75f1ef3d5ebb",
+      "evidence_summary": {
+        "candidate_id": 2738,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10040",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10040",
+        "detected_card_code": "OP11-031",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b8\u30f3\u30d9\u30a8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10040.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "be79af80b8f3a575fd9d30bfff997bfd3acf371b7874c1342d66ffeee8d27029",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6610,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4523,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4524,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2739,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10064",
+      "card_code": "OP11-051",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4547,
+        4548
+      ],
+      "evidence_digest": "823d92431358b35b772f75a907fd49ae9c240678a3e5499c7c1a894c5884e8c2",
+      "scope_key": "yuyu-identity:2739:sha256:823d92431358b35b772f75a907fd49ae9c240678a3e5499c7c1a894c5884e8c2",
+      "evidence_summary": {
+        "candidate_id": 2739,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10064",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10064",
+        "detected_card_code": "OP11-051",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b5\u30f3\u30b8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10064.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "ca63ff97d571c9ba8836292e260b7d7570f7168e98e7e61927839f86854d9342",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6630,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4547,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4548,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2740,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10068",
+      "card_code": "OP11-054",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4551,
+        4552
+      ],
+      "evidence_digest": "6500be88f6102179bfcd3bcda0b24a999a51e419578dc0bd95bdb4e61b979e44",
+      "scope_key": "yuyu-identity:2740:sha256:6500be88f6102179bfcd3bcda0b24a999a51e419578dc0bd95bdb4e61b979e44",
+      "evidence_summary": {
+        "candidate_id": 2740,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10068",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10068",
+        "detected_card_code": "OP11-054",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30ca\u30df(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10068.jpg",
+        "price_jpy": 2480,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "1dd1447eec1a6118e632e9611e3a09f12a7a5a71d7d6d6545a7c6a549468b4aa",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6633,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4551,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4552,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2741,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10083",
+      "card_code": "OP11-067",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4566,
+        4567
+      ],
+      "evidence_digest": "6168f42af47a13631d06c92c8b797272d56cee2abcbe935207bb5e514a862dba",
+      "scope_key": "yuyu-identity:2741:sha256:6168f42af47a13631d06c92c8b797272d56cee2abcbe935207bb5e514a862dba",
+      "evidence_summary": {
+        "candidate_id": 2741,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10083",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10083",
+        "detected_card_code": "OP11-067",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10083.jpg",
+        "price_jpy": 1480,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "b9fa7bbb838cd9476c001bcc1af471fe98d2fe609fcdbe1d1e4046d101b16acf",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6646,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4566,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4567,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2742,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10087",
+      "card_code": "OP11-070",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4570,
+        4571
+      ],
+      "evidence_digest": "eb6aad42e6b3465349be99b57d445c3da5571099b45c13598f269b5a728415f8",
+      "scope_key": "yuyu-identity:2742:sha256:eb6aad42e6b3465349be99b57d445c3da5571099b45c13598f269b5a728415f8",
+      "evidence_summary": {
+        "candidate_id": 2742,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10087",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10087",
+        "detected_card_code": "OP11-070",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30d7\u30ea\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10087.jpg",
+        "price_jpy": 1980,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "cf5b311609528a1e7730800edb0aadd3fe16f23bfc215c02f089a4bc913ea98d",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6649,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4570,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4571,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2743,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10113",
+      "card_code": "OP11-092",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4596,
+        4597
+      ],
+      "evidence_digest": "949496c7fab39dc6dd6f4928963a302c8a2f05524f120a55929b0da2ad4b3354",
+      "scope_key": "yuyu-identity:2743:sha256:949496c7fab39dc6dd6f4928963a302c8a2f05524f120a55929b0da2ad4b3354",
+      "evidence_summary": {
+        "candidate_id": 2743,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10113",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10113",
+        "detected_card_code": "OP11-092",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30d8\u30eb\u30e1\u30c3\u30dd(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10113.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "82e9662fd6b2d1228bb5f8d6d15db5d5084e09434f6d016fba15a779c1eaf00f",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6671,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4596,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4597,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2744,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10117",
+      "card_code": "OP11-095",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4600,
+        4601
+      ],
+      "evidence_digest": "ed97d82828a1d286f9d1ba335060aadfed1b70ca06dd6589d0e39ea4a3775993",
+      "scope_key": "yuyu-identity:2744:sha256:ed97d82828a1d286f9d1ba335060aadfed1b70ca06dd6589d0e39ea4a3775993",
+      "evidence_summary": {
+        "candidate_id": 2744,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10117",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10117",
+        "detected_card_code": "OP11-095",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30ac\u30fc\u30d7(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10117.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "490450b6b0f8a52bfcc775c37a0fa6c9800918303793d08fef38d0806dfc5d62",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6674,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4600,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4601,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2745,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10124",
+      "card_code": "OP11-101",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4607,
+        4608
+      ],
+      "evidence_digest": "ccb24bf5467dfea9e14e4c98c7955242b314dcf2b00a2dde5f60ac50577e8c7b",
+      "scope_key": "yuyu-identity:2745:sha256:ccb24bf5467dfea9e14e4c98c7955242b314dcf2b00a2dde5f60ac50577e8c7b",
+      "evidence_summary": {
+        "candidate_id": 2745,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10124",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10124",
+        "detected_card_code": "OP11-101",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30ab\u30dd\u30cd\u30fb\u30d9\u30c3\u30b8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10124.jpg",
+        "price_jpy": 780,
+        "availability": "in_stock",
+        "raw_listing_digest": "6037e1e794d499ec8db7a23628cddee6c978d85946d557c7fb9b9b6595f7d169",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6680,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4607,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4608,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2756,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10011",
+      "card_code": "OP11-008",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4494,
+        4495
+      ],
+      "evidence_digest": "6e661f97d6fc698ff6317a3a1bcf4e43b36cb0cff6a3947210e27e1056d5556b",
+      "scope_key": "yuyu-identity:2756:sha256:6e661f97d6fc698ff6317a3a1bcf4e43b36cb0cff6a3947210e27e1056d5556b",
+      "evidence_summary": {
+        "candidate_id": 2756,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10011",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10011",
+        "detected_card_code": "OP11-008",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30c9\u30fc\u30eb(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10011.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "0e57eb369c849bd45087c8406ce1987d0350a8e20137037139d491fe8c55e204",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6587,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4494,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4495,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2757,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10023",
+      "card_code": "OP11-018",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4506,
+        4507
+      ],
+      "evidence_digest": "96416aba7a768a59e4e579eaa65262b3e433b6deb7a4db5985e1c039bbb35efa",
+      "scope_key": "yuyu-identity:2757:sha256:96416aba7a768a59e4e579eaa65262b3e433b6deb7a4db5985e1c039bbb35efa",
+      "evidence_summary": {
+        "candidate_id": 2757,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10023",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10023",
+        "detected_card_code": "OP11-018",
+        "detected_rarity": "P-R",
+        "name_jp": "\u5b9f\u76f4\u62f3\u9aa8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10023.jpg",
+        "price_jpy": 4980,
+        "availability": "in_stock",
+        "raw_listing_digest": "84ca41cbbdc8e69602f3178b454da34bbea21ec0906ff0d6345dfd72b340a1a3",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6597,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4506,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4507,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2758,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10031",
+      "card_code": "OP11-023",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4514,
+        4515
+      ],
+      "evidence_digest": "4a61919ed6f165eca12b82a6c93e3e076302894c9006242dbb3e287c7d228b99",
+      "scope_key": "yuyu-identity:2758:sha256:4a61919ed6f165eca12b82a6c93e3e076302894c9006242dbb3e287c7d228b99",
+      "evidence_summary": {
+        "candidate_id": 2758,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10031",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10031",
+        "detected_card_code": "OP11-023",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30a2\u30fc\u30ed\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10031.jpg",
+        "price_jpy": 580,
+        "availability": "in_stock",
+        "raw_listing_digest": "57727dc6a7e3aeaae896f9074336f7b79d2ee5cd157337f4de3c139c5356de40",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6602,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4514,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4515,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2759,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10059",
+      "card_code": "OP11-047",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4542,
+        4543
+      ],
+      "evidence_digest": "b39455d0a3e33a3ceee544131685291329708551342642dbb4b230f8d4443410",
+      "scope_key": "yuyu-identity:2759:sha256:b39455d0a3e33a3ceee544131685291329708551342642dbb4b230f8d4443410",
+      "evidence_summary": {
+        "candidate_id": 2759,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10059",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10059",
+        "detected_card_code": "OP11-047",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30f4\u30a3\u30f3\u30b9\u30e2\u30fc\u30af\u30fb\u30ec\u30a4\u30b8\u30e5(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10059.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "6b8f9f0d07a3b053e763b0ecb520d8aec2a6bbfae6c9fcdfcb2dd449c8c3baa7",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6626,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4542,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4543,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2760,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10091",
+      "card_code": "OP11-073",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4574,
+        4575
+      ],
+      "evidence_digest": "dfb0a91406c91615f94ff03d915442b2a5adc425975941236647c023bad3535c",
+      "scope_key": "yuyu-identity:2760:sha256:dfb0a91406c91615f94ff03d915442b2a5adc425975941236647c023bad3535c",
+      "evidence_summary": {
+        "candidate_id": 2760,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10091",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10091",
+        "detected_card_code": "OP11-073",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ea\u30f3\u30ea\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10091.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "edb9f59a1a8ba1c4ec4eb905f64ecee88d862942084daab78ca6ce96ac2dde23",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6652,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4574,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4575,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2761,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10099",
+      "card_code": "OP11-080",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4582,
+        4583
+      ],
+      "evidence_digest": "708b756987581359d63d9495d5c14328326f4ccc4771c238d58dd2c4033c6833",
+      "scope_key": "yuyu-identity:2761:sha256:708b756987581359d63d9495d5c14328326f4ccc4771c238d58dd2c4033c6833",
+      "evidence_summary": {
+        "candidate_id": 2761,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10099",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10099",
+        "detected_card_code": "OP11-080",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30ae\u30a22(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10099.jpg",
+        "price_jpy": 39800,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "005eeffd81d8d09c62e80102a5723c9aa7c6fec21a8b57f3c12743c357ee23a8",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6659,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4582,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4583,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2762,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10104",
+      "card_code": "OP11-084",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4587,
+        4588
+      ],
+      "evidence_digest": "1cd6c1a8a001589721a887264c030cf4ee7b13fcd3ccb3c10a0bc51f74b9dd47",
+      "scope_key": "yuyu-identity:2762:sha256:1cd6c1a8a001589721a887264c030cf4ee7b13fcd3ccb3c10a0bc51f74b9dd47",
+      "evidence_summary": {
+        "candidate_id": 2762,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10104",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10104",
+        "detected_card_code": "OP11-084",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30af\u30b6\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10104.jpg",
+        "price_jpy": 780,
+        "availability": "in_stock",
+        "raw_listing_digest": "e44d497738c679cbdb2742c4b6960c304c997813ace2565220bc4407e2957af7",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6663,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4587,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4588,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2763,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10130",
+      "card_code": "OP11-106",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4613,
+        4614
+      ],
+      "evidence_digest": "c7b04ec4e7a758d46ad6e434147e866320ccc2ce8e77287ebf81ccbfa3bd686a",
+      "scope_key": "yuyu-identity:2763:sha256:c7b04ec4e7a758d46ad6e434147e866320ccc2ce8e77287ebf81ccbfa3bd686a",
+      "evidence_summary": {
+        "candidate_id": 2763,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10130",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10130",
+        "detected_card_code": "OP11-106",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30bc\u30a6\u30b9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10130.jpg",
+        "price_jpy": 3480,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "1c76cf5ddd94e54c1c7bc8fcbffa697e97a363d72c2edfe0b6898d229e75a337",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6685,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4613,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4614,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2764,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10139",
+      "card_code": "OP11-114",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4622,
+        4623
+      ],
+      "evidence_digest": "bbfdaf4d0350665a52846787dd09069bbd4e48701e3f976ac765336b5223124b",
+      "scope_key": "yuyu-identity:2764:sha256:bbfdaf4d0350665a52846787dd09069bbd4e48701e3f976ac765336b5223124b",
+      "evidence_summary": {
+        "candidate_id": 2764,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10139",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10139",
+        "detected_card_code": "OP11-114",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b4\u30e0\u30b4\u30e0\u306e\u706b\u62f3\u9283(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10139.jpg",
+        "price_jpy": 7980,
+        "availability": "in_stock",
+        "raw_listing_digest": "8eea8db8fbced5c6a17334d84d2df51f26d56d59814fc5a6f4fd60a6acfa8f23",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6693,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4622,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4623,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2866,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10002",
+      "card_code": "OP11-001",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4485,
+        4486
+      ],
+      "evidence_digest": "6cd0b97f7835065d462f2b533c87154e3cd045af01ba3943289d7ed647737f63",
+      "scope_key": "yuyu-identity:2866:sha256:6cd0b97f7835065d462f2b533c87154e3cd045af01ba3943289d7ed647737f63",
+      "evidence_summary": {
+        "candidate_id": 2866,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10002",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10002",
+        "detected_card_code": "OP11-001",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b3\u30d3\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10002.jpg",
+        "price_jpy": 1780,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "61def0f7350bd182b590ef98c36933abaac8419c865c5b8733b36915f7177241",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6580,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4485,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4486,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2867,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10027",
+      "card_code": "OP11-021",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4510,
+        4511
+      ],
+      "evidence_digest": "7e56419e225fe8977aae1349cf030f9efa803cdcfb0fc07fb893e8117012704d",
+      "scope_key": "yuyu-identity:2867:sha256:7e56419e225fe8977aae1349cf030f9efa803cdcfb0fc07fb893e8117012704d",
+      "evidence_summary": {
+        "candidate_id": 2867,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10027",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10027",
+        "detected_card_code": "OP11-021",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b8\u30f3\u30d9\u30a8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10027.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "aae71f86f96a0c5d6e5797df72fb8b7e37d0cc6b267e578ed3dc0d4d30b58bde",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6600,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4510,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4511,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2868,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10029",
+      "card_code": "OP11-022",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4512,
+        4513
+      ],
+      "evidence_digest": "806ccff9e31a4b811b8554fc8412568392a0bde9deaee10d8c8a956b7fa52235",
+      "scope_key": "yuyu-identity:2868:sha256:806ccff9e31a4b811b8554fc8412568392a0bde9deaee10d8c8a956b7fa52235",
+      "evidence_summary": {
+        "candidate_id": 2868,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10029",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10029",
+        "detected_card_code": "OP11-022",
+        "detected_rarity": "P-L",
+        "name_jp": "\u3057\u3089\u307b\u3057(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10029.jpg",
+        "price_jpy": 2480,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "e8c286b6c0f345588df89ea62ff792f457ad7b90c1433e4b7b39f5a5ea070b1c",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6601,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4512,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4513,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2869,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10050",
+      "card_code": "OP11-040",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4533,
+        4534
+      ],
+      "evidence_digest": "49d06708e5d7a6b3f2f1bad050ed49876ae2edd729d11210d077665dd5f79c9a",
+      "scope_key": "yuyu-identity:2869:sha256:49d06708e5d7a6b3f2f1bad050ed49876ae2edd729d11210d077665dd5f79c9a",
+      "evidence_summary": {
+        "candidate_id": 2869,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10050",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10050",
+        "detected_card_code": "OP11-040",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10050.jpg",
+        "price_jpy": 5980,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "413528d464f6bc0752d532c22a0ced786e9a8b4ec23a6b85340b57e197992288",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6619,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4533,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4534,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2870,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10052",
+      "card_code": "OP11-041",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4535,
+        4536
+      ],
+      "evidence_digest": "a5756095a5690b8e274527e3800ce3b66943fcf1485bc0da52a57921a82f4555",
+      "scope_key": "yuyu-identity:2870:sha256:a5756095a5690b8e274527e3800ce3b66943fcf1485bc0da52a57921a82f4555",
+      "evidence_summary": {
+        "candidate_id": 2870,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10052",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10052",
+        "detected_card_code": "OP11-041",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30ca\u30df(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10052.jpg",
+        "price_jpy": 5980,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "952b57337516d87bdcb027727ed7af65e61ce47231c60cef35a813cec15337e8",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6620,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4535,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4536,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2871,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10077",
+      "card_code": "OP11-062",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4560,
+        4561
+      ],
+      "evidence_digest": "d9a9b4a43c79f11c36e598aa11d8aa93368cf0011414604655506053c5a333c2",
+      "scope_key": "yuyu-identity:2871:sha256:d9a9b4a43c79f11c36e598aa11d8aa93368cf0011414604655506053c5a333c2",
+      "evidence_summary": {
+        "candidate_id": 2871,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10077",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10077",
+        "detected_card_code": "OP11-062",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10077.jpg",
+        "price_jpy": 1780,
+        "availability": "in_stock",
+        "raw_listing_digest": "51a613a204bd43bba2ff310848d43e2e881f006c3d2ec491968c0059ca89d873",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6641,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4560,
+            "release_product_id": 180,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4561,
+            "release_product_id": 180,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 2884,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10155",
+      "card_code": "OP05-119",
+      "release_product_id": 180,
+      "considered_print_ids": [
+        4633,
+        4634
+      ],
+      "evidence_digest": "8a639097f39c741e6139ba62410e8c9d54e96bb13a4257cb1b94f83641814f98",
+      "scope_key": "yuyu-identity:2884:sha256:8a639097f39c741e6139ba62410e8c9d54e96bb13a4257cb1b94f83641814f98",
+      "evidence_summary": {
+        "candidate_id": 2884,
+        "discovery_run_id": 279,
+        "set_slug": "op11",
+        "product_id": "10155",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10155",
+        "detected_card_code": "OP05-119",
+        "detected_rarity": "SP",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)(\u91d1\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op11/10155.jpg",
+        "price_jpy": 1280000,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "0ff47414ab0858c38da158e6f5be8536a957a38ab61575f1f267c12371499e17",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb",
+          "\u91d1\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 5984,
+        "resolved_release_product_id": 180,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4633,
+            "release_product_id": 180,
+            "official_asset_variant": "p6",
+            "official_rarity": "SP\u30ab\u30fc\u30c9"
+          },
+          {
+            "card_print_id": 4634,
+            "release_product_id": 180,
+            "official_asset_variant": "p7",
+            "official_rarity": "SP\u30ab\u30fc\u30c9"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 564,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10143",
+      "card_code": "OP12-118",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4472,
+        4473,
+        4474
+      ],
+      "evidence_digest": "a03b6d08f36dccdfce28ff4a89204a615817ad8d244cf783bd570242984bbf52",
+      "scope_key": "yuyu-identity:564:sha256:a03b6d08f36dccdfce28ff4a89204a615817ad8d244cf783bd570242984bbf52",
+      "evidence_summary": {
+        "candidate_id": 564,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10143",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10143",
+        "detected_card_code": "OP12-118",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10143.jpg",
+        "price_jpy": 2980,
+        "availability": "in_stock",
+        "raw_listing_digest": "377caa8d87ed86c047202d018cf3e92a06f4d171361debb000c8bcdbf4789722",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6816,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4472,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4473,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4474,
+            "release_product_id": 181,
+            "official_asset_variant": "p2",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 566,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10146",
+      "card_code": "OP12-119",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4475,
+        4476
+      ],
+      "evidence_digest": "1eb1c1cde003d586e860312df6109591e6b224eadd5dc8e6c0a12e0a0e1d3c5a",
+      "scope_key": "yuyu-identity:566:sha256:1eb1c1cde003d586e860312df6109591e6b224eadd5dc8e6c0a12e0a0e1d3c5a",
+      "evidence_summary": {
+        "candidate_id": 566,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10146",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10146",
+        "detected_card_code": "OP12-119",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30d0\u30fc\u30bd\u30ed\u30df\u30e5\u30fc\u30fb\u304f\u307e(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10146.jpg",
+        "price_jpy": 1980,
+        "availability": "in_stock",
+        "raw_listing_digest": "c557e9e69ae1352e8865c7ec7d32af8e1d429f76d8665aaed3b82ad7974ad755",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6817,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4475,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4476,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 569,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10017",
+      "card_code": "OP12-014",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4346,
+        4347
+      ],
+      "evidence_digest": "4b681442c549e84002d2e12a01fc5017db806e42726c5e9c33ab8fc467013663",
+      "scope_key": "yuyu-identity:569:sha256:4b681442c549e84002d2e12a01fc5017db806e42726c5e9c33ab8fc467013663",
+      "evidence_summary": {
+        "candidate_id": 569,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10017",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10017",
+        "detected_card_code": "OP12-014",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30dc\u30a2\u30fb\u30cf\u30f3\u30b3\u30c3\u30af(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10017.jpg",
+        "price_jpy": 2980,
+        "availability": "in_stock",
+        "raw_listing_digest": "8cf695e4eb9875584cb6accae1cf83cddc14c69d99a1279a80e183ba63a8ed91",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6712,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4346,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4347,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 570,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10019",
+      "card_code": "OP12-015",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4348,
+        4349
+      ],
+      "evidence_digest": "7b88c8ddde6355e5a34881ada8970a1e5c3507476303c34eca2c3b3b94a5e190",
+      "scope_key": "yuyu-identity:570:sha256:7b88c8ddde6355e5a34881ada8970a1e5c3507476303c34eca2c3b3b94a5e190",
+      "evidence_summary": {
+        "candidate_id": 570,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10019",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10019",
+        "detected_card_code": "OP12-015",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10019.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "321f2b9b79a98f47c69725311704886ca20e9636032c79058b2d66d526ca1c18",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6713,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4348,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4349,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 571,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10036",
+      "card_code": "OP12-030",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4365,
+        4366
+      ],
+      "evidence_digest": "42f776dfd949afdef079a2a6a49dd3b0344919cda63b0761e59bf41f8059a449",
+      "scope_key": "yuyu-identity:571:sha256:42f776dfd949afdef079a2a6a49dd3b0344919cda63b0761e59bf41f8059a449",
+      "evidence_summary": {
+        "candidate_id": 571,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10036",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10036",
+        "detected_card_code": "OP12-030",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b8\u30e5\u30e9\u30ad\u30e5\u30fc\u30eb\u30fb\u30df\u30db\u30fc\u30af(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10036.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "77fd5e91167645e6da3fea3a404d72538d03cb0b4ff87903bd4f3ded4281f02a",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6728,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4365,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4366,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 572,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10042",
+      "card_code": "OP12-034",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4371,
+        4372
+      ],
+      "evidence_digest": "79320e9333f12a579c64f00fd9152d5d97a5ee08e853dd3949df1d53171a0752",
+      "scope_key": "yuyu-identity:572:sha256:79320e9333f12a579c64f00fd9152d5d97a5ee08e853dd3949df1d53171a0752",
+      "evidence_summary": {
+        "candidate_id": 572,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10042",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10042",
+        "detected_card_code": "OP12-034",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30da\u30ed\u30fc\u30ca(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10042.jpg",
+        "price_jpy": 4980,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "6878fe70101c8410a909b56547a8fea322b8467b564885b9cc0b881b44358be0",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6732,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4371,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4372,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 573,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10069",
+      "card_code": "OP12-056",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4398,
+        4399
+      ],
+      "evidence_digest": "8819f4b45a1d93c05f85a887eca327b79752de8e6d62ce7e6086828f0dd18146",
+      "scope_key": "yuyu-identity:573:sha256:8819f4b45a1d93c05f85a887eca327b79752de8e6d62ce7e6086828f0dd18146",
+      "evidence_summary": {
+        "candidate_id": 573,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10069",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10069",
+        "detected_card_code": "OP12-056",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30ac\u30fc\u30d7(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10069.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "25cc7ab95a4f07142bfffa95c598791b156c585747a3342814cb71131ada5ca4",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6754,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4398,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4399,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 574,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10079",
+      "card_code": "OP12-063",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4408,
+        4409
+      ],
+      "evidence_digest": "abfc418afb1262b77d135fc5f54fbb86ff3d3ae010f93fcee0823c1d8adfd6e9",
+      "scope_key": "yuyu-identity:574:sha256:abfc418afb1262b77d135fc5f54fbb86ff3d3ae010f93fcee0823c1d8adfd6e9",
+      "evidence_summary": {
+        "candidate_id": 574,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10079",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10079",
+        "detected_card_code": "OP12-063",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30f4\u30a3\u30f3\u30b9\u30e2\u30fc\u30af\u30fb\u30ec\u30a4\u30b8\u30e5(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10079.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "dacf1cc9f3858dbcdc645aa8aa86854f80045b1d7c4307e68592b141209ff689",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6761,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4408,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4409,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 575,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10091",
+      "card_code": "OP12-073",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4420,
+        4421
+      ],
+      "evidence_digest": "a898ed5647812fe39a3343f035e016a107dbbc6b388b00ce3c7f8c88fdb70c46",
+      "scope_key": "yuyu-identity:575:sha256:a898ed5647812fe39a3343f035e016a107dbbc6b388b00ce3c7f8c88fdb70c46",
+      "evidence_summary": {
+        "candidate_id": 575,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10091",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10091",
+        "detected_card_code": "OP12-073",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30c8\u30e9\u30d5\u30a1\u30eb\u30ac\u30fc\u30fb\u30ed\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10091.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "33ead2c42b946b9a05731bee5903b8a27e1d2d513154f68432911c54a1e24061",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6771,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4420,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4421,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 576,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10108",
+      "card_code": "OP12-087",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4437,
+        4438
+      ],
+      "evidence_digest": "44552e4ca5f7698af8b391a305fcb1402010c5158592e1ce160c44ad01350cbb",
+      "scope_key": "yuyu-identity:576:sha256:44552e4ca5f7698af8b391a305fcb1402010c5158592e1ce160c44ad01350cbb",
+      "evidence_summary": {
+        "candidate_id": 576,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10108",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10108",
+        "detected_card_code": "OP12-087",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30cb\u30b3\u30fb\u30ed\u30d3\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10108.jpg",
+        "price_jpy": 3480,
+        "availability": "in_stock",
+        "raw_listing_digest": "7daeb0715faa4515b520305f1810e710ac8bd2ede805241b488715a2f8351775",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6785,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4437,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4438,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 577,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10116",
+      "card_code": "OP12-094",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4445,
+        4446
+      ],
+      "evidence_digest": "f2e0bd5d30df46f1565ac9655dd88f0d624b09abdd7808f20eeac8b20e0a82f0",
+      "scope_key": "yuyu-identity:577:sha256:f2e0bd5d30df46f1565ac9655dd88f0d624b09abdd7808f20eeac8b20e0a82f0",
+      "evidence_summary": {
+        "candidate_id": 577,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10116",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10116",
+        "detected_card_code": "OP12-094",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30c9\u30e9\u30b4\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10116.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "159195f47c63641e0bb0d076c887a9d644403c10e47af7055a9c2ab5fce4c015",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6792,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4445,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4446,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 578,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10125",
+      "card_code": "OP12-102",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4454,
+        4455
+      ],
+      "evidence_digest": "772c09173113a2b4f6370b66cd3b1155997fd16fe2fbc98fc25ef4eca7618802",
+      "scope_key": "yuyu-identity:578:sha256:772c09173113a2b4f6370b66cd3b1155997fd16fe2fbc98fc25ef4eca7618802",
+      "evidence_summary": {
+        "candidate_id": 578,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10125",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10125",
+        "detected_card_code": "OP12-102",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u3057\u3089\u307b\u3057(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10125.jpg",
+        "price_jpy": 1280,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "d15195dea9bc88ba55360855c1b28bb811ce7ec6e9c84d170bd8cb7bce76c4c6",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6800,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4454,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4455,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 589,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10010",
+      "card_code": "OP12-008",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4339,
+        4340
+      ],
+      "evidence_digest": "3b5375f164c2ab10b630c12cb2d950b435eb97d7bfb6eaa22d29b64f31b38e2e",
+      "scope_key": "yuyu-identity:589:sha256:3b5375f164c2ab10b630c12cb2d950b435eb97d7bfb6eaa22d29b64f31b38e2e",
+      "evidence_summary": {
+        "candidate_id": 589,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10010",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10010",
+        "detected_card_code": "OP12-008",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b7\u30e3\u30f3\u30af\u30b9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10010.jpg",
+        "price_jpy": 1480,
+        "availability": "in_stock",
+        "raw_listing_digest": "6897cd14f9d45cbcd9abe2fdca52362a9dbe5f672082b9d7df232b15a379e15d",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6706,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4339,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4340,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 590,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10038",
+      "card_code": "OP12-031",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4367,
+        4368
+      ],
+      "evidence_digest": "1a1ce4405221a5a0aa2084fe93e7562af7abc24c6438c852273f49e22292598e",
+      "scope_key": "yuyu-identity:590:sha256:1a1ce4405221a5a0aa2084fe93e7562af7abc24c6438c852273f49e22292598e",
+      "evidence_summary": {
+        "candidate_id": 590,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10038",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10038",
+        "detected_card_code": "OP12-031",
+        "detected_rarity": "P-R",
+        "name_jp": "\u305f\u3057\u304e(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10038.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "d317be3939af21ae31a639405054fdf78d3054dbbfe9e58cdd7e8237bafa3a42",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6729,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4367,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4368,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 591,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10046",
+      "card_code": "OP12-037",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4375,
+        4376
+      ],
+      "evidence_digest": "925283f0788c897817df894d6887c89ac069ffb359737665c9099b111873b2d9",
+      "scope_key": "yuyu-identity:591:sha256:925283f0788c897817df894d6887c89ac069ffb359737665c9099b111873b2d9",
+      "evidence_summary": {
+        "candidate_id": 591,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10046",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10046",
+        "detected_card_code": "OP12-037",
+        "detected_rarity": "P-R",
+        "name_jp": "\u9b3c\u6c17 \u4e5d\u5200\u6d41 \u963f\u4fee\u7f85 \u629c\u5263 \u4ea1\u8005\u622f(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10046.jpg",
+        "price_jpy": 29800,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "1ad3afcff7a40ec14031458d33b591c490a310bbc41cfd741d7cbdb56692cd39",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6735,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4375,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4376,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 592,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10055",
+      "card_code": "OP12-043",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4384,
+        4385
+      ],
+      "evidence_digest": "8a5c680a425811216249e5494fc02cd075534cad2eb83af8cf07bbafd2f4f056",
+      "scope_key": "yuyu-identity:592:sha256:8a5c680a425811216249e5494fc02cd075534cad2eb83af8cf07bbafd2f4f056",
+      "evidence_summary": {
+        "candidate_id": 592,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10055",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10055",
+        "detected_card_code": "OP12-043",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30af\u30b6\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10055.jpg",
+        "price_jpy": 1480,
+        "availability": "in_stock",
+        "raw_listing_digest": "0088b9f165428da819ac196a126b51f5c037a6ba79e91be4c217c3fa151fc690",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6741,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4384,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4385,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 593,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10074",
+      "card_code": "OP12-060",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4403,
+        4404
+      ],
+      "evidence_digest": "81ca804faf68a07bc886de7efa1099f980a32fdc42094b5e9f26a5212f4d3926",
+      "scope_key": "yuyu-identity:593:sha256:81ca804faf68a07bc886de7efa1099f980a32fdc42094b5e9f26a5212f4d3926",
+      "evidence_summary": {
+        "candidate_id": 593,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10074",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10074",
+        "detected_card_code": "OP12-060",
+        "detected_rarity": "P-R",
+        "name_jp": "\u725b\u8089\u30d0\u30fc\u30b9\u30c8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10074.jpg",
+        "price_jpy": 9980,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "371ec31245dac3c82a2e3b7cec1fe74ea382a0cc0974687b3924bf6bab1ec1b8",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6758,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4403,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4404,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 594,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10087",
+      "card_code": "OP12-070",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4416,
+        4417
+      ],
+      "evidence_digest": "3b36a7f24c124147e60ef135fcee6b5ecacf3d5fd8182330b9790fd5984c1570",
+      "scope_key": "yuyu-identity:594:sha256:3b36a7f24c124147e60ef135fcee6b5ecacf3d5fd8182330b9790fd5984c1570",
+      "evidence_summary": {
+        "candidate_id": 594,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10087",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10087",
+        "detected_card_code": "OP12-070",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b5\u30f3\u30b8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10087.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "964d2af90307c153d9058cee5062399c5b5fe9721972bc0eb97df0b8487232b1",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6768,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4416,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4417,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 595,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10106",
+      "card_code": "OP12-086",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4435,
+        4436
+      ],
+      "evidence_digest": "9cb48e110ca457f3842fbe94a1285087f7e7713c954ac35c5a02a33e731eb5fd",
+      "scope_key": "yuyu-identity:595:sha256:9cb48e110ca457f3842fbe94a1285087f7e7713c954ac35c5a02a33e731eb5fd",
+      "evidence_summary": {
+        "candidate_id": 595,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10106",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10106",
+        "detected_card_code": "OP12-086",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b3\u30a2\u30e9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10106.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "b9291b33483e5c22e7f1fdc268845897cfa36110a77992c139562fa150021dd0",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6784,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4435,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4436,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 596,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10132",
+      "card_code": "OP12-108",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4461,
+        4462
+      ],
+      "evidence_digest": "94d8e634bd75d9a379a02cbd6d8afe37d6e34ad3a5144ac80b3ae2b20994db2e",
+      "scope_key": "yuyu-identity:596:sha256:94d8e634bd75d9a379a02cbd6d8afe37d6e34ad3a5144ac80b3ae2b20994db2e",
+      "evidence_summary": {
+        "candidate_id": 596,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10132",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10132",
+        "detected_card_code": "OP12-108",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30ed\u30b7\u30ca\u30f3\u30c6(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10132.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "6e6923adcb1048dc52bdfef17517899a5754028615fa7d330b00eff7268661e8",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6806,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4461,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4462,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 698,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10002",
+      "card_code": "OP12-001",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4331,
+        4332
+      ],
+      "evidence_digest": "7a1bb144383c9367409244eb6210c530288159b6d14cd1a118ad10da8dcf30a1",
+      "scope_key": "yuyu-identity:698:sha256:7a1bb144383c9367409244eb6210c530288159b6d14cd1a118ad10da8dcf30a1",
+      "evidence_summary": {
+        "candidate_id": 698,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10002",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10002",
+        "detected_card_code": "OP12-001",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b7\u30eb\u30d0\u30fc\u30ba\u30fb\u30ec\u30a4\u30ea\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10002.jpg",
+        "price_jpy": 1980,
+        "availability": "in_stock",
+        "raw_listing_digest": "fed2100dfe73dd201de1c49453099b17b7422c5ffb8a21016e02fae635554fdc",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6699,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4331,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4332,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 699,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10025",
+      "card_code": "OP12-020",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4354,
+        4355
+      ],
+      "evidence_digest": "7806323cbde0e22068e151a327a688cd556f808eb102652acd270fa57b9e2289",
+      "scope_key": "yuyu-identity:699:sha256:7806323cbde0e22068e151a327a688cd556f808eb102652acd270fa57b9e2289",
+      "evidence_summary": {
+        "candidate_id": 699,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10025",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10025",
+        "detected_card_code": "OP12-020",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30ed\u30ed\u30ce\u30a2\u30fb\u30be\u30ed(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10025.jpg",
+        "price_jpy": 5980,
+        "availability": "in_stock",
+        "raw_listing_digest": "477984b5fdbf873a55a1423c2089361060eb00f05ee635a05dc9b1e5f1f82c7d",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6718,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4354,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4355,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 700,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10050",
+      "card_code": "OP12-040",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4379,
+        4380
+      ],
+      "evidence_digest": "62f052a55ce17250d4b992c42108968aab4578175e4737250eabcaa72abc297c",
+      "scope_key": "yuyu-identity:700:sha256:62f052a55ce17250d4b992c42108968aab4578175e4737250eabcaa72abc297c",
+      "evidence_summary": {
+        "candidate_id": 700,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10050",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10050",
+        "detected_card_code": "OP12-040",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30af\u30b6\u30f3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10050.jpg",
+        "price_jpy": 1780,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "5e6362492c1074945969d301f7aaa0a2858522b69447f96066c4a3940bae545c",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6738,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4379,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4380,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 701,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10052",
+      "card_code": "OP12-041",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4381,
+        4382
+      ],
+      "evidence_digest": "ac4ed2768f01f2e001dd6cfa8e6d2b7f165b65596664865df20aff5b2bcd826d",
+      "scope_key": "yuyu-identity:701:sha256:ac4ed2768f01f2e001dd6cfa8e6d2b7f165b65596664865df20aff5b2bcd826d",
+      "evidence_summary": {
+        "candidate_id": 701,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10052",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10052",
+        "detected_card_code": "OP12-041",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b5\u30f3\u30b8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10052.jpg",
+        "price_jpy": 1480,
+        "availability": "in_stock",
+        "raw_listing_digest": "4a5ebc897e27e9a0f1aeb6250935d9e2ea0a9aea631a75bf37858c69f9bf9d8a",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6739,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4381,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4382,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 702,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10076",
+      "card_code": "OP12-061",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4405,
+        4406
+      ],
+      "evidence_digest": "e052a9c1de77d457ddd6c2d28ddae604fd9a485b0e17b56b44a170fe3310850b",
+      "scope_key": "yuyu-identity:702:sha256:e052a9c1de77d457ddd6c2d28ddae604fd9a485b0e17b56b44a170fe3310850b",
+      "evidence_summary": {
+        "candidate_id": 702,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10076",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10076",
+        "detected_card_code": "OP12-061",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30ed\u30b7\u30ca\u30f3\u30c6(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10076.jpg",
+        "price_jpy": 1980,
+        "availability": "in_stock",
+        "raw_listing_digest": "500308923c0a183de0ec9cc071165339922440856bdc4bcaa408462ed5efb8f0",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6759,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4405,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4406,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 703,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10100",
+      "card_code": "OP12-081",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4429,
+        4430
+      ],
+      "evidence_digest": "739d3f76e0b8c66f662faa597619210dc82992a33a23761131245e39874330a5",
+      "scope_key": "yuyu-identity:703:sha256:739d3f76e0b8c66f662faa597619210dc82992a33a23761131245e39874330a5",
+      "evidence_summary": {
+        "candidate_id": 703,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10100",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10100",
+        "detected_card_code": "OP12-081",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b3\u30a2\u30e9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10100.jpg",
+        "price_jpy": 1480,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "808fcdab358ddbd88349b759b137a8bf87b1c3b65969ee5f8cafe4d1fa52e65c",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6779,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4429,
+            "release_product_id": 181,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4430,
+            "release_product_id": 181,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 716,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10154",
+      "card_code": "OP09-093",
+      "release_product_id": 181,
+      "considered_print_ids": [
+        4480,
+        4481
+      ],
+      "evidence_digest": "d92e7517679efe0722644ce086dbed8fe60c115fa3970c9cfae741fffc689405",
+      "scope_key": "yuyu-identity:716:sha256:d92e7517679efe0722644ce086dbed8fe60c115fa3970c9cfae741fffc689405",
+      "evidence_summary": {
+        "candidate_id": 716,
+        "discovery_run_id": 281,
+        "set_slug": "op12",
+        "product_id": "10154",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10154",
+        "detected_card_code": "OP09-093",
+        "detected_rarity": "SP",
+        "name_jp": "\u30de\u30fc\u30b7\u30e3\u30eb\u30fbD\u30fb\u30c6\u30a3\u30fc\u30c1(\u30d1\u30e9\u30ec\u30eb)(\u91d1\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op12/10154.jpg",
+        "price_jpy": 148000,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "ad3a236b6aeb2599fa8d64bdba240c298f95a874a6258ad9d011ce0a9e9c30f2",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb",
+          "\u91d1\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6434,
+        "resolved_release_product_id": 181,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4480,
+            "release_product_id": 181,
+            "official_asset_variant": "p4",
+            "official_rarity": "SP\u30ab\u30fc\u30c9"
+          },
+          {
+            "card_print_id": 4481,
+            "release_product_id": 181,
+            "official_asset_variant": "p5",
+            "official_rarity": "SP\u30ab\u30fc\u30c9"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 157,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10152",
+      "card_code": "OP13-118",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4307,
+        4308,
+        4309,
+        4310,
+        4311
+      ],
+      "evidence_digest": "43240cdedae51b8ed89b39503f84dc03b299de4932a1846fe2bb3126d1f9924b",
+      "scope_key": "yuyu-identity:157:sha256:43240cdedae51b8ed89b39503f84dc03b299de4932a1846fe2bb3126d1f9924b",
+      "evidence_summary": {
+        "candidate_id": 157,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10152",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10152",
+        "detected_card_code": "OP13-118",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10152.jpg",
+        "price_jpy": 12800,
+        "availability": "in_stock",
+        "raw_listing_digest": "cc7398baaba4f4a1b7456192d0f5507aa8d5a5204b36905ea25a0730976094a1",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6935,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4307,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4308,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4309,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4310,
+            "release_product_id": 182,
+            "official_asset_variant": "p3",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4311,
+            "release_product_id": 182,
+            "official_asset_variant": "p4",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 160,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10156",
+      "card_code": "OP13-119",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4312,
+        4313,
+        4314,
+        4315,
+        4316
+      ],
+      "evidence_digest": "79b20f465aef5e38909be4279eaf598790db2e782e8f2d399fb2a283f98926a1",
+      "scope_key": "yuyu-identity:160:sha256:79b20f465aef5e38909be4279eaf598790db2e782e8f2d399fb2a283f98926a1",
+      "evidence_summary": {
+        "candidate_id": 160,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10156",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10156",
+        "detected_card_code": "OP13-119",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30dd\u30fc\u30c8\u30ac\u30b9\u30fbD\u30fb\u30a8\u30fc\u30b9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10156.jpg",
+        "price_jpy": 2980,
+        "availability": "in_stock",
+        "raw_listing_digest": "e67ee38fd4f9529332a7634303a7f798f5282aa46db0264a18ef99ca5f669371",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6936,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4312,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4313,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4314,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4315,
+            "release_product_id": 182,
+            "official_asset_variant": "p3",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4316,
+            "release_product_id": 182,
+            "official_asset_variant": "p4",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 163,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10160",
+      "card_code": "OP13-120",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4317,
+        4318,
+        4319,
+        4320,
+        4321
+      ],
+      "evidence_digest": "c200896defdee29cdd7097296cea810238e640dd57a6078eee41a71453e792e1",
+      "scope_key": "yuyu-identity:163:sha256:c200896defdee29cdd7097296cea810238e640dd57a6078eee41a71453e792e1",
+      "evidence_summary": {
+        "candidate_id": 163,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10160",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10160",
+        "detected_card_code": "OP13-120",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30b5\u30dc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10160.jpg",
+        "price_jpy": 1980,
+        "availability": "in_stock",
+        "raw_listing_digest": "7c481aa529a48f69dde9dfc740c9d2346a0cf89cf38b665066183331f62d5c3a",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6937,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4317,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4318,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4319,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4320,
+            "release_product_id": 182,
+            "official_asset_variant": "p3",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4321,
+            "release_product_id": 182,
+            "official_asset_variant": "p4",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 169,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10012",
+      "card_code": "OP13-007",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4167,
+        4168
+      ],
+      "evidence_digest": "9161a9bb316a9f1ab25bbd635982be9afc2d60d330d9705de2c3df847d32f0b3",
+      "scope_key": "yuyu-identity:169:sha256:9161a9bb316a9f1ab25bbd635982be9afc2d60d330d9705de2c3df847d32f0b3",
+      "evidence_summary": {
+        "candidate_id": 169,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10012",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10012",
+        "detected_card_code": "OP13-007",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30a8\u30fc\u30b9\uff06\u30b5\u30dc\uff06\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10012.jpg",
+        "price_jpy": 3980,
+        "availability": "in_stock",
+        "raw_listing_digest": "eb11159f48691d59acc34cd8f24327c6881d55fabf223cf6ae7a64ea7749dfae",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6824,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4167,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4168,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 170,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10030",
+      "card_code": "OP13-023",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4185,
+        4186
+      ],
+      "evidence_digest": "6cb7aa63de0112a4f9859adf6b1740b13b44099807655c2d7e765f7d9ed01134",
+      "scope_key": "yuyu-identity:170:sha256:6cb7aa63de0112a4f9859adf6b1740b13b44099807655c2d7e765f7d9ed01134",
+      "evidence_summary": {
+        "candidate_id": 170,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10030",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10030",
+        "detected_card_code": "OP13-023",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30a6\u30bf(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10030.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "54cf58fa38b6a2a1bb5a7f677623b3d4ca613f8c33aed40b4c8d3483f0adbd0a",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6840,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4185,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4186,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 171,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10037",
+      "card_code": "OP13-028",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4192,
+        4193
+      ],
+      "evidence_digest": "1f931913bf0f9b319407fe63a181718fe93897729f7289e0eb61228185754f67",
+      "scope_key": "yuyu-identity:171:sha256:1f931913bf0f9b319407fe63a181718fe93897729f7289e0eb61228185754f67",
+      "evidence_summary": {
+        "candidate_id": 171,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10037",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10037",
+        "detected_card_code": "OP13-028",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b7\u30e3\u30f3\u30af\u30b9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10037.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "effed52d13786fc0b6d071b45580bfd8b28f281f98bb751c29abb16c99d9c335",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6845,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4192,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4193,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 172,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10052",
+      "card_code": "OP13-042",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4207,
+        4208
+      ],
+      "evidence_digest": "e16d34d1f38dbd79287000a375fafe464ab8021b6d267949e42496177b5c8e01",
+      "scope_key": "yuyu-identity:172:sha256:e16d34d1f38dbd79287000a375fafe464ab8021b6d267949e42496177b5c8e01",
+      "evidence_summary": {
+        "candidate_id": 172,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10052",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10052",
+        "detected_card_code": "OP13-042",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30a8\u30c9\u30ef\u30fc\u30c9\u30fb\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10052.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "255e9db65eb4743450169f9e2f7a9a87e6b45cfd13417a74eb0ac8f3862f8e35",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6859,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4207,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4208,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 173,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10066",
+      "card_code": "OP13-054",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4221,
+        4222
+      ],
+      "evidence_digest": "26419537717f2fcf8575ce8605ab0ae02de292871dfce7d3cebf46b27406c022",
+      "scope_key": "yuyu-identity:173:sha256:26419537717f2fcf8575ce8605ab0ae02de292871dfce7d3cebf46b27406c022",
+      "evidence_summary": {
+        "candidate_id": 173,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10066",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10066",
+        "detected_card_code": "OP13-054",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30e4\u30de\u30c8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10066.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "a27704efab9dce0bf72e2e83383673b4159b4403ed67faad586889fe70001256",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6871,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4221,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4222,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 174,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10077",
+      "card_code": "OP13-064",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4232,
+        4233
+      ],
+      "evidence_digest": "e15f4ddb6bd6bd9d5ee7585ea606d8692186c081c2128b1054cc672327d73963",
+      "scope_key": "yuyu-identity:174:sha256:e15f4ddb6bd6bd9d5ee7585ea606d8692186c081c2128b1054cc672327d73963",
+      "evidence_summary": {
+        "candidate_id": 174,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10077",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10077",
+        "detected_card_code": "OP13-064",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b4\u30fc\u30eb\u30fbD\u30fb\u30ed\u30b8\u30e3\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10077.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "87ac0433688c27f78e8a5c5e5b589d4c6555e659b65ab4f9c0ac33484a0e565d",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6881,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4232,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4233,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 175,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10081",
+      "card_code": "OP13-066",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4236,
+        4237
+      ],
+      "evidence_digest": "92b9b5dadf65ab24a72591d71211ffc22ddf55087c2f75e96d8ce04a9111ec01",
+      "scope_key": "yuyu-identity:175:sha256:92b9b5dadf65ab24a72591d71211ffc22ddf55087c2f75e96d8ce04a9111ec01",
+      "evidence_summary": {
+        "candidate_id": 175,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10081",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10081",
+        "detected_card_code": "OP13-066",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b7\u30eb\u30d0\u30fc\u30ba\u30fb\u30ec\u30a4\u30ea\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10081.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "965e02d57a6a1a9f10cec8808bc3538e7bed7ff7fd216408dd5be3b076951f76",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6883,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4236,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4237,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 176,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10102",
+      "card_code": "OP13-082",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4257,
+        4258
+      ],
+      "evidence_digest": "a11cc7b897c25456d7b67a338b0d50cf6a9fbbc70d6e74aa8cda214c80a67652",
+      "scope_key": "yuyu-identity:176:sha256:a11cc7b897c25456d7b67a338b0d50cf6a9fbbc70d6e74aa8cda214c80a67652",
+      "evidence_summary": {
+        "candidate_id": 176,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10102",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10102",
+        "detected_card_code": "OP13-082",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u4e94\u8001\u661f(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10102.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "9c8159dfdf171636895cbfd9c4cc467e9c488c562d5e2ec1d09a04e4f721e531",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6899,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4257,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4258,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 177,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10138",
+      "card_code": "OP13-108",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4293,
+        4294
+      ],
+      "evidence_digest": "0adf10be3f34a8dcf462f17680913cb3c725ce0603a131de6b75cc9c789e2365",
+      "scope_key": "yuyu-identity:177:sha256:0adf10be3f34a8dcf462f17680913cb3c725ce0603a131de6b75cc9c789e2365",
+      "evidence_summary": {
+        "candidate_id": 177,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10138",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10138",
+        "detected_card_code": "OP13-108",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10138.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "c8e3f27c2ad46b3a19cba4f708cf19f368946465cb6c04995e2d33a66d62685c",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6925,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4293,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4294,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 178,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10141",
+      "card_code": "OP13-110",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4296,
+        4297
+      ],
+      "evidence_digest": "ff8164d9b6972d8e6c8590d2bf5b95005ea9b6ce60300e3191143a67d5c1ce19",
+      "scope_key": "yuyu-identity:178:sha256:ff8164d9b6972d8e6c8590d2bf5b95005ea9b6ce60300e3191143a67d5c1ce19",
+      "evidence_summary": {
+        "candidate_id": 178,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10141",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10141",
+        "detected_card_code": "OP13-110",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b9\u30c6\u30e5\u30fc\u30b7\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10141.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "936d9e8b0c1768d6e96669964bcad290954f02e64f16df6da3a1e8931b94dbc4",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6927,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4296,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4297,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 189,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10022",
+      "card_code": "OP13-016",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4177,
+        4178
+      ],
+      "evidence_digest": "332d35a4b38f7499af9b2c8fb3e8c95e9950da171652b7b5f7e4603bc1e41089",
+      "scope_key": "yuyu-identity:189:sha256:332d35a4b38f7499af9b2c8fb3e8c95e9950da171652b7b5f7e4603bc1e41089",
+      "evidence_summary": {
+        "candidate_id": 189,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10022",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10022",
+        "detected_card_code": "OP13-016",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30ac\u30fc\u30d7(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10022.jpg",
+        "price_jpy": 1980,
+        "availability": "in_stock",
+        "raw_listing_digest": "ce9ca381abbdc982d5b54ed6ae58961c1cff8177022e4a4854c0723334c2d7eb",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6833,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4177,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4178,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 190,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10035",
+      "card_code": "OP13-027",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4190,
+        4191
+      ],
+      "evidence_digest": "07fe43dbcca4f552559c44259811c2c7fe5f1a9ac3c3ac4680514c9b87f98d2d",
+      "scope_key": "yuyu-identity:190:sha256:07fe43dbcca4f552559c44259811c2c7fe5f1a9ac3c3ac4680514c9b87f98d2d",
+      "evidence_summary": {
+        "candidate_id": 190,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10035",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10035",
+        "detected_card_code": "OP13-027",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b5\u30f3\u30b8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10035.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "713b37c94ca196f698d1d640f0339705e885d295163c3ae73d8efbfca1e5296c",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6844,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4190,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4191,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 191,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10062",
+      "card_code": "OP13-051",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4217,
+        4218
+      ],
+      "evidence_digest": "de59f2632a75b4df7a3d51be18889519159437665ea41acb5e643413dc464b6e",
+      "scope_key": "yuyu-identity:191:sha256:de59f2632a75b4df7a3d51be18889519159437665ea41acb5e643413dc464b6e",
+      "evidence_summary": {
+        "candidate_id": 191,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10062",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10062",
+        "detected_card_code": "OP13-051",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30dc\u30a2\u30fb\u30cf\u30f3\u30b3\u30c3\u30af(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10062.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "7349708ddc8d703a36b6dc81daac73f6633745774b70f44c2ed54d0041dd4420",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6868,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4217,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4218,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 192,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10079",
+      "card_code": "OP13-065",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4234,
+        4235
+      ],
+      "evidence_digest": "849a7cb3a435a59dfb2961b33780b3371b38cf20dedd3ab9afbde002bdb24c58",
+      "scope_key": "yuyu-identity:192:sha256:849a7cb3a435a59dfb2961b33780b3371b38cf20dedd3ab9afbde002bdb24c58",
+      "evidence_summary": {
+        "candidate_id": 192,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10079",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10079",
+        "detected_card_code": "OP13-065",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b7\u30e3\u30f3\u30af\u30b9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10079.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "955840442a5416d320bae4220fe103b0fcb78829ed5feebbe2f31c57e7a217b4",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6882,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4234,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4235,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 193,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10092",
+      "card_code": "OP13-076",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4247,
+        4248
+      ],
+      "evidence_digest": "3ccacbed7f15200fbc4b2823d579164dd125609bf6dbc4ac9531770754be8e74",
+      "scope_key": "yuyu-identity:193:sha256:3ccacbed7f15200fbc4b2823d579164dd125609bf6dbc4ac9531770754be8e74",
+      "evidence_summary": {
+        "candidate_id": 193,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10092",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10092",
+        "detected_card_code": "OP13-076",
+        "detected_rarity": "P-R",
+        "name_jp": "\u795e\u907f(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10092.jpg",
+        "price_jpy": 3480,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "5df8829886e8ba98b0bd9993ba8a3fcb0f237a3f0678029dff3dfa220a5f4cef",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6893,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4247,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4248,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 194,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10098",
+      "card_code": "OP13-080",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4253,
+        4254,
+        4255
+      ],
+      "evidence_digest": "8e8cb618bdd6cc3f319c5218d9b2a879110e634cf1b3a30e4acc10969f445dc5",
+      "scope_key": "yuyu-identity:194:sha256:8e8cb618bdd6cc3f319c5218d9b2a879110e634cf1b3a30e4acc10969f445dc5",
+      "evidence_summary": {
+        "candidate_id": 194,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10098",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10098",
+        "detected_card_code": "OP13-080",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30a4\u30fc\u30b6\u30f3\u30d0\u30ed\u30f3\u30fbV\u30fb\u30ca\u30b9\u5bff\u90ce\u8056(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10098.jpg",
+        "price_jpy": 1780,
+        "availability": "in_stock",
+        "raw_listing_digest": "7762238f742b4544cace17d31ea158cd56a686754c7bc35081df43ac4a610e5b",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6897,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4253,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4254,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4255,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 196,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10104",
+      "card_code": "OP13-083",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4259,
+        4260,
+        4261
+      ],
+      "evidence_digest": "5ff99bc7d4613944be675d98db4c6a5e784827b0543ad33f9291c6f3df7b99eb",
+      "scope_key": "yuyu-identity:196:sha256:5ff99bc7d4613944be675d98db4c6a5e784827b0543ad33f9291c6f3df7b99eb",
+      "evidence_summary": {
+        "candidate_id": 196,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10104",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10104",
+        "detected_card_code": "OP13-083",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b8\u30a7\u30a4\u30ac\u30eb\u30b7\u30a2\u30fb\u30b5\u30bf\u30fc\u30f3\u8056(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10104.jpg",
+        "price_jpy": 1780,
+        "availability": "in_stock",
+        "raw_listing_digest": "3eeb282d6d18e810ee6bf6b60356a9c2ee9010ee74ab4c68199bdd9cfe33532f",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6900,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4259,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4260,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4261,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 198,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10107",
+      "card_code": "OP13-084",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4262,
+        4263,
+        4264
+      ],
+      "evidence_digest": "642633aaeca37e856654a0097308062eeff62ca9429f5b5d032d3dfd3816376e",
+      "scope_key": "yuyu-identity:198:sha256:642633aaeca37e856654a0097308062eeff62ca9429f5b5d032d3dfd3816376e",
+      "evidence_summary": {
+        "candidate_id": 198,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10107",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10107",
+        "detected_card_code": "OP13-084",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30b7\u30a7\u30d1\u30fc\u30c9\u30fb\u5341\u30fb\u30d4\u30fc\u30bf\u30fc\u8056(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10107.jpg",
+        "price_jpy": 1780,
+        "availability": "in_stock",
+        "raw_listing_digest": "e2081b3354dd5f8042c055395f9daecb8c413b9ac6e0cd0b9774fba3c92752b8",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6901,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4262,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4263,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4264,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 200,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10114",
+      "card_code": "OP13-089",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4269,
+        4270,
+        4271
+      ],
+      "evidence_digest": "f59627faed08f01a31ddb93b8de093298eab5f9df4a79b4b34ede1785d3d38c8",
+      "scope_key": "yuyu-identity:200:sha256:f59627faed08f01a31ddb93b8de093298eab5f9df4a79b4b34ede1785d3d38c8",
+      "evidence_summary": {
+        "candidate_id": 200,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10114",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10114",
+        "detected_card_code": "OP13-089",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30c8\u30c3\u30d7\u30de\u30f3\u30fb\u30a6\u30a9\u30fc\u30ad\u30e5\u30ea\u30fc\u8056(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10114.jpg",
+        "price_jpy": 1780,
+        "availability": "in_stock",
+        "raw_listing_digest": "493f7f49ba7d3ce8b66880f9836a7492b730be847d7f299d4cc78985862469f1",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6906,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4269,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4270,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4271,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 202,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10118",
+      "card_code": "OP13-091",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4273,
+        4274,
+        4275
+      ],
+      "evidence_digest": "0a9afbea079e67d122a18d62744bb4dd670fe8e528cab1cfff5e8028c0d7d4bc",
+      "scope_key": "yuyu-identity:202:sha256:0a9afbea079e67d122a18d62744bb4dd670fe8e528cab1cfff5e8028c0d7d4bc",
+      "evidence_summary": {
+        "candidate_id": 202,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10118",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10118",
+        "detected_card_code": "OP13-091",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30de\u30fc\u30ab\u30b9\u30fb\u30de\u30fc\u30ba\u8056(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10118.jpg",
+        "price_jpy": 1780,
+        "availability": "in_stock",
+        "raw_listing_digest": "18948ed0357b10a411b478e5eae850ed697d5081537b849d76b12ef498c80082",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6908,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4273,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4274,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4275,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 204,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10145",
+      "card_code": "OP13-113",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4300,
+        4301
+      ],
+      "evidence_digest": "212cb548443cb4841ad773628c07abfc5dea508a919bcb676da4c73a67d29d39",
+      "scope_key": "yuyu-identity:204:sha256:212cb548443cb4841ad773628c07abfc5dea508a919bcb676da4c73a67d29d39",
+      "evidence_summary": {
+        "candidate_id": 204,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10145",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10145",
+        "detected_card_code": "OP13-113",
+        "detected_rarity": "P-R",
+        "name_jp": "\u30ea\u30ea\u30b9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10145.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "924ac7cdec69ad2828ac7c001308bd7e41813d532687930f7b172749ed594d41",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6930,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4300,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4301,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 205,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10147",
+      "card_code": "OP13-114",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4302,
+        4303
+      ],
+      "evidence_digest": "102e8de2542cd171131bddf763f6ed78747462b4db56ad50c151bc8156ff1d47",
+      "scope_key": "yuyu-identity:205:sha256:102e8de2542cd171131bddf763f6ed78747462b4db56ad50c151bc8156ff1d47",
+      "evidence_summary": {
+        "candidate_id": 205,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10147",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10147",
+        "detected_card_code": "OP13-114",
+        "detected_rarity": "P-R",
+        "name_jp": "S-\u30b9\u30cd\u30fc\u30af(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10147.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "bddd57e86f02b763346849401369e6b229dc173a1ae99f3d882836226ddc408f",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6931,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4302,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "R"
+          },
+          {
+            "card_print_id": 4303,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "R"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 307,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10002",
+      "card_code": "OP13-001",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4157,
+        4158
+      ],
+      "evidence_digest": "e0af01f51dbe618ea03cf98585ebb4741348b39a7fa91855490e8216d0ae6778",
+      "scope_key": "yuyu-identity:307:sha256:e0af01f51dbe618ea03cf98585ebb4741348b39a7fa91855490e8216d0ae6778",
+      "evidence_summary": {
+        "candidate_id": 307,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10002",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10002",
+        "detected_card_code": "OP13-001",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10002.jpg",
+        "price_jpy": 3980,
+        "availability": "in_stock",
+        "raw_listing_digest": "dfe8e0018d96c2f6bf8b8ee6a9b54d3238fc9f98d1ef843bed7ae8dbf4dbfe11",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6818,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4157,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4158,
+            "release_product_id": 182,
+            "official_asset_variant": "p2",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 308,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10004",
+      "card_code": "OP13-002",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4159,
+        4160
+      ],
+      "evidence_digest": "47f6cc6381215f997ee4f1ba5868809a91e3dd2c637314a48b490794bf2abf50",
+      "scope_key": "yuyu-identity:308:sha256:47f6cc6381215f997ee4f1ba5868809a91e3dd2c637314a48b490794bf2abf50",
+      "evidence_summary": {
+        "candidate_id": 308,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10004",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10004",
+        "detected_card_code": "OP13-002",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30dd\u30fc\u30c8\u30ac\u30b9\u30fbD\u30fb\u30a8\u30fc\u30b9(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10004.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "8c7682d1d398553c6e1f7a416394ea734e5b9cc63562e1059717f323f56c575f",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6819,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4159,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4160,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 309,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10006",
+      "card_code": "OP13-003",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4161,
+        4162
+      ],
+      "evidence_digest": "978e896205f6e0c80db4b77d8f61dc4a75ca7f3a6e004b182bd35e7021072d04",
+      "scope_key": "yuyu-identity:309:sha256:978e896205f6e0c80db4b77d8f61dc4a75ca7f3a6e004b182bd35e7021072d04",
+      "evidence_summary": {
+        "candidate_id": 309,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10006",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10006",
+        "detected_card_code": "OP13-003",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b4\u30fc\u30eb\u30fbD\u30fb\u30ed\u30b8\u30e3\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10006.jpg",
+        "price_jpy": 1980,
+        "availability": "in_stock",
+        "raw_listing_digest": "6ad1ff7a5fb76e3bd3214a0400796296fe94952d6ca8ec267667437ae7dbcf56",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6820,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4161,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4162,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 310,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10008",
+      "card_code": "OP13-004",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4163,
+        4164
+      ],
+      "evidence_digest": "a10291120ac9b1ce5261f4a7b23fb89c0cf016200e12ee60e340209c1b48c24c",
+      "scope_key": "yuyu-identity:310:sha256:a10291120ac9b1ce5261f4a7b23fb89c0cf016200e12ee60e340209c1b48c24c",
+      "evidence_summary": {
+        "candidate_id": 310,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10008",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10008",
+        "detected_card_code": "OP13-004",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b5\u30dc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10008.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "ee366b0c48751e6b3964be32b9a05280aa3d4dc719b16a52941cb3a9c30c3186",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6821,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4163,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4164,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 311,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10096",
+      "card_code": "OP13-079",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4251,
+        4252
+      ],
+      "evidence_digest": "20617f3ffab0a3c96754703d592b866d621e8c57e4b3a3423427fa065dcc4a29",
+      "scope_key": "yuyu-identity:311:sha256:20617f3ffab0a3c96754703d592b866d621e8c57e4b3a3423427fa065dcc4a29",
+      "evidence_summary": {
+        "candidate_id": 311,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10096",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10096",
+        "detected_card_code": "OP13-079",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30a4\u30e0(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10096.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "ca0f152381588f26412542240fe8cf654bf83e4448e44ca253eb8b419346cf31",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6896,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4251,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4252,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 312,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10129",
+      "card_code": "OP13-100",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4284,
+        4285
+      ],
+      "evidence_digest": "db4229cf76eb9c44303ed2925c3c02743e7f71c421a68a830fc15025efdc70ed",
+      "scope_key": "yuyu-identity:312:sha256:db4229cf76eb9c44303ed2925c3c02743e7f71c421a68a830fc15025efdc70ed",
+      "evidence_summary": {
+        "candidate_id": 312,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10129",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10129",
+        "detected_card_code": "OP13-100",
+        "detected_rarity": "P-L",
+        "name_jp": "\u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10129.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "7801c1f7ce63fb6642164fb427a4d3332d5bc93fbfdf4de8177a487cac14b4e2",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6917,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4284,
+            "release_product_id": 182,
+            "official_asset_variant": "base",
+            "official_rarity": "L"
+          },
+          {
+            "card_print_id": 4285,
+            "release_product_id": 182,
+            "official_asset_variant": "p1",
+            "official_rarity": "L"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 329,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10175",
+      "card_code": "OP09-004",
+      "release_product_id": 182,
+      "considered_print_ids": [
+        4325,
+        4326
+      ],
+      "evidence_digest": "fec5f0e29412e010baa28df0477c6f12f03c9bee9bc9b2cc5e096635d0d9df9f",
+      "scope_key": "yuyu-identity:329:sha256:fec5f0e29412e010baa28df0477c6f12f03c9bee9bc9b2cc5e096635d0d9df9f",
+      "evidence_summary": {
+        "candidate_id": 329,
+        "discovery_run_id": 285,
+        "set_slug": "op13",
+        "product_id": "10175",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10175",
+        "detected_card_code": "OP09-004",
+        "detected_rarity": "SP",
+        "name_jp": "\u30b7\u30e3\u30f3\u30af\u30b9(\u30d1\u30e9\u30ec\u30eb)(\u91d1\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op13/10175.jpg",
+        "price_jpy": 128000,
+        "availability": "in_stock",
+        "raw_listing_digest": "642d5b4354d3cb50e70b53a2f9a39ebec8c671d55fe677654252dd5ced041bc1",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb",
+          "\u91d1\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6345,
+        "resolved_release_product_id": 182,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4325,
+            "release_product_id": 182,
+            "official_asset_variant": "p5",
+            "official_rarity": "SP\u30ab\u30fc\u30c9"
+          },
+          {
+            "card_print_id": 4326,
+            "release_product_id": 182,
+            "official_asset_variant": "p6",
+            "official_rarity": "SP\u30ab\u30fc\u30c9"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 719,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10145",
+      "card_code": "OP14-119",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4144,
+        4145,
+        4146
+      ],
+      "evidence_digest": "6dab66207e64464ce060f0681a2869b93f9e3ae7bfeae2f2210297f06390fc94",
+      "scope_key": "yuyu-identity:719:sha256:6dab66207e64464ce060f0681a2869b93f9e3ae7bfeae2f2210297f06390fc94",
+      "evidence_summary": {
+        "candidate_id": 719,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10145",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10145",
+        "detected_card_code": "OP14-119",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30b8\u30e5\u30e9\u30ad\u30e5\u30fc\u30eb\u30fb\u30df\u30db\u30fc\u30af(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10145.jpg",
+        "price_jpy": 1780,
+        "availability": "in_stock",
+        "raw_listing_digest": "a869eca9ed25bd08f9ba839f663790b3716348f5c131174cc64801f7ca66b6f3",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 7056,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4144,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4145,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4146,
+            "release_product_id": 183,
+            "official_asset_variant": "p2",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 721,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10148",
+      "card_code": "OP14-120",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4147,
+        4148
+      ],
+      "evidence_digest": "ee46be1be1aec3d6438533ea69ac4614fb7e3b0f71853b8b2240649b5799b31d",
+      "scope_key": "yuyu-identity:721:sha256:ee46be1be1aec3d6438533ea69ac4614fb7e3b0f71853b8b2240649b5799b31d",
+      "evidence_summary": {
+        "candidate_id": 721,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10148",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10148",
+        "detected_card_code": "OP14-120",
+        "detected_rarity": "P-SEC",
+        "name_jp": "\u30af\u30ed\u30b3\u30c0\u30a4\u30eb(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10148.jpg",
+        "price_jpy": 1980,
+        "availability": "out_of_stock",
+        "raw_listing_digest": "2740a1ff9f851883e871d43b0aabc8d1174d8688ff79583d50bf10ef283ab496",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 7057,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4147,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SEC"
+          },
+          {
+            "card_print_id": 4148,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SEC"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 724,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10011",
+      "card_code": "OP14-009",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4010,
+        4011
+      ],
+      "evidence_digest": "65abd4fe38969da2e3a0ea0de21e1b558a36bd1e24617b3751928a9efa58508c",
+      "scope_key": "yuyu-identity:724:sha256:65abd4fe38969da2e3a0ea0de21e1b558a36bd1e24617b3751928a9efa58508c",
+      "evidence_summary": {
+        "candidate_id": 724,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10011",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10011",
+        "detected_card_code": "OP14-009",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30c8\u30e9\u30d5\u30a1\u30eb\u30ac\u30fc\u30fb\u30ed\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10011.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "5acf56e7ead23e26f357f9a1256ec39fd04a7dbc3a56b379460589dbd93d81fe",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6946,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4010,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4011,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 725,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10016",
+      "card_code": "OP14-013",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4015,
+        4016
+      ],
+      "evidence_digest": "1ceb1c2620a77bac73e3988e545af23f55d1e1856504948f8f381aef231216e1",
+      "scope_key": "yuyu-identity:725:sha256:1ceb1c2620a77bac73e3988e545af23f55d1e1856504948f8f381aef231216e1",
+      "evidence_summary": {
+        "candidate_id": 725,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10016",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10016",
+        "detected_card_code": "OP14-013",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30e2\u30f3\u30ad\u30fc\u30fb\uff24\u30fb\u30eb\u30d5\u30a3(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10016.jpg",
+        "price_jpy": 1280,
+        "availability": "in_stock",
+        "raw_listing_digest": "b6f6cc48fdc39175f08b5d974e6a80e3ce893718154e46b2a59e8c5a2f41d0dd",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6950,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4015,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4016,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 726,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10038",
+      "card_code": "OP14-031",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4037,
+        4038
+      ],
+      "evidence_digest": "2957227c3614c81e7a3b3e0dc24d4c6caa23cae8c3c21978a6b34ca13130de41",
+      "scope_key": "yuyu-identity:726:sha256:2957227c3614c81e7a3b3e0dc24d4c6caa23cae8c3c21978a6b34ca13130de41",
+      "evidence_summary": {
+        "candidate_id": 726,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10038",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10038",
+        "detected_card_code": "OP14-031",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30ca\u30df(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10038.jpg",
+        "price_jpy": 4980,
+        "availability": "in_stock",
+        "raw_listing_digest": "15231b220a8a3e775a283a5ad455ec449d22ed67854e86886d886bbdf639f08b",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6968,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4037,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4038,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 727,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10041",
+      "card_code": "OP14-033",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4040,
+        4041
+      ],
+      "evidence_digest": "a6e8ca25a9769d4d147ea3e24726956dd797c458edd7bd4322bd74c329bd6f19",
+      "scope_key": "yuyu-identity:727:sha256:a6e8ca25a9769d4d147ea3e24726956dd797c458edd7bd4322bd74c329bd6f19",
+      "evidence_summary": {
+        "candidate_id": 727,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10041",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10041",
+        "detected_card_code": "OP14-033",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30da\u30ed\u30fc\u30ca(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10041.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "41d065facffa96064b6e8744e54795a7806204f629508ab888b24536796675f6",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6970,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4040,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4041,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 728,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10061",
+      "card_code": "OP14-049",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4060,
+        4061
+      ],
+      "evidence_digest": "736900c13cf80da805d4c0ae6827f884df1d65c4b31f6cde54a1778605247c63",
+      "scope_key": "yuyu-identity:728:sha256:736900c13cf80da805d4c0ae6827f884df1d65c4b31f6cde54a1778605247c63",
+      "evidence_summary": {
+        "candidate_id": 728,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10061",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10061",
+        "detected_card_code": "OP14-049",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30b8\u30f3\u30d9\u30a8(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10061.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "ace69a1379188cb1092e1e6476bd9f9c8a69035210c12981c1fe399f20c65b52",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 6986,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4060,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4061,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 729,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10084",
+      "card_code": "OP14-069",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4083,
+        4084
+      ],
+      "evidence_digest": "3319fb512bafd7ff455f3f4187bdc84758a378e6e81e4aaad42db8fd1bc202ab",
+      "scope_key": "yuyu-identity:729:sha256:3319fb512bafd7ff455f3f4187bdc84758a378e6e81e4aaad42db8fd1bc202ab",
+      "evidence_summary": {
+        "candidate_id": 729,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10084",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10084",
+        "detected_card_code": "OP14-069",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30c9\u30d5\u30e9\u30df\u30f3\u30b4(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10084.jpg",
+        "price_jpy": 1480,
+        "availability": "in_stock",
+        "raw_listing_digest": "6af33ecd92722ea8090e7b50e586484557cb40031438e1d93f8d37bf63b441b3",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 7006,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4083,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4084,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 730,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10102",
+      "card_code": "OP14-084",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4101,
+        4102
+      ],
+      "evidence_digest": "1a78bbeee92c87e93e826f5d9f078613077d1265ad14a0ed495d4377d5d5893c",
+      "scope_key": "yuyu-identity:730:sha256:1a78bbeee92c87e93e826f5d9f078613077d1265ad14a0ed495d4377d5d5893c",
+      "evidence_summary": {
+        "candidate_id": 730,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10102",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10102",
+        "detected_card_code": "OP14-084",
+        "detected_rarity": "P-SR",
+        "name_jp": "\u30df\u30b9\u30fb\u30aa\u30fc\u30eb\u30b5\u30f3\u30c7\u30fc(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10102.jpg",
+        "price_jpy": 2480,
+        "availability": "in_stock",
+        "raw_listing_digest": "0936c15a87b53245646bebbc0189a373318f190d8f24ceb7b8a68ddfbaaab0d2",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 7021,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4101,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4102,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": 731,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10111",
+      "card_code": "OP14-091",
+      "release_product_id": 183,
+      "considered_print_ids": [
+        4110,
+        4111
+      ],
+      "evidence_digest": "0df0e9194f654405bce7256425c9c0aa7f25729f4e54a6bb03781077033b57a3",
+      "scope_key": "yuyu-identity:731:sha256:0df0e9194f654405bce7256425c9c0aa7f25729f4e54a6bb03781077033b57a3",
+      "evidence_summary": {
+        "candidate_id": 731,
+        "discovery_run_id": 278,
+        "set_slug": "op14",
+        "product_id": "10111",
+        "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10111",
+        "detected_card_code": "OP14-091",
+        "detected_rarity": "P-SR",
+        "name_jp": "Mr.2\u30fb\u30dc\u30f3\u30fb\u30af\u30ec\u30fc(\u30d9\u30f3\u30b5\u30e0)(\u30d1\u30e9\u30ec\u30eb)",
+        "image_url": "https://card.yuyu-tei.jp/opc/100_140/op14/10111.jpg",
+        "price_jpy": 980,
+        "availability": "in_stock",
+        "raw_listing_digest": "646e860d0584eb2253e5b1155059f0f98bc8023215084ab0882821801df7b6fa",
+        "candidate_match_status": "family_matched",
+        "candidate_matched_card_print_id": null,
+        "source_product_labels": [
+          "\u30d9\u30f3\u30b5\u30e0",
+          "\u30d1\u30e9\u30ec\u30eb"
+        ],
+        "named_release_product_ids": [],
+        "resolved_canonical_card_id": 7028,
+        "resolved_release_product_id": 183,
+        "eligible_print_identity": [
+          {
+            "card_print_id": 4110,
+            "release_product_id": 183,
+            "official_asset_variant": "base",
+            "official_rarity": "SR"
+          },
+          {
+            "card_print_id": 4111,
+            "release_product_id": 183,
+            "official_asset_variant": "p1",
+            "official_rarity": "SR"
+          }
+        ]
+      }
+    }
+  ],
+  "complete_original_images": 317,
+  "worst_bounded_image_envelope_bytes": 887045884,
+  "estimated_image_envelope_bytes": 128528601.0,
+  "new_queue_rows_before_apply": 0,
+  "request_bound": 10000,
+  "per_intent_bound": 100,
+  "registry_proof_writes": 0,
+  "mapping_or_price_writes": 0,
+  "aggregate_known_75_opportunity": "512new families plus201existing-family listings at last census; total713potential scopes,71300request bound. Metadata opportunities do not establish exact physical identity. Each bounded stage must remeasure storage/normal recurrence; no splitting to evade AMBER safeguards.",
+  "preserve": "Every existing identity scope, attempt, raw payload, mapping, immutable decision/history retained; candidates with ANY prior capture scope or reviewed decision excluded.",
+  "capacity": "Existing nine staggered serial16-slot consumers and9000/1800 budget;1000proof reader delivery required before publishing beyond300.",
+  "apply_prerequisites": [
+    "Fresh strict successor delivery and CURRENT_STATE snapshot; current exact source/API feature compatibility and all9natural component receipts.",
+    "Measured operational>=2590 and source budgets open; no source denials/duplicate requests/lease-reservation leaks.",
+    "Pinned staging volume free space must exceed bounded image estimate plus explicit HTML/WAL/index allowance and2GBreserve; no storage or security configuration change.",
+    "Current digest and full authoritative sibling set still ambiguous and zero-source; every scope absent; no prior candidate capture intent or reviewed decision."
+  ],
+  "rollback": "Block only listed pending/unclaimed/unattempted NEW scopes after collector ownership checks; preserve all attempts, raw, approvals, observations and immutable history."
+}

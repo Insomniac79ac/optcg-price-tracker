@@ -1,0 +1,66 @@
+{
+  "verified_at": "2026-10-11T15:15:44.514266+00:00",
+  "expected_commit": "7503d719f202c5b68714923765272b5b8355194f",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_B2BtgeYdoK8TEoe3qr2wsR4Znmsx",
+    "status": "READY",
+    "sha": "7503d719f202c5b68714923765272b5b8355194f"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "92dcc9a65e7b25e0603d122415300b0b385e462adfe895940e4b8cda0c71e7b4",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "c086b8be800f609e727549aa69d63cb18a05e2f1",
+    "merge": "7503d719f202c5b68714923765272b5b8355194f",
+    "decision": "full",
+    "files": [
+      "docs/agent/STAGING_DELIVERY.md",
+      "docs/agent/STAGING_MISSION.json",
+      "scripts/collector_variables.py",
+      "scripts/deploy_staging_collectors.py",
+      "scripts/tests/test_collector_variables.py",
+      "scripts/tests/test_deploy_staging_collectors.py",
+      "scripts/tests/test_operational_health.py"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      "scripts/collector_variables.py",
+      "scripts/deploy_staging_collectors.py",
+      "scripts/tests/test_collector_variables.py",
+      "scripts/tests/test_deploy_staging_collectors.py",
+      "scripts/tests/test_operational_health.py"
+    ]
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "419210dfb7a5a246b3d085a39b4e7c381aba655f",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}

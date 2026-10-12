@@ -1,0 +1,68 @@
+{
+  "verified_at": "2026-10-11T16:56:13.871054+00:00",
+  "expected_commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_7xXCRAkou9DcDvYhidRMSij9SMKF",
+    "status": "READY",
+    "sha": "a504e476d98ab49ad7773a0c8c6b71e9d927b125"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "b160369731dca11aba33ad82a4c06896dc5d30dae48fa2c998051f1aed7e3c6b",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "7503d719f202c5b68714923765272b5b8355194f",
+    "merge": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "decision": "full",
+    "files": [
+      "docs/agent/STAGING_MISSION.json",
+      "services/api/app/services/physical_artwork_proof.py",
+      "services/api/app/services/source_mapping_proposals.py",
+      "services/api/tests/test_physical_artwork_proof.py",
+      "services/api/tests/test_source_mapping_proposals.py"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      "services/api/app/services/physical_artwork_proof.py",
+      "services/api/app/services/source_mapping_proposals.py",
+      "services/api/tests/test_physical_artwork_proof.py",
+      "services/api/tests/test_source_mapping_proposals.py"
+    ]
+  },
+  "api_expectation": {
+    "mode": "build",
+    "sha": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": [
+      "services/api/app/services/physical_artwork_proof.py",
+      "services/api/app/services/source_mapping_proposals.py",
+      "services/api/tests/test_physical_artwork_proof.py",
+      "services/api/tests/test_source_mapping_proposals.py"
+    ]
+  },
+  "production_accessed": false
+}

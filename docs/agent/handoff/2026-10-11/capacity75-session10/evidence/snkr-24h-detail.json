@@ -1,0 +1,542 @@
+{
+ "read_only": true,
+ "window": [
+  "2026-10-10T14:31:00Z",
+  "2026-10-11T14:31:00Z"
+ ],
+ "observed_at": "2026-10-11 14:40:10.117886",
+ "windows": [
+  {
+   "name": "snkrdunk",
+   "win": "10-10 14:23",
+   "n": 33,
+   "req": 2855
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-10 14:53",
+   "n": 12,
+   "req": 1112
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-10 15:23",
+   "n": 6,
+   "req": 582
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-10 15:53",
+   "n": 32,
+   "req": 2808
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-10 16:23",
+   "n": 21,
+   "req": 1808
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-10 16:53",
+   "n": 4,
+   "req": 427
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-10 17:23",
+   "n": 19,
+   "req": 1692
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 08:53",
+   "n": 17,
+   "req": 1567
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 09:23",
+   "n": 9,
+   "req": 848
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 09:53",
+   "n": 32,
+   "req": 2832
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 10:23",
+   "n": 11,
+   "req": 1068
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 10:53",
+   "n": 18,
+   "req": 1701
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 11:53",
+   "n": 31,
+   "req": 2875
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 12:23",
+   "n": 23,
+   "req": 2066
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 13:23",
+   "n": 19,
+   "req": 1815
+  },
+  {
+   "name": "snkrdunk",
+   "win": "10-11 13:53",
+   "n": 31,
+   "req": 2820
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 18:23",
+   "n": 8,
+   "req": 259
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 18:53",
+   "n": 8,
+   "req": 258
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 19:23",
+   "n": 51,
+   "req": 1638
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 19:53",
+   "n": 77,
+   "req": 2419
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 20:23",
+   "n": 46,
+   "req": 1466
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 20:53",
+   "n": 70,
+   "req": 2188
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 21:23",
+   "n": 58,
+   "req": 1789
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 21:53",
+   "n": 74,
+   "req": 2305
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 22:23",
+   "n": 45,
+   "req": 1410
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 22:53",
+   "n": 82,
+   "req": 2536
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 23:23",
+   "n": 88,
+   "req": 2711
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-10 23:53",
+   "n": 84,
+   "req": 2625
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 00:23",
+   "n": 61,
+   "req": 1875
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 00:53",
+   "n": 108,
+   "req": 3394
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 01:23",
+   "n": 99,
+   "req": 3186
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 01:53",
+   "n": 120,
+   "req": 3745
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 02:23",
+   "n": 112,
+   "req": 3460
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 02:53",
+   "n": 110,
+   "req": 3404
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 03:23",
+   "n": 120,
+   "req": 3848
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 03:53",
+   "n": 157,
+   "req": 5028
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 04:23",
+   "n": 101,
+   "req": 3140
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 04:53",
+   "n": 143,
+   "req": 4385
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 05:23",
+   "n": 158,
+   "req": 4845
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 05:53",
+   "n": 113,
+   "req": 3490
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 06:23",
+   "n": 104,
+   "req": 3217
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 06:53",
+   "n": 65,
+   "req": 2044
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 07:23",
+   "n": 68,
+   "req": 2131
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 07:53",
+   "n": 20,
+   "req": 632
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 08:23",
+   "n": 46,
+   "req": 1465
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 08:53",
+   "n": 67,
+   "req": 2102
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 09:23",
+   "n": 60,
+   "req": 1897
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 09:53",
+   "n": 64,
+   "req": 1962
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 10:23",
+   "n": 5,
+   "req": 225
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 10:53",
+   "n": 37,
+   "req": 1179
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 11:23",
+   "n": 4,
+   "req": 168
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 13:23",
+   "n": 30,
+   "req": 1659
+  },
+  {
+   "name": "yuyutei",
+   "win": "10-11 13:53",
+   "n": 22,
+   "req": 1213
+  }
+ ],
+ "snkr_turns": {
+  "runs": 48,
+  "runs_with_work": 16,
+  "attempted": 318,
+  "failures": 0,
+  "http_403": 0,
+  "http_429": 0,
+  "challenge": 0,
+  "safety_faults": 0
+ },
+ "homepage_per_turn": [
+  {
+   "created_at": "2026-10-10 14:33:50.166394+00:00",
+   "att": 33,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-10 15:01:22.457499+00:00",
+   "att": 12,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-10 15:27:45.616458+00:00",
+   "att": 6,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-10 16:02:24.522420+00:00",
+   "att": 32,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-10 16:30:55.329818+00:00",
+   "att": 21,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-10 16:59:53.696873+00:00",
+   "att": 4,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-10 17:32:03.567505+00:00",
+   "att": 19,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 09:01:28.663814+00:00",
+   "att": 17,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 09:32:41.383040+00:00",
+   "att": 9,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 10:03:36.311771+00:00",
+   "att": 32,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 10:28:56.321776+00:00",
+   "att": 11,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 10:59:04.004613+00:00",
+   "att": 18,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 11:59:59.162074+00:00",
+   "att": 31,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 12:33:22.655950+00:00",
+   "att": 23,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 13:30:51.757833+00:00",
+   "att": 19,
+   "homepage": 1
+  },
+  {
+   "created_at": "2026-10-11 14:02:03.911681+00:00",
+   "att": 31,
+   "homepage": 1
+  }
+ ],
+ "snkr_by_hour": [
+  {
+   "h": "10-10 14",
+   "outcome": "captured",
+   "n": 1,
+   "req": 81
+  },
+  {
+   "h": "10-10 14",
+   "outcome": "no_listing",
+   "n": 32,
+   "req": 2774
+  },
+  {
+   "h": "10-10 15",
+   "outcome": "captured",
+   "n": 2,
+   "req": 163
+  },
+  {
+   "h": "10-10 15",
+   "outcome": "no_listing",
+   "n": 19,
+   "req": 1859
+  },
+  {
+   "h": "10-10 16",
+   "outcome": "captured",
+   "n": 4,
+   "req": 355
+  },
+  {
+   "h": "10-10 16",
+   "outcome": "no_listing",
+   "n": 50,
+   "req": 4360
+  },
+  {
+   "h": "10-10 17",
+   "outcome": "no_listing",
+   "n": 19,
+   "req": 1692
+  },
+  {
+   "h": "10-11 09",
+   "outcome": "captured",
+   "n": 7,
+   "req": 729
+  },
+  {
+   "h": "10-11 09",
+   "outcome": "no_listing",
+   "n": 19,
+   "req": 1686
+  },
+  {
+   "h": "10-11 10",
+   "outcome": "captured",
+   "n": 16,
+   "req": 1579
+  },
+  {
+   "h": "10-11 10",
+   "outcome": "no_listing",
+   "n": 45,
+   "req": 4022
+  },
+  {
+   "h": "10-11 11",
+   "outcome": "captured",
+   "n": 9,
+   "req": 872
+  },
+  {
+   "h": "10-11 11",
+   "outcome": "no_listing",
+   "n": 22,
+   "req": 2003
+  },
+  {
+   "h": "10-11 12",
+   "outcome": "captured",
+   "n": 6,
+   "req": 572
+  },
+  {
+   "h": "10-11 12",
+   "outcome": "no_listing",
+   "n": 17,
+   "req": 1494
+  },
+  {
+   "h": "10-11 13",
+   "outcome": "captured",
+   "n": 5,
+   "req": 508
+  },
+  {
+   "h": "10-11 13",
+   "outcome": "no_listing",
+   "n": 16,
+   "req": 1569
+  },
+  {
+   "h": "10-11 14",
+   "outcome": "no_listing",
+   "n": 29,
+   "req": 2558
+  }
+ ],
+ "snkr_due_state": [
+  {
+   "state": "blocked",
+   "n": 89,
+   "due_now": 89
+  },
+  {
+   "state": "pending",
+   "n": 290,
+   "due_now": 0
+  }
+ ]
+}

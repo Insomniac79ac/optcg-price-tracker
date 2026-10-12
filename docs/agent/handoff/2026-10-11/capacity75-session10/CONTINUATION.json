@@ -1,0 +1,160 @@
+{
+ "status": "session10_complete",
+ "written_at": "2026-10-11T23:35:00Z",
+ "objective_complete": false,
+ "staging_only": true,
+ "production_accessed": false,
+ "psa10": "OFF (NOT READY)",
+ "collectors": {
+  "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "released_by": "PR #103 CI delivery job, sequential 15:52:38-16:31:08Z (Railway createdAt 16:02:22-16:29:12Z)",
+  "receipt": "ORIGINAL CI artifact staging-delivery-a504e476d98ab49ad7773a0c8c6b71e9d927b125 (run 38151886392, artifact 11709366163, expires 2027-01-09); copy in evidence/pr103-delivery/",
+  "receipt_crosscheck": "evidence/pr103-receipt-crosscheck.json: all 10 found SUCCESS, digests match, exactly 1 deployment per collector since merge, rollback targets equal session-8 a852244; 0 UNKNOWN fields",
+  "rollback_target": {
+   "commit": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+   "redeployable_all_10": true,
+   "evidence": "evidence/rollback-source-check.json",
+   "deployments": {
+    "snkrdunk-collector": "59171f15-ee6b-4489-8470-f520b9e5e5f7",
+    "yuyutei-collector-shard-0": "209fc53c-8e15-4fc1-aac0-cdd2b3380ed4",
+    "yuyutei-collector-shard-1": "cb8156c3-d4e4-4320-9a17-51cacd139f79",
+    "yuyutei-collector-shard-2": "f572ef86-6e19-4909-9a9b-a4009f42108c",
+    "yuyutei-collector-shard-3": "8a5889b1-c269-415b-a8ac-331cc6fbeb0b",
+    "yuyutei-collector-shard-4-v2": "26808284-572d-4fea-bc93-f2fdefe51e85",
+    "yuyutei-collector-shard-5": "a47093dc-ad60-4ede-ade4-7a42253a252a",
+    "yuyutei-collector-shard-6": "7dd74cd4-5073-4e0a-ad6c-7beb181db582",
+    "yuyutei-collector-shard-7": "d2c50819-5970-4935-b77e-cb3a3f66b64b",
+    "yuyutei-collector-shard-8": "f98f53b9-237b-48f1-9bf7-b8ce19acdfb1"
+   }
+  },
+  "rollback_triggers": [
+   "> 200 new proposal versions/day in the 24h after the first full Yuyu discovery cycle on a504e47 (first cycle re-versions ~2,164 pending groups once; not a trigger)",
+   "any proof lost: approved exact Yuyu with proof < 298, or any approved group superseded"
+  ],
+  "github_deployment_triggers": "none on all 10; auto-deploy false (evidence/live-a504e47-2307Z.json; receipt github_trigger_preflight)",
+  "daily_v1": true,
+  "cron_start_command_unchanged": true
+ },
+ "backup_gate": {
+  "met": true,
+  "newest": "manual 2135eec8-6932-4344-bf3f-a1fee2fc3387 created 2026-10-11T15:20:25Z (7.8 h old at 23:07Z)",
+  "schedule": "DAILY 22 9 * * *, retention 518400 s",
+  "evidence": [
+   "evidence/backups-final.json",
+   "evidence/backups-2307Z.json"
+  ]
+ },
+ "snkr_24h_a852244": {
+  "window": [
+   "2026-10-10T14:31Z",
+   "2026-10-11T14:31Z"
+  ],
+  "requests_per_attempt": 90.8,
+  "attempts": 318,
+  "homepage_raw": "16 rows in 16 turns with work, 1,075,908 bytes",
+  "window_peak": 2875,
+  "window_avg": 1805,
+  "limit": 3100,
+  "peak_fell_after_drain": false,
+  "denials_403_429_challenges": 0,
+  "failures": 0,
+  "price_continuity": {
+   "observations": 2666,
+   "identical_price": 2664,
+   "identical_price_stock_promo": 2658
+  }
+ },
+ "storage": {
+  "resize": "owner decision 2026-10-11: no resize; grow within 10 GB",
+  "unit_basis": "session-9 (GB metric x1024); Railway basis in evidence/storage-model.json",
+  "volume_mb_2026-10-11T14:00Z": 3655.3,
+  "room_to_reserve_mb": 3123.4,
+  "growth_mb_day": {
+   "24h_a852244": 18.83,
+   "42h": 23.77,
+   "worst_rolling_24h": 34.18
+  },
+  "runway_days": {
+   "18.8": 166,
+   "23.8": 131,
+   "34.2": 91,
+   "116.7_CF": 27
+  },
+  "new100": {
+   "one_off_hard_bound_mb": 887.0,
+   "one_off_estimate_mb": 133.1,
+   "recurring_mb_day": 0.63,
+   "reuse_possible": "0 of 317 images already stored",
+   "fits_90d_hard_bound": {
+    "18.8": "+485 MB",
+    "23.8": "+41 MB",
+    "34.2": "-896 MB (largest batch 5)"
+   }
+  },
+  "artwork_storage": "Postgres raw_snapshots base64 (636 MB, ~23% of DB); R2 pointer design in ARTWORK_EVIDENCE_R2_DESIGN.md (design only)"
+ },
+ "autodeploy_preflight": {
+  "pr": 102,
+  "merged": "2026-10-11T15:04:16Z",
+  "collector_deployments_from_merge": 0,
+  "first_live_use": "PR #103 rollout receipt github_trigger_preflight: all 10 no trigger"
+ },
+ "proposal_digest": {
+  "pr": 103,
+  "state": "RELEASED a504e47; natural discovery NOT yet observed (last discovery 14:15:53Z, next due 2026-10-12T01:12:59Z)",
+  "versions_24h_before": 2164,
+  "versions_since_merge": 0,
+  "approved_exact_yuyu": 2019,
+  "with_proof": 298,
+  "approved_exact_snkr": 151,
+  "approved_superseded_since_merge": 0,
+  "proof_bridge_precondition": "298/298",
+  "replay_sample": {
+   "1.2": "0/20",
+   "1.3": "17/20 (3 real evidence changes)"
+  },
+  "runs_on_a504e47": "all completed, 13-14 per collector 16:33-23:05Z; 649 Yuyu captures @31.1 req, 23 SNKR @79.5, 0 failures",
+  "evidence": "evidence/post-release-health-2327Z.txt"
+ },
+ "new100": {
+  "verdict": "NOT EVALUATED, NOT APPROVED",
+  "reason": "proposal-digest release not yet naturally verified; 2026-10-07 manifest digests are stale 1.2 digests and must be re-planned on 1.3"
+ },
+ "coverage": {
+  "mapped": 2635,
+  "operational": 2630,
+  "fresh_usable": 2398,
+  "both": 334,
+  "zero": 1681,
+  "change_from_2630": 0,
+  "evidence": "evidence/coverage-end.json (23:26:37Z)"
+ },
+ "blockers": [
+  "freshness-deadline-deficit",
+  "snkrdunk-identity-quarantine (23)"
+ ],
+ "never_replay": [
+  "SNKR 3676/3677",
+  "RAW recovery 35175",
+  "Yuyu canary evidence",
+  "deliveries PR77-100",
+  "PR #102",
+  "PR #103",
+  "session-10 handoff PR"
+ ],
+ "session11_first": [
+  "proposal-digest natural verification from 2026-10-12T01:12Z: 298 proofs, 2019/151 approved, 0 superseded, 0 discovery failures, resolver 1.3 versions, <=200/day after first full cycle; rollback per HANDOFF section 4 on trigger",
+  "receipt persistence: confirm with owner; handoffs download CI delivery artifacts into evidence; operator output never in /tmp",
+  "48h current-code volume growth; redo NEW100 storage check",
+  "NEW100: re-plan 100 candidates on 1.3 digests, then full guard table",
+  "lossless from ledger id 47829"
+ ],
+ "owner_decision": "2026-10-11 after 23:00Z: accept a504e47 as the new collector baseline; no further release this session",
+ "current_state": "CURRENT_STATE-end.yaml (23:25:47Z), evidence/staging-state-6ac524c7f165f6b3.json",
+ "quiet_windows": {
+  "collector_changes_forbidden": "02:00-06:00Z",
+  "collector_releases_allowed": "06:00-23:00Z",
+  "no_api_or_migration_merge": "19:30-20:30Z",
+  "observe": "first natural 1.3 discovery cycle from 2026-10-12T01:12Z"
+ }
+}

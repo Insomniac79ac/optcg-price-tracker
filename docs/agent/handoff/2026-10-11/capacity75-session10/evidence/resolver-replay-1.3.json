@@ -1,0 +1,134 @@
+{
+ "code_root": "/workspaces/cp-s10",
+ "module_file": "/workspaces/cp-s10/services/api/app/services/source_mapping_proposals.py",
+ "resolver_version": "source-mapping-proposals/1.3",
+ "sample": 20,
+ "read_only": true,
+ "exact_with_proof": 17,
+ "statuses": {
+  "exact": 17,
+  "ambiguous": 3
+ },
+ "rows": [
+  {
+   "candidate": 1,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "172caa794e3455db7393229aba0ccbf8e92dee1eeb0a378018a8cd79c816d820"
+  },
+  {
+   "candidate": 29,
+   "status": "exact",
+   "proof": true,
+   "digest": "395952ff6c1880fb7588ad43d39d73adc27c057e7a9c1ed7407c24f6114e4aae"
+  },
+  {
+   "candidate": 333,
+   "status": "exact",
+   "proof": true,
+   "digest": "4b1dbe010b9c1804eaa6cb2309808b2d13ffceee56cb3e7dd9104b61bc19c5b9"
+  },
+  {
+   "candidate": 407,
+   "status": "exact",
+   "proof": true,
+   "digest": "98582d0e84197ce0eb88ef461b7858e67a3e997276b56e20dbc889deeac9c6a4"
+  },
+  {
+   "candidate": 438,
+   "status": "exact",
+   "proof": true,
+   "digest": "d59ff025af8b740a1fc9310c30c1fdb37dc7b364e42ea225eacb420a81a240e2"
+  },
+  {
+   "candidate": 1219,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "be8703ba3df99f2bfdc8b36d3a8a4f558d153cb4f44e23b553548789da9a40c2"
+  },
+  {
+   "candidate": 1342,
+   "status": "ambiguous",
+   "proof": false,
+   "digest": "cae7984f3e21c32492b93ebe05a13d538f231abed14ae6a3e97c2f75a936eaff"
+  },
+  {
+   "candidate": 1436,
+   "status": "exact",
+   "proof": true,
+   "digest": "874d954242a5cece9b99709bed1d586136347ee7cc9707adfb5c1feb520f97dd"
+  },
+  {
+   "candidate": 1527,
+   "status": "exact",
+   "proof": true,
+   "digest": "b8cd07da88af13e041ccad16b2f46c3e8f133b685021d49e6e86aae09dc5f1af"
+  },
+  {
+   "candidate": 1643,
+   "status": "exact",
+   "proof": true,
+   "digest": "de31ec6f988d903d1882d39b0cf24ab9605b7bfacc23aabeb55dd084939c758d"
+  },
+  {
+   "candidate": 1671,
+   "status": "exact",
+   "proof": true,
+   "digest": "81a781388e7c67bd6c68be09fdf6424152847945bac7e61270018fcc937fc03f"
+  },
+  {
+   "candidate": 1818,
+   "status": "exact",
+   "proof": true,
+   "digest": "3b8d0fec594d28a094f890789f97c51e405fa36c3ad107564de835373eb414f6"
+  },
+  {
+   "candidate": 1949,
+   "status": "exact",
+   "proof": true,
+   "digest": "c665981caf5f41f52e8c6c35c269aaf8b22fbadc3eb842fda5bc225f2110cef5"
+  },
+  {
+   "candidate": 1993,
+   "status": "exact",
+   "proof": true,
+   "digest": "012566c7352a201914da08c099b800aeed91be7b4a663ae7add1bd7613152a79"
+  },
+  {
+   "candidate": 2125,
+   "status": "exact",
+   "proof": true,
+   "digest": "16891831ebeb674fa3891ec1d4716a05655f29d985f2a1a355dc15ffc46ff531"
+  },
+  {
+   "candidate": 2251,
+   "status": "exact",
+   "proof": true,
+   "digest": "db1a580dde2ab01ed86fa2e76960ddc01fa2164740dde6d4b5a04e0c86c4ab86"
+  },
+  {
+   "candidate": 2282,
+   "status": "exact",
+   "proof": true,
+   "digest": "7b688a8b2abe40e0bf7fb960b5c980b64feb17db5369436622ffd69ee6949371"
+  },
+  {
+   "candidate": 2425,
+   "status": "exact",
+   "proof": true,
+   "digest": "4a640e7d2503f9ebb186c45d4918fb94666e22c1bb3c581127a2eada6cb7f767"
+  },
+  {
+   "candidate": 2450,
+   "status": "exact",
+   "proof": true,
+   "digest": "4a38abcec76b7bd7ff7ddec7ead4a320577cc8a02479db68d25f4c145c3f99d7"
+  },
+  {
+   "candidate": 2585,
+   "status": "exact",
+   "proof": true,
+   "digest": "075cec0a4ad3c2e84c72a7850aecc4b970b0bee64775095adb664e8f77d1b279"
+  }
+ ]
+}

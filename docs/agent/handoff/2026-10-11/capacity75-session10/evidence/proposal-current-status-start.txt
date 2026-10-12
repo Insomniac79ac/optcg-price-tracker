@@ -1,0 +1,11 @@
+## select g.resolution_status, g.review_status, count(*) n, count(*) filter (where (g.evidence_summary_json::jsonb ? 'posit
+{"resolution_status": "ambiguous", "review_status": "pending", "n": 1326, "with_proof": 0, "created_24h": 1326, "proof_created_24h": 0, "proof_oldest": null, "proof_newest": null}
+{"resolution_status": "conflict", "review_status": "pending", "n": 5, "with_proof": 0, "created_24h": 5, "proof_created_24h": 0, "proof_oldest": null, "proof_newest": null}
+{"resolution_status": "exact", "review_status": "approved", "n": 2019, "with_proof": 298, "created_24h": 0, "proof_created_24h": 0, "proof_oldest": "2026-10-06 10:27:38.020841+00:00", "proof_newest": "2026-10-07 05:43:17.496985+00:00"}
+{"resolution_status": "exact", "review_status": "pending", "n": 3, "with_proof": 0, "created_24h": 3, "proof_created_24h": 0, "proof_oldest": null, "proof_newest": null}
+{"resolution_status": "release_unresolved", "review_status": "pending", "n": 451, "with_proof": 0, "created_24h": 451, "proof_created_24h": 0, "proof_oldest": null, "proof_newest": null}
+{"resolution_status": "unresolved_identity", "review_status": "pending", "n": 379, "with_proof": 0, "created_24h": 379, "proof_created_24h": 0, "proof_oldest": null, "proof_newest": null}
+## select count(*) versions_24h, count(distinct canonical_source_listing_identity) listings from source_mapping_proposal_gr
+{"versions_24h": 2164, "listings": 2164}
+## select source_id, count(*) versions_24h from source_mapping_proposal_groups where created_at > now() - interval '24 hour
+{"source_id": 1, "versions_24h": 2164}

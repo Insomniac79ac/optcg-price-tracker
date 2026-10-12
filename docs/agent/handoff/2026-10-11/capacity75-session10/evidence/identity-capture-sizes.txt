@@ -1,0 +1,4 @@
+## select split_part(source_url,'/',3) host, (source_url ~* '\.(png|jpe?g|webp)(\?|$)') is_image, count(*) n, round(avg(pg_
+{"host": "card.yuyu-tei.jp", "is_image": true, "n": 516, "avg_stored": "635067", "avg_len": "635067", "max_stored": 916516}
+{"host": "www.onepiece-cardgame.com", "is_image": true, "n": 1059, "avg_stored": "291299", "avg_len": "291299", "max_stored": 437868}
+{"host": "yuyu-tei.jp", "is_image": false, "n": 1034, "avg_stored": "31892", "avg_len": "186852", "max_stored": 37456}

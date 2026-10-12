@@ -1,0 +1,36 @@
+## select now() at time zone 'utc' t
+{"t": "2026-10-11 23:26:54.595350"}
+## select source_id, count(*) filter (where review_status='approved' and resolution_status='exact') approved_exact, count(*
+{"source_id": 1, "approved_exact": 2019, "approved_with_proof": 298, "current_groups": 4183}
+{"source_id": 2, "approved_exact": 151, "approved_with_proof": 0, "current_groups": 474}
+## select source_id, resolver_version, count(*) n from source_mapping_proposal_groups where created_at > '2026-10-11 15:51:
+## select count(*) approved_superseded_since_merge from source_mapping_proposal_groups where review_status='approved' and s
+{"approved_superseded_since_merge": 0}
+## select pg_total_relation_size('source_mapping_proposal_groups') groups_bytes, pg_total_relation_size('source_mapping_pro
+{"groups_bytes": 56991744, "alts_bytes": 15441920, "total_rows": 30251}
+## select service, context_json->'identity'->>'revision' rev, count(*) runs, count(*) filter (where context_json->'exit'->>
+{"service": "snkrdunk-collector", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 23, "first": "2026-10-11 16:33:01.148584+00:00", "last": "2026-10-11 23:01:13.379905+00:00"}
+{"service": "yuyutei-collector-shard-0", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 72, "first": "2026-10-11 16:34:39.919686+00:00", "last": "2026-10-11 23:05:34.109417+00:00"}
+{"service": "yuyutei-collector-shard-0", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:01:52.838778+00:00", "last": "2026-10-11 16:01:52.838778+00:00"}
+{"service": "yuyutei-collector-shard-1", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 87, "first": "2026-10-11 16:35:33.851883+00:00", "last": "2026-10-11 23:08:23.008341+00:00"}
+{"service": "yuyutei-collector-shard-1", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:04:42.038432+00:00", "last": "2026-10-11 16:04:42.038432+00:00"}
+{"service": "yuyutei-collector-shard-2", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 56, "first": "2026-10-11 16:36:03.288120+00:00", "last": "2026-10-11 23:12:26.274613+00:00"}
+{"service": "yuyutei-collector-shard-2", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:10:23.465231+00:00", "last": "2026-10-11 16:10:23.465231+00:00"}
+{"service": "yuyutei-collector-shard-3", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 63, "first": "2026-10-11 16:42:54.117026+00:00", "last": "2026-10-11 23:13:44.262077+00:00"}
+{"service": "yuyutei-collector-shard-3", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:11:41.658434+00:00", "last": "2026-10-11 16:11:41.658434+00:00"}
+{"service": "yuyutei-collector-shard-4-v2", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 77, "first": "2026-10-11 16:43:41.296391+00:00", "last": "2026-10-11 23:13:33.190098+00:00"}
+{"service": "yuyutei-collector-shard-4-v2", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:12:34.804536+00:00", "last": "2026-10-11 16:12:34.804536+00:00"}
+{"service": "yuyutei-collector-shard-5", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 63, "first": "2026-10-11 16:45:55.728767+00:00", "last": "2026-10-11 23:16:36.523027+00:00"}
+{"service": "yuyutei-collector-shard-5", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:15:03.954264+00:00", "last": "2026-10-11 16:15:03.954264+00:00"}
+{"service": "yuyutei-collector-shard-6", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 82, "first": "2026-10-11 16:51:43.212914+00:00", "last": "2026-10-11 23:20:05.990749+00:00"}
+{"service": "yuyutei-collector-shard-6", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:20:15.243851+00:00", "last": "2026-10-11 16:20:15.243851+00:00"}
+{"service": "yuyutei-collector-shard-7", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 14, "completed": 14, "attempted": 77, "first": "2026-10-11 16:51:05.806101+00:00", "last": "2026-10-11 23:22:40.522307+00:00"}
+{"service": "yuyutei-collector-shard-7", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:21:47.460112+00:00", "last": "2026-10-11 16:21:47.460112+00:00"}
+{"service": "yuyutei-collector-shard-8", "rev": "a504e476d98ab49ad7773a0c8c6b71e9d927b125", "runs": 13, "completed": 13, "attempted": 62, "first": "2026-10-11 16:55:53.896331+00:00", "last": "2026-10-11 22:55:48.479203+00:00"}
+{"service": "yuyutei-collector-shard-8", "rev": "a8522447c6933d05e94e01d5789cdcd5160c10da", "runs": 1, "completed": 1, "attempted": 0, "first": "2026-10-11 16:24:42.277438+00:00", "last": "2026-10-11 16:24:42.277438+00:00"}
+## select s.name, w.kind, a.outcome, count(*) n, round(avg(a.actual_request_cost),1) avg_req from freshness_attempts a join
+{"name": "snkrdunk", "kind": "refresh", "outcome": "no_listing", "n": 23, "avg_req": "79.5"}
+{"name": "yuyutei", "kind": "refresh", "outcome": "captured", "n": 649, "avg_req": "31.1"}
+## select s.name, w.kind, max(a.finished_at) last_attempt, (select min(next_due_at) from freshness_work x where x.source_id
+{"name": "snkrdunk", "kind": "discovery", "last_attempt": "2026-10-07 23:29:50.912104+00:00", "next_pending_due": "2126-09-13 23:02:01.866292+00:00"}
+{"name": "yuyutei", "kind": "discovery", "last_attempt": "2026-10-11 14:15:53.806777+00:00", "next_pending_due": "2026-10-12 01:12:59.740070+00:00"}

@@ -1,0 +1,7 @@
+## select now() at time zone 'utc' t, source_id, count(*) filter (where review_status='approved' and resolution_status='exa
+{"t": "2026-10-11 15:34:39.043610", "source_id": 1, "approved_exact": 2019, "approved_with_proof": 298, "current_groups": 4183}
+{"t": "2026-10-11 15:34:39.043610", "source_id": 2, "approved_exact": 151, "approved_with_proof": 0, "current_groups": 474}
+## select source_id, count(*) versions_24h, max(resolver_version) rv from source_mapping_proposal_groups where created_at >
+{"source_id": 1, "versions_24h": 2164, "rv": "source-mapping-proposals/1.2"}
+## select pg_total_relation_size('source_mapping_proposal_groups') groups_bytes, pg_total_relation_size('source_mapping_pro
+{"groups_bytes": 56991744, "alts_bytes": 15441920, "total_rows": 30251}
