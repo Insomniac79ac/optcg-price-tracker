@@ -182,7 +182,8 @@ describe("AdminImportValidationPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Validate" }));
 
     await waitFor(() => expect(validateImportCsv).toHaveBeenCalled());
-    expect(screen.getByText("Invalid")).toBeInTheDocument();
+    // The call is only the request; wait for its answer to be rendered.
+    expect(await screen.findByText("Invalid")).toBeInTheDocument();
     expect(screen.getByText("card_code is required")).toBeInTheDocument();
     // Appears in both the warnings table and the preview table's warnings column.
     expect(screen.getAllByText("variant will be normalized to parallel").length).toBeGreaterThan(0);

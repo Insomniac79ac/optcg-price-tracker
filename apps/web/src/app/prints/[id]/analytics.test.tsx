@@ -355,9 +355,14 @@ describe("downloading the chart", () => {
     await renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "2W" }));
-    await waitFor(() => expect(fetchPrintAnalytics).toHaveBeenCalledTimes(2));
+    // Wait for the 2W ANSWER to be on screen, not merely requested: until it
+    // lands the page is still showing the previous window, and the button
+    // deliberately will not save that (see the next test).
+    const button = screen.getByTestId("print-export");
+    await waitFor(() => expect(button).toHaveAccessibleName(expect.stringContaining("for 2W")));
+    expect(fetchPrintAnalytics).toHaveBeenCalledTimes(2);
 
-    fireEvent.click(screen.getByTestId("print-export"));
+    fireEvent.click(button);
     await waitFor(() => expect(downloadPrintChartExport).toHaveBeenCalled());
 
     const plan = downloadPrintChartExport.mock.calls[0][0] as unknown as {
@@ -366,6 +371,37 @@ describe("downloading the chart", () => {
     };
     expect(plan.windowToken).toBe("2w");
     expect(plan.filename).toContain("-2w-");
+  });
+
+  it("will not save the previous window while the chosen one is still loading", async () => {
+    let answer2w!: (value: PrintAnalytics) => void;
+    fetchPrintAnalytics
+      .mockResolvedValueOnce(analytics())
+      .mockImplementationOnce(
+        () =>
+          new Promise<PrintAnalytics>((resolve) => {
+            answer2w = resolve;
+          }),
+      );
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "2W" }));
+    await waitFor(() => expect(fetchPrintAnalytics).toHaveBeenCalledTimes(2));
+
+    // The 2W answer is held open: the dimmed `all` chart is what is on screen,
+    // and it is not what the reader asked for.
+    const button = screen.getByTestId("print-export");
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button.getAttribute("aria-label")).toContain("updating");
+    fireEvent.click(button);
+    expect(downloadPrintChartExport).not.toHaveBeenCalled();
+
+    answer2w(analytics({ requested_window: "2w" }));
+    await waitFor(() => expect(button).not.toHaveAttribute("aria-disabled"));
+    fireEvent.click(button);
+    await waitFor(() => expect(downloadPrintChartExport).toHaveBeenCalledTimes(1));
+    const plan = downloadPrintChartExport.mock.calls[0][0] as unknown as { windowToken: string };
+    expect(plan.windowToken).toBe("2w");
   });
 
   it("carries the exact print's identity and the series on screen", async () => {

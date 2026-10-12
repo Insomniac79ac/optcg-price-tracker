@@ -65,8 +65,8 @@ describe("ProposalReviewPage", () => {
 
   it("updates URL-backed source and resolution filters and resets the page", async () => {
     renderPage("page=3");
-    await waitFor(() => expect(fetchProposalReviewGroups).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole("button", { name: /Yuyu \(3,553\)/ }));
+    // The source counts come from the response, so wait for it to be rendered.
+    fireEvent.click(await screen.findByRole("button", { name: /Yuyu \(3,553\)/ }));
     await waitFor(() => expect(fetchProposalReviewGroups).toHaveBeenLastCalledWith(expect.objectContaining({ source: "yuyutei", offset: 0 })));
     expect(replace.mock.calls.at(-1)?.[0]).toContain("source=yuyutei");
     expect(replace.mock.calls.at(-1)?.[0]).not.toContain("page=");

@@ -98,7 +98,7 @@ export function PrintAnalyticsSection({
         chartHeightClass="h-[240px] sm:h-[260px] lg:h-[260px]"
       />
 
-      <PrintChartExportAction analytics={analytics} identity={identity} />
+      <PrintChartExportAction analytics={analytics} identity={identity} updating={loading} />
     </section>
   );
 }
@@ -141,20 +141,33 @@ export function PrintMarketIndexHeadline({ analytics }: { analytics: PrintAnalyt
  * touch, so the one reader most likely to wonder why nothing happens is the
  * one who cannot find out.
  *
+ * UNAVAILABLE, TOO, WHILE THE NEXT WINDOW IS IN FLIGHT. A window change keeps
+ * the previous window's chart on screen, dimmed, until the answer for the new
+ * one lands. That dimmed chart is no longer what the reader asked for, so a
+ * press in that gap would save a file of the window they just left - with
+ * nothing on the button to say so. The button waits for the answer instead.
+ *
  * The accessible name names the CARD and the WINDOW, because "Download chart"
  * alone says neither which card nor which of seven timeframes it saved.
  */
 function PrintChartExportAction({
   analytics,
   identity,
+  updating,
 }: {
   analytics: PrintAnalytics | null;
   identity: PrintExportIdentity;
+  /** True while the response for the reader's chosen window is outstanding. */
+  updating: boolean;
 }) {
   const [state, setState] = useState<"idle" | "working" | "failed">("idle");
   const plan = buildPrintChartExport(analytics, identity);
-  const unavailable = plan === null;
+  const empty = plan === null;
+  const unavailable = empty || updating;
   const label = analytics ? windowLabel(analytics.requested_window) : "";
+  const reason = empty
+    ? "There is no recorded price history to save for this card yet."
+    : "The chart is updating to the timeframe you picked.";
 
   return (
     <div className="mt-2 flex items-center justify-end gap-3">
@@ -171,15 +184,13 @@ function PrintChartExportAction({
         type="button"
         data-testid="print-export"
         aria-label={
-          unavailable
+          empty
             ? "Download chart — there is no recorded price history to save for this card yet"
-            : `Download the ${identity.displayName} (${identity.cardCode}) price chart for ${label} as a PNG image`
+            : updating
+              ? "Download chart — the chart is updating to the timeframe you picked"
+              : `Download the ${identity.displayName} (${identity.cardCode}) price chart for ${label} as a PNG image`
         }
-        title={
-          unavailable
-            ? "There is no recorded price history to save for this card yet."
-            : undefined
-        }
+        title={unavailable ? reason : undefined}
         aria-disabled={unavailable || undefined}
         aria-busy={state === "working" || undefined}
         disabled={state === "working"}
