@@ -1,0 +1,10 @@
+## select source_card_mapping_id % 9 shard, count(*) refresh_items from freshness_work where source_id=1 and kind='refresh'
+{"shard": 0, "refresh_items": 291}
+{"shard": 1, "refresh_items": 290}
+{"shard": 2, "refresh_items": 290}
+{"shard": 3, "refresh_items": 291}
+{"shard": 4, "refresh_items": 291}
+{"shard": 5, "refresh_items": 292}
+{"shard": 6, "refresh_items": 292}
+{"shard": 7, "refresh_items": 292}
+{"shard": 8, "refresh_items": 290}

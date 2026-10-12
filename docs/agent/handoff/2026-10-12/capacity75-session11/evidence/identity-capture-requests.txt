@@ -1,0 +1,6 @@
+## select count(*) n, round(avg(a.actual_request_cost),1) avg_req, max(a.actual_request_cost) max_req, min(a.started_at) fi
+{"n": 521, "avg_req": "58.1", "max_req": 60, "first": "2026-10-06 09:18:53.100639+00:00", "last": "2026-10-06 16:06:49.576115+00:00", "not_completed": 6}
+## select a.outcome, count(*) n from freshness_attempts a join freshness_work w on w.id=a.work_id where w.source_id=1 and a
+{"outcome": "transient_failure", "n": 1}
+{"outcome": "completed", "n": 67}
+{"outcome": "captured", "n": 2814}

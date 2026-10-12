@@ -1,0 +1,210 @@
+{
+ "observed_at": "2026-10-12T06:11:13.614993+00:00",
+ "environment": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+ "services": {
+  "worker": {
+   "collector": false,
+   "auto": {
+    "canEnable": true,
+    "enabled": true,
+    "reason": null
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "6f239714-9a65-4fa9-9d7d-aa75d9ad659e",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-2": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "Postgres": {
+   "collector": false,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "yuyutei-collector-shard-7": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "snkrdunk-collector": {
+   "collector": true,
+   "auto": {
+    "canEnable": true,
+    "enabled": false,
+    "reason": null
+   },
+   "triggers": []
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "tmp-yuyu-shard-rehearsal": {
+   "collector": false,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "yuyutei-collector-shard-3": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "optcg-price-tracker": {
+   "collector": false,
+   "auto": {
+    "canEnable": true,
+    "enabled": true,
+    "reason": null
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "24bbbf15-c774-49c5-b11a-0422a5b9aac9",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-6": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "tmp-yuyu-discovery-4b": {
+   "collector": false,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "yuyutei-collector-shard-0": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "yuyutei-collector": {
+   "collector": false,
+   "auto": {
+    "canEnable": true,
+    "enabled": false,
+    "reason": null
+   },
+   "triggers": []
+  },
+  "yuyutei-collector-shard-1": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "market-index-snapshot": {
+   "collector": false,
+   "auto": {
+    "canEnable": true,
+    "enabled": true,
+    "reason": null
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "b0a39ea6-9986-4f19-b9b5-5a3338ab812c",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-5": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "Redis": {
+   "collector": false,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "yuyutei-collector-shard-8": {
+   "collector": true,
+   "auto": {
+    "canEnable": false,
+    "enabled": false,
+    "reason": "NO_REPO"
+   },
+   "triggers": []
+  },
+  "beat": {
+   "collector": false,
+   "auto": {
+    "canEnable": false,
+    "enabled": true,
+    "reason": "NO_REPO"
+   },
+   "triggers": [
+    {
+     "branch": "staging",
+     "checkSuites": false,
+     "id": "c4b22bf2-8384-4d2b-a6f2-a18fe4ad188f",
+     "provider": "github",
+     "repository": "Insomniac79ac/optcg-price-tracker"
+    }
+   ]
+  }
+ },
+ "collectors_with_triggers": []
+}

@@ -1,0 +1,87 @@
+{
+ "observed_at": "2026-10-12T06:12:00.951410+00:00",
+ "receipt_completed_at": "2026-10-11T16:31:08.684579+00:00",
+ "services": {
+  "snkrdunk-collector": {
+   "receipt_deployment": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+   "live_deployment": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97",
+   "receipt_digest": "sha256:19423bbcdbe0869c1c6040f94abece76fc5e2d06722eb180ffbc75145b6dc66a",
+   "live_digest": "sha256:19423bbcdbe0869c1c6040f94abece76fc5e2d06722eb180ffbc75145b6dc66a",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-0": {
+   "receipt_deployment": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+   "live_deployment": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+   "receipt_digest": "sha256:fc8c991c49d40c851ee67c59d226f53bc04837c9691fd86439db28782bc15e13",
+   "live_digest": "sha256:fc8c991c49d40c851ee67c59d226f53bc04837c9691fd86439db28782bc15e13",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-1": {
+   "receipt_deployment": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+   "live_deployment": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+   "receipt_digest": "sha256:5f4a320fa136bd9cbe5be877ecfdc6cb610f1adfca2012eea63f1155b03121d9",
+   "live_digest": "sha256:5f4a320fa136bd9cbe5be877ecfdc6cb610f1adfca2012eea63f1155b03121d9",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-2": {
+   "receipt_deployment": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+   "live_deployment": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+   "receipt_digest": "sha256:8baef84c6f0e1eb0689cebf731a8f1a51d319458a2d0dd9f1c954e93e3252731",
+   "live_digest": "sha256:8baef84c6f0e1eb0689cebf731a8f1a51d319458a2d0dd9f1c954e93e3252731",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-3": {
+   "receipt_deployment": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+   "live_deployment": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+   "receipt_digest": "sha256:9a3247bd9c29b16e548013a27fd9c33926235cc0ff9310c7c886009dbd2f7244",
+   "live_digest": "sha256:9a3247bd9c29b16e548013a27fd9c33926235cc0ff9310c7c886009dbd2f7244",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "receipt_deployment": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+   "live_deployment": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+   "receipt_digest": "sha256:a8519de6ddcea4ed70871a79e28b874e0f50bdbe5571eee97ff9e0ad904e56c0",
+   "live_digest": "sha256:a8519de6ddcea4ed70871a79e28b874e0f50bdbe5571eee97ff9e0ad904e56c0",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-5": {
+   "receipt_deployment": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+   "live_deployment": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+   "receipt_digest": "sha256:393a00a63f1cbf62c023c3c133c35ca30033d4cc55d9f012cc60b15ec03922bd",
+   "live_digest": "sha256:393a00a63f1cbf62c023c3c133c35ca30033d4cc55d9f012cc60b15ec03922bd",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-6": {
+   "receipt_deployment": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+   "live_deployment": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+   "receipt_digest": "sha256:6ddede32f78ed57ce5031d6aec1ca2152f6ea455a36b27978c034748f8cd56e7",
+   "live_digest": "sha256:6ddede32f78ed57ce5031d6aec1ca2152f6ea455a36b27978c034748f8cd56e7",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-7": {
+   "receipt_deployment": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+   "live_deployment": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+   "receipt_digest": "sha256:0b6bb48cbc672aee4e520bbf8d2ac199c7e4f106a48f4c34b4c5bd816f51d0ca",
+   "live_digest": "sha256:0b6bb48cbc672aee4e520bbf8d2ac199c7e4f106a48f4c34b4c5bd816f51d0ca",
+   "records_after_rollout": [],
+   "match": true
+  },
+  "yuyutei-collector-shard-8": {
+   "receipt_deployment": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+   "live_deployment": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+   "receipt_digest": "sha256:a65534d459933229b524ea1d7a1b801d5c423aaeda2a1046763fb9eaa05ff247",
+   "live_digest": "sha256:a65534d459933229b524ea1d7a1b801d5c423aaeda2a1046763fb9eaa05ff247",
+   "records_after_rollout": [],
+   "match": true
+  }
+ },
+ "all_match": true
+}
