@@ -92,7 +92,7 @@
    "reason": "Session-11 handoff under docs/agent/handoff/ (read-only evidence including the downloaded PR #104/#105 CI delivery artifacts, regenerated state snapshots, read-only measurement tools) plus a handoff receipt checklist section in docs/agent/STAGING_DELIVERY.md. No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
   }
  ],
- "diff_sha256": "5ac496dc77261aaad683482e6c5e0cda3b842bddb7ee8bf05dce0bb0cd679b6a",
+ "diff_sha256": "1b56540af7cf1ebe314f37b994a61e867d7e1f162448e2af944a28df1d105f3a",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "f9e5b4a8c012",
