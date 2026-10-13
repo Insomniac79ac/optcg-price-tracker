@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.accounts.router import router as accounts_router
 from app.api.admin_actions import router as admin_actions_router
 from app.api.admin_backup import router as admin_backup_router
 from app.api.admin_cache import router as admin_cache_router
@@ -219,3 +220,6 @@ app.include_router(admin_release_status_router)
 app.include_router(system_check_router)
 app.include_router(env_check_router)
 app.include_router(version_router)
+# Collector accounts v1 (/me). Dark behind COLLECTOR_ACCOUNTS_ENABLED; see
+# app/accounts/config.py. A separate package so no collector imports it.
+app.include_router(accounts_router)
