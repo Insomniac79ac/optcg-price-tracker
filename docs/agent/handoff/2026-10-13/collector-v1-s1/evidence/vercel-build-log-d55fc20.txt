@@ -1,0 +1,192 @@
+<claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />
+Vercel CLI 60.1.3 (Node.js 24.14.0)
+Fetching deployment "dpl_ENZZqLhJBvX3SRACYP5aWaGEL6jd" in insomniac79acs-projects
+2026-10-13T07:01:43.289Z  Running build in Washington, D.C., USA (East) – iad1
+2026-10-13T07:01:43.290Z  Build machine configuration: 2 cores, 8 GB
+2026-10-13T07:01:43.458Z  Cloning github.com/Insomniac79ac/optcg-price-tracker (Branch: staging, Commit: d55fc20)
+2026-10-13T07:01:46.080Z  Cloning completed: 2.622s
+2026-10-13T07:01:46.299Z  Restored build cache from previous deployment (DvjeFBiq6TMdNcRh7Nf8Fk546zyX)
+2026-10-13T07:01:46.894Z  Running "vercel build"
+2026-10-13T07:01:46.909Z  Vercel CLI 62.7.0
+2026-10-13T07:01:47.334Z  Installing dependencies...
+2026-10-13T07:01:48.507Z  
+2026-10-13T07:01:48.508Z  up to date in 1s
+2026-10-13T07:01:48.508Z  
+2026-10-13T07:01:48.508Z  174 packages are looking for funding
+2026-10-13T07:01:48.508Z  run `npm fund` for details
+2026-10-13T07:01:48.510Z  npm warn install-scripts 2 packages have install scripts not yet covered by allowScripts:
+2026-10-13T07:01:48.510Z  npm warn install-scripts   sharp@0.34.5 (install: node install/check.js || npm run build)
+2026-10-13T07:01:48.510Z  npm warn install-scripts   unrs-resolver@1.12.2 (postinstall: node postinstall.js)
+2026-10-13T07:01:48.510Z  npm warn install-scripts
+2026-10-13T07:01:48.510Z  npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+2026-10-13T07:01:48.544Z  Detected Next.js version: 16.2.10
+2026-10-13T07:01:48.549Z  Running "npm run build"
+2026-10-13T07:01:48.671Z  
+2026-10-13T07:01:48.672Z  > web@0.1.0 build
+2026-10-13T07:01:48.672Z  > next build
+2026-10-13T07:01:48.672Z  
+2026-10-13T07:01:49.442Z  Applying modifyConfig from Vercel
+2026-10-13T07:01:49.463Z  ▲ Next.js 16.2.10 (Turbopack)
+2026-10-13T07:01:49.465Z  
+2026-10-13T07:01:49.534Z  Creating an optimized production build ...
+2026-10-13T07:02:08.790Z  ✓ Compiled successfully in 19.0s
+2026-10-13T07:02:08.798Z  Running TypeScript ...
+2026-10-13T07:02:25.711Z  Finished TypeScript in 16.9s ...
+2026-10-13T07:02:25.716Z  Collecting page data using 1 worker ...
+2026-10-13T07:02:27.115Z  Generating static pages using 1 worker (0/146) ...
+2026-10-13T07:02:27.541Z  Generating static pages using 1 worker (36/146)
+2026-10-13T07:02:27.554Z  Generating static pages using 1 worker (72/146)
+2026-10-13T07:02:27.909Z  Generating static pages using 1 worker (109/146)
+2026-10-13T07:02:27.953Z  ✓ Generating static pages using 1 worker (146/146) in 838ms
+2026-10-13T07:02:27.961Z  Finalizing page optimization ...
+2026-10-13T07:02:28.105Z  Running onBuildComplete from Vercel
+2026-10-13T07:02:28.375Z  
+2026-10-13T07:02:28.379Z  Route (app)                                                               Revalidate  Expire
+2026-10-13T07:02:28.380Z  ┌ ○ /                                                                             5m      1y
+2026-10-13T07:02:28.380Z  ├ ○ /_not-found
+2026-10-13T07:02:28.380Z  ├ ƒ /admin
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/actions
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/alerts
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/backup
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/cache
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/card-audit
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/card-duplicates
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/cards
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/catalog-coverage
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/catalog-ops
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/collection-attempts
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/data-retention
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/file-jobs
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/import-validation
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/job-locks
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/login
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/logs
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/performance
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/price-source-health
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/refresh-runs
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/release-status
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/snkrdunk-candidates
+2026-10-13T07:02:28.380Z  ├ ƒ /admin/source-mapping-proposals
+2026-10-13T07:02:28.381Z  ├ ƒ /admin/source-mapping-proposals/[id]
+2026-10-13T07:02:28.381Z  ├ ƒ /admin/source-mapping-quality
+2026-10-13T07:02:28.381Z  ├ ƒ /admin/system-check
+2026-10-13T07:02:28.382Z  ├ ƒ /analytics
+2026-10-13T07:02:28.382Z  ├ ○ /analytics/collection
+2026-10-13T07:02:28.382Z  ├ ○ /analytics/wishlist
+2026-10-13T07:02:28.382Z  ├ ƒ /api/admin/actions/full-market-refresh
+2026-10-13T07:02:28.382Z  ├ ƒ /api/admin/actions/refresh-prices
+2026-10-13T07:02:28.382Z  ├ ƒ /api/admin/actions/snapshot-portfolio
+2026-10-13T07:02:28.382Z  ├ ƒ /api/admin/alert-events
+2026-10-13T07:02:28.382Z  ├ ƒ /api/admin/alert-events/[id]
+2026-10-13T07:02:28.382Z  ├ ƒ /api/admin/alert-rules
+2026-10-13T07:02:28.382Z  ├ ƒ /api/admin/alert-rules/[id]
+2026-10-13T07:02:28.383Z  ├ ƒ /api/admin/backup/export
+2026-10-13T07:02:28.383Z  ├ ƒ /api/admin/backup/export/job
+2026-10-13T07:02:28.383Z  ├ ƒ /api/admin/backup/restore
+2026-10-13T07:02:28.383Z  ├ ƒ /api/admin/backup/validate
+2026-10-13T07:02:28.383Z  ├ ƒ /api/admin/cache/clear
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cache/status
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/card-audit
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cards
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cards/[id]/merge-preview
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cards/duplicates
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cards/duplicates/bulk-preview
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cards/export
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cards/import
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/cards/merge
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/catalog-coverage
+2026-10-13T07:02:28.384Z  ├ ƒ /api/admin/catalog-coverage/gaps
+2026-10-13T07:02:28.385Z  ├ ƒ /api/admin/collection-attempts
+2026-10-13T07:02:28.385Z  ├ ƒ /api/admin/data-retention/policy
+2026-10-13T07:02:28.385Z  ├ ƒ /api/admin/data-retention/prune
+2026-10-13T07:02:28.385Z  ├ ƒ /api/admin/db-index-audit
+2026-10-13T07:02:28.385Z  ├ ƒ /api/admin/file-jobs/cleanup
+2026-10-13T07:02:28.387Z  ├ ƒ /api/admin/import-templates
+2026-10-13T07:02:28.387Z  ├ ƒ /api/admin/import-templates/[type]
+2026-10-13T07:02:28.387Z  ├ ƒ /api/admin/import-validation/[type]
+2026-10-13T07:02:28.387Z  ├ ƒ /api/admin/import-validation/reports
+2026-10-13T07:02:28.387Z  ├ ƒ /api/admin/import-validation/reports/[id]
+2026-10-13T07:02:28.388Z  ├ ƒ /api/admin/job-locks
+2026-10-13T07:02:28.388Z  ├ ƒ /api/admin/job-locks/[lockName]/force-release
+2026-10-13T07:02:28.388Z  ├ ƒ /api/admin/job-locks/cleanup-expired
+2026-10-13T07:02:28.388Z  ├ ƒ /api/admin/logs
+2026-10-13T07:02:28.388Z  ├ ƒ /api/admin/logs/[id]
+2026-10-13T07:02:28.388Z  ├ ƒ /api/admin/logs/prune
+2026-10-13T07:02:28.388Z  ├ ƒ /api/admin/observability/summary
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/performance/summary
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/price-source-health
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/price-source-health/gaps
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/refresh-runs
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/refresh-runs/[id]
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/release-status
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/snkrdunk-candidates
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/snkrdunk-candidates/[id]/approve-match
+2026-10-13T07:02:28.389Z  ├ ƒ /api/admin/snkrdunk-candidates/[id]/matches
+2026-10-13T07:02:28.390Z  ├ ƒ /api/admin/snkrdunk-candidates/[id]/reject-match
+2026-10-13T07:02:28.390Z  ├ ƒ /api/admin/snkrdunk-candidates/[id]/rematch
+2026-10-13T07:02:28.390Z  ├ ƒ /api/admin/snkrdunk-candidates/rematch-all
+2026-10-13T07:02:28.390Z  ├ ƒ /api/admin/source-mapping-proposals/review/groups
+2026-10-13T07:02:28.390Z  ├ ƒ /api/admin/source-mapping-proposals/review/groups/[id]
+2026-10-13T07:02:28.390Z  ├ ƒ /api/admin/source-mapping-proposals/review/groups/[id]/approve-exact
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mapping-proposals/review/releases
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mapping-proposals/review/summary
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mappings
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mappings/[id]/replace-card
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mappings/[id]/suggested-cards
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mappings/bulk-update
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mappings/quality
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/source-mappings/recheck-quality
+2026-10-13T07:02:28.391Z  ├ ƒ /api/admin/system-check
+2026-10-13T07:02:28.391Z  ├ ƒ /api/analytics/collection
+2026-10-13T07:02:28.391Z  ├ ƒ /api/analytics/wishlist
+2026-10-13T07:02:28.391Z  ├ ƒ /api/auth/[...nextauth]
+2026-10-13T07:02:28.391Z  ├ ƒ /api/backend-health
+2026-10-13T07:02:28.391Z  ├ ƒ /api/card-image
+2026-10-13T07:02:28.391Z  ├ ƒ /api/collection/export
+2026-10-13T07:02:28.391Z  ├ ƒ /api/collection/export/job
+2026-10-13T07:02:28.392Z  ├ ƒ /api/collection/import
+2026-10-13T07:02:28.392Z  ├ ƒ /api/file-jobs
+2026-10-13T07:02:28.392Z  ├ ƒ /api/file-jobs/[id]
+2026-10-13T07:02:28.392Z  ├ ƒ /api/file-jobs/[id]/cancel
+2026-10-13T07:02:28.392Z  ├ ƒ /api/file-jobs/[id]/download
+2026-10-13T07:02:28.392Z  ├ ƒ /api/health
+2026-10-13T07:02:28.392Z  ├ ƒ /api/saved-views
+2026-10-13T07:02:28.393Z  ├ ƒ /api/saved-views/[id]
+2026-10-13T07:02:28.393Z  ├ ƒ /api/saved-views/[id]/set-default
+2026-10-13T07:02:28.393Z  ├ ƒ /api/saved-views/[id]/use
+2026-10-13T07:02:28.393Z  ├ ƒ /api/saved-views/clear-default
+2026-10-13T07:02:28.393Z  ├ ƒ /api/version
+2026-10-13T07:02:28.393Z  ├ ƒ /api/wishlist/export
+2026-10-13T07:02:28.393Z  ├ ƒ /api/wishlist/export/job
+2026-10-13T07:02:28.393Z  ├ ƒ /api/wishlist/import
+2026-10-13T07:02:28.393Z  ├ ○ /apple-icon.png
+2026-10-13T07:02:28.393Z  ├ ƒ /cards
+2026-10-13T07:02:28.394Z  ├ ƒ /cards/[id]
+2026-10-13T07:02:28.394Z  ├ ƒ /cards/code/[cardCode]
+2026-10-13T07:02:28.394Z  ├ ○ /collection
+2026-10-13T07:02:28.394Z  ├ ○ /collection/vault
+2026-10-13T07:02:28.394Z  ├ ○ /icon.svg
+2026-10-13T07:02:28.394Z  ├ ○ /manifest.webmanifest
+2026-10-13T07:02:28.394Z  ├ ○ /market/movers
+2026-10-13T07:02:28.394Z  ├ ƒ /prints/[id]
+2026-10-13T07:02:28.394Z  ├ ƒ /prints/sitemap/[__metadata_id__]
+2026-10-13T07:02:28.394Z  ├ ƒ /robots.txt
+2026-10-13T07:02:28.394Z  ├ ƒ /share/[kind]/[id]
+2026-10-13T07:02:28.395Z  ├ ƒ /sign-in
+2026-10-13T07:02:28.395Z  ├ ƒ /sitemap.xml
+2026-10-13T07:02:28.395Z  └ ○ /wishlist
+2026-10-13T07:02:28.395Z  
+2026-10-13T07:02:28.395Z  
+2026-10-13T07:02:28.395Z  ƒ Proxy (Middleware)
+2026-10-13T07:02:28.396Z  
+2026-10-13T07:02:28.396Z  ○  (Static)   prerendered as static content
+2026-10-13T07:02:28.396Z  ƒ  (Dynamic)  server-rendered on demand
+2026-10-13T07:02:28.396Z  
+2026-10-13T07:02:28.911Z  Build Completed in /vercel/output [42s]
+2026-10-13T07:02:28.934Z  Deploying outputs...
+2026-10-13T07:02:36.983Z  Deployment completed
+2026-10-13T07:02:36.989Z  Creating build cache...
+2026-10-13T07:02:55.050Z  Created build cache: 18s
+2026-10-13T07:02:55.050Z  Uploading build cache [189.21 MB]
+2026-10-13T07:02:57.738Z  Build cache uploaded: 2.688s
+status	● Ready

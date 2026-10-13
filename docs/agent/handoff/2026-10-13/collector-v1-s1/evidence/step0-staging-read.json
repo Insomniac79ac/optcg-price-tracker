@@ -1,0 +1,138 @@
+{
+ "observed_at": "2026-10-12T23:53:02.576738+00:00",
+ "read_only": "on",
+ "table_stats": [
+  {
+   "relname": "card_pirate_index_points",
+   "n_live_tup": 27,
+   "seq_scan": 45,
+   "last_seq_scan": "2026-10-09 10:02:16.629258+00:00",
+   "idx_scan": 1227,
+   "last_idx_scan": "2026-10-12 23:34:06.743855+00:00",
+   "n_tup_ins": 27,
+   "n_tup_upd": 0
+  },
+  {
+   "relname": "market_index_snapshot_completions",
+   "n_live_tup": 14,
+   "seq_scan": 383,
+   "last_seq_scan": "2026-10-12 20:01:46.291365+00:00",
+   "idx_scan": 1317,
+   "last_idx_scan": "2026-10-12 23:34:04.843708+00:00",
+   "n_tup_ins": 14,
+   "n_tup_upd": 0
+  },
+  {
+   "relname": "market_index_snapshots",
+   "n_live_tup": 39418,
+   "seq_scan": 215,
+   "last_seq_scan": "2026-10-12 23:24:36.965782+00:00",
+   "idx_scan": 40696,
+   "last_idx_scan": "2026-10-12 23:34:10.978437+00:00",
+   "n_tup_ins": 34195,
+   "n_tup_upd": 0
+  },
+  {
+   "relname": "market_intelligence_reports",
+   "n_live_tup": 0,
+   "seq_scan": 16,
+   "last_seq_scan": "2026-10-11 08:28:02.469401+00:00",
+   "idx_scan": 11,
+   "last_idx_scan": "2026-10-10 05:38:41.402031+00:00",
+   "n_tup_ins": 0,
+   "n_tup_upd": 0
+  },
+  {
+   "relname": "market_report_digest_sends",
+   "n_live_tup": 0,
+   "seq_scan": 1,
+   "last_seq_scan": "2026-10-11 08:28:02.469401+00:00",
+   "idx_scan": 0,
+   "last_idx_scan": null,
+   "n_tup_ins": 0,
+   "n_tup_upd": 0
+  },
+  {
+   "relname": "market_signal_events",
+   "n_live_tup": 0,
+   "seq_scan": 29,
+   "last_seq_scan": "2026-10-11 08:28:02.469401+00:00",
+   "idx_scan": 0,
+   "last_idx_scan": null,
+   "n_tup_ins": 0,
+   "n_tup_upd": 0
+  },
+  {
+   "relname": "market_value_points",
+   "n_live_tup": 3060,
+   "seq_scan": 4232,
+   "last_seq_scan": "2026-10-12 23:34:09.698582+00:00",
+   "idx_scan": 11192,
+   "last_idx_scan": "2026-10-12 23:34:10.978437+00:00",
+   "n_tup_ins": 3180,
+   "n_tup_upd": 0
+  },
+  {
+   "relname": "market_workflow_runs",
+   "n_live_tup": 0,
+   "seq_scan": 22,
+   "last_seq_scan": "2026-10-11 08:28:02.469401+00:00",
+   "idx_scan": 7,
+   "last_idx_scan": "2026-09-30 11:54:50.334054+00:00",
+   "n_tup_ins": 0,
+   "n_tup_upd": 0
+  }
+ ],
+ "stats_reset": null,
+ "exact_counts": {
+  "market_workflow_runs": 0,
+  "market_signal_events": 7,
+  "market_intelligence_reports": 12,
+  "market_report_digest_sends": 0
+ },
+ "latest_rows": {
+  "market_workflow_runs": "None",
+  "market_signal_events": "2026-08-05 13:11:30.442470+00:00",
+  "market_intelligence_reports": "2026-08-08 01:11:29.818173+00:00",
+  "market_report_digest_sends": "None"
+ },
+ "dependent_views": [],
+ "incoming_foreign_keys": [
+  {
+   "from_table": "market_report_digest_sends",
+   "to_table": "market_intelligence_reports",
+   "conname": "market_report_digest_sends_report_id_fkey"
+  },
+  {
+   "from_table": "market_workflow_runs",
+   "to_table": "market_intelligence_reports",
+   "conname": "market_workflow_runs_market_report_id_fkey"
+  },
+  {
+   "from_table": "collector_notes",
+   "to_table": "market_signal_events",
+   "conname": "collector_notes_market_signal_event_id_fkey"
+  },
+  {
+   "from_table": "collector_notes",
+   "to_table": "market_intelligence_reports",
+   "conname": "collector_notes_market_report_id_fkey"
+  },
+  {
+   "from_table": "collector_activity_events",
+   "to_table": "market_signal_events",
+   "conname": "collector_activity_events_market_signal_event_id_fkey"
+  },
+  {
+   "from_table": "collector_activity_events",
+   "to_table": "market_intelligence_reports",
+   "conname": "collector_activity_events_market_report_id_fkey"
+  },
+  {
+   "from_table": "collector_activity_events",
+   "to_table": "market_workflow_runs",
+   "conname": "collector_activity_events_market_workflow_run_id_fkey"
+  }
+ ],
+ "functions_or_triggers_mentioning": []
+}

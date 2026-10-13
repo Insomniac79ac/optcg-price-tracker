@@ -1,0 +1,180 @@
+{
+ "label": "before",
+ "observed_at": "2026-10-12T23:55:22.666601+00:00",
+ "deleted_urls": {
+  "/analytics/buy-decisions": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fanalytics%2Fbuy-decisions"
+  },
+  "/analytics/sell-decisions": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fanalytics%2Fsell-decisions"
+  },
+  "/analytics/portfolio-risk": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fanalytics%2Fportfolio-risk"
+  },
+  "/analytics/grading": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fanalytics%2Fgrading"
+  },
+  "/analytics/digest": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fanalytics%2Fdigest"
+  },
+  "/grading": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fgrading"
+  },
+  "/market/signals": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fmarket%2Fsignals"
+  },
+  "/market/signal-events": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fmarket%2Fsignal-events"
+  },
+  "/market/opportunities": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fmarket%2Fopportunities"
+  },
+  "/market/report": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fmarket%2Freport"
+  },
+  "/market/report/latest": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fmarket%2Freport%2Flatest"
+  },
+  "/dashboard": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fdashboard"
+  },
+  "/activity": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Factivity"
+  },
+  "/search": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fsearch"
+  },
+  "/search?q=luffy": {
+   "status": 307,
+   "location": "/sign-in?callbackUrl=%2Fsearch%3Fq%3Dluffy"
+  },
+  "/admin/market-workflow-runs": {
+   "status": 307,
+   "location": "/admin/login?callbackUrl=%2Fadmin%2Fmarket-workflow-runs"
+  }
+ },
+ "api": {
+  "/analytics/market-value?window=7d": {
+   "status": 200,
+   "sha256_normalized": "1ba6d7d0e5c9020f391277bd9ff9aca3f61bfffd21145304106c77e39b83178d",
+   "bytes": 2145
+  },
+  "/analytics/market-value?window=30d": {
+   "status": 200,
+   "sha256_normalized": "b6ab485d47dbb4519b5d31ac604dabcc3bbe0c40c9f92365d538bc9e257b4183",
+   "bytes": 7027
+  },
+  "/analytics/market-value/releases": {
+   "status": 200,
+   "sha256_normalized": "ad22e131381e0d742642bbf1ac7d12f8e69bdba0183ba45fe668239d0ae9bccc",
+   "bytes": 30021
+  },
+  "/analytics/market-value/movers": {
+   "status": 200,
+   "sha256_normalized": "362264b974b3b30b5abf210a47d16278f707b78d62c2f902f1b063a56b59856b",
+   "bytes": 1440
+  },
+  "/market/movers": {
+   "status": 200,
+   "sha256_normalized": "5a1165ab6f34fda8d61eeda7e33b20b047cd7eeabb6911da478d8c813d1dab39",
+   "bytes": 13531
+  },
+  "/releases": {
+   "status": 200,
+   "sha256_normalized": "058533d5ee2eb2e2d0d63382a4eab9395b083a1723be9669a83e26fa1747b70e",
+   "bytes": 22906
+  }
+ },
+ "pages": {
+  "/ [desktop]": {
+   "status": 200,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_-desktop.png"
+  },
+  "/ [mobile]": {
+   "status": 200,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_-mobile.png"
+  },
+  "/analytics [desktop]": {
+   "status": 200,
+   "title": "One Piece Card Market \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_analytics-desktop.png"
+  },
+  "/analytics [mobile]": {
+   "status": 200,
+   "title": "One Piece Card Market \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: net::ERR_NETWORK_CHANGED",
+    "Failed to load resource: net::ERR_NETWORK_CHANGED",
+    "Failed to load resource: net::ERR_NETWORK_CHANGED",
+    "Failed to load resource: net::ERR_NETWORK_CHANGED",
+    "Failed to load resource: net::ERR_NETWORK_CHANGED"
+   ],
+   "shot": "before_analytics-mobile.png"
+  },
+  "/cards [desktop]": {
+   "status": 200,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_cards-desktop.png"
+  },
+  "/cards [mobile]": {
+   "status": 200,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_cards-mobile.png"
+  },
+  "/prints/5661 [desktop]": {
+   "status": 200,
+   "title": "Olin OP04-099 Price \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_prints_5661-desktop.png"
+  },
+  "/prints/5661 [mobile]": {
+   "status": 200,
+   "title": "Olin OP04-099 Price \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_prints_5661-mobile.png"
+  },
+  "/market/movers [desktop]": {
+   "status": 200,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_market_movers-desktop.png"
+  },
+  "/market/movers [mobile]": {
+   "status": 200,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_market_movers-mobile.png"
+  }
+ }
+}

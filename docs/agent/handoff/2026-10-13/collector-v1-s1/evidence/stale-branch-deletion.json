@@ -1,0 +1,1 @@
+{"branch":"fix/admin-auth-mutating-routes","tip":"1bae1c2dffca57ecd20820b45f64029b10bd8808","equivalent_upstream":"08427c0 (PR #93, merge fd5f8f8)","git_cherry":"- (patch already upstream)","deleted_at":"2026-10-12T23:57:16Z","restore":"git push origin 1bae1c2dffca57ecd20820b45f64029b10bd8808:refs/heads/fix/admin-auth-mutating-routes"}
