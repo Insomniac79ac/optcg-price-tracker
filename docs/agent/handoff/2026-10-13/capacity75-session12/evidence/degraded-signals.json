@@ -1,0 +1,101 @@
+{
+ "now": [
+  {
+   "t": "2026-10-13 15:14:08.288550"
+  }
+ ],
+ "by_source_state": [
+  {
+   "source": "snkrdunk",
+   "state": "blocked",
+   "n": 66,
+   "overdue": 66,
+   "never_checked": 22,
+   "over_24h": 44,
+   "backoff": 0
+  },
+  {
+   "source": "snkrdunk",
+   "state": "pending",
+   "n": 287,
+   "overdue": 0,
+   "never_checked": 0,
+   "over_24h": 0,
+   "backoff": 0
+  },
+  {
+   "source": "yuyutei",
+   "state": "pending",
+   "n": 2616,
+   "overdue": 0,
+   "never_checked": 0,
+   "over_24h": 0,
+   "backoff": 0
+  }
+ ],
+ "snkr_blocked_timing": [
+  {
+   "n": 66,
+   "first_blocked_update": "2026-10-02 15:54:46.480365+00:00",
+   "last_blocked_update": "2026-10-06 18:27:53.657103+00:00",
+   "min_failure_at": "2026-10-06 07:27:50.967762+00:00",
+   "max_failure_at": "2026-10-06 18:27:53.657103+00:00",
+   "oldest_success": "2026-10-04 13:30:27.951785+00:00",
+   "newest_success": "2026-10-05 11:29:16.735786+00:00"
+  }
+ ],
+ "snkr_blocked_failure_class": [
+  {
+   "last_outcome": "identity_refusal",
+   "failure_class": "artwork_not_confirmed_match:placeholder_image_url;no_raw_con",
+   "n": 39
+  },
+  {
+   "last_outcome": null,
+   "failure_class": "Existing confirmed identity-validation refusal; explicit rev",
+   "n": 22
+  },
+  {
+   "last_outcome": "identity_refusal",
+   "failure_class": "artwork_not_confirmed_match:placeholder_image_url",
+   "n": 2
+  },
+  {
+   "last_outcome": "identity_refusal",
+   "failure_class": "artwork_not_confirmed_match:no_match",
+   "n": 1
+  },
+  {
+   "last_outcome": "identity_refusal",
+   "failure_class": "artwork_not_confirmed_match:no_match;no_raw_condition_price_",
+   "n": 1
+  },
+  {
+   "last_outcome": "source_denial",
+   "failure_class": "Explicit current product capture: artwork unavailable; ident",
+   "n": 1
+  }
+ ],
+ "snkr_overdue_not_blocked": [
+  {
+   "n": 0
+  }
+ ],
+ "snkr_validation_blocked": [
+  {
+   "kind": "validation",
+   "state": "blocked",
+   "n": 23,
+   "min": "2026-10-06 05:01:32.415457+00:00",
+   "max": "2026-10-06 09:30:29.014310+00:00"
+  },
+  {
+   "kind": "validation",
+   "state": "pending",
+   "n": 1,
+   "min": "2026-10-06 07:27:50.856737+00:00",
+   "max": "2026-10-06 07:27:50.856737+00:00"
+  }
+ ],
+ "yuyu_overdue": []
+}

@@ -1,0 +1,29 @@
+{
+ "action": "NEW50 Yuyu identity-evidence capture intents (first 50 eligible of the 2026-10-07 NEW100 plan)",
+ "level": "AMBER (storage fits at both owner-defined current-code rates; all non-storage guards PASS)",
+ "recorded_at": "2026-10-13T16:04Z",
+ "impact": {
+  "database_writes": "exactly 50 freshness_work rows inserted (source yuyutei, kind discovery, lane discovery, state pending, attempt_count 0, estimated_request_cost 100, scope yuyu-identity:<cid>:sha256:<1.3 digest>, explicit_identity_capture cursor); no proposal, review or mapping write",
+  "source_requests": "none by this action; ordinary scheduled Yuyu turns claim the intents under the 9,000/1,800 s budget; about 50 x 58 = 2.9k requests one-off (ESTIMATE from s11 MEASURED 58.1/capture)",
+  "storage_one_off_mb": {"hard_bound": 429.1, "estimate": 65.2},
+  "storage_recurring_mb_day": 0.45,
+  "runtime": "claims spread over the next Yuyu turns; each capture about 1 minute",
+  "blast_radius": "evidence capture only; identity is never approved by a capture; load_intent re-checks every intent at claim time and refuses (identity_refusal) on any change"
+ },
+ "backup": {"id": "e1a2c03c-0660-47d3-a34c-dd1ec2f53839", "created_at": "2026-10-13T09:22:01Z", "age_hours_at_apply": 6.7, "note": "no existing row is modified; rollback does not need a restore"},
+ "rollback": {
+  "before_claim": "retire unclaimed intents by state change through a reviewed guarded tool (not built; not needed unless a trigger fires); no RAW evidence is deleted",
+  "after_capture": "retained RAW evidence stays (immutable); no mapping or proposal state exists to undo",
+  "triggers": ["any http_403, http_429, challenge or source_denial on Yuyu", "more than 5 transient failures among the 50", "any capture writing a mapping or proposal decision", "observed one-off growth above the 429.1 MB hard bound", "freshness regression: actionable Yuyu refresh older than 24 h"]
+ },
+ "verification": {
+  "now": "read-only: 50 rows exist with the exact scope keys and cursors, all pending, attempt_count 0",
+  "natural": "session 13: attempts on these 50 work ids (outcomes, request cost, raw snapshot bytes per capture vs the estimate), volume growth vs rates, 0 mapping/proposal decisions, Yuyu refresh freshness unchanged"
+ },
+ "inputs": {
+  "approved_list": "new50-approved.json sha256 906482e8d9958617627a34307d3dbd896d30d51cfd9ce4753dce82f49037a1f9",
+  "replan_preapply": "new100-replan-preapply.json observed 2026-10-13T15:57:01Z (100/100 eligible, 0 digest changes since 14:51Z)",
+  "dry_run": "new50-enqueue-dryrun.json 16:03:15Z DRY_RUN_OK 50/50",
+  "tool": "scripts/yuyu_identity_capture_enqueue.py at staging 6e4079a (PR #116)"
+ }
+}

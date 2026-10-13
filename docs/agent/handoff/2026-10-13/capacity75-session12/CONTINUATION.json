@@ -1,0 +1,74 @@
+{
+ "status": "session12_complete",
+ "written_at": "2026-10-13T16:15:00Z",
+ "objective_complete": false,
+ "staging_only": true,
+ "production_accessed": false,
+ "psa10": "OFF (NOT READY)",
+ "database_writes": "50 freshness_work rows (NEW50 capture intents 3678-3727) via scripts/yuyu_identity_capture_enqueue.py; nothing else",
+ "source_requests_by_session": 0,
+ "collectors": {
+  "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "state": "all 10 on PR #103 receipt deployments/digests, marker, SUCCESS; 0 deployment records since 2026-10-11T16:31:08Z (checked 14:43Z and 16:10Z); daily-v1/cron/start unchanged; no GitHub triggers",
+  "verified": "a504e47 resolver-1.3 release VERIFIED; rollback window CLOSED",
+  "evidence": ["evidence/live-state-start.json", "evidence/fleet-vs-receipt-start.json", "evidence/live-state-end.json", "evidence/fleet-vs-receipt-end.json", "evidence/trigger-status-start.json"]
+ },
+ "trigger_decision": {
+  "verdict": "NOT FIRED",
+  "first_cycle_complete_at": "2026-10-12T14:18:37.6Z",
+  "recurring_items": "67/67 completed on a504e47; 0 discovery failures",
+  "one_time_conversion": "915 + 1249 = 2164 (Yuyu pending on 1.3: 2164; on 1.2: 0)",
+  "versions_24h_after_cycle": 74,
+  "threshold": 200,
+  "early_signal_2026-10-13T01:12-04:15Z": 25,
+  "baseline": 915,
+  "approved_exact": {"yuyu": 2019, "snkr": 151},
+  "with_proof": 298,
+  "approved_superseded_demoted_created": [0, 0, 0],
+  "reviews_since_merge": 0,
+  "evidence": ["evidence/trigger-decision.json", "evidence/trigger-window.json"]
+ },
+ "provenance_fix": {
+  "pr": 115,
+  "merge": "f1d92673f3b660f4df18fd42baaa011d79175b98",
+  "rule": "collectors vs newest runtime-input change (collector_runtime_inputs); API/snapshot vs watch patterns; frontend vs head; fail closed",
+  "result": "blockers 3 -> 2 live and in the delivery-job state at f1d9267 and 6e4079a",
+  "evidence": ["evidence/provenance-counterfactual.json", "evidence/pr115-delivery/"]
+ },
+ "new100": {
+  "rate_window": {"from": "2026-10-10T14:31:00.43Z (a852244 rollout)", "to": "2026-10-13T14:50Z", "hours": 72.25, "samples_5min": 868},
+  "planning_mb_day": 21.78,
+  "stress_mb_day": 25.86,
+  "room_to_reserve_mb_s9": 3076.5,
+  "fit_hard_bound": {"NEW100": "planning only (+141.2 / -226.0)", "NEW50": "both (+646.9 / +279.7)", "NEW25": "both"},
+  "guards": "all non-storage PASS 100/100 (replan 14:51Z and pre-apply 15:57Z, 0 digest changes)",
+  "verdict": {"NEW100": "NOT APPROVED (planning only); owner question in HANDOFF section 3", "NEW50": "APPROVED (AMBER) and ENQUEUED 2026-10-13T16:06:12Z"},
+  "enqueue": {"tool": "scripts/yuyu_identity_capture_enqueue.py (PR #116, merge 6e4079a)", "list_sha256": "906482e8d9958617627a34307d3dbd896d30d51cfd9ce4753dce82f49037a1f9", "work_ids": [3678, 3727], "written": 50, "proposal_or_mapping_writes": 0},
+  "evidence": ["evidence/storage-rates-current-code.json", "evidence/new100-storage.json", "evidence/new100-replan.json", "evidence/new100-replan-preapply.json", "evidence/new50-approved.json", "evidence/new50-amber-preflight.json", "evidence/new50-enqueue-dryrun.json", "evidence/new50-enqueue-apply.json", "evidence/new50-postapply-check.txt"]
+ },
+ "storage": {"volume_mb_s9": 3702.2, "db_bytes": 2849175231, "raw_snapshots_bytes": 2631450624, "collector_v1_s3_tables_bytes": 131072, "runway_days_no_batch": {"planning": 141.3, "stress": 119.0}, "runway_days_with_new50_hard": {"planning": 119.1, "stress": 100.6}},
+ "lossless": {"ledger_ids": [50072, 53967], "rows": 3648, "failures": 0, "expanded": 0, "next_floor_exclusive": 53967, "evidence": "evidence/verify-lossless-from-50072.json"},
+ "degraded_signals": {"snkrdunk": "mislabel: 66 identity-quarantined (blocked) mappings counted as deadline misses; non-blocked overdue 0", "raw_due_work": "same cause", "proposal": "exclude state=blocked from overdue/never_checked/deadline_misses; keep quarantine visible (owner sign-off)", "evidence": "evidence/degraded-signals.json"},
+ "freshness": {"not_met_items": 69, "all_blocked": true, "yuyu": "3 inactive contained-duplicate mappings (OP09-077, OP16-118 p1, OP16-119 p1) since 2026-10-06", "snkr": "66 identity quarantine since 2026-10-02/06", "actionable_max_age_h": {"yuyu": 21.9, "snkr": 23.2}, "evidence": "evidence/freshness-detail.json"},
+ "coverage": {"mapped": 2635, "operational": 2630, "fresh_usable": 2398, "both": 334, "zero": 1681, "change_from_2630": 0, "evidence": "evidence/coverage-start.json (14:57:31Z)"},
+ "receipts": {
+  "downloaded": {
+   "pr106": {"merge": "e1e2a0bebae7650b7048f08485a2a0441cb88637", "run": 38212930001, "scope": "skip", "collector_deployments": 0},
+   "pr113": {"merge": "b3862e6aa82acb0c0d565a75efbbb74fea02fd42", "run": 38386604468, "scope": "skip", "collector_deployments": 0},
+   "pr115": {"merge": "f1d92673f3b660f4df18fd42baaa011d79175b98", "run": 38416755490, "scope": "full", "api": "skip", "collector_deployments": 0},
+   "pr116": {"merge": "6e4079a6b1c0e7a73d89ffa190bda6903e5be04c", "run": 38420530144, "scope": "full", "api": "build", "collector_deployments": 0}
+  },
+  "pending": "this session-12 handoff PR receipt: session 13 downloads it first"
+ },
+ "blockers_end": ["freshness-deadline-deficit (all 69 blocked work)", "snkrdunk-identity-quarantine (23)"],
+ "never_replay": ["SNKR 3676/3677", "RAW recovery 35175", "Yuyu canary evidence", "deliveries PR77-116", "session-12 handoff PR", "NEW50 enqueue (list 906482e8...)"],
+ "quiet_windows": {"collector_changes_forbidden": "02:00-06:00Z", "collector_releases_allowed": "06:00-23:00Z", "no_api_or_migration_merge": "19:30-20:30Z", "observe": ["NEW50 intents 3678-3727 claimed by ordinary Yuyu turns from 2026-10-13T16:06Z"]},
+ "session13_first": [
+  "download this handoff PR's CI receipt",
+  "NEW50 natural evidence (attempts/outcomes, request cost, RAW bytes vs 65.2 MB estimate and 429.1 MB bound, volume vs 21.78/25.86 MB/day, 0 denials, 0 decisions, freshness unchanged)",
+  "lossless from ledger id 53968",
+  "provenance stays clear after the next docs/web merge",
+  "owner answers: NEW100 basis; blocked-vs-deadline reporting fix"
+ ],
+ "earliest_recheck": "2026-10-14T06:00Z (14:00 Asia/Kuala_Lumpur), after NEW50 has run through ordinary turns"
+}

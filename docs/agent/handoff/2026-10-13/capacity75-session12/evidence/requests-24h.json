@@ -1,0 +1,89 @@
+{
+ "read_only": true,
+ "source_requests": 0,
+ "window": [
+  "2026-10-12 14:50:00+00",
+  "2026-10-13 14:50:00+00"
+ ],
+ "observed_at": "2026-10-13 14:57:14.596024",
+ "per_capture": [
+  {
+   "name": "snkrdunk",
+   "kind": "refresh",
+   "outcome": "captured",
+   "n": 54,
+   "avg_cost": "82.8",
+   "p50": 79.5,
+   "min_cost": 71,
+   "max_cost": 177,
+   "max_reserved": 300,
+   "over_reservation": 0
+  },
+  {
+   "name": "snkrdunk",
+   "kind": "refresh",
+   "outcome": "no_listing",
+   "n": 270,
+   "avg_cost": "78.3",
+   "p50": 75.0,
+   "min_cost": 61,
+   "max_cost": 177,
+   "max_reserved": 300,
+   "over_reservation": 0
+  },
+  {
+   "name": "yuyutei",
+   "kind": "discovery",
+   "outcome": "completed",
+   "n": 67,
+   "avg_cost": "55.7",
+   "p50": 56.0,
+   "min_cost": 55,
+   "max_cost": 56,
+   "max_reserved": 1200,
+   "over_reservation": 0
+  },
+  {
+   "name": "yuyutei",
+   "kind": "refresh",
+   "outcome": "captured",
+   "n": 2616,
+   "avg_cost": "31.1",
+   "p50": 29.0,
+   "min_cost": 29,
+   "max_cost": 56,
+   "max_reserved": 300,
+   "over_reservation": 0
+  },
+  {
+   "name": "yuyutei",
+   "kind": "refresh",
+   "outcome": "transient_failure",
+   "n": 2,
+   "avg_cost": "23.5",
+   "p50": 23.5,
+   "min_cost": 19,
+   "max_cost": 28,
+   "max_reserved": 300,
+   "over_reservation": 0
+  }
+ ],
+ "window_peaks": [
+  {
+   "name": "snkrdunk",
+   "peak": 2849,
+   "avg_window": "2134",
+   "windows": 12
+  },
+  {
+   "name": "yuyutei",
+   "peak": 4527,
+   "avg_window": "2303",
+   "windows": 37
+  }
+ ],
+ "snkr_homepage_raw": {
+  "n": 12,
+  "stored_bytes": 829296
+ }
+}

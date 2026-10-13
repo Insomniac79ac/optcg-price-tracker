@@ -1,0 +1,110 @@
+{
+ "room_to_reserve_mb_s9": 3076.5,
+ "recurring_mb_per_capture": 0.00896,
+ "attempts_24h": 2685,
+ "b64_bound_bytes_per_image": 2798252,
+ "batches": {
+  "NEW100": {
+   "families": 100,
+   "yuyu_images": 100,
+   "official_images": 217,
+   "one_off_hard_bound_mb": 894.5,
+   "one_off_estimate_mb": 134.1,
+   "recurring_mb_day": 0.896
+  },
+  "NEW50": {
+   "families": 50,
+   "yuyu_images": 50,
+   "official_images": 102,
+   "one_off_hard_bound_mb": 429.1,
+   "one_off_estimate_mb": 65.2,
+   "recurring_mb_day": 0.448
+  },
+  "NEW25": {
+   "families": 25,
+   "yuyu_images": 25,
+   "official_images": 51,
+   "one_off_hard_bound_mb": 214.5,
+   "one_off_estimate_mb": 32.6,
+   "recurring_mb_day": 0.224
+  }
+ },
+ "rates": {
+  "planning_current_code_avg": {
+   "mb_day": 21.78,
+   "base_90d_mb": 1960.2,
+   "runway_days_no_batch": 141.3,
+   "fit": {
+    "NEW100:hard": {
+     "need_mb": 2935.3,
+     "margin_mb": 141.2,
+     "fits": true
+    },
+    "NEW100:estimate": {
+     "need_mb": 2174.9,
+     "margin_mb": 901.6,
+     "fits": true
+    },
+    "NEW50:hard": {
+     "need_mb": 2429.6,
+     "margin_mb": 646.9,
+     "fits": true
+    },
+    "NEW50:estimate": {
+     "need_mb": 2065.7,
+     "margin_mb": 1010.8,
+     "fits": true
+    },
+    "NEW25:hard": {
+     "need_mb": 2194.9,
+     "margin_mb": 881.6,
+     "fits": true
+    },
+    "NEW25:estimate": {
+     "need_mb": 2013.0,
+     "margin_mb": 1063.5,
+     "fits": true
+    }
+   },
+   "largest_fitting_hard_bound": "NEW100"
+  },
+  "stress_current_code_worst_rolling_24h": {
+   "mb_day": 25.86,
+   "base_90d_mb": 2327.4,
+   "runway_days_no_batch": 119.0,
+   "fit": {
+    "NEW100:hard": {
+     "need_mb": 3302.5,
+     "margin_mb": -226.0,
+     "fits": false
+    },
+    "NEW100:estimate": {
+     "need_mb": 2542.1,
+     "margin_mb": 534.4,
+     "fits": true
+    },
+    "NEW50:hard": {
+     "need_mb": 2796.8,
+     "margin_mb": 279.7,
+     "fits": true
+    },
+    "NEW50:estimate": {
+     "need_mb": 2432.9,
+     "margin_mb": 643.6,
+     "fits": true
+    },
+    "NEW25:hard": {
+     "need_mb": 2562.1,
+     "margin_mb": 514.4,
+     "fits": true
+    },
+    "NEW25:estimate": {
+     "need_mb": 2380.2,
+     "margin_mb": 696.3,
+     "fits": true
+    }
+   },
+   "largest_fitting_hard_bound": "NEW50"
+  }
+ }
+}

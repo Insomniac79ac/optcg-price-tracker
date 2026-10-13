@@ -1,0 +1,16 @@
+{
+  "base": "b3862e6aa82acb0c0d565a75efbbb74fea02fd42",
+  "merge": "f1d92673f3b660f4df18fd42baaa011d79175b98",
+  "decision": "full",
+  "files": [
+    "docs/agent/STAGING_DELIVERY.md",
+    "docs/agent/STAGING_MISSION.json",
+    "scripts/generate_staging_state.py",
+    "scripts/tests/test_generate_staging_state.py"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    "scripts/generate_staging_state.py",
+    "scripts/tests/test_generate_staging_state.py"
+  ]
+}
