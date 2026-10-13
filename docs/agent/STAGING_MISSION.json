@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Collector v1 S3: collector account tables (one additive migration 3b7d9c1a5e20) and the dark /me API behind COLLECTOR_ACCOUNTS_ENABLED (off). PLAN \u00a7B1/\u00a7C/\u00a7H S3. Staging only; no collector release.",
+ "mission": "Record Collector v1 S3 delivery on staging: PR #112 receipts, migration 3b7d9c1a5e20 evidence, flag-off /me checks, skip comparison; carry the pending PR #111 receipt (documentation only)",
  "target": "staging",
- "classification": "AMBER",
+ "classification": "GREEN",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,63 +20,80 @@
  "impacts": [
   {
    "files": [
-    "services/api/alembic/env.py",
-    "services/api/alembic/versions/3b7d9c1a5e20_add_collector_account_tables.py",
-    "services/api/app/accounts/__init__.py",
-    "services/api/app/accounts/models.py"
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/HANDOFF.md",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/backups-preflight-1.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/backups-preflight-2.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/backups-preflight-3.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/deploy-records-after-pr112.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/flag-check-after-deploy.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-793d203-pg18-delay65.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-ae73048-delay65.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-ea00c36-pg16.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-staging-b9d1c21-pg18.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/import-graph-check-793d203.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/import-graph-check-ea00c36.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/legacy-dry-run-postmigration.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/legacy-dry-run-premigration.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/me-probe-after-deploy.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/me-probe-before-deploy.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/migration-3b7d9c1a5e20-offline.sql",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/migration-upgrade.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/openapi-me-after-deploy.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-credential-probe-10e2fbc1b1ef75f51c2fc64b014ca1e555eff68d/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-4a1530ec16286b6e.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/skip-comparison-793d203-vs-b9d1c21.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/staging-state-after-deploy.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/staging-state-preflight-1.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/apply_migration.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/backups.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/compare_skips.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/db.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/delay_after_collection.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/deploy_records.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/import_graph_check.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/me_probe.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/run_both.sh",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/run_suite.sh",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/staging_readonly.py"
    ],
    "effects": [
-    "application",
-    "migration"
+    "documentation",
+    "state_observation"
    ],
-   "reason": "Additive migration 3b7d9c1a5e20 (parent 6c2242f6f439) creates five empty tables: collection_entries, collection_entry_events, watchlist_entries, user_preferences, collection_value_points. user_id FKs CASCADE, card_print_id FKs RESTRICT. No existing table, column, constraint or row changes. Downgrade refuses non-empty tables. app/accounts is not imported by app.models, so neither collector reaches it (test_accounts_import_graph.py; scripts/collector_runtime_inputs.py: 0 changed runtime inputs for snkrdunk and yuyutei)."
+   "reason": "S3 handoff and read-only evidence under docs/agent/handoff/2026-10-13/collector-v1-s3/ (HANDOFF.md, downloaded PR #112 delivery and credential-probe artifacts, Railway deployment records, migration result and offline DDL, backup checks, table state, legacy dry run, /me and OpenAPI probes, flag presence check, API suite logs and skip comparison, import-graph check) plus the tools used. No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
   },
   {
    "files": [
-    "services/api/app/accounts/config.py",
-    "services/api/app/accounts/router.py",
-    "services/api/app/accounts/schemas.py",
-    "services/api/app/accounts/service.py",
-    "services/api/app/accounts/valuation.py",
-    "services/api/app/accounts/migrate_legacy.py",
-    "services/api/app/main.py"
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-eac5de83941abd00.json"
    ],
    "effects": [
-    "application"
+    "documentation",
+    "state_observation"
    ],
-   "reason": "Dark /me API (/me/collection, /me/collection/value, /me/watchlist, /me/preferences, /me/export, DELETE /me). COLLECTOR_ACCOUNTS_ENABLED is read in accounts/config.py, off by default and unset on staging, so every /me route answers 404 before authentication. Valuation reads archived Market Index values from receipted days only; unpriced is never 0; Yuyu-Tei sale and struck prices never value a collection. No pricing methodology, Market Index or Market Value change. DELETE /me also removes the user's SET NULL saved_views/search_history rows and FK-less file_jobs rows and files. Legacy copy CLI is dry run by default. No settings.py, app/models/** or requirements change."
-  },
-  {
-   "files": [
-    "services/api/tests/accounts_helpers.py",
-    "services/api/tests/test_accounts.py",
-    "services/api/tests/test_accounts_import_graph.py",
-    "services/api/tests/test_accounts_postgres.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Tenant isolation, flag-off 404, cascade and explicit deletion (schema-discovered user_id columns/FKs on Postgres), constraints, coverage math, unpriced != 0, Yuyu sale exclusion, struck-price non-substitution, downgrade refusal, collector import graph."
-  },
-  {
-   "files": [
-    "services/api/tests/test_admin_actor_assertion.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Test-only: mint the 60-second admin actor assertions inside the test instead of at collection time, so a suite that reaches them more than 60 s after collection does not fail. Expiry and assertions unchanged."
-  },
-  {
-   "files": [
-    "docs/collector_accounts.md"
-   ],
-   "effects": [
-    "documentation"
-   ],
-   "reason": "Operations doc: tables, endpoints, flag, deletion semantics, legacy copy CLI and rollback."
+   "reason": "Pending PR #111 (S1 handoff) delivery receipt, downloaded read-only from CI run 38362184827 into the S1 evidence folder. No behaviour."
   }
  ],
+ "diff_sha256": "208992e55737554cc0d3d4ac6664f4e32ec90650d6c04cf92c0feb12e43368e2",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "3b7d9c1a5e20",
@@ -87,56 +104,5 @@
   "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
- },
- "safeguards": {
-  "impact": {
-   "resources": [
-    {
-     "name": "Staging Postgres: five new empty tables (migration 3b7d9c1a5e20 applied before this PR leaves draft via documented alembic upgrade, lock_timeout 10s)",
-     "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
-     "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
-     "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
-    },
-    {
-     "name": "Staging API",
-     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
-    }
-   ],
-   "routes": [
-    "/me/collection, /me/collection/value, /me/watchlist, /me/preferences, /me/export, DELETE /me: new, 404 while COLLECTOR_ACCOUNTS_ENABLED is off (staging: unset). No existing route changes."
-   ],
-   "dependencies": [
-    "users and card_prints tables (FK targets)",
-    "archived Market Index values and delivery receipts (read only)",
-    "6c2242f6f439 parent revision"
-   ],
-   "deployment_impact": "API redeploys on merge through its normal trigger. No web, collector watch path or collector-imported module changes, so no collector build or rollout; collector_services is empty. The migration is additive and applied before this PR leaves draft, so the verifier sees revision 3b7d9c1a5e20.",
-   "database_writes": 0,
-   "source_requests": 0,
-   "estimated_runtime_minutes": 5
-  },
-  "recovery": {
-   "artifact": "b9d1c211de51d55946d53d66d98f6f24ad33831b",
-   "procedure": "Native revert of this PR removes the /me routes (already dark). Then, while the tables are still empty, alembic downgrade 6c2242f6f439 drops the five tables; the migration refuses if any row exists (dropping data would be a separate RED decision).",
-   "trigger": "migration error or lock timeout; verifier failure; any /me route answering other than 404 while the flag is off; any change in Market Value, Market Index or public page responses",
-   "backup": "Staging Postgres volume backup younger than 24 h confirmed immediately before the upgrade (id and time in the S3 handoff). The migration creates empty tables only and modifies no existing row.",
-   "validation": [
-    "services/api/tests/test_accounts.py",
-    "services/api/tests/test_accounts_postgres.py",
-    "services/api/tests/test_accounts_import_graph.py",
-    "docs/collector_accounts.md"
-   ]
-  },
-  "verification": {
-   "required_checks": [
-    "engineering-gate"
-   ],
-   "post_change": [
-    "scripts/verify_staging_delivery.py",
-    "scripts/generate_staging_state.py"
-   ],
-   "observation_window": "Delivery receipt with API at the merge, revision 3b7d9c1a5e20 and no collector rollout; read-only check that the five tables exist and are empty and that /me routes answer 404."
-  }
- },
- "diff_sha256": "8fcd69a61dcb76db0de1cd909f7b42ef1a11cc8e9d32e8e9bd1125f7b590da81"
+ }
 }
