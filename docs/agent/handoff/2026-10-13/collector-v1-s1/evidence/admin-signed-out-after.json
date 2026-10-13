@@ -1,0 +1,139 @@
+{
+ "observed_at": "2026-10-13T07:18:48.072587+00:00",
+ "signed_in": false,
+ "web_admin_pages": {
+  "actions": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Factions"
+  ],
+  "alerts": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Falerts"
+  ],
+  "backup": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fbackup"
+  ],
+  "cache": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fcache"
+  ],
+  "card-audit": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fcard-audit"
+  ],
+  "card-duplicates": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fcard-duplicates"
+  ],
+  "cards": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fcards"
+  ],
+  "catalog-coverage": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fcatalog-coverage"
+  ],
+  "catalog-ops": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fcatalog-ops"
+  ],
+  "collection-attempts": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fcollection-attempts"
+  ],
+  "data-retention": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fdata-retention"
+  ],
+  "file-jobs": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Ffile-jobs"
+  ],
+  "import-validation": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fimport-validation"
+  ],
+  "job-locks": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fjob-locks"
+  ],
+  "logs": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Flogs"
+  ],
+  "performance": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fperformance"
+  ],
+  "price-source-health": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fprice-source-health"
+  ],
+  "refresh-runs": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Frefresh-runs"
+  ],
+  "release-status": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Frelease-status"
+  ],
+  "snkrdunk-candidates": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fsnkrdunk-candidates"
+  ],
+  "source-mapping-proposals": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fsource-mapping-proposals"
+  ],
+  "source-mapping-quality": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fsource-mapping-quality"
+  ],
+  "system-check": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fsystem-check"
+  ],
+  "market-workflow-runs": [
+   307,
+   "/admin/login?callbackUrl=%2Fadmin%2Fmarket-workflow-runs"
+  ]
+ },
+ "web_admin_login": [
+  200,
+  null
+ ],
+ "api_admin_kept_no_token": {
+  "/admin/release-status": 401,
+  "/admin/observability/summary": 401,
+  "/admin/data-retention/policy": 401
+ },
+ "api_deleted_no_token": {
+  "/admin/market-workflow-runs": 404,
+  "/market/signals": 404,
+  "/market/opportunities": 404,
+  "/market/report/latest": 404,
+  "/dashboard/overview": 404,
+  "/search?q=luffy": 404,
+  "/analytics/digest/latest": 404,
+  "/analytics/buy-decisions": 404
+ },
+ "web_api_deleted": {
+  "/admin/market-workflow-runs": [
+   404,
+   null
+  ],
+  "/market/signals": [
+   404,
+   null
+  ],
+  "/search?q=luffy": [
+   404,
+   null
+  ],
+  "/dashboard/overview": [
+   404,
+   null
+  ]
+ }
+}
