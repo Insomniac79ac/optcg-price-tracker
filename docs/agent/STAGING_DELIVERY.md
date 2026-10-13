@@ -433,3 +433,28 @@ the following.
 
 This is a documentation and operator routine only. No workflow, script or
 artifact retention setting changes.
+
+### Provenance follows what each service runs (2026-10-13, session 12)
+
+`deployment-provenance-divergence` used to compare every Railway service with
+the repository head. A docs or web merge moves the head while every collector
+correctly stays on its release commit, and the API on its last watched build, so
+the blocker fired after every such merge. `scripts/generate_staging_state.py`
+now records a `provenance` decision per service and raises the blocker only for
+services that are not current for what they run:
+
+- **Collectors:** current when no runtime input changed between the deployed
+  commit and the head, using `scripts/collector_runtime_inputs.py` (the same
+  import graph as the continuity check). That is, the deployed commit is not
+  older than the newest commit that changed the collector's runtime inputs.
+- **API and market-index-snapshot:** current when no path under their Railway
+  watch patterns changed (the same rule as `api_expectation: skip`).
+- **Frontend:** built from every staging commit, so it must still equal the head.
+
+Every service's commit must be on the staging history, and the platform SHA and
+the exact-commit marker must agree when both are known. An undeterminable import
+graph, watch-pattern set or diff counts as a divergence. The blocker now lists
+the divergent services. Evidence recorded before this change replays with the
+old head rule. Session-12 counterfactual on real history: Yuyu on a852244 would
+be flagged (2 runtime inputs changed by a504e47), SNKRDUNK on a852244 would not
+(it imports neither), the API on a504e47 would be (104 watched changes).

@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -236,6 +237,116 @@ class StateTests(unittest.TestCase):
         for query in queries.values():
             self.assertTrue(query.strip().lower().startswith(("select ", "with ")))
             self.assertNotIn(";", query)
+
+
+class ProvenanceTests(unittest.TestCase):
+    """deployment-provenance-divergence follows what each service runs, not the head."""
+
+    HEAD, RELEASE, OLDER = "c" * 40, "a" * 40, "d" * 40
+
+    @staticmethod
+    def git(ancestors):
+        def run(*args):
+            result = unittest.mock.Mock(stdout="", returncode=0)
+            if args[:2] == ("merge-base", "--is-ancestor"):
+                result.returncode = 0 if args[2] in ancestors else 1
+            elif args[0] == "diff":
+                result.stdout = ancestors[args[3]]
+            return result
+        return run
+
+    def provenance(self, name, deployed, *, changed=(), diff="", patterns=None, ancestor=True):
+        git = self.git({deployed: diff} if ancestor else {})
+        return generator.commit_provenance(
+            name, deployed, self.HEAD, git=git,
+            runtime_changes=lambda component, head, key: (list(changed), "import-graph"),
+            watch_patterns=patterns,
+        )
+
+    def test_collector_on_release_commit_after_docs_and_web_merges_is_current(self):
+        result = self.provenance("yuyutei-collector-shard-3", self.RELEASE, changed=[])
+        self.assertTrue(result["current"])
+        self.assertIn("collector runtime inputs", result["basis"])
+
+    def test_collector_behind_a_runtime_input_change_diverges(self):
+        result = self.provenance(
+            "snkrdunk-collector", self.RELEASE,
+            changed=["services/snkrdunk_collector/snkrdunk_collector/due.py"],
+        )
+        self.assertFalse(result["current"])
+        self.assertEqual(result["changed"], ["services/snkrdunk_collector/snkrdunk_collector/due.py"])
+
+    def test_commit_outside_staging_history_diverges_even_with_identical_inputs(self):
+        result = self.provenance("yuyutei-collector-shard-0", self.OLDER, changed=[], ancestor=False)
+        self.assertFalse(result["current"])
+        self.assertEqual(result["basis"], "not on the staging history")
+
+    def test_undeterminable_collector_inputs_fail_closed(self):
+        def boom(*_):
+            raise RuntimeError("git cat-file failed")
+        git = self.git({self.RELEASE: ""})
+        with patch.dict(sys.modules, {"collector_runtime_inputs": unittest.mock.Mock(changed_runtime_inputs=boom)}):
+            result = generator.commit_provenance("snkrdunk-collector", self.RELEASE, self.HEAD, git=git)
+        self.assertFalse(result["current"])
+
+    def test_api_skipped_for_docs_only_merge_is_current(self):
+        result = self.provenance(
+            "optcg-price-tracker", self.RELEASE,
+            diff="docs/agent/handoff/x/HANDOFF.md\napps/web/src/app/page.tsx\n",
+            patterns=["services/api/**", "deploy/railway/api.Dockerfile"],
+        )
+        self.assertTrue(result["current"])
+
+    def test_api_behind_a_watched_change_diverges(self):
+        result = self.provenance(
+            "market-index-snapshot", self.RELEASE,
+            diff="docs/x.md\nservices/api/app/main.py\n",
+            patterns=["services/api/**", "deploy/railway/api.Dockerfile"],
+        )
+        self.assertFalse(result["current"])
+        self.assertEqual(result["changed"], ["services/api/app/main.py"])
+
+    def test_api_without_watch_patterns_fails_closed(self):
+        for patterns in ([], ["services/api/**", "!docs/**"]):
+            self.assertFalse(self.provenance("optcg-price-tracker", self.RELEASE, patterns=patterns)["current"])
+
+    def test_platform_sha_and_exact_commit_marker_must_agree(self):
+        service = {"name": "snkrdunk-collector", "git_sha": self.RELEASE, "reported_sha": self.OLDER}
+        self.assertFalse(generator.service_provenance(service, self.HEAD)["current"])
+        self.assertEqual(generator.service_provenance({"name": "x", "git_sha": "unknown", "reported_sha": "unknown"}, self.HEAD), "unknown")
+
+    def _state(self, provenance, frontend_sha=None):
+        evidence = fixture()
+        evidence["frontend"]["sha"] = frontend_sha or evidence["repository"]["sha"]
+        evidence["railway"]["services"][0]["git_sha"] = self.RELEASE
+        evidence["railway"]["services"][0]["provenance"] = provenance
+        return generator.build_state(generator.sanitize(evidence))
+
+    def test_no_blocker_when_every_service_is_current_although_head_moved(self):
+        state = self._state({"current": True, "basis": "collector runtime inputs (import-graph)", "changed": []})
+        self.assertNotIn("deployment-provenance-divergence", [b["id"] for b in state["blockers"]])
+
+    def test_real_collector_divergence_still_blocks_and_names_the_service(self):
+        state = self._state({"current": False, "basis": "collector runtime inputs (import-graph)",
+                             "changed": ["services/api/app/settings.py"]})
+        blocker = next(b for b in state["blockers"] if b["id"] == "deployment-provenance-divergence")
+        self.assertEqual(blocker["services"], ["snkrdunk-collector"])
+
+    def test_frontend_must_still_equal_the_head(self):
+        state = self._state({"current": True, "basis": "head", "changed": []}, frontend_sha="b" * 40)
+        blocker = next(b for b in state["blockers"] if b["id"] == "deployment-provenance-divergence")
+        self.assertEqual(blocker["services"], ["frontend"])
+
+    def test_sanitize_keeps_only_decision_basis_and_paths(self):
+        evidence = fixture()
+        evidence["railway"]["services"][0]["provenance"] = {
+            "current": True, "basis": "watch patterns", "changed": ["services/api/x.py", "bad path; rm -rf"],
+            "secret": "value",
+        }
+        clean = generator.sanitize(evidence)["railway"]["services"][0]["provenance"]
+        self.assertEqual(clean, {"current": True, "basis": "watch patterns", "changed": ["services/api/x.py"]})
+        evidence["railway"]["services"][0]["provenance"] = {"current": "yes"}
+        self.assertEqual(generator.sanitize(evidence)["railway"]["services"][0]["provenance"], "unknown")
 
 
 if __name__ == "__main__":
