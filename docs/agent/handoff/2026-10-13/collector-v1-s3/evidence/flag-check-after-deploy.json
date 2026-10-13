@@ -1,0 +1,7 @@
+{
+ "observed_at": "2026-10-13T10:28:17.125398+00:00",
+ "service": "optcg-price-tracker (5290becf-6956-4c5c-ab16-01d865587e07)",
+ "environment": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+ "COLLECTOR_ACCOUNTS_ENABLED_present": false,
+ "note": "key names only; no values read into this file"
+}

@@ -1,0 +1,46 @@
+{
+ "observed_at": "2026-10-13T09:06:55.599335+00:00",
+ "installed_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+ "base": "b9d1c211de51d55946d53d66d98f6f24ad33831b",
+ "head": "793d203a86b3a51e3fc8a6631aeab1716f6d2128",
+ "pr_files": [
+  "docs/collector_accounts.md",
+  "services/api/alembic/env.py",
+  "services/api/alembic/versions/3b7d9c1a5e20_add_collector_account_tables.py",
+  "services/api/app/accounts/__init__.py",
+  "services/api/app/accounts/config.py",
+  "services/api/app/accounts/migrate_legacy.py",
+  "services/api/app/accounts/models.py",
+  "services/api/app/accounts/router.py",
+  "services/api/app/accounts/schemas.py",
+  "services/api/app/accounts/service.py",
+  "services/api/app/accounts/valuation.py",
+  "services/api/app/main.py",
+  "services/api/tests/accounts_helpers.py",
+  "services/api/tests/test_accounts.py",
+  "services/api/tests/test_accounts_import_graph.py",
+  "services/api/tests/test_accounts_postgres.py",
+  "services/api/tests/test_admin_actor_assertion.py"
+ ],
+ "touches_models_or_settings": [],
+ "collectors": {
+  "snkrdunk": {
+   "basis": "import-graph",
+   "changed_runtime_inputs_component_to_head": [],
+   "pr_files_in_import_set": [],
+   "import_set_size": 62,
+   "accounts_modules_reached": [],
+   "models_init_imported": true,
+   "settings_imported": true
+  },
+  "yuyutei": {
+   "basis": "import-graph",
+   "changed_runtime_inputs_component_to_head": [],
+   "pr_files_in_import_set": [],
+   "import_set_size": 73,
+   "accounts_modules_reached": [],
+   "models_init_imported": true,
+   "settings_imported": true
+  }
+ }
+}

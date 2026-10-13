@@ -1,0 +1,43 @@
+{
+ "observed_at": "2026-10-13T10:26:35.811945+00:00",
+ "api": "https://optcg-price-tracker-staging.up.railway.app",
+ "health": [
+  200,
+  "{\"status\":\"ok\",\"app_env\":\"staging\",\"database_connected\":true,\"redis_connected\":true,\"version\":\"0.1.0\",\"git_commit\":\"unknown\"}"
+ ],
+ "me": {
+  "/me/collection": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ],
+  "/me/collection/value?window=7d": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ],
+  "/me/collection/value?window=30d": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ],
+  "/me/watchlist": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ],
+  "/me/preferences": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ],
+  "/me/export": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ],
+  "/me/export/collection.csv": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ],
+  "/me/export/watchlist.csv": [
+   404,
+   "{\"detail\":\"Not Found\"}"
+  ]
+ },
+ "all_me_404": true
+}

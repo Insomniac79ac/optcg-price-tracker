@@ -1,0 +1,20 @@
+commit: ae73048
+postgres: 18 (localhost:5546), TEST_POSTGRES_URL set; DELAY_AFTER_COLLECTION=65 via .s3-work/plugins/delay_after_collection.py
+[delay_after_collection] sleeping 65.0s after collecting 5535 tests
+5494 passed, 41 skipped, 2683 warnings in 1335.07s (0:22:15)
+exit=0
+SKIPPED [1] tests/test_alembic_url_forms_postgres.py:43: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5546/opcg_test_a
+SKIPPED [1] tests/test_alembic_url_forms_postgres.py:43: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5546/opcg_test_b
+SKIPPED [1] tests/test_database_url_forms_postgres.py:32: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5546/opcg_test_a
+SKIPPED [1] tests/test_database_url_forms_postgres.py:32: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5546/opcg_test_b
+SKIPPED [1] tests/test_official_snapshot.py:477: no local snapshot to compare
+SKIPPED [1] tests/test_official_snapshot.py:573: no local snapshot to compare
+SKIPPED [1] tests/test_official_snapshot.py:599: no local snapshot to compare
+SKIPPED [1] tests/test_official_snapshot.py:620: no local snapshot to compare
+SKIPPED [1] tests/test_personal_search_ownership_migration.py:51: Set SEC8B_TEST_POSTGRES_URL to a disposable local PostgreSQL database
+SKIPPED [1] tests/test_personal_search_ownership_migration.py:70: Set SEC8B_TEST_POSTGRES_URL to a disposable local PostgreSQL database
+SKIPPED [6] tests/test_uncoded_product_evidence.py:41: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [6] tests/test_uncoded_product_evidence.py:53: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [1] tests/test_uncoded_product_evidence.py:64: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [6] tests/test_uncoded_product_evidence.py:71: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [12] tests/test_uncoded_product_evidence.py:102: frozen catalogue snapshots are gitignored (~1GB) and not checked out

@@ -1,0 +1,115 @@
+{
+ "action": "upgrade",
+ "started_at": "2026-10-13T09:54:56.274609+00:00",
+ "before": {
+  "observed_at": "2026-10-13T09:54:56.274620+00:00",
+  "alembic": [
+   "6c2242f6f439"
+  ],
+  "table_count": 55,
+  "account_tables": {
+   "collection_entries": {
+    "exists": false
+   },
+   "collection_entry_events": {
+    "exists": false
+   },
+   "watchlist_entries": {
+    "exists": false
+   },
+   "user_preferences": {
+    "exists": false
+   },
+   "collection_value_points": {
+    "exists": false
+   }
+  },
+  "legacy_rows": {
+   "users": 0,
+   "collection_items": 0,
+   "wishlist_items": 0,
+   "cards": 25,
+   "saved_views": 0,
+   "search_history": 0
+  },
+  "database_bytes": 2842269375
+ },
+ "proxy_port": 12258,
+ "alembic_exit": 0,
+ "alembic_log": [
+  "INFO  [alembic.runtime.migration] Running upgrade 6c2242f6f439 -> 3b7d9c1a5e20, Add collector account tables (collector v1 S3)."
+ ],
+ "after": {
+  "observed_at": "2026-10-13T09:55:14.614454+00:00",
+  "alembic": [
+   "3b7d9c1a5e20"
+  ],
+  "table_count": 60,
+  "account_tables": {
+   "collection_entries": {
+    "exists": true,
+    "rows": 0,
+    "total_bytes": 49152,
+    "indexes": [
+     "collection_entries_pkey",
+     "ix_collection_entries_card_print_id",
+     "ix_collection_entries_user_id",
+     "uq_collection_entries_legacy_item",
+     "uq_collection_entries_user_print"
+    ],
+    "columns": 12
+   },
+   "collection_entry_events": {
+    "exists": true,
+    "rows": 0,
+    "total_bytes": 16384,
+    "indexes": [
+     "collection_entry_events_pkey",
+     "ix_collection_entry_events_user_print_time"
+    ],
+    "columns": 6
+   },
+   "watchlist_entries": {
+    "exists": true,
+    "rows": 0,
+    "total_bytes": 49152,
+    "indexes": [
+     "ix_watchlist_entries_card_print_id",
+     "ix_watchlist_entries_user_id",
+     "uq_watchlist_entries_legacy_item",
+     "uq_watchlist_entries_user_print",
+     "watchlist_entries_pkey"
+    ],
+    "columns": 10
+   },
+   "user_preferences": {
+    "exists": true,
+    "rows": 0,
+    "total_bytes": 8192,
+    "indexes": [
+     "user_preferences_pkey"
+    ],
+    "columns": 4
+   },
+   "collection_value_points": {
+    "exists": true,
+    "rows": 0,
+    "total_bytes": 8192,
+    "indexes": [
+     "pk_collection_value_points"
+    ],
+    "columns": 16
+   }
+  },
+  "legacy_rows": {
+   "users": 0,
+   "collection_items": 0,
+   "wishlist_items": 0,
+   "cards": 25,
+   "saved_views": 0,
+   "search_history": 0
+  },
+  "database_bytes": 2842547903
+ },
+ "finished_at": "2026-10-13T09:55:25.587571+00:00"
+}

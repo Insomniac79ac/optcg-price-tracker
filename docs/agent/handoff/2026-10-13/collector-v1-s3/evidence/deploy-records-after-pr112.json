@@ -1,0 +1,112 @@
+{
+ "observed_at": "2026-10-13T10:26:20.340242+00:00",
+ "since": "2026-10-13T09:56:00Z",
+ "services": {
+  "Postgres": {
+   "since": [],
+   "latest": "176a0445-1ce8-4e4d-84cc-51dae3f6ec31"
+  },
+  "Redis": {
+   "since": [],
+   "latest": "bb0fba59-638c-48c9-8f24-b418c7d193cf"
+  },
+  "beat": {
+   "since": [
+    {
+     "id": "3071a42c-bd67-4297-907a-8682dbb5eeb6",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-13T10:14:22.994Z",
+     "commitHash": "5d86629fc8679849e9bcb79121d0407e813f2166"
+    }
+   ],
+   "latest": "3071a42c-bd67-4297-907a-8682dbb5eeb6"
+  },
+  "market-index-snapshot": {
+   "since": [
+    {
+     "id": "553186f6-9d24-4388-b0ed-b19fa194853f",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-13T10:14:22.121Z",
+     "commitHash": "5d86629fc8679849e9bcb79121d0407e813f2166"
+    }
+   ],
+   "latest": "553186f6-9d24-4388-b0ed-b19fa194853f"
+  },
+  "optcg-price-tracker": {
+   "since": [
+    {
+     "id": "b1ec1753-3bae-4bd2-a75d-fd3a6a708a60",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-13T10:14:22.121Z",
+     "commitHash": "5d86629fc8679849e9bcb79121d0407e813f2166"
+    }
+   ],
+   "latest": "b1ec1753-3bae-4bd2-a75d-fd3a6a708a60"
+  },
+  "snkrdunk-collector": {
+   "since": [],
+   "latest": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97"
+  },
+  "tmp-yuyu-discovery-4b": {
+   "since": [],
+   "latest": "f7ecde7b-3d13-438b-bf98-0db0a1c83c97"
+  },
+  "tmp-yuyu-shard-rehearsal": {
+   "since": [],
+   "latest": "a549db5a-331b-4f21-8452-502f51c97612"
+  },
+  "worker": {
+   "since": [
+    {
+     "id": "35698b66-f050-4902-9485-a9308f61b416",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-13T10:14:23.021Z",
+     "commitHash": "5d86629fc8679849e9bcb79121d0407e813f2166"
+    }
+   ],
+   "latest": "35698b66-f050-4902-9485-a9308f61b416"
+  },
+  "yuyutei-collector": {
+   "since": [],
+   "latest": "889fed4a-64f0-4e00-8aff-7795efd70294"
+  },
+  "yuyutei-collector-shard-0": {
+   "since": [],
+   "latest": "0a3c7f35-d282-4e25-8197-70f8f3283bfa"
+  },
+  "yuyutei-collector-shard-1": {
+   "since": [],
+   "latest": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a"
+  },
+  "yuyutei-collector-shard-2": {
+   "since": [],
+   "latest": "ac493f4b-bf25-4598-bd48-5f73c9d2c011"
+  },
+  "yuyutei-collector-shard-3": {
+   "since": [],
+   "latest": "e42e9c4a-b54d-495d-9010-072ecdaa3241"
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "since": [],
+   "latest": "548d1a23-9bc2-49d4-9d15-62a08edeca0d"
+  },
+  "yuyutei-collector-shard-5": {
+   "since": [],
+   "latest": "06d64d9a-6bfa-4f27-b75a-732b446bedbf"
+  },
+  "yuyutei-collector-shard-6": {
+   "since": [],
+   "latest": "5b4ff8a2-9465-4619-b321-8df037bcf925"
+  },
+  "yuyutei-collector-shard-7": {
+   "since": [],
+   "latest": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823"
+  },
+  "yuyutei-collector-shard-8": {
+   "since": [],
+   "latest": "ee64bf59-544e-47c3-a604-2fa2041f3baf"
+  }
+ },
+ "collector_services": 11,
+ "collector_deployments_since": 0
+}
