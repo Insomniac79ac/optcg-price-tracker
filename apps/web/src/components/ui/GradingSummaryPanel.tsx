@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { EmptyState } from "@/components/StateBlocks";
 import type { GradingSubmission } from "@/lib/api";
@@ -22,9 +20,6 @@ export function GradingSummaryPanel({ submissions }: { submissions: GradingSubmi
     <div className="panel p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="text-sm font-semibold text-text-primary">Grading</h2>
-        <Link href="/grading" className="text-xs text-sky-400 hover:text-sky-300">
-          View grading →
-        </Link>
       </div>
 
       {submissions.length === 0 ? (

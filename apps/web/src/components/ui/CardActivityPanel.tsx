@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/StateBlocks";
@@ -80,9 +79,6 @@ export function CardActivityPanel({
       <div>
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="text-sm font-semibold text-text-primary">Activity</h2>
-          <Link href="/activity" className="text-xs text-sky-400 hover:text-sky-300">
-            View activity →
-          </Link>
         </div>
         {activity.length === 0 ? (
           <EmptyState variant="inline">No recent activity for this card.</EmptyState>

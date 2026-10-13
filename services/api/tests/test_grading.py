@@ -449,39 +449,6 @@ def test_valuation_response_grading_false_when_no_submission(client, db_session)
     assert grading["latest_status"] is None
 
 
-def test_opportunities_include_grading_status_for_owned(client, db_session):
-    from datetime import datetime, timezone
-
-    from app.models import MarketSignalEvent
-
-    card = make_card(db_session)
-    item = make_item(db_session, card, quantity=1)
-    make_submission_via_api(client, item.id, submission_status="shipped_back")
-
-    now = datetime.now(timezone.utc)
-    event = MarketSignalEvent(
-        signal_type="owned_above_target_sell",
-        dedupe_key="dedupe-grading-1",
-        severity="info",
-        suggested_action="review_sell_opportunity",
-        status="open",
-        message="test",
-        card_id=card.id,
-        first_seen_at=now,
-        last_seen_at=now,
-        seen_count=1,
-    )
-    db_session.add(event)
-    db_session.commit()
-
-    response = client.get("/market/opportunities")
-
-    assert response.status_code == 200
-    opp = response.json()["opportunities"][0]
-    assert opp["grading"]["has_grading_submission"] is True
-    assert opp["grading"]["latest_status"] == "shipped_back"
-
-
 # --- backup -------------------------------------------------------------
 
 

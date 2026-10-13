@@ -1,7 +1,7 @@
 # apps/web
 
-Next.js dashboard for the OPTCG price tracker. Fetches directly from the API in the browser
-using `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:8000`).
+Next.js web app for the OPTCG price tracker (Card Pirate). Public pages read the API server-side
+or in the browser using `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:8000`).
 
 ## Development
 
@@ -10,14 +10,17 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — it redirects to `/dashboard`.
+Open [http://localhost:3000](http://localhost:3000) — the public Discover page.
 
 ## Pages
 
-- `/` — redirects to `/dashboard`.
-- `/dashboard` — table of cards from `GET /cards`.
-- `/cards/[id]` — card detail, price chart, and price observations from `GET /cards/{id}` and
+- `/` — public Discover page.
+- `/cards` — card catalogue; `/prints/[id]` — one exact card version.
+- `/analytics` — public Market page (Market Value and the Card Pirate Index).
+- `/cards/[id]` — legacy card detail, price chart, and price observations from `GET /cards/{id}` and
   `GET /cards/{id}/prices`.
+
+`/dashboard` was removed in Collector v1 S1 (2026-10-13) and now redirects to `/collection`.
 
 See `docs/route_inventory.md` at the repo root for the full, current route list (the list above
 is not kept up to date as new pages are added).
@@ -40,7 +43,7 @@ grep -rl "recharts" .next/static/chunks/*.js              # confirm which chunks
 
 Recharts should only show up in a handful of chunks (the dynamically-imported chart components -
 see `next/dynamic(..., { ssr: false })` in the callers of `PriceChart`/
-`PortfolioValuationHistoryChart`/`DashboardPortfolioChart`), not in the main/shared bundle every
+`PortfolioValuationHistoryChart`), not in the main/shared bundle every
 page loads. If you want a full interactive treemap instead of grepping chunk files by hand,
 `npx @next/bundle-analyzer` can be run as a one-off without adding it to `package.json` - see that
 package's own README for the `next.config.ts` wrapper it needs.

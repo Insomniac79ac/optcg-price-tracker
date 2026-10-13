@@ -19,7 +19,6 @@ def test_observability_summary_works_with_empty_data(client, db_session):
     assert data["status"] == "ok"
     assert data["last_24h"] == {"critical": 0, "error": 0, "warning": 0, "info": 0}
     assert data["latest_error"] is None
-    assert data["latest_market_workflow_run"] is None
     assert data["latest_price_refresh_run"] is None
     assert data["latest_backup"] is None
     assert data["latest_system_check_status"] in ("ok", "warning", "critical")

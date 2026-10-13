@@ -78,30 +78,6 @@ export default function CollectionAnalyticsPage() {
           >
             Wishlist Analytics →
           </Link>
-          <Link
-            href="/analytics/sell-decisions"
-            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-          >
-            Sell Decision Support →
-          </Link>
-          <Link
-            href="/analytics/grading"
-            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-          >
-            Grading ROI Analytics →
-          </Link>
-          <Link
-            href="/analytics/portfolio-risk"
-            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-          >
-            Portfolio Risk →
-          </Link>
-          <Link
-            href="/analytics/digest"
-            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-          >
-            Digest →
-          </Link>
         </div>
         <p className="mb-4 text-sm text-text-muted">
           Composition, valuation exposure, and concentration risk.

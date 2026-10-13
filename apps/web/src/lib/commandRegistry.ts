@@ -106,24 +106,6 @@ export const COMMAND_REGISTRY: Command[] = [
     keywords: ["want", "target"],
     scope: "collector",
   }),
-  cmd({
-    id: "nav-grading",
-    label: "Grading",
-    description: "Grading submissions and ROI tracking",
-    group: "Grading",
-    route_path: "/grading",
-    keywords: ["psa", "bgs", "submission"],
-    scope: "collector",
-  }),
-  cmd({
-    id: "nav-activity",
-    label: "Activity",
-    description: "Recent collection and wishlist activity",
-    group: "Navigate",
-    route_path: "/activity",
-    keywords: ["history", "log"],
-    scope: "collector",
-  }),
 
   // --- Admin ---------------------------------------------------------
   // `requires_admin: true` is enforced in CommandPalette.tsx via

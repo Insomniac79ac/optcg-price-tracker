@@ -129,7 +129,7 @@ in docs/deployment.md), and `app_env`. `GET /health` includes `version`/`git_com
 quick check without a separate call.
 
 `GET /admin/release-status` (admin-token gated) is the fuller picture: the same version/build
-fields plus the latest system check, market workflow run, backup, and error, and a
+fields plus the latest system check, backup, and error, and a
 `release_readiness` summary (`system_check_status`, `critical_logs_last_24h`,
 `latest_backup_available`). The `/admin/release-status` page in the web UI (linked from the admin
 nav, `/admin/system-check`, and `/admin/actions`) shows the same thing - use it right after a
@@ -153,8 +153,8 @@ you decide whether a rollback is even needed.
 curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/rate-limit/status"
 ```
 
-Returns whether rate limiting is enabled and, for each of the five route groups (`public_read`,
-`collection_write`, `admin`, `import_export`, `search`), its current limit, window, and
+Returns whether rate limiting is enabled and, for each of the four route groups (`public_read`,
+`collection_write`, `admin`, `import_export`; `search` was removed in Collector v1 S1), its current limit, window, and
 `active_keys` (distinct client IPs with a live counter right now - a large number here across a
 short window is a sign of either real traffic growth or abuse worth investigating). See
 "Security headers, CSP, and rate limiting" in `docs/deployment.md` for what each group covers and
@@ -551,121 +551,32 @@ docker compose exec worker python -m worker.jobs.check_alerts --dry-run
 docker compose exec worker python -m worker.jobs.check_alerts
 ```
 
-## Market workflow scheduling
+## Market workflow, market report and analytics digest (removed)
 
-The scheduled market intelligence workflow (refresh prices → snapshot portfolio/market signals →
-generate report → optionally send a Telegram digest) is disabled by default. Celery Beat only adds
-it to its schedule if `MARKET_WORKFLOW_ENABLED=true` (see
-`services/worker/worker/celery_app.py::_build_beat_schedule`); see [Market workflow schedule
-config](deployment.md#1c-market-workflow-schedule-config) in docs/deployment.md for the full env
-var reference (`MARKET_WORKFLOW_SOURCE`/`_LIMIT`/`_SEND_TELEGRAM`/`_HOUR_UTC`/`_MINUTE_UTC`).
-Changing any of these requires restarting `beat` to pick up the new schedule:
+Removed in Collector v1 S1 (2026-10-13; plan `docs/agent/plans/collector-v1/PLAN.md` section F,
+owner decision Q7). Gone: the scheduled market intelligence workflow (Celery Beat
+`run_market_workflow`, `POST /admin/actions/run-market-workflow`, `/admin/market-workflow-runs`),
+the signal-snapshot and market-report steps that ran after every price refresh, the market
+intelligence report and its Telegram digest (`generate-market-report`,
+`send-market-report-digest`, `/market/report*`), market signals/signal events/opportunities, and the
+analytics digest (`/analytics/digest*`, `generate-analytics-digest`, `app.generate_analytics_digest`).
+Before deletion, S1 proved that nothing in Market Value, the Card Pirate Index,
+`market-index-snapshot` or any public page reads their output.
 
-```
-docker compose -f docker-compose.prod.yml --env-file .env.production restart beat
-```
-
-To run the workflow on demand (without waiting for or changing the schedule), via the admin API:
-
-```
-curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"source": "yuyutei", "send_telegram": false, "dry_run": true}' \
-  "http://localhost:8000/admin/actions/run-market-workflow"
-```
-
-Or use the "Run market workflow" action on `/admin/actions` in the web UI. `dry_run: true` runs
-the full pipeline without writing new rows or sending a digest - use it to sanity-check a schedule
-change before letting Beat run it for real. Past runs (scheduled or on-demand) are visible at
-`/admin/market-workflow-runs` or `GET /admin/market-workflow-runs`.
-
-## Telegram digest testing
-
-Requires `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` both set (see [Telegram
-config](deployment.md#1b-telegram-config)). Send (or dry-run) the latest market intelligence
-report's digest independent of the scheduled workflow:
-
-```
-curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"dry_run": true}' \
-  "http://localhost:8000/admin/actions/send-market-report-digest"
-```
-
-`dry_run: true` formats the message and reports what would be sent without calling the Telegram
-API - use this first to confirm formatting/content. Drop it (or set `false`) to actually send. Digest
-sends are deduplicated per report by default; pass `"force": true` in the body to resend a report
-that's already been sent. Requires a market intelligence report to already exist (generate one via
-the market workflow above, or `POST /admin/actions/generate-market-report`) - returns
-`report_id: null` if none exists yet.
-
-## Analytics digest
-
-**What it summarizes.** One combined, deterministic snapshot of everything the analytics pages
-already compute - collection analytics, wishlist analytics, buy decision support, sell decision
-support, grading ROI, and portfolio risk - in a single response/report, plus a handful of
-plain-template `deterministic_summary_lines` (e.g. "3 wishlist targets are at or below target
-price."). See `services/api/app/services/analytics_digest.py` - it only reads and re-shapes what
-those six services already computed for the interactive `/analytics/*` pages; it never recomputes
-a valuation, a score, or a risk figure, and there is no AI/LLM involvement anywhere in it.
-
-`GET /analytics/digest` (signed-in, user-scoped, `?valuation_mode=raw_market|graded_adjusted`) is
-the live, always-fresh version - same request/response shape as every other `/analytics/*`
-endpoint, cached under the `analytics_digest` prefix. `POST /admin/actions/generate-analytics-
-digest` (and the CLI/worker paths below) additionally *persist* a row to `analytics_digest_reports`
-so a digest's numbers can be compared over time - browsable at `/analytics/digest` (history table)
-or via `GET /analytics/digest/reports` / `GET /analytics/digest/reports/{id}` / `GET
-/analytics/digest/latest`. The persisted path is not user-scoped (it resolves the single collector
-account, lowest user id - this app is not yet multi-tenant in practice, same simplification
-`app.services.portfolio_valuation`'s own admin-only aggregate callers already make).
-
-**How to generate from the CLI:**
-
-```
-docker compose exec api python -m app.generate_analytics_digest --valuation-mode raw_market
-```
-
-Prints `report_id`, `valuation_mode`, `risk_score`, `buy_review_count`, `sell_review_count`.
-Acquires the `analytics_digest_generation` concurrency lock (see 'Worker job concurrency locking'
-below); `--skip-lock` is test/dev only.
-
-**How to generate from the admin UI.** The "Generate analytics digest" card on `/admin/actions`
-(pick a valuation mode, click the button), or directly:
-
-```
-curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"valuation_mode": "raw_market"}' \
-  "http://localhost:8000/admin/actions/generate-analytics-digest"
-```
-
-A digest is also generated automatically, best-effort, after a successful non-dry-run run of
-`POST /admin/actions/run-market-workflow` or `POST /admin/actions/full-market-refresh` (never for
-a `dry_run` request) - a digest generation failure there is logged as a warning and never fails or
-rolls back the workflow that already succeeded. This runs in the API process, not inside the
-worker's own scheduled Celery Beat `run_market_workflow` job - that job has no access to the six
-API-only analytics services the digest composes (see `worker/models.py`'s "no shared code with the
-api service" convention), so a digest is not currently generated for a workflow run that Beat
-triggers directly without going through the admin API. Run the CLI on a schedule of your own (e.g.
-a host cron hitting the container) if you want a fully automatic, always-current digest history
-independent of admin-triggered runs.
-
-**How it differs from the market intelligence report.** The market report (`GET
-/market/report/latest`, `services/api/app/services/market_report.py`) is about *market
-opportunities* - ranked buy/sell/momentum/drop signals derived from price observations, plus a
-portfolio value snapshot. The analytics digest is about *your collection's decision-support and
-risk posture* - wishlist targets, buy/sell recommendations, grading ROI, and portfolio
-concentration/data-quality/liquidity/grading-exposure risk. They read overlapping underlying data
-but answer different questions and are generated/stored independently of each other.
+The `MARKET_WORKFLOW_*` and `TELEGRAM_*` settings, the model files and the tables
+(`market_workflow_runs`, `market_signal_events`, `market_intelligence_reports`,
+`market_report_digest_sends`, `analytics_digest_reports`) stay in place, inert, until the deferred
+S9 clean-up. `TELEGRAM_*` is still used by the worker's `check_alerts`.
 
 ## Saved views workflow
 
 **What it does.** Single-user saved filter/sort/column presets for the dense analytics/admin/
-collector list pages (e.g. "Review Buy" on `/analytics/buy-decisions`, "Critical Mapping Issues" on
-`/admin/source-mapping-quality`) - backed by `app.services.saved_views` / the `saved_views` table.
+collector list pages (e.g. "Critical Mapping Issues" on `/admin/source-mapping-quality`) - backed by `app.services.saved_views` / the `saved_views` table.
 Read/write, but never destructive: creating, updating, or deleting a saved view only ever touches
 that one row, never the data the filters describe. There is no per-account scoping (no `user_id`
 column, matching `dashboard_preferences`) - this is one shared, global preset store, since the app
 has no multi-user accounts. Every endpoint is gated by the existing signed-in-session check
-(`require_current_user`, the same bearer token `/dashboard`, `/collection`, `/wishlist`, and
-`/grading` already require) purely as a sign-in gate, not a new permission tier - no `X-Admin-Token`
+(`require_current_user`, the same bearer token `/collection` and `/wishlist` already require) purely as a sign-in gate, not a new permission tier - no `X-Admin-Token`
 is ever required for `/saved-views/*`, even from an admin page.
 
 **Recommended flow:**
@@ -682,10 +593,12 @@ is ever required for `/saved-views/*`, even from an admin page.
    default sharing that page's `route_path`+`view_type` first - only one default per page. "Clear
    default" (`POST /saved-views/clear-default`, body `{route_path, view_type}`) unsets it without
    picking a replacement.
-4. **Pin a view for the dashboard/catalog-ops shortcut sections.** Toggle "pinned" from
-   "Manage views" (`PATCH /saved-views/{id}`) - pinned views across every scope then show up in
-   `PinnedViewsSection` on `/dashboard` and (admin-scoped ones) `/admin/catalog-ops`.
-5. **Seed the default presets** (Review Buy, Critical Mapping Issues, Stale Prices, ...) on a fresh
+4. **Pin a view for the catalog-ops shortcut section.** Toggle "pinned" from
+   "Manage views" (`PATCH /saved-views/{id}`) - pinned admin-scoped views then show up in
+   `PinnedViewsSection` on `/admin/catalog-ops` (the `/dashboard` section was removed in
+   Collector v1 S1).
+5. **Seed the default presets** (Critical Mapping Issues, Stale Prices, ...; the presets for pages
+   removed in Collector v1 S1 were dropped from the seed) on a fresh
    or freshly-migrated database:
    ```
    docker compose exec api python -m app.seed_saved_views
@@ -705,7 +618,7 @@ main guarantee.
 
 **What it does.** A global `Cmd/Ctrl+K` command palette, a per-page
 `QuickActionBar` of contextual shortcut pills, a `?` keyboard-shortcuts
-reference modal, and a "Workflow Shortcuts" section on `/dashboard` - pure
+reference modal - pure
 frontend navigation convenience layered on top of the existing sidebar, no
 new backend routes or tables. See `docs/interface_design_system.md`,
 "Command palette and workflow shortcuts," for the full component/behavior
@@ -730,9 +643,9 @@ reference.
    `QuickActionBar` instead, wired directly to the page's existing handler
    function - no new write path is introduced anywhere in this feature.
 4. **`g` then a key** jumps directly to a handful of high-traffic pages
-   without opening the palette at all (`g d` dashboard, `g c` collection,
-   `g v` vault, `g w` wishlist, `g b` buy decisions, `g s` sell decisions,
-   `g r` portfolio risk, `g a` admin catalog ops) - press `?` for the full
+   without opening the palette at all (for example `g c` collection,
+   `g v` vault, `g w` wishlist, `g a` admin catalog ops; the shortcuts for
+   pages removed in Collector v1 S1 went with them) - press `?` for the full
    list any time.
 5. **Recent-workflow tracking is `localStorage`-only**, not a new backend
    table or endpoint - it's per-browser, ephemeral, low-stakes UX
@@ -740,8 +653,7 @@ reference.
    data that needs to survive a device change or appear in a backup/
    restore. It never stores an admin token, file contents, or confirm-
    modal text. If you clear browser storage, the "Recent" list in the
-   palette and the recent-items row on the dashboard's "Workflow
-   Shortcuts" section both just go back to empty - nothing else is
+   palette just goes back to empty - nothing else is
    affected.
 
 ## Reset local dev database
@@ -842,16 +754,15 @@ The container logs in [Logs](#logs) above show everything a service printed - us
 unstructured, and gone once the container is recreated. `app_log_events` is a separate,
 queryable table that api/worker/beat write structured rows to for the events that actually matter
 for production debugging (startup failures, env/system-check failures, backup export/validate/
-restore outcomes, CSV import errors, price refresh runs, market workflow runs, Telegram digest
-sends, and Yuyu-Tei/SNKRDUNK scraping failures) - see `app.services.app_logging`
+restore outcomes, CSV import errors, price refresh runs, and Yuyu-Tei/SNKRDUNK scraping
+failures) - see `app.services.app_logging`
 (`services/api/app/services/app_logging.py`) and its worker mirror
 (`services/worker/worker/app_logging.py`).
 
 **Where to view logs.** The `/admin/logs` page (linked from the admin nav, `/admin/actions`,
-`/admin/system-check`, and `/admin/market-workflow-runs`) is the primary place - filter by level,
+and `/admin/system-check`) is the primary place - filter by level,
 service, event type, or a message search, and open a row for its full message, context JSON, and
-traceback. `/dashboard`'s "Workflow status" widget also surfaces a link to `/admin/logs` whenever
-there's been an error or warning in the last 24 hours, so you don't have to go looking. The same
+traceback. The same
 data is available via the API directly:
 
 ```
@@ -861,7 +772,7 @@ curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/observability
 ```
 
 `GET /admin/observability/summary` is the fastest "is anything on fire" check - last-24h counts by
-level plus the latest error, market workflow run, price refresh run, backup, and system-check
+level plus the latest error, price refresh run, backup, and system-check
 status in one call.
 
 **What the levels mean.** `debug` < `info` < `warning` < `error` < `critical`, in ascending
@@ -911,13 +822,12 @@ As `price_observations`, `raw_snapshots`, `collector_activity_events`, `market_s
 and `app_log_events` grow, an unpaginated list endpoint would eventually return a response large
 enough to slow the API down or make the browser struggle to render it. Every list endpoint that
 reads from one of those tables (or anything else that can grow without bound - collection,
-wishlist, grading submissions, market signals/opportunities/reports, search results, admin
-logs/refresh-runs/workflow-runs/source-mappings/SNKRDUNK-candidates/alert-events/db-backups) is
+wishlist, grading submissions, admin
+logs/refresh-runs/source-mappings/SNKRDUNK-candidates/alert-events/db-backups) is
 paginated and carries a standard `pagination` metadata block. CSV/backup exports are the one
 deliberate exception - see below.
 
-**Limits.** Default page size is 100, capped at 500 (a handful of endpoints - `/collector/notes`,
-`/search`, `/search/suggestions` - use a tighter documented max instead, matching how those
+**Limits.** Default page size is 100, capped at 500 (a handful of endpoints - for example `/collector/notes` - use a tighter documented max instead, matching how those
 endpoints were already scoped before pagination metadata was added). An invalid `limit`/`offset`
 is rejected with `422` rather than silently clamped - `limit <= 0`, `limit` over the endpoint's
 max, or a negative `offset` all fail the request instead of reinterpreting it. This is enforced
@@ -926,7 +836,7 @@ surfaces that don't get that for free (e.g. `GET /admin/db-backups`) - by the sh
 `parse_pagination()` helper in `app.core.pagination` (`services/api/app/core/pagination.py`).
 
 **Response shape.** Every paginated response keeps its existing top-level shape (`items`,
-`events`, `opportunities`, `signals`, `results`, `logs`, `reports`, ... - whatever it already
+`events`, `results`, `logs`, `reports`, ... - whatever it already
 was) and adds a `pagination` object alongside it:
 
 ```json
@@ -952,7 +862,6 @@ regardless of what its items array is called.
 
 ```
 curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?limit=50&offset=50"
-curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/market/opportunities?limit=20"
 ```
 
 **Exports are not paginated.** `GET /collection/export.csv`, `GET /wishlist/export.csv`, and the
@@ -988,8 +897,8 @@ audit results, with a link straight into `/admin/logs` pre-filtered to
 
 ## Cache operations
 
-Several expensive read endpoints (dashboard, portfolio valuation, market opportunities/signals/
-reports, wishlist/grading summaries, search suggestions) are cached for a short TTL via
+Several expensive read endpoints (portfolio valuation, collection analytics, wishlist/grading
+summaries) are cached for a short TTL via
 `app.services.cache` (`services/api/app/services/cache.py`) - Redis-backed by default, with an
 in-memory fallback for local development only. This trades a small amount of staleness for
 materially faster responses on pages that would otherwise recompute the same aggregate query on
@@ -999,32 +908,18 @@ every load.
 
 | Endpoint | TTL setting |
 | --- | --- |
-| `GET /dashboard/overview` | `CACHE_DASHBOARD_TTL_SECONDS` |
 | `GET /collection/valuation` (key includes `valuation_mode`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /collection/valuation/history` (key includes `days`/`limit`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /analytics/collection` (key includes `valuation_mode`/`include_sold`) | `CACHE_COLLECTION_TTL_SECONDS` |
-| `GET /analytics/portfolio-risk` (key includes `valuation_mode`/`include_sold`) | `CACHE_COLLECTION_TTL_SECONDS` |
-| `GET /analytics/digest` (key includes `valuation_mode`) | `CACHE_COLLECTION_TTL_SECONDS` |
-| `GET /analytics/digest/latest` / `/reports` (key includes `valuation_mode`/`limit`/`offset`) | `CACHE_COLLECTION_TTL_SECONDS` |
-| `GET /market/opportunities` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
-| `GET /market/signals` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
-| `GET /market/signal-events` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
-| `GET /market/report/latest` | `CACHE_MARKET_TTL_SECONDS` |
-| `GET /market/reports` (key includes `limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
 | `GET /wishlist/summary` | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /grading/summary` | `CACHE_COLLECTION_TTL_SECONDS` |
-| `GET /search/suggestions` (key includes `q`/`limit`) | fixed 60s |
 
 Every cached response carries `X-Cache: HIT` or `MISS`, and `X-Cache-TTL` (the TTL in seconds
 used for that entry); `X-Cache-Key` is added too, but only in a development environment - it's
 not something a production client should depend on.
 
-**Why `GET /search` is not cached by default.** Unlike `/search/suggestions`, the full search
-endpoint records `search_history` as a side effect of every call (see `app.services.search`).
-Caching it would mean a repeated identical query silently stops being recorded, which would make
-`/search/suggestions`' own "recently searched" suggestions quietly go stale - the side effect
-matters more here than the read-speed win, so this endpoint is left out of the cached set on
-purpose.
+The dashboard, portfolio-risk, analytics digest, market signal/opportunity/report and search
+suggestion endpoints that used to be in this table were removed in Collector v1 S1.
 
 **Default TTLs and env vars** (`services/api/app/settings.py`):
 
@@ -1035,8 +930,9 @@ purpose.
   development, but see the warning below about using it anywhere else.
 - `CACHE_DEFAULT_TTL_SECONDS` (default `60`) - not directly read by any endpoint above (each has
   its own more specific setting), kept as a fallback default for future cached endpoints.
-- `CACHE_DASHBOARD_TTL_SECONDS` (default `60`)
-- `CACHE_MARKET_TTL_SECONDS` (default `120`)
+- `CACHE_DASHBOARD_TTL_SECONDS` (default `60`) and `CACHE_MARKET_TTL_SECONDS` (default `120`) - no
+  endpoint reads them since Collector v1 S1 removed `/dashboard/*` and the market signal/opportunity/
+  report endpoints; the settings stay until the deferred S9 clean-up.
 - `CACHE_COLLECTION_TTL_SECONDS` (default `60`)
 
 **Redis vs. memory backend.** `CACHE_BACKEND=redis` (the default) points at the same `REDIS_URL`
@@ -1063,7 +959,7 @@ Or the `/admin/cache` page (linked from the admin nav, `/admin/performance`, and
 summary alongside its other counters.
 
 **When and how to clear the cache.** Every write endpoint that changes cached data (collection,
-wishlist, grading, market signal snapshot/report generation, price refresh, portfolio snapshot)
+wishlist, grading, price refresh, portfolio snapshot)
 already invalidates the relevant cache prefixes itself - see the invalidation lists in each
 service module's comments if you need the exact mapping. A manual clear is normally only needed
 if you suspect a bug in that invalidation logic, or want to force every cached endpoint to
@@ -1071,7 +967,7 @@ recompute immediately after a manual data fix:
 
 ```
 curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"prefix": "dashboard", "confirm": "CLEAR"}' \
+  -d '{"prefix": "collection_valuation", "confirm": "CLEAR"}' \
   http://localhost:8000/admin/cache/clear
 
 # omit "prefix" (or set it to null) to clear every cache key this app has written
@@ -1082,9 +978,7 @@ curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json
 
 `confirm` must be exactly `"CLEAR"` - same confirmation-phrase pattern as
 `/admin/data-retention/prune` and `/admin/job-locks/{name}/force-release`. Useful prefixes:
-`dashboard`, `collection_valuation`, `collection_history`, `collection_analytics`, `market_signals`,
-`market_signal_events`, `market_opportunities`, `market_report` (and `market_reports`),
-`wishlist`, `wishlist_summary`, `grading_summary`. Every cache clear (and every Redis
+`collection_valuation`, `collection_history`, `collection_analytics`, `wishlist`, `wishlist_summary`, `grading_summary`. Every cache clear (and every Redis
 backend-failure/fallback event) is recorded to `app_log_events` - see `GET /admin/logs` - but
 individual cache hits/misses are never logged, only the hit/miss counters shown on
 `/admin/cache`.
@@ -1277,7 +1171,7 @@ docker compose exec api python -m app.prune_data_retention --apply --confirm PRU
 during an actual prune is printed as that table's warning, not a nonzero exit.
 
 **Scheduled pruning.** Celery Beat can run this automatically once a day - disabled by default,
-same opt-in pattern as the market workflow schedule:
+opt-in:
 
 ```
 DATA_RETENTION_ENABLED=true      # default false - beat does not schedule pruning otherwise
@@ -1294,8 +1188,8 @@ everything else normally.
 
 ## Worker job concurrency locking
 
-Two triggers for the same job can overlap - an admin clicks "run market workflow" while the
-scheduled Celery Beat run is still going, or a scheduled data retention prune fires while someone's
+Two triggers for the same job can overlap - an admin clicks "full market refresh" while a
+scheduled price refresh is still going, or a scheduled data retention prune fires while someone's
 running the CLI version by hand. Without something preventing that, two concurrent runs can create
 duplicate snapshots/report rows or step on each other's writes. `job_locks` (one row per lock name,
 `services/api/app/models/job_lock.py`) is a simple mutual-exclusion lock every one of these jobs
@@ -1310,27 +1204,22 @@ genuinely crashed job doesn't block its lock forever.
 | Lock name                   | TTL     | Guards                                                  |
 | ---------------------------- | ------- | -------------------------------------------------------- |
 | `price_refresh`              | 30 min  | `worker.jobs.refresh_prices` (manual CLI, scheduled Yuyu-Tei refresh, on-demand via admin) |
-| `market_workflow`            | 60 min  | `worker.jobs.run_market_workflow` (scheduled/manual), and `POST /admin/actions/full-market-refresh` |
+| `market_workflow`            | 60 min  | `POST /admin/actions/full-market-refresh` (the scheduled `run_market_workflow` job was removed in Collector v1 S1) |
 | `portfolio_snapshot`         | 10 min  | `app.snapshot_portfolio_valuation` (CLI + admin action)   |
 | `card_pirate_index`          | 10 min  | `app.card_pirate_index_writer` (CLI). Runs after `market_index_snapshot`, reads the day it archived, and inserts only the index points missing from the head. `--dry-run` and `--verify` take no lock, so they are safe against a read-only session. |
-| `market_signal_snapshot`     | 10 min  | `app.services.market_signal_events.snapshot_market_signals` (CLI + admin action) |
-| `market_report_generation`   | 10 min  | `app.services.market_report.generate_market_report` (CLI + admin action) |
-| `analytics_digest_generation` | 10 min | `app.services.analytics_digest.generate_analytics_digest` (CLI + admin action + best-effort after a market workflow run) |
-| `telegram_market_digest`     | 5 min   | `app.services.telegram_market_digest.send_market_report_digest` (CLI + admin action) |
 | `data_retention_prune`       | 30 min  | `app.services.data_retention.prune_tables` (CLI + admin action) and the worker's scheduled prune task |
 | `backup_restore`             | 60 min  | `app.services.backup.restore_backup` (CLI + `POST /admin/backup/restore`) |
 
 Acquisition is non-blocking: if a lock is already held and not expired, the caller fails
 immediately rather than waiting for it to free up. A job that needs more than one lock (e.g.
-`run_market_workflow` holding `market_workflow` while it calls `refresh_prices`, which acquires its
+`full-market-refresh` holding `market_workflow` while the price refresh it triggers acquires its
 own `price_refresh` lock) always acquires a *different*-named lock, never the same one twice - so
 there's no circular-wait condition and no deadlock is possible, regardless of nesting order.
 
 **What happens on conflict.**
 
 - Admin endpoints (`POST /admin/actions/refresh-prices`, `/full-market-refresh`,
-  `/run-market-workflow`, `/snapshot-portfolio`, `/snapshot-market-signals`,
-  `/generate-market-report`, `/send-market-report-digest`, `POST /admin/data-retention/prune`,
+  `/snapshot-portfolio`, `POST /admin/data-retention/prune`,
   `POST /admin/backup/restore`) return `409` with:
 
   ```json
@@ -1342,9 +1231,7 @@ there's no circular-wait condition and no deadlock is possible, regardless of ne
   ```
 
 - Every CLI script (`python -m worker.jobs.refresh_prices`, `python -m
-  worker.jobs.run_market_workflow`, `python -m app.snapshot_portfolio_valuation`, `python -m
-  app.snapshot_market_signals`, `python -m app.generate_market_report`, `python -m
-  app.send_market_report_digest`, `python -m app.prune_data_retention`, `python -m
+  app.snapshot_portfolio_valuation`, `python -m app.prune_data_retention`, `python -m
   app.restore_backup`) prints `Job already running: <lock_name>` and exits with status `2`.
 
 - Each of these functions/scripts takes a `--skip-lock` CLI flag (or `skip_lock=True` kwarg)
@@ -1617,16 +1504,16 @@ What it checks:
 
 1. `scripts/check_secrets.sh`
 2. Backend/worker pytest suites (unless `SKIP_TESTS=true`)
-3. HTTP 200 on every key web route touched by this phase (dashboard, collection, vault, wishlist,
-   grading, the analytics pages, and the dense admin pages)
-4. HTTP 200 on `/health`, `/saved-views`, `/analytics/digest`, `/analytics/buy-decisions`,
-   `/analytics/sell-decisions` (public) and `/admin/catalog-coverage`, `/admin/price-source-health`,
+3. HTTP 200 on every key web route touched by this phase (collection, vault, wishlist, the
+   remaining analytics pages, and the dense admin pages; the pages removed in Collector v1 S1 are no
+   longer listed)
+4. HTTP 200 on `/health` and `/saved-views` (200 or 401) and `/admin/catalog-coverage`, `/admin/price-source-health`,
    `/admin/source-mappings/quality` (admin-token-gated)
 5. A Playwright viewport/overflow smoke test *if* Playwright (or an equivalent frontend test setup)
    already exists in `apps/web` - it doesn't as of this phase, so this step is a no-op that prints
    why it's skipped rather than adding a new test framework just for this check. If one is added
-   later, wire it in here at 360×800 / 768×1024 / 1440×900 against `/dashboard`,
-   `/collection/vault`, `/analytics/buy-decisions`, and `/admin/source-mapping-quality`, asserting
+   later, wire it in here at 360×800 / 768×1024 / 1440×900 against
+   `/collection/vault` and `/admin/source-mapping-quality`, asserting
    `document.documentElement.scrollWidth <= window.innerWidth + <small tolerance>`.
 
 ### Manual QA checklist

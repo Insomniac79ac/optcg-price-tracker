@@ -284,9 +284,7 @@ export default function CardDetailPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {/* /dashboard is a signed-in-only route (see proxyGuard.ts) - linking
-            there from a page every anonymous visitor can reach would bounce
-            them straight to /sign-in. /cards is this app's actual public
+        {/* /cards is this app's actual public
             "came from browsing the catalogue" entry point (collector-first
             redesign audit, Phase 7). */}
         <Link

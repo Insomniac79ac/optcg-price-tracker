@@ -141,17 +141,6 @@ def test_serialization_failure_does_not_crash():
 # --- endpoint caching (HIT/MISS headers) -----------------------------------
 
 
-def test_dashboard_overview_returns_hit_on_second_request(client, db_session):
-    first = client.get("/dashboard/overview")
-    assert first.status_code == 200
-    assert first.headers["X-Cache"] == "MISS"
-
-    second = client.get("/dashboard/overview")
-    assert second.status_code == 200
-    assert second.headers["X-Cache"] == "HIT"
-    assert second.json() == first.json()
-
-
 def test_collection_valuation_cache_key_includes_valuation_mode(client, db_session):
     raw = client.get("/collection/valuation", params={"valuation_mode": "raw_market"})
     assert raw.headers["X-Cache"] == "MISS"
@@ -164,17 +153,6 @@ def test_collection_valuation_cache_key_includes_valuation_mode(client, db_sessi
 
     graded_again = client.get("/collection/valuation", params={"valuation_mode": "graded_adjusted"})
     assert graded_again.headers["X-Cache"] == "HIT"
-
-
-def test_market_opportunities_cache_key_includes_filters(client, db_session):
-    first = client.get("/market/opportunities", params={"category": "buy"})
-    assert first.headers["X-Cache"] == "MISS"
-
-    different_filter = client.get("/market/opportunities", params={"category": "sell"})
-    assert different_filter.headers["X-Cache"] == "MISS"
-
-    repeat = client.get("/market/opportunities", params={"category": "buy"})
-    assert repeat.headers["X-Cache"] == "HIT"
 
 
 # --- invalidation ------------------------------------------------------
@@ -198,18 +176,13 @@ def test_collection_write_invalidates_valuation_cache(client, db_session):
     assert third.headers["X-Cache"] == "MISS"
 
 
-def test_wishlist_write_invalidates_wishlist_and_market_cache(client, db_session):
+def test_wishlist_write_invalidates_wishlist_cache(client, db_session):
     card = make_card(db_session)
 
     first = client.get("/wishlist/summary")
     assert first.headers["X-Cache"] == "MISS"
     second = client.get("/wishlist/summary")
     assert second.headers["X-Cache"] == "HIT"
-
-    opp_first = client.get("/market/opportunities")
-    assert opp_first.headers["X-Cache"] == "MISS"
-    opp_second = client.get("/market/opportunities")
-    assert opp_second.headers["X-Cache"] == "HIT"
 
     response = client.post(
         "/wishlist",
@@ -219,9 +192,6 @@ def test_wishlist_write_invalidates_wishlist_and_market_cache(client, db_session
 
     third = client.get("/wishlist/summary")
     assert third.headers["X-Cache"] == "MISS"
-
-    opp_third = client.get("/market/opportunities")
-    assert opp_third.headers["X-Cache"] == "MISS"
 
 
 def test_grading_write_invalidates_valuation_cache(client, db_session):
@@ -247,7 +217,7 @@ def test_grading_write_invalidates_valuation_cache(client, db_session):
     assert third.headers["X-Cache"] == "MISS"
 
 
-def test_price_refresh_invalidates_market_and_collection_cache(monkeypatch):
+def test_price_refresh_invalidates_collection_cache(monkeypatch):
     """trigger_price_refresh runs in the API process (see
     app.services.refresh_trigger) even though the actual scraping happens in
     the worker over Celery - this monkeypatches the Celery client so the
@@ -256,8 +226,6 @@ def test_price_refresh_invalidates_market_and_collection_cache(monkeypatch):
     result comes back."""
     from app.services import refresh_trigger
 
-    cache_module.set_cache("dashboard:overview:1", {"a": 1}, 60)
-    cache_module.set_cache("market_opportunities:x", {"a": 1}, 60)
     cache_module.set_cache("collection_valuation:1:raw_market", {"a": 1}, 60)
 
     class FakeAsyncResult:
@@ -274,15 +242,13 @@ def test_price_refresh_invalidates_market_and_collection_cache(monkeypatch):
 
     refresh_trigger.trigger_price_refresh(source="all", limit=10, dry_run=False)
 
-    assert cache_module.get_cache("dashboard:overview:1") is None
-    assert cache_module.get_cache("market_opportunities:x") is None
     assert cache_module.get_cache("collection_valuation:1:raw_market") is None
 
 
 def test_price_refresh_dry_run_does_not_invalidate(monkeypatch):
     from app.services import refresh_trigger
 
-    cache_module.set_cache("dashboard:overview:1", {"a": 1}, 60)
+    cache_module.set_cache("collection_valuation:1:raw_market", {"a": 1}, 60)
 
     class FakeAsyncResult:
         id = "fake-task-id"
@@ -298,7 +264,7 @@ def test_price_refresh_dry_run_does_not_invalidate(monkeypatch):
 
     refresh_trigger.trigger_price_refresh(source="all", limit=10, dry_run=True)
 
-    assert cache_module.get_cache("dashboard:overview:1") == {"a": 1}
+    assert cache_module.get_cache("collection_valuation:1:raw_market") == {"a": 1}
 
 
 # --- admin cache endpoints --------------------------------------------

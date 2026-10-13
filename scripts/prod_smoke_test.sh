@@ -101,14 +101,14 @@ else
 fi
 echo
 
-# /dashboard and /collection require a signed-in user (see
-# apps/web/middleware.ts) - an anonymous request redirects to
-# /market/movers rather than rendering. -L follows that redirect, so these
-# checks verify "the app is up and routing works", not "the page itself
-# rendered" - the same tradeoff scripts/smoke_test.sh already makes for
-# /dashboard in the dev stack.
+# /collection requires a signed-in user (see apps/web/src/proxy.ts) - an
+# anonymous request redirects rather than rendering. -L follows that
+# redirect, so these checks verify "the app is up and routing works", not
+# "the page itself rendered" - the same tradeoff scripts/smoke_test.sh
+# already makes for /collection in the dev stack. (/dashboard, /market/report
+# and /search were removed in Collector v1 S1; they now redirect.)
 echo "-- 2. Frontend pages --"
-for page in /dashboard /market/report /collection /search; do
+for page in /analytics /cards /collection; do
   http_get "$WEB_BASE_URL$page" -L
   if [[ "$HTTP_STATUS" == "200" ]]; then
     pass "GET $WEB_BASE_URL$page returned 200"

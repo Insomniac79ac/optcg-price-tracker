@@ -26,11 +26,11 @@ import {
 // auth logic, just a response header, never appeared on any response) while
 // diagnosing why staging's /collection etc. weren't redirecting.
 //
-// /collection, /grading, /wishlist, /dashboard, /activity, and /analytics/*
-// require a signed-in collector - they expose the caller's own
-// portfolio/wishlist/grading/analytics data. As of the 2026-08-18 MVP launch
-// cleanup /search and the internal market-analytics routes (/market/signals,
-// /market/opportunities, /market/signal-events, /market/report) join them.
+// /collection, /wishlist and /analytics/* require a signed-in collector -
+// they expose the caller's own portfolio/wishlist/analytics data. The
+// /grading, /dashboard, /activity, /search and internal market-analytics
+// pages were deleted in Collector v1 S1 (2026-10-13); next.config.ts
+// redirects them (before this proxy runs) or they 404.
 //
 // The public collector product - /, /cards, /cards/:id and /prints/:id - is
 // deliberately NOT matched here and stays reachable while signed out.
@@ -148,20 +148,12 @@ export default async function proxy(
 export const config = {
   matcher: [
     "/collection/:path*",
-    "/grading/:path*",
     "/wishlist/:path*",
-    "/dashboard/:path*",
-    "/activity/:path*",
     // `:path+` - one or more segments, so the bare /analytics (the public
     // market landscape) is NOT matched while every legacy /analytics/* leaf
     // page still is. See proxyGuard.ts for why, and proxy.test.ts for the
     // equality assertion that keeps this list identical to FULL_MATCHER.
     "/analytics/:path+",
-    "/search/:path*",
-    "/market/signals/:path*",
-    "/market/opportunities/:path*",
-    "/market/signal-events/:path*",
-    "/market/report/:path*",
     "/admin/:path*",
   ],
 };

@@ -14,8 +14,8 @@ def _reset(monkeypatch):
 
 def test_classify_route_groups():
     assert classify_route("/health", "GET") is None
-    assert classify_route("/search", "GET") == "search"
-    assert classify_route("/search/suggestions", "GET") == "search"
+    # /search was removed in Collector v1 S1; it is an ordinary (404) read now.
+    assert classify_route("/search", "GET") == "public_read"
     assert classify_route("/admin/backup/export", "GET") == "import_export"
     assert classify_route("/admin/backup/restore", "POST") == "import_export"
     assert classify_route("/admin/db-backups", "GET") == "import_export"
@@ -66,17 +66,6 @@ def test_import_export_rate_limit_returns_429(client, db_session, monkeypatch):
     assert response.status_code == 200
 
     response = client.get("/admin/db-backups")
-    assert response.status_code == 429
-
-
-def test_search_rate_limit_returns_429(client, db_session, monkeypatch):
-    monkeypatch.setattr(settings, "RATE_LIMIT_SEARCH_PER_5M", 2)
-
-    for _ in range(2):
-        response = client.get("/search", params={"q": "luffy"})
-        assert response.status_code == 200
-
-    response = client.get("/search", params={"q": "luffy"})
     assert response.status_code == 429
 
 
@@ -151,7 +140,7 @@ def test_rate_limit_status_reports_all_groups(client, db_session):
     data = response.json()
     assert data["enabled"] is True
     groups = {w["group"] for w in data["windows"]}
-    assert groups == {"public_read", "collection_write", "admin", "import_export", "search"}
+    assert groups == {"public_read", "collection_write", "admin", "import_export"}
 
 
 def test_rate_limit_status_reflects_active_keys(client, db_session, monkeypatch):

@@ -5,6 +5,7 @@ import { metadataBlockingBots } from "./src/lib/metadataBots";
 
 import { generateBuildVersion } from "./scripts/generate-build-version";
 import { buildImageSrcHosts } from "./src/lib/cspImageOrigin";
+import { legacyRedirects } from "./src/lib/legacyRedirects";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -93,6 +94,10 @@ const nextConfig: NextConfig = {
   // Preserve Next’s HTML-only search/social defaults and cover documented
   // OpenAI search/browsing agents without blocking normal browser metadata.
   htmlLimitedBots: metadataBlockingBots,
+  // 308s for the legacy pages deleted in Collector v1 S1 (src/lib/legacyRedirects.ts).
+  async redirects() {
+    return legacyRedirects();
+  },
   async headers() {
     return [
       {

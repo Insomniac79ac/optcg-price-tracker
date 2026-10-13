@@ -65,8 +65,8 @@ Existing badge components (`RarityBadge`, `SourceBadge`, `PriceTypeBadge`,
 emerald/sky/violet) rather than being rewritten onto the raw `--signal-*`
 hex values — they already map color→meaning consistently, and forcing every
 existing badge onto new hex values would be high-churn for no visual gain.
-New shared badges (`RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`,
-`DecisionBadge`) use the new signal tokens/utility classes directly.
+New shared badges (`RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`)
+use the new signal tokens/utility classes directly.
 
 ## Typography
 
@@ -109,10 +109,9 @@ per-page edit.
 
 **Nav mapping notes:**
 - Routes the design brief didn't explicitly list (`/analytics/collection`,
-  `/analytics/wishlist`, `/analytics/grading`, the `/market/*` sub-pages)
-  are nested under their closest parent nav item rather than removed.
+  `/analytics/wishlist`, `/market/movers`) are nested under their closest parent nav item rather than removed.
 - Several existing admin routes not named in the brief (alerts, cache,
-  data-retention, file-jobs, job-locks, market-workflow-runs, refresh-runs,
+  data-retention, file-jobs, job-locks, refresh-runs,
   release-status) live in a collapsed "Admin · More" group — reachable, not
   promoted.
 - "Source Mappings" from the brief's nav list has no corresponding route
@@ -121,8 +120,8 @@ per-page edit.
 - The topbar does **not** show a global source-health/last-sync badge —
   faking it (or firing an admin API call on every anonymous page load)
   would violate "static placeholder should not fake health". Real
-  freshness/health data stays on `/dashboard` (its `data_freshness` widget)
-  and `/admin/price-source-health` (which already fetches it).
+  freshness/health data stays on `/admin/price-source-health` (which already
+  fetches it; the `/dashboard` widget went with that page in Collector v1 S1).
 
 ## Component usage rules
 
@@ -142,11 +141,11 @@ for the tokens/shell to apply.
 | `ActionButton` | All buttons — variant encodes admin-safety tier (see below) |
 | `AdminActionPanel` | Groups action buttons + description for an admin action block |
 | `ConfirmActionModal` | Confirmation gate for real/destructive admin actions (see below) |
-| `RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`, `DecisionBadge`, `VariantBadge` | Canonical badge vocabularies (see Badges below) |
+| `RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`, `VariantBadge` | Canonical badge vocabularies (see Badges below) |
 | `CardImageFrame`, `CardIdentityBlock`, `CardVaultTile`, `CardPricePanel`, `SourceComparisonPanel` | Collector vault / card-identity treatment (see below) |
 | `SkeletonBlock` / `SkeletonRows` | Loading shimmer (used inside `LoadingState`) |
 | `SavedViewBar`, `SaveViewModal`, `ManageSavedViewsModal`, `SavedViewPill`, `PinnedViewsSection` | Saved filter/sort/column presets (see below) |
-| `CommandPalette`, `KeyboardShortcutsModal`, `QuickActionBar`, `WorkflowShortcutsSection` | Global Cmd/Ctrl+K palette, shortcuts reference, per-page shortcut pills (see "Command palette and workflow shortcuts" below) |
+| `CommandPalette`, `KeyboardShortcutsModal`, `QuickActionBar` | Global Cmd/Ctrl+K palette, shortcuts reference, per-page shortcut pills (see "Command palette and workflow shortcuts" below) |
 
 ## Saved views
 
@@ -156,14 +155,14 @@ Single-user saved filter presets (name a filter combination, reapply it later, o
 - **`SaveViewModal`** is the name/description/pinned/default/density form, in the same modal chrome as `ConfirmActionModal` (`rounded-modal`, `bg-bg-elevated`) but not a confirm-phrase gate - just a form.
 - **`ManageSavedViewsModal`** lists every saved view for the current page's route+view_type: pin/unpin, set/clear default, edit, delete (delete goes through `ConfirmActionModal`'s plain no-phrase mode).
 - **`SavedViewPill`** is the one deliberately fully-rounded badge shape in the app (`!rounded-full`, gold-tinted) - everything else uses the small `rounded-control` corner radius. Reserved for "this saved view is currently active," nothing else.
-- **`PinnedViewsSection`** renders pinned views across every scope on `/dashboard` (as a standalone section, not a `DashboardWidgetId` - it isn't personalization-scoped, so it doesn't touch `DashboardPreferences`) and `/admin/catalog-ops` (as "Pinned Admin Views," between the stat tiles and the nav-card grid). Links only navigate to the bare `route_path` - they can't pre-apply the view's filters (see the URL-params limitation above), so visiting the page and picking the view from its own `SavedViewBar` is still required. Unrelated to `DashboardPreferences.pinned_cards` (an existing, separately-schemaed, currently-unused field for pinning individual *cards*, not saved views) - don't conflate the two.
+- **`PinnedViewsSection`** renders pinned views on `/admin/catalog-ops` (as "Pinned Admin Views," between the stat tiles and the nav-card grid). Its `/dashboard` placement was removed with that page in Collector v1 S1. Links only navigate to the bare `route_path` - they can't pre-apply the view's filters (see the URL-params limitation above), so visiting the page and picking the view from its own `SavedViewBar` is still required. Unrelated to `DashboardPreferences.pinned_cards` (an existing, separately-schemaed, currently-unused field for pinning individual *cards*, not saved views) - don't conflate the two.
 - **Density**: `SaveViewModal`'s compact/comfortable selector is stored on the row (`density`) but no page currently reads it back - it's schema-ready for a future page to start honoring, not yet wired to any actual layout change. Whichever value a page eventually uses it for, the "dense" 11px/12px minimums from this doc still apply in both modes - `comfortable` should only ever mean more row padding, never smaller text.
 
 ## Command palette and workflow shortcuts
 
 Global `Cmd/Ctrl+K` command palette (navigation + card search + saved views
 + recent workflows), a per-page `QuickActionBar`, a keyboard-shortcuts
-reference modal, and a dashboard "Workflow Shortcuts" section - navigation
+reference modal - navigation
 convenience layered on top of the existing sidebar, not a replacement for
 it.
 
@@ -206,9 +205,9 @@ it.
 - **Keyboard shortcuts**: `Cmd/Ctrl+K` (palette), `Esc` (close), `/`
   (open palette, when nothing else is focused and no modal is open), `?`
   (open `KeyboardShortcutsModal`), and `g` then a key for direct
-  navigation (`g d` dashboard, `g c` collection, `g v` vault, `g w`
-  wishlist, `g b` buy decisions, `g s` sell decisions, `g r` portfolio
-  risk, `g a` admin catalog ops). All single-key shortcuts are guarded
+  navigation (for example `g c` collection, `g v` vault, `g w` wishlist,
+  `g a` admin catalog ops; the shortcuts for pages removed in Collector v1
+  S1 went with them). All single-key shortcuts are guarded
   against firing while focus is inside an input/textarea/select/
   contenteditable, or while the palette/shortcuts modal is open - `Esc`
   and `Cmd/Ctrl+K` are the only two that always fire.
@@ -276,8 +275,8 @@ sections. Order, top to bottom:
    Index wording") - opportunity scores + buy/sell-decision links are exactly
    the trading-signal framing that audit's Phase 8 rules out for a page every
    anonymous visitor reaches. `MarketContextPanel` itself, and the signal-
-   events/opportunities APIs/pages it linked to, are unchanged and still
-   directly reachable - just no longer rendered here.
+   events/opportunities APIs/pages it linked to, were deleted in Collector
+   v1 S1 (2026-10-13).
 5. **Notes/activity** (`CardActivityPanel`).
 6. **Admin mini-panel** (source mappings) - only rendered for admin-token
    holders, styled with `.admin-preview` (the gold-outline admin treatment,
@@ -342,7 +341,6 @@ never as a primary signal (pair it with a badge).
 | `RiskBadge` | low / medium / high / critical | green / blue / amber / red |
 | `ConfidenceBadge` | exact / high / medium / low / very_low / unknown | gold / green / blue / amber / red / neutral |
 | `SourceHealthBadge` | healthy / degraded / stale / blocked / error / unknown | green / blue / amber / red / red / neutral |
-| `DecisionBadge` | review_buy / review_sell / wait / hold / monitor / grade_first / missing_data / skip | green / blue / amber / neutral / cyan / purple / red / neutral |
 | `RarityBadge` (existing) | L / SR / SEC / R / UC / C | amber / violet / rose / sky / emerald / neutral |
 | `SourceBadge` (existing) | Yuyu-Tei / SNKRDUNK | sky / fuchsia |
 | `VariantBadge` | Manga / SP / SEC (gold family), Parallel / Alt Art (purple family), other (neutral) | see Card vault rules |
@@ -399,8 +397,8 @@ polish pass on top of everything above, not a replacement for it.
   the keyboard-shortcuts/auth controls — every element has a `h-9 w-9`
   minimum touch target below `lg`.
 - `SidebarNav` groups are Collector / Analytics / Admin / Admin · More —
-  Analytics routes (including the per-domain `analytics/collection`,
-  `analytics/wishlist`, `analytics/grading`) live in their own group rather
+  Analytics routes (including the per-domain `analytics/collection` and
+  `analytics/wishlist`) live in their own group rather
   than nested under Collector items, so the mobile drawer separates the
   three clearly (per the design brief).
 - No page should rely on horizontal body scroll — the only horizontal
@@ -422,8 +420,8 @@ polish pass on top of everything above, not a replacement for it.
 - `STICKY_FIRST_COLUMN_CLASS` (`sticky-col-first`) - add to a table's first
   `<th>` and every first `<td>` to keep that identifying column in view
   while the rest of a wide row scrolls underneath it. Applied to the
-  highest-value dense tables (buy/sell decision candidates, wishlist
-  targets, grading submissions, wishlist table, market opportunities).
+  highest-value dense tables (wishlist targets, grading submissions,
+  wishlist table).
 - `MobileRecordList` - a card-per-row fallback for the rare table that's
   genuinely unusable even with horizontal scroll. Not used anywhere in this
   pass (horizontal scroll was always workable) - available for a future
@@ -491,11 +489,11 @@ for the full route-by-route before/after detail this section summarizes.
 | `DataTableShell` / `TableScrollContainer` / `MobileRecordList` | Table chrome: scroll, empty state, sticky header, mobile fallback |
 | `FilterBar` (+ `FILTER_INPUT_CLASS`/`FILTER_LABEL_CLASS`) | Inline filter row with mobile collapse |
 | `SavedViewBar`, `SaveViewModal`, `ManageSavedViewsModal`, `SavedViewPill`, `PinnedViewsSection` | Saved views/filter presets |
-| `CommandPalette`, `KeyboardShortcutsModal`, `QuickActionBar`, `WorkflowShortcutsSection` | Command palette and workflow shortcuts |
+| `CommandPalette`, `KeyboardShortcutsModal`, `QuickActionBar` | Command palette and workflow shortcuts |
 | `CardVaultTile`, `CardImageFrame`, `CardIdentityBlock`, `CardPricePanel`, `CardActivityPanel` | Card identity/detail building blocks |
 | `OwnershipSummaryPanel`, `WishlistSummaryPanel`, `GradingSummaryPanel`, `MarketContextPanel`, `SourceComparisonPanel` | Card-detail side panels |
 | `PriceCell`, `PriceBasisLabel` | Canonical price + basis display (see "Price/source display examples") |
-| `Badge` (primitive), `VariantBadge`, `RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`, `DecisionBadge` | Shared status/category pills (see "Badge/status mapping" below) |
+| `Badge` (primitive), `VariantBadge`, `RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge` | Shared status/category pills (see "Badge/status mapping" below) |
 | `ActionButton` | Button with admin-safety-tier variants (`default`/`primary`/`dry-run`/`preview`/`real`/`danger`) |
 | `ConfirmActionModal`, `AdminActionPanel` | Destructive-action confirmation gates |
 | `SkeletonBlock` (`SkeletonRows`) | Loading shimmer |
@@ -503,10 +501,8 @@ for the full route-by-route before/after detail this section summarizes.
 `apps/web/src/components/` (domain-specific, built on the primitives above):
 `RarityBadge`, `SourceBadge`, and one status badge per domain vocabulary
 (`AlertStatusBadge`, `CollectionStatusBadge`, `GradingStatusBadge`,
-`LogLevelBadge`, `MarketSignalEventStatusBadge`,
-`MarketWorkflowRunStatusBadge`, `MatchStatusBadge`,
-`OpportunityCategoryBadge`, `PriceTypeBadge`, `RunStatusBadge`,
-`SearchTypeBadge`, `SeverityBadge`, `StockStatusBadge`,
+`LogLevelBadge`, `MatchStatusBadge`, `PriceTypeBadge`, `RunStatusBadge`,
+`SeverityBadge`, `StockStatusBadge`,
 `WishlistPriorityBadge`, `WishlistStatusBadge`, `CollectorTagBadge`) — kept
 separate from `components/ui/` deliberately, see "Page adoption rules"
 below. `StateBlocks.tsx` exports `LoadingState`/`ErrorState`/`EmptyState`/
@@ -553,7 +549,6 @@ mapping from the design brief's Part 7:
 | Variant | `VariantBadge` | Manga/SP/SEC gold family, Parallel/Alt Art purple family |
 | Source | `SourceBadge` | Yuyu-Tei / SNKRDUNK |
 | Valuation mode | `PriceBasisLabel` (`mode` prop) | Raw market / Graded adjusted |
-| Decision action | `DecisionBadge` | review_buy / review_sell / wait / hold / monitor / grade_first / missing_data / skip |
 | Risk level | `RiskBadge` | low / medium / high / critical |
 | Confidence label | `ConfidenceBadge` | exact / high / medium / low / very_low / unknown |
 | Source health | `SourceHealthBadge` | healthy / degraded / stale / blocked / error / unknown |
@@ -561,7 +556,6 @@ mapping from the design brief's Part 7:
 | Review status (SNKRDUNK candidates) | `MatchStatusBadge` | own matched/unmatched/rejected vocabulary |
 | Job status (file jobs) | `Badge` (via `FileJobTracker`'s `STATUS_STYLES` map) | queued/running/success/failed/cancelled |
 | Import validation status | `Badge` (via `import-validation`'s `StatusBadge`) | valid/invalid |
-| Workflow status | `MarketWorkflowRunStatusBadge` | market workflow runs |
 | Refresh run status | `RunStatusBadge` | price refresh runs |
 | Alert status | `AlertStatusBadge` | alert events |
 | Log level | `LogLevelBadge` | structured app logs |

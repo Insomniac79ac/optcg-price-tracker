@@ -100,12 +100,6 @@ export function OwnershipSummaryPanel({
                   {item.latest_grading_status && (
                     <GradingStatusBadge status={item.latest_grading_status} />
                   )}
-                  <Link
-                    href={`/grading?item_id=${item.id}`}
-                    className="text-xs font-medium text-violet-400 hover:text-violet-300"
-                  >
-                    Create grading submission
-                  </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div>

@@ -175,23 +175,6 @@ def test_changing_grading_submission_status_records_activity(client, db_session)
     assert "grading_submission_status_changed" in event_types(client)
 
 
-# --- admin actions -----------------------------------------------------
-
-
-def test_snapshot_market_signals_records_activity(client, db_session):
-    response = client.post("/admin/actions/snapshot-market-signals")
-    assert response.status_code == 200
-
-    assert "market_signal_snapshot" in event_types(client)
-
-
-def test_generate_market_report_records_activity(client, db_session):
-    response = client.post("/admin/actions/generate-market-report")
-    assert response.status_code == 200
-
-    assert "market_report_generated" in event_types(client)
-
-
 # --- backup restore ------------------------------------------------------
 
 

@@ -1,6 +1,8 @@
 # Release blockers - v1.0.0
 
 > **Environment status (2026-10-09):** there is no live production and `main` (last updated 2026-07-23) is not a release source; production remains RED. See `docs/agent/PROJECT_HANDOVER.md` §5 and §41.
+>
+> **Collector v1 S1 (2026-10-13):** the market intelligence features (signals, signal events, opportunities, market reports and their Telegram digest, the market workflow), the analytics digest, the buy/sell-decision, portfolio-risk and grading-analytics pages, `/dashboard`, `/search`, `/activity` and the `/grading` page were removed. The records below describe the v1.0.0 candidate as audited then; see `docs/route_inventory.md` "Update (2026-10-13)" for the current routes and redirects.
 
 **No open release blockers.** Every row below is `fixed` or `deferred` (cosmetic, non-blocking) as
 of the 2026-07-23 v1.0.0 tagging pass - see `docs/release_candidate_report.md` for the full

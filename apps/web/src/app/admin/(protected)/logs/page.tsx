@@ -30,7 +30,6 @@ const NA = "not available";
 const ALL_OPTION = "";
 
 const RELATED_ENTITY_LINKS: Record<string, string> = {
-  market_workflow_run: "/admin/market-workflow-runs",
   price_refresh_run: "/admin/refresh-runs",
 };
 
@@ -201,16 +200,13 @@ function SummaryCards({ summary }: { summary: ObservabilitySummary | null }) {
   if (!summary) {
     return (
       <StatGrid>
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <StatCard key={i} label="…" value={NA} />
         ))}
       </StatGrid>
     );
   }
 
-  const workflow = summary.latest_market_workflow_run as
-    | { status?: string; id?: number }
-    | null;
   const refresh = summary.latest_price_refresh_run as { status?: string; id?: number } | null;
   const backup = summary.latest_backup as { filename?: string; created_at?: string } | null;
 
@@ -231,7 +227,6 @@ function SummaryCards({ summary }: { summary: ObservabilitySummary | null }) {
         value={summary.last_24h.warning}
         tone={summary.last_24h.warning > 0 ? "bad" : "neutral"}
       />
-      <StatCard label="Latest workflow" value={workflow ? naText(workflow.status) : NA} />
       <StatCard label="Latest price refresh" value={refresh ? naText(refresh.status) : NA} />
       <StatCard
         label="Latest backup"

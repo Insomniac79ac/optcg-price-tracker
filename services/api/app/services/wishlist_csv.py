@@ -38,17 +38,10 @@ DEFAULT_STATUS = "watching"
 # app.services.file_jobs' background wishlist_import processing, so both
 # paths stay in sync.
 WISHLIST_WRITE_CACHE_PREFIXES = (
-    "dashboard",
     "wishlist",
     "wishlist_summary",
     "collection_analytics",
     "wishlist_analytics",
-    "market_opportunities",
-    "market_signals",
-    "sell_decisions",
-    "buy_decisions",
-    "portfolio_risk",
-    "analytics_digest",
     "admin/catalog_coverage",
 )
 

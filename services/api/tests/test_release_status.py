@@ -23,7 +23,6 @@ def test_release_status_returns_expected_shape(client, db_session):
     response = client.get("/admin/release-status")
 
     data = response.json()
-    assert data["latest_market_workflow_run"] is None
     assert data["latest_backup"] is None
     assert data["latest_error"] is None
 

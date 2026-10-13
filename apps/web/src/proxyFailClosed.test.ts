@@ -47,12 +47,11 @@ const isNotFoundRewrite = (res: NextResponse) =>
   (res.headers.get("x-middleware-rewrite") ?? "").includes("__not-found__");
 
 const PROTECTED_TOOLS = [
-  "/search",
-  "/market/signals",
-  "/market/opportunities",
-  "/market/signal-events",
-  "/market/report",
-  "/dashboard",
+  "/collection",
+  "/collection/vault",
+  "/wishlist",
+  "/analytics/collection",
+  "/analytics/wishlist",
 ];
 
 beforeEach(() => {
@@ -91,7 +90,7 @@ describe("normal signed-out visitor", () => {
       expect(redirect.pathname).toBe("/admin/login");
       expect(redirect.searchParams.get("callbackUrl")).toBe(path);
     }
-    const collector = new URL((await get("/search")).headers.get("location")!);
+    const collector = new URL((await get("/collection")).headers.get("location")!);
     expect(collector.origin).toBe(ORIGIN);
     expect(collector.pathname).toBe("/sign-in");
   });
@@ -159,7 +158,7 @@ describe("auth evaluation throws (missing or malformed AUTH_SECRET)", () => {
   });
 
   it("never leaks the failure reason to the browser", async () => {
-    const res = await get("/market/signals");
+    const res = await get("/wishlist");
     const serialised = JSON.stringify([...res.headers.entries()]);
     expect(serialised).not.toMatch(/MissingSecret/i);
     expect(serialised).not.toMatch(/secret/i);

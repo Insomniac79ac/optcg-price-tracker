@@ -21,7 +21,6 @@ def release_status_endpoint(db: Session = Depends(get_db)):
         git_commit=status.git_commit,
         build_time=status.build_time,
         app_env=status.app_env,
-        latest_market_workflow_run=status.latest_market_workflow_run,
         latest_system_check=SystemCheckResponseOut(**status.latest_system_check),
         latest_backup=status.latest_backup,
         latest_error=app_log_to_out(status.latest_error) if status.latest_error is not None else None,

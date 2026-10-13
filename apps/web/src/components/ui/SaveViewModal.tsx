@@ -119,7 +119,7 @@ export function SaveViewModal({
                 checked={values.pinned}
                 onChange={(e) => update("pinned", e.target.checked)}
               />
-              Pin to dashboard
+              Pin to Catalog Ops
             </label>
             <label className="flex items-center gap-1.5 text-xs text-text-secondary">
               <input

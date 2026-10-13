@@ -38,19 +38,14 @@ if ! [[ "$CONCURRENCY" =~ ^[0-9]+$ ]] || [[ "$CONCURRENCY" -lt 1 ]]; then
   exit 1
 fi
 
-# /dashboard, /collection, /wishlist, and /grading redirect an anonymous
-# visitor to /market/movers (see apps/web/middleware.ts) - -L below follows
-# that, matching scripts/web_route_smoke.sh's tradeoff of only verifying
+# /collection and /wishlist redirect an anonymous visitor (see
+# apps/web/src/proxy.ts) - -L below follows that, matching scripts/web_route_smoke.sh's tradeoff of only verifying
 # "the app is up and routing works" for those routes, not signed-in content.
 ROUTES=(
-  /dashboard
-  /search
   /collection
   /wishlist
-  /grading
-  /activity
-  /market/report
-  /market/opportunities
+  /analytics
+  /cards
   /admin/performance
   /admin/cache
   /admin/file-jobs

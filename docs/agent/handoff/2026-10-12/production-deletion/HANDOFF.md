@@ -14,8 +14,12 @@ Full record and before/after table: `docs/agent/plans/production-deprecation/INV
 - `evidence/pr107-delivery/`: PR #107 CI delivery receipts; `baseline-after-pr107.json`,
   `collector-records-after-pr107.json`: post-merge checks.
 
+- `evidence/pr108-delivery/`: PR #108 CI receipts (Vercel Git-fetch failure);
+  `verify-3ec8a7a-after-redeploy.json`: verifier green after the owner-authorized redeploy.
+
 Pending for the next session:
-- The outcome PR's own delivery receipt.
+- Land this record with the next docs change (branch
+  `docs/production-deletion-pr108-fix-20261012`, no PR opened).
 - `scripts/staging_db_read_check.py` comment (port 21415 was the production proxy,
-  now removed): separate small PR outside quiet windows, or with the next release.
-- Staging `ADMIN_TOKEN` rotation: owner decision.
+  now removed): folded into collector-v1 S1.
+- Staging `ADMIN_TOKEN` rotation: collector-v1 S5 (owner decision 2026-10-12).

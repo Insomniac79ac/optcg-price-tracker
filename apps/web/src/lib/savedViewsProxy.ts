@@ -10,7 +10,7 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
 
 /** Shared proxy body for every /api/saved-views/** route - mirrors
- * src/app/api/dashboard/preferences/route.ts's auth/timeout/error-parsing
+ * the former dashboard preferences proxy's auth/timeout/error-parsing
  * pattern, with one addition: a 204 (DELETE /saved-views/{id}, POST
  * /clear-default) is translated into a small JSON success body rather than
  * forwarded as an empty response, since fetchAdminJson (the frontend

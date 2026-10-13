@@ -12,16 +12,16 @@ describe("recentWorkflows", () => {
   });
 
   it("records a new entry", () => {
-    recordRecentWorkflow({ item_type: "route", label: "Dashboard", route_path: "/dashboard" });
+    recordRecentWorkflow({ item_type: "route", label: "Collection", route_path: "/collection" });
     const all = getRecentWorkflows();
     expect(all).toHaveLength(1);
-    expect(all[0].label).toBe("Dashboard");
+    expect(all[0].label).toBe("Collection");
     expect(all[0].usage_count).toBe(1);
   });
 
   it("upserts by item_type + route_path + label, bumping usage_count", () => {
-    recordRecentWorkflow({ item_type: "route", label: "Dashboard", route_path: "/dashboard" });
-    recordRecentWorkflow({ item_type: "route", label: "Dashboard", route_path: "/dashboard" });
+    recordRecentWorkflow({ item_type: "route", label: "Collection", route_path: "/collection" });
+    recordRecentWorkflow({ item_type: "route", label: "Collection", route_path: "/collection" });
     const all = getRecentWorkflows();
     expect(all).toHaveLength(1);
     expect(all[0].usage_count).toBe(2);

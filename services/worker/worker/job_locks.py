@@ -1,14 +1,13 @@
 """Mirrors app.services.job_locks on the api service - same table, same
-acquire/release semantics, same LOCK_TTL_SECONDS. Used by
-worker.jobs.refresh_prices and worker.jobs.run_market_workflow (manual CLI,
-Celery task, and beat-scheduled entry points all go through the same
-functions in those modules, so locking here covers all three uniformly).
+acquire/release semantics, same LOCK_TTL_SECONDS for shared names. Used by
+worker.jobs.refresh_prices (manual CLI, Celery task, and beat-scheduled
+entry points all go through the same function there, so locking here covers
+all three uniformly), data retention pruning and SNKRDUNK discovery.
 See 'Worker job concurrency locking' in docs/operations.md.
 
 Acquisition is non-blocking and fails clean (LockHeldError) rather than
 waiting - see app.services.job_locks's module docstring for why that makes
-nested acquisition (e.g. run_market_workflow holding market_workflow while
-refresh_prices acquires price_refresh beneath it) deadlock-free with no
+nested acquisition of distinct-named locks deadlock-free with no
 special-casing needed.
 """
 
@@ -28,11 +27,7 @@ from worker.models import JobLock
 
 LOCK_TTL_SECONDS: dict[str, int] = {
     "price_refresh": 30 * 60,
-    "market_workflow": 60 * 60,
     "portfolio_snapshot": 10 * 60,
-    "market_signal_snapshot": 10 * 60,
-    "market_report_generation": 10 * 60,
-    "telegram_market_digest": 5 * 60,
     "data_retention_prune": 30 * 60,
     "backup_restore": 60 * 60,
     # Bounded discovery: a run is capped at ~5 minutes of wall clock,

@@ -304,5 +304,103 @@ class RepositoryGraphTests(unittest.TestCase):
                     self.assertNotIn("services/api/app/api/market.py", found)
 
 
+# Collector v1 S1 (legacy deletion): every services/api path the PR deletes or
+# edits. PLAN §A rule 6: none may be a collector runtime input, so S1 is not a
+# collector release. Deleted modules must also leave the graph resolvable.
+COLLECTOR_V1_S1_API_PATHS = (
+    "services/api/app/api/admin_actions.py",
+    "services/api/app/api/admin_card_merge.py",
+    "services/api/app/api/admin_cards.py",
+    "services/api/app/api/admin_data_retention.py",
+    "services/api/app/api/admin_observability.py",
+    "services/api/app/api/admin_release_status.py",
+    "services/api/app/api/analytics.py",
+    "services/api/app/api/collector_activity.py",
+    "services/api/app/api/dashboard.py",
+    "services/api/app/api/grading.py",
+    "services/api/app/api/market.py",
+    "services/api/app/api/market_workflow_runs.py",
+    "services/api/app/api/search.py",
+    "services/api/app/core/rate_limit.py",
+    "services/api/app/generate_analytics_digest.py",
+    "services/api/app/generate_market_report.py",
+    "services/api/app/main.py",
+    "services/api/app/schemas.py",
+    "services/api/app/seed_saved_views.py",
+    "services/api/app/send_market_report_digest.py",
+    "services/api/app/services/activity_timeline.py",
+    "services/api/app/services/analytics_digest.py",
+    "services/api/app/services/buy_decision_support.py",
+    "services/api/app/services/collection_csv.py",
+    "services/api/app/services/dashboard.py",
+    "services/api/app/services/grading_analytics.py",
+    "services/api/app/services/job_locks.py",
+    "services/api/app/services/market_report.py",
+    "services/api/app/services/market_signal_events.py",
+    "services/api/app/services/market_signals.py",
+    "services/api/app/services/market_workflow_trigger.py",
+    "services/api/app/services/observability.py",
+    "services/api/app/services/opportunity_scoring.py",
+    "services/api/app/services/portfolio_risk.py",
+    "services/api/app/services/public_price_payload.py",
+    "services/api/app/services/refresh_trigger.py",
+    "services/api/app/services/release_status.py",
+    "services/api/app/services/search.py",
+    "services/api/app/services/search_ownership.py",
+    "services/api/app/services/sell_decision_support.py",
+    "services/api/app/services/system_check.py",
+    "services/api/app/services/telegram_client.py",
+    "services/api/app/services/telegram_market_digest.py",
+    "services/api/app/services/wishlist_csv.py",
+    "services/api/app/snapshot_market_signals.py",
+    "services/api/app/snapshot_portfolio_valuation.py",
+    "services/api/tests/test_activity_wiring.py",
+    "services/api/tests/test_admin_actions.py",
+    "services/api/tests/test_admin_auth.py",
+    "services/api/tests/test_analytics_digest.py",
+    "services/api/tests/test_backup.py",
+    "services/api/tests/test_buy_decision_support.py",
+    "services/api/tests/test_cache.py",
+    "services/api/tests/test_collector.py",
+    "services/api/tests/test_collector_activity.py",
+    "services/api/tests/test_dashboard.py",
+    "services/api/tests/test_grading.py",
+    "services/api/tests/test_grading_analytics.py",
+    "services/api/tests/test_legacy_routes_removed.py",
+    "services/api/tests/test_market_analytics.py",
+    "services/api/tests/test_market_report.py",
+    "services/api/tests/test_market_signal_events.py",
+    "services/api/tests/test_market_signals.py",
+    "services/api/tests/test_mutating_route_auth.py",
+    "services/api/tests/test_observability.py",
+    "services/api/tests/test_opportunity_scoring.py",
+    "services/api/tests/test_pagination_endpoints.py",
+    "services/api/tests/test_portfolio_risk.py",
+    "services/api/tests/test_private_read_route_auth.py",
+    "services/api/tests/test_rate_limit.py",
+    "services/api/tests/test_release_status.py",
+    "services/api/tests/test_search.py",
+    "services/api/tests/test_search_health.py",
+    "services/api/tests/test_search_tenant_isolation.py",
+    "services/api/tests/test_sell_decision_support.py",
+    "services/api/tests/test_system_check.py",
+    "services/api/tests/test_telegram_market_digest.py",
+    "services/api/tests/test_yuyutei_sale_price_semantics.py",
+)
+
+
+class CollectorV1S1ImportGraphTests(unittest.TestCase):
+    def test_s1_paths_are_outside_both_collector_runtime_inputs(self):
+        head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
+        with patch.object(inputs.state, "ROOT", REPO):
+            for collector in ("snkrdunk", "yuyutei"):
+                with self.subTest(collector=collector):
+                    found = inputs.runtime_inputs(head, collector)
+                    touched = [p for p in COLLECTOR_V1_S1_API_PATHS if inputs.counts(p, found)]
+                    self.assertEqual(touched, [])
+                    for protected in ("services/api/app/models/__init__.py", "services/api/app/settings.py"):
+                        self.assertNotIn(protected, COLLECTOR_V1_S1_API_PATHS)
+
+
 if __name__ == "__main__":
     unittest.main()

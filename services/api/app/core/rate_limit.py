@@ -5,7 +5,7 @@ dict, so a multi-instance/distributed deployment would need to move this to
 a reverse proxy or a shared store (Redis) instead - see 'Rate limiting' in
 docs/deployment.md.
 
-Requests are classified into one of five route groups (see classify_route)
+Requests are classified into one of four route groups (see classify_route)
 based on path + method, each with its own limit/window read live from
 Settings (so tests can monkeypatch settings.RATE_LIMIT_* and see the change
 immediately, and so RATE_LIMIT_ENABLED=false can be toggled without a
@@ -54,8 +54,6 @@ IMPORT_EXPORT_PATHS = frozenset(
     }
 )
 
-SEARCH_PATHS = frozenset({"/search", "/search/suggestions"})
-
 # Non-admin write endpoints for collection/wishlist/grading/notes - see
 # app.api.collection, app.api.wishlist, app.api.grading, app.api.collector_notes.
 COLLECTION_WRITE_PREFIXES = ("/collection", "/wishlist", "/grading", "/collector/notes")
@@ -72,15 +70,12 @@ def is_admin_path(path: str) -> bool:
 
 
 def classify_route(path: str, method: str) -> str | None:
-    """Maps a request to one of the five rate-limit groups, or None if it
+    """Maps a request to one of the four rate-limit groups, or None if it
     isn't rate limited at all (health check, or a write endpoint outside the
-    groups the spec defines - e.g. market signal event actions, dashboard
-    preference updates - deliberately left uncovered rather than guessing at
-    a group for them)."""
+    groups the spec defines - deliberately left uncovered rather than
+    guessing at a group for them)."""
     if path in EXEMPT_PATHS:
         return None
-    if path in SEARCH_PATHS:
-        return "search"
     if path in IMPORT_EXPORT_PATHS:
         return "import_export"
     if is_admin_path(path):
@@ -107,7 +102,6 @@ _WINDOW_SECONDS = {
     "collection_write": 300,
     "admin": 300,
     "import_export": 600,
-    "search": 300,
 }
 
 
@@ -117,7 +111,6 @@ def _limit_for(group: str) -> int:
         "collection_write": settings.RATE_LIMIT_COLLECTION_WRITE_PER_5M,
         "admin": settings.RATE_LIMIT_ADMIN_PER_5M,
         "import_export": settings.RATE_LIMIT_IMPORT_EXPORT_PER_10M,
-        "search": settings.RATE_LIMIT_SEARCH_PER_5M,
     }[group]
 
 
@@ -125,7 +118,7 @@ def group_config(group: str) -> GroupConfig:
     return GroupConfig(group=group, limit=_limit_for(group), window_seconds=_WINDOW_SECONDS[group])
 
 
-ALL_GROUPS: tuple[str, ...] = ("public_read", "collection_write", "admin", "import_export", "search")
+ALL_GROUPS: tuple[str, ...] = ("public_read", "collection_write", "admin", "import_export")
 
 
 # --- in-memory fixed-window counters -------------------------------------

@@ -44,7 +44,7 @@ const SAVED_VIEW = {
   updated_at: "2026-01-01T00:00:00Z",
   name: "Review Buy",
   description: "Review buy candidates",
-  route_path: "/analytics/buy-decisions",
+  route_path: "/analytics/collection",
   view_type: "buy_decisions",
   scope: "analytics" as const,
   filters_json: { action: "review_buy", min_score: 70 },
@@ -73,7 +73,7 @@ describe("SavedViewBar", () => {
     fetchSavedViews.mockResolvedValue(EMPTY_LIST);
     render(
       <SavedViewBar
-        routePath="/analytics/buy-decisions"
+        routePath="/analytics/collection"
         viewType="buy_decisions"
         scope="analytics"
         currentFilters={{ action: "review_buy" }}
@@ -82,7 +82,7 @@ describe("SavedViewBar", () => {
     );
 
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalledWith({
-      route_path: "/analytics/buy-decisions",
+      route_path: "/analytics/collection",
       view_type: "buy_decisions",
     }));
     expect(screen.getByRole("button", { name: "Save current view" })).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe("SavedViewBar", () => {
     createSavedView.mockResolvedValue(SAVED_VIEW);
     render(
       <SavedViewBar
-        routePath="/analytics/buy-decisions"
+        routePath="/analytics/collection"
         viewType="buy_decisions"
         scope="analytics"
         currentFilters={{ action: "review_buy", min_score: 70 }}
@@ -111,7 +111,7 @@ describe("SavedViewBar", () => {
     await waitFor(() => expect(createSavedView).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "Review Buy",
-        route_path: "/analytics/buy-decisions",
+        route_path: "/analytics/collection",
         view_type: "buy_decisions",
         filters_json: { action: "review_buy", min_score: 70 },
       }),
@@ -132,7 +132,7 @@ describe("SavedViewBar", () => {
     const onApply = vi.fn();
     render(
       <SavedViewBar
-        routePath="/analytics/buy-decisions"
+        routePath="/analytics/collection"
         viewType="buy_decisions"
         scope="analytics"
         currentFilters={{}}

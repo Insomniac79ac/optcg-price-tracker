@@ -87,7 +87,7 @@ export default function ReleaseStatusPage() {
           title="Release status"
           description={
             <>
-              Version/build metadata plus the latest system check, workflow run, backup, and
+              Version/build metadata plus the latest system check, backup, and
               error - the same checklist as docs/release_checklist.md&apos;s post-deploy
               validation step.
             </>
@@ -203,35 +203,6 @@ export default function ReleaseStatusPage() {
                 </Link>
               </Section>
 
-              <Section title="Latest market workflow run">
-                {status.latest_market_workflow_run ? (
-                  <div className="text-xs text-text-secondary">
-                    <p>
-                      Run #{String(status.latest_market_workflow_run.id)} -{" "}
-                      <span className="font-medium text-text-primary">
-                        {String(status.latest_market_workflow_run.status)}
-                      </span>
-                    </p>
-                    <p className="mt-1">
-                      Started: {String(status.latest_market_workflow_run.started_at)}
-                    </p>
-                    {status.latest_market_workflow_run.error_message ? (
-                      <p className="mt-1 text-signal-red">
-                        {String(status.latest_market_workflow_run.error_message)}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="text-xs text-text-muted">No workflow runs yet.</p>
-                )}
-                <Link
-                  href="/admin/market-workflow-runs"
-                  className="mt-2 inline-block text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-                >
-                  View workflow runs
-                </Link>
-              </Section>
-
               <Section title="Latest backup">
                 {status.latest_backup ? (
                   <div className="text-xs text-text-secondary">
@@ -293,12 +264,6 @@ export default function ReleaseStatusPage() {
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
                 Backup &amp; restore
-              </Link>
-              <Link
-                href="/admin/market-workflow-runs"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Market workflow runs
               </Link>
             </div>
           </>

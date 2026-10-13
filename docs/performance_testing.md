@@ -32,7 +32,7 @@ exists under more load and more data.
 ## Seed synthetic test data locally
 
 `python -m app.seed_performance_data` creates deterministic, clearly-fake data so pagination,
-caching, search, and the dashboard have enough volume to be worth load testing. Every row it
+caching and the collection pages have enough volume to be worth load testing. Every row it
 creates is namespaced so it can never be confused with real data:
 
 - Cards use `card_code` `TEST-PERF-0001`, `TEST-PERF-0002`, ... (`set_code` `TEST-PERF`) - real
@@ -93,15 +93,15 @@ WEB_BASE_URL=http://127.0.0.1:3000 REQUESTS=10 CONCURRENCY=3 bash scripts/load_t
 ```
 
 A route passes if every request in the burst returned HTTP 200 (following redirects, same as
-`scripts/web_route_smoke.sh` - a signed-out visit to e.g. `/dashboard` redirects to
-`/market/movers`, which still counts as reachable/passing).
+`scripts/web_route_smoke.sh` - a signed-out visit to e.g. `/collection` redirects to
+`/sign-in`, which still counts as reachable/passing).
 
 ## Check cache hits
 
 `GET /admin/cache/status` (or the `/admin/cache` page) shows the active backend, key count, and
 configured TTLs. Every cached response also carries `X-Cache: HIT` / `X-Cache: MISS` and
-`X-Cache-Key` response headers - `curl -sI` a cached endpoint (e.g. `/dashboard/overview`,
-`/market/opportunities`) twice in a row and confirm the second call comes back `X-Cache: HIT`. See
+`X-Cache-Key` response headers - `curl -sI` a cached endpoint (e.g. `/collection/valuation`,
+`/wishlist/summary`) twice in a row and confirm the second call comes back `X-Cache: HIT`. See
 ["Cache operations"](operations.md#cache-operations) for the full reference, including how to
 clear specific prefixes.
 
@@ -142,7 +142,7 @@ docker compose exec api python -m app.cleanup_performance_data --confirm DELETE_
 ```
 
 Run this after you're done load testing locally - synthetic data left lying around will skew real
-dashboard/collection views in a shared dev database.
+collection views in a shared dev database.
 
 ## Automated Phase 7 audit
 

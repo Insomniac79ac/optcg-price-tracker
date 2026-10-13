@@ -57,7 +57,7 @@ describe("the public collector surface stays reachable while signed out", () => 
   });
 
   it("G. keeps every unrelated protected route protected", () => {
-    for (const p of ["/collection", "/wishlist", "/grading", "/dashboard", "/search", "/market/report"]) {
+    for (const p of ["/collection", "/wishlist", "/analytics/collection"]) {
       expect(isMatched(p)).toBe(true);
       expect(guardOutcome(p, false)).toEqual({ kind: "redirect-sign-in" });
       expect(failClosedOutcome(p)).toEqual({ kind: "redirect-sign-in" });
@@ -67,30 +67,28 @@ describe("the public collector surface stays reachable while signed out", () => 
   });
 });
 
-describe("internal market analytics are guarded", () => {
+describe("routes deleted in Collector v1 S1 are no longer guarded", () => {
+  // They answer permanent redirects from next.config.ts (which run before the
+  // proxy) or 404 (/grading), so the matcher no longer lists them.
   it.each([
     "/market/signals",
     "/market/opportunities",
     "/market/signal-events",
     "/market/report",
-  ])("%s is guarded", (pathname) => {
-    expect(isMatched(pathname)).toBe(true);
-  });
-
-  it("guards their subpaths too", () => {
-    expect(isMatched("/market/report/latest")).toBe(true);
-    expect(isMatched("/market/signals/42")).toBe(true);
-  });
-
-  it("leaves the public Market Index alone", () => {
-    expect(isMatched("/market/movers")).toBe(false);
-    expect(PROTECTED_MATCHER.map(prefixOf)).not.toContain("/market/movers");
+    "/market/report/latest",
+    "/search",
+    "/dashboard",
+    "/activity",
+    "/grading",
+  ])("%s is not matched", (pathname) => {
+    expect(isMatched(pathname)).toBe(false);
   });
 });
 
-describe("/search is guarded", () => {
-  it("is not reachable signed out", () => {
-    expect(isMatched("/search")).toBe(true);
+describe("the public Market Index", () => {
+  it("leaves the public Market Index alone", () => {
+    expect(isMatched("/market/movers")).toBe(false);
+    expect(PROTECTED_MATCHER.map(prefixOf)).not.toContain("/market/movers");
   });
 });
 
@@ -99,10 +97,8 @@ describe("collector-private routes remain guarded", () => {
     "/collection",
     "/collection/vault",
     "/wishlist",
-    "/grading",
-    "/dashboard",
-    "/activity",
     "/analytics/collection",
+    "/analytics/wishlist",
   ])("%s is guarded", (pathname) => {
     expect(isMatched(pathname)).toBe(true);
   });
@@ -127,12 +123,6 @@ describe("the market landscape is public, the collector analytics beneath it are
     for (const leaf of [
       "/analytics/collection",
       "/analytics/wishlist",
-      "/analytics/grading",
-      "/analytics/buy-decisions",
-      "/analytics/sell-decisions",
-      "/analytics/portfolio-risk",
-      "/analytics/digest",
-      "/analytics/digest/reports",
     ]) {
       expect(isMatched(leaf), `${leaf} must stay guarded`).toBe(true);
       expect(guardOutcome(leaf, false)).toEqual({ kind: "redirect-sign-in" });
@@ -141,12 +131,12 @@ describe("the market landscape is public, the collector analytics beneath it are
   });
 
   it("uses :path+ for analytics and :path* for the routes whose parent is private", () => {
-    // The neighbours must NOT be converted along with it: /collection,
-    // /wishlist, /grading, /dashboard and /activity are all real pages showing
-    // the caller's own data, so their bare parent has to stay matched.
+    // The neighbours must NOT be converted along with it: /collection and
+    // /wishlist are real pages showing the caller's own data, so their bare
+    // parent has to stay matched.
     expect(PROTECTED_MATCHER).toContain("/analytics/:path+");
     expect(PROTECTED_MATCHER).not.toContain("/analytics/:path*");
-    for (const parent of ["/collection", "/wishlist", "/grading", "/dashboard", "/activity"]) {
+    for (const parent of ["/collection", "/wishlist"]) {
       expect(PROTECTED_MATCHER).toContain(`${parent}/:path*`);
       expect(isMatched(parent), `${parent} must stay guarded`).toBe(true);
     }
@@ -169,15 +159,7 @@ describe("FULL_MATCHER composition", () => {
 
 describe("guardOutcome - signed out", () => {
   it("sends normal protected routes to sign-in", () => {
-    for (const p of [
-      "/search",
-      "/market/signals",
-      "/market/opportunities",
-      "/market/signal-events",
-      "/market/report",
-      "/dashboard",
-      "/collection",
-    ]) {
+    for (const p of ["/collection", "/wishlist", "/analytics/collection"]) {
       expect(guardOutcome(p, false), p).toEqual({ kind: "redirect-sign-in" });
     }
   });
@@ -190,7 +172,7 @@ describe("guardOutcome - signed out", () => {
 
 describe("guardOutcome - signed in", () => {
   it("allows every matched route through", () => {
-    for (const p of ["/search", "/market/report", "/dashboard", "/cards/1", "/admin/logs"]) {
+    for (const p of ["/collection", "/analytics/wishlist", "/cards/1", "/admin/logs"]) {
       expect(guardOutcome(p, true), p).toEqual({ kind: "allow" });
     }
   });
@@ -199,17 +181,11 @@ describe("guardOutcome - signed in", () => {
 describe("failClosedOutcome - authentication could not be evaluated", () => {
   it("never allows protected content through", () => {
     for (const p of [
-      "/search",
-      "/market/signals",
-      "/market/opportunities",
-      "/market/signal-events",
-      "/market/report",
-      "/dashboard",
       "/collection",
+      "/collection/vault",
       "/wishlist",
-      "/grading",
-      "/activity",
       "/analytics/collection",
+      "/analytics/wishlist",
       "/cards/1",
       "/admin/logs",
     ]) {
@@ -220,12 +196,12 @@ describe("failClosedOutcome - authentication could not be evaluated", () => {
   it("keeps each route's own established public behaviour", () => {
     // Not one blanket response: an admin route goes to the admin login and
     // ordinary protected tools stay a sign-in redirect.
-    expect(failClosedOutcome("/market/signals")).toEqual({ kind: "redirect-sign-in" });
+    expect(failClosedOutcome("/wishlist")).toEqual({ kind: "redirect-sign-in" });
     expect(failClosedOutcome("/admin/logs")).toEqual({ kind: "redirect-admin-login" });
   });
 
   it("is exactly the signed-out policy", () => {
-    for (const p of ["/search", "/cards/1", "/admin/logs", "/dashboard"]) {
+    for (const p of ["/collection", "/cards/1", "/admin/logs", "/analytics/wishlist"]) {
       expect(failClosedOutcome(p)).toEqual(guardOutcome(p, false));
     }
   });

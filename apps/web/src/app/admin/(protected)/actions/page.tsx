@@ -12,34 +12,19 @@ import {
   ADMIN_ACTION_SOURCES,
   AdminAuthRequiredError,
   triggerFullMarketRefresh,
-  triggerGenerateAnalyticsDigest,
-  triggerGenerateMarketReport,
   triggerRefreshPrices,
-  triggerRunMarketWorkflow,
-  triggerSendMarketReportDigest,
-  triggerSnapshotMarketSignals,
   triggerSnapshotPortfolio,
 } from "@/lib/api";
 
 type ActionKey =
   | "refresh-prices"
   | "snapshot-portfolio"
-  | "snapshot-market-signals"
-  | "generate-market-report"
-  | "generate-analytics-digest"
-  | "full-market-refresh"
-  | "send-market-report-digest"
-  | "run-market-workflow";
+  | "full-market-refresh";
 
 const ACTION_LABELS: Record<ActionKey, string> = {
   "refresh-prices": "Refresh prices",
   "snapshot-portfolio": "Portfolio snapshot",
-  "snapshot-market-signals": "Market signal snapshot",
-  "generate-market-report": "Generate market report",
-  "generate-analytics-digest": "Generate analytics digest",
   "full-market-refresh": "Full market refresh",
-  "send-market-report-digest": "Send market report digest",
-  "run-market-workflow": "Run scheduled market workflow manually",
 };
 
 interface ActionResult {
@@ -62,27 +47,7 @@ function summarizeResult(action: ActionKey, data: unknown): { label: string; val
       ];
     case "snapshot-portfolio":
       return [{ label: "Snapshot ID", value: String(d.snapshot_id) }];
-    case "snapshot-market-signals":
-      return [
-        { label: "Created", value: String(d.created_count ?? 0) },
-        { label: "Updated", value: String(d.updated_count ?? 0) },
-        { label: "Resolved", value: String(d.resolved_count ?? 0) },
-      ];
-    case "generate-market-report":
-      return [{ label: "Report ID", value: String(d.report_id) }];
-    case "generate-analytics-digest":
-      return [
-        { label: "Report ID", value: d.report_id != null ? String(d.report_id) : "not available" },
-        { label: "Valuation mode", value: d.valuation_mode ? String(d.valuation_mode) : "not available" },
-        {
-          label: "Portfolio risk score",
-          value: d.portfolio_risk_score != null ? String(d.portfolio_risk_score) : "not available",
-        },
-        { label: "Buy review count", value: String(d.buy_review_count ?? 0) },
-        { label: "Sell review count", value: String(d.sell_review_count ?? 0) },
-      ];
     case "full-market-refresh": {
-      const signals = (d.market_signal_snapshot ?? {}) as Record<string, unknown>;
       return [
         {
           label: "Price refresh run ID",
@@ -91,54 +56,8 @@ function summarizeResult(action: ActionKey, data: unknown): { label: string; val
         {
           label: "Portfolio snapshot ID",
           value: d.portfolio_snapshot_id != null ? String(d.portfolio_snapshot_id) : "not available",
-        },
-        { label: "Signals created", value: String(signals.created ?? 0) },
-        { label: "Signals updated", value: String(signals.updated ?? 0) },
-        { label: "Signals resolved", value: String(signals.resolved ?? 0) },
-        {
-          label: "Market report ID",
-          value: d.market_report_id != null ? String(d.market_report_id) : "not available",
         },
         { label: "Dry run", value: d.dry_run ? "yes" : "no" },
-      ];
-    }
-    case "send-market-report-digest":
-      return [
-        { label: "Report ID", value: d.report_id != null ? String(d.report_id) : "not available" },
-        { label: "Status", value: d.status ? String(d.status) : "not available" },
-        { label: "Sent", value: d.sent ? "yes" : "no" },
-        {
-          label: "Skipped reason",
-          value: d.skipped_reason ? String(d.skipped_reason) : "not available",
-        },
-      ];
-    case "run-market-workflow": {
-      const signals = (d.market_signal_snapshot ?? {}) as Record<string, unknown>;
-      return [
-        {
-          label: "Workflow run ID",
-          value: d.market_workflow_run_id != null ? String(d.market_workflow_run_id) : "not available",
-        },
-        { label: "Status", value: d.status ? String(d.status) : "not available" },
-        {
-          label: "Price refresh run ID",
-          value: d.price_refresh_run_id != null ? String(d.price_refresh_run_id) : "not available",
-        },
-        {
-          label: "Portfolio snapshot ID",
-          value: d.portfolio_snapshot_id != null ? String(d.portfolio_snapshot_id) : "not available",
-        },
-        { label: "Signals created", value: String(signals.created ?? 0) },
-        { label: "Signals updated", value: String(signals.updated ?? 0) },
-        { label: "Signals resolved", value: String(signals.resolved ?? 0) },
-        {
-          label: "Market report ID",
-          value: d.market_report_id != null ? String(d.market_report_id) : "not available",
-        },
-        {
-          label: "Telegram digest status",
-          value: d.telegram_digest_status ? String(d.telegram_digest_status) : "not available",
-        },
       ];
     }
     default:
@@ -150,12 +69,6 @@ function warningsOf(data: unknown): string[] {
   if (!data || typeof data !== "object") return [];
   const warnings = (data as Record<string, unknown>).warnings;
   return Array.isArray(warnings) ? warnings.filter((w): w is string => typeof w === "string") : [];
-}
-
-function messagePreviewOf(action: ActionKey, data: unknown): string | null {
-  if (action !== "send-market-report-digest" || !data || typeof data !== "object") return null;
-  const preview = (data as Record<string, unknown>).message_preview;
-  return typeof preview === "string" ? preview : null;
 }
 
 export default function AdminActionsPage() {
@@ -170,18 +83,6 @@ export default function AdminActionsPage() {
   const [fullSource, setFullSource] = useState<string>("all");
   const [fullLimit, setFullLimit] = useState("");
   const [fullDryRun, setFullDryRun] = useState(false);
-
-  const [digestDryRun, setDigestDryRun] = useState(false);
-  const [digestForce, setDigestForce] = useState(false);
-
-  const [analyticsDigestValuationMode, setAnalyticsDigestValuationMode] = useState<
-    "raw_market" | "graded_adjusted"
-  >("raw_market");
-
-  const [workflowSource, setWorkflowSource] = useState<string>("yuyutei");
-  const [workflowLimit, setWorkflowLimit] = useState("");
-  const [workflowSendTelegram, setWorkflowSendTelegram] = useState(false);
-  const [workflowDryRun, setWorkflowDryRun] = useState(false);
 
   useEffect(() => {
   }, []);
@@ -222,7 +123,7 @@ export default function AdminActionsPage() {
       <main className="mx-auto max-w-5xl px-4 py-6">
         <PageHeader
           title="Admin Actions"
-          description="Trigger refreshes, snapshots, and report generation."
+          description="Trigger price refreshes and portfolio snapshots."
         />
 
         {unauthorized && (
@@ -300,73 +201,6 @@ export default function AdminActionsPage() {
                 </ActionButton>
               </ActionCard>
 
-              <ActionCard title="Market signal snapshot">
-                <p className="text-xs text-text-muted">
-                  Snapshot current market signals into persistent signal events.
-                </p>
-                <ActionButton
-                  disabled={isBusy}
-                  pending={pendingAction === "snapshot-market-signals"}
-                  onClick={() =>
-                    runAction("snapshot-market-signals", () => triggerSnapshotMarketSignals())
-                  }
-                >
-                  Snapshot market signals
-                </ActionButton>
-              </ActionCard>
-
-              <ActionCard title="Generate market report">
-                <p className="text-xs text-text-muted">
-                  Generate and store one deterministic market intelligence report.
-                </p>
-                <ActionButton
-                  disabled={isBusy}
-                  pending={pendingAction === "generate-market-report"}
-                  onClick={() =>
-                    runAction("generate-market-report", () => triggerGenerateMarketReport())
-                  }
-                >
-                  Generate report
-                </ActionButton>
-              </ActionCard>
-
-              <ActionCard title="Generate analytics digest">
-                <div className="flex flex-col gap-2">
-                  <FieldRow label="Valuation mode">
-                    <select
-                      value={analyticsDigestValuationMode}
-                      onChange={(e) =>
-                        setAnalyticsDigestValuationMode(
-                          e.target.value as "raw_market" | "graded_adjusted",
-                        )
-                      }
-                      disabled={isBusy}
-                      className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary disabled:opacity-50"
-                    >
-                      <option value="raw_market">Raw market</option>
-                      <option value="graded_adjusted">Graded adjusted</option>
-                    </select>
-                  </FieldRow>
-                  <p className="text-xs text-text-muted">
-                    Generate and store one combined analytics digest (collection, wishlist,
-                    buy/sell decisions, grading ROI, and portfolio risk).
-                  </p>
-                </div>
-                <ActionButton
-                  disabled={isBusy}
-                  pending={pendingAction === "generate-analytics-digest"}
-                  onClick={() =>
-                    runAction("generate-analytics-digest", () =>
-                      triggerGenerateAnalyticsDigest({
-                        valuation_mode: analyticsDigestValuationMode,
-                      }),
-                    )
-                  }
-                >
-                  Generate digest
-                </ActionButton>
-              </ActionCard>
-
               <ActionCard title="Full market refresh" className="md:col-span-2">
                 <div className="flex flex-col gap-2">
                   <FieldRow label="Source">
@@ -404,8 +238,7 @@ export default function AdminActionsPage() {
                     Dry run
                   </label>
                   <p className="text-xs text-text-muted">
-                    Refreshes prices, then (unless dry run) snapshots the portfolio, snapshots
-                    market signals, and generates a market report.
+                    Refreshes prices, then (unless dry run) snapshots the portfolio.
                   </p>
                 </div>
                 <ActionButton
@@ -426,117 +259,6 @@ export default function AdminActionsPage() {
                 </ActionButton>
               </ActionCard>
 
-              <ActionCard title="Send market report digest" className="md:col-span-2">
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                    <input
-                      type="checkbox"
-                      checked={digestDryRun}
-                      onChange={(e) => setDigestDryRun(e.target.checked)}
-                      disabled={isBusy}
-                    />
-                    Dry run
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                    <input
-                      type="checkbox"
-                      checked={digestForce}
-                      onChange={(e) => setDigestForce(e.target.checked)}
-                      disabled={isBusy}
-                    />
-                    Force (resend even if already sent)
-                  </label>
-                  <p className="text-xs text-text-muted">
-                    Sends a concise Telegram digest of the latest market intelligence report.
-                    Skipped if Telegram is not configured or already sent for this report.
-                  </p>
-                </div>
-                <ActionButton
-                  disabled={isBusy}
-                  pending={pendingAction === "send-market-report-digest"}
-                  variant={digestDryRun ? "dry-run" : "real"}
-                  onClick={() =>
-                    runAction("send-market-report-digest", () =>
-                      triggerSendMarketReportDigest({
-                        dry_run: digestDryRun,
-                        force: digestForce,
-                      }),
-                    )
-                  }
-                >
-                  Send Telegram digest
-                </ActionButton>
-              </ActionCard>
-
-              <ActionCard title="Run scheduled market workflow manually" className="md:col-span-2">
-                <div className="flex flex-col gap-2">
-                  <FieldRow label="Source">
-                    <select
-                      value={workflowSource}
-                      onChange={(e) => setWorkflowSource(e.target.value)}
-                      disabled={isBusy}
-                      className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary disabled:opacity-50"
-                    >
-                      {ADMIN_ACTION_SOURCES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </FieldRow>
-                  <FieldRow label="Limit">
-                    <input
-                      type="number"
-                      min={1}
-                      value={workflowLimit}
-                      onChange={(e) => setWorkflowLimit(e.target.value)}
-                      disabled={isBusy}
-                      placeholder="default 10"
-                      className="w-28 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint disabled:opacity-50"
-                    />
-                  </FieldRow>
-                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                    <input
-                      type="checkbox"
-                      checked={workflowSendTelegram}
-                      onChange={(e) => setWorkflowSendTelegram(e.target.checked)}
-                      disabled={isBusy}
-                    />
-                    Send Telegram digest
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                    <input
-                      type="checkbox"
-                      checked={workflowDryRun}
-                      onChange={(e) => setWorkflowDryRun(e.target.checked)}
-                      disabled={isBusy}
-                    />
-                    Dry run
-                  </label>
-                  <p className="text-xs text-text-muted">
-                    Runs the same sequence as the scheduled daily workflow: refresh prices,
-                    snapshot the portfolio and market signals, generate a report, and
-                    optionally send a Telegram digest. Recorded as a market workflow run.
-                  </p>
-                </div>
-                <ActionButton
-                  disabled={isBusy}
-                  pending={pendingAction === "run-market-workflow"}
-                  variant={workflowDryRun ? "dry-run" : "real"}
-                  onClick={() =>
-                    runAction("run-market-workflow", () =>
-                      triggerRunMarketWorkflow({
-                        source: workflowSource,
-                        limit: parseLimit(workflowLimit),
-                        send_telegram: workflowSendTelegram,
-                        dry_run: workflowDryRun,
-                      }),
-                    )
-                  }
-                >
-                  Run market workflow
-                </ActionButton>
-              </ActionCard>
             </div>
 
             {result && <ResultPanel result={result} />}
@@ -547,18 +269,6 @@ export default function AdminActionsPage() {
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
                 Refresh runs
-              </Link>
-              <Link
-                href="/admin/market-workflow-runs"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Market workflow runs
-              </Link>
-              <Link
-                href="/analytics/digest"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Analytics digest
               </Link>
               <Link
                 href="/admin/backup"
@@ -613,30 +323,6 @@ export default function AdminActionsPage() {
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
                 Collection
-              </Link>
-              <Link
-                href="/market/signals"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Market signals
-              </Link>
-              <Link
-                href="/market/signal-events"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Signal events
-              </Link>
-              <Link
-                href="/market/opportunities"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Opportunities
-              </Link>
-              <Link
-                href="/market/report"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Market report
               </Link>
             </div>
           </>
@@ -705,7 +391,6 @@ function ActionButton({
 function ResultPanel({ result }: { result: ActionResult }) {
   const warnings = result.success ? warningsOf(result.data) : [];
   const summary = result.success ? summarizeResult(result.action, result.data) : [];
-  const messagePreview = result.success ? messagePreviewOf(result.action, result.data) : null;
 
   return (
     <div className="mt-6 rounded-panel border border-border-default bg-bg-surface p-4">
@@ -738,15 +423,6 @@ function ResultPanel({ result }: { result: ActionResult }) {
               <div className="text-sm font-medium text-text-primary">{item.value}</div>
             </div>
           ))}
-        </div>
-      )}
-
-      {messagePreview && (
-        <div className="mb-2 rounded border border-border-default bg-bg-page p-3">
-          <div className="mb-1 text-[11px] uppercase tracking-wide text-text-muted">
-            Message preview
-          </div>
-          <pre className="whitespace-pre-wrap text-xs text-text-secondary">{messagePreview}</pre>
         </div>
       )}
 

@@ -85,16 +85,8 @@ describe("TopBar", () => {
     expect(Array.from(nav.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Home", "Card Prices", "Market"]);
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
     expect(hrefs).not.toContain("/admin");
-    // The seven legacy collector-data analytics pages gain no entry from it.
-    for (const leaf of [
-      "/analytics/collection",
-      "/analytics/wishlist",
-      "/analytics/grading",
-      "/analytics/buy-decisions",
-      "/analytics/sell-decisions",
-      "/analytics/portfolio-risk",
-      "/analytics/digest",
-    ]) {
+    // The remaining legacy collector-data analytics pages gain no entry from it.
+    for (const leaf of ["/analytics/collection", "/analytics/wishlist"]) {
       expect(hrefs).not.toContain(leaf);
     }
     // Market Index is a value on every card, not a destination: its page was

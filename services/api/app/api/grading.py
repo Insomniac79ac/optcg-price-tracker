@@ -31,16 +31,10 @@ router = APIRouter(prefix="/grading", tags=["grading"])
 # Cache-prefix invalidation for every route in this router that writes to
 # grading_submissions - see 'Cache invalidation' in docs/operations.md.
 _GRADING_WRITE_INVALIDATES = (
-    "dashboard",
     "grading_summary",
     "collection_valuation",
     "collection_history",
     "collection_analytics",
-    "market_opportunities",
-    "sell_decisions",
-    "grading_analytics",
-    "portfolio_risk",
-    "analytics_digest",
 )
 
 

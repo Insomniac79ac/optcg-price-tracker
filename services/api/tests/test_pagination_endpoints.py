@@ -22,35 +22,6 @@ PAGINATION_KEYS = {
 }
 
 
-def test_market_opportunities_returns_pagination_metadata(client, db_session):
-    response = client.get("/market/opportunities")
-    assert response.status_code == 200
-    data = response.json()
-    assert "pagination" in data
-    assert set(data["pagination"].keys()) == PAGINATION_KEYS
-    assert data["pagination"]["total"] == data["summary"]["total_opportunities"]
-    assert data["pagination"]["has_next"] is False
-    assert data["pagination"]["has_previous"] is False
-
-
-def test_market_signals_returns_pagination_metadata(client, db_session):
-    response = client.get("/market/signals")
-    assert response.status_code == 200
-    data = response.json()
-    assert "pagination" in data
-    assert set(data["pagination"].keys()) == PAGINATION_KEYS
-    assert data["pagination"]["total"] == data["summary"]["total_signals"]
-
-
-def test_market_signal_events_returns_pagination_metadata(client, db_session):
-    response = client.get("/market/signal-events")
-    assert response.status_code == 200
-    data = response.json()
-    assert "pagination" in data
-    assert set(data["pagination"].keys()) == PAGINATION_KEYS
-    assert data["pagination"]["total"] == data["summary"]["total_events"]
-
-
 def test_admin_logs_returns_pagination_metadata(client, db_session):
     response = client.get("/admin/logs")
     assert response.status_code == 200
@@ -78,15 +49,6 @@ def test_collector_activity_returns_pagination_metadata(client, db_session):
     assert "pagination" in data
     assert set(data["pagination"].keys()) == PAGINATION_KEYS
     assert data["pagination"]["total"] == data["summary"]["total_events"]
-
-
-def test_search_returns_pagination_metadata(client, db_session):
-    response = client.get("/search", params={"q": "anything"})
-    assert response.status_code == 200
-    data = response.json()
-    assert "pagination" in data
-    assert set(data["pagination"].keys()) == PAGINATION_KEYS
-    assert data["pagination"]["total"] == data["summary"]["total_results"]
 
 
 def test_admin_db_backups_returns_pagination_metadata(client, db_session):

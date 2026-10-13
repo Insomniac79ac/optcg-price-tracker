@@ -690,9 +690,8 @@ def test_market_analytics_is_public_like_the_rest_of_the_pricing_surface(client,
     The access-control split in this app is by DATA SUBJECT, not by router
     prefix: app.api.prints and app.api.market carry no auth at all because
     they describe the catalogue, while the holdings endpoints in this same
-    router (collection, wishlist, buy/sell decisions, grading, portfolio risk)
-    require a user because they describe what one person owns.
-    /analytics/digest/latest is already ungated here for the same reason.
+    router (collection, wishlist) require a user because they describe what
+    one person owns.
 
     Every number these two endpoints return is an aggregate of what
     GET /prints and GET /prints/{id}/market-index already serve to anyone, so
@@ -720,7 +719,7 @@ def test_market_analytics_is_public_like_the_rest_of_the_pricing_surface(client,
     # And the holdings endpoints in this SAME router stay gated, which is what
     # makes the split data-subject-shaped rather than prefix-shaped.
     assert guarded(analytics_api.router, "/analytics/collection")
-    assert guarded(analytics_api.router, "/analytics/portfolio-risk")
+    assert guarded(analytics_api.router, "/analytics/wishlist")
 
 
 # --- filter vocabulary (GET /analytics/market/filters) ----------------------

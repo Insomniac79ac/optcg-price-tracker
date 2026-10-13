@@ -25,28 +25,24 @@ Tailwind patterns: `bg-white`, `text-blue-*`, `rounded-xl`, `bg-gradient-*`,
 
 ## Collector pages
 
+Rows for pages removed in Collector v1 S1 (2026-10-13: `/dashboard`, `/search`, `/activity`,
+`/grading`, the `/analytics` digest/decision/risk/grading pages, the `/market` signal, opportunity
+and report pages, `/admin/market-workflow-runs`) were deleted from the tables below; the summary
+counts and the narrative sections describe the audit as it ran.
+
 | Route | Category | Main issues | Components used | Fixed in this pass | Notes |
 |---|---|---|---|---|---|
-| `/dashboard` | A | None | `PageHeader`, `StatCard`, `PinnedViewsSection`, `VaultHighlightsSection`, `WorkflowShortcutsSection`, `ActionButton`, `StateBlocks`, badges | No | 786 lines; already a Part 2 model page |
 | `/collection` | A | None | `PageHeader`, `FilterBar`, `DataTableShell`, `SavedViewBar`, `QuickActionBar`, `PriceCell`, `ConfirmActionModal`, `ActionButton`, badges | No | 1375 lines, largest collector page |
 | `/collection/vault` | A | None | `PageHeader`, `FilterBar`, `SavedViewBar`, `QuickActionBar`, `CardVaultTile`, `StateBlocks`, badges | No | Vault grid reference implementation |
-| `/search` | A | None | `PageHeader`, `StateBlocks`, `PaginationControls`, `SearchTypeBadge` | No | |
 | `/cards/[id]` | A | None | `CardImageFrame`, `CardIdentityBlock`, `CardPricePanel`, `OwnershipSummaryPanel`, `WishlistSummaryPanel`, `GradingSummaryPanel`, `MarketContextPanel`, `CardActivityPanel`, `DataTableShell`, `VariantBadge`, `ActionButton` | No | 960 lines; card detail reference implementation |
 | `/wishlist` | A | Fixed: added `PageHeader` (title + cross-links in description slot + item count in actions slot), replaced local `StatCard` with shared `StatGrid`/`StatCard`, converted 3 legacy `bg-neutral-100 ... hover:bg-white` buttons to `ActionButton` | `DataTableShell`, `SavedViewBar`, `QuickActionBar`, `PageHeader`, `StatCard`, `ActionButton`, `PaginationControls`, `WishlistPriorityBadge`, `WishlistStatusBadge`, `RarityBadge`, `FormField`, `WishlistImportExport` | Yes | 1069 lines |
-| `/grading` | A | Fixed: same `PageHeader`/`StatGrid`/`ActionButton` treatment as `/wishlist` | `DataTableShell`, `SavedViewBar`, `QuickActionBar`, `PageHeader`, `StatCard`, `ActionButton`, `PaginationControls`, `GradingStatusBadge`, `FormField` | Yes | 847 lines |
-| `/activity` | A | Fixed: added `PageHeader`, replaced local `StatCard` with shared `StatGrid`/`StatCard`; kept the timeline-list markup (not `DataTableShell`) since it's not tabular data | `StateBlocks`, `PageHeader`, `StatCard`, `PaginationControls`, `SearchTypeBadge` | Yes | 189 lines, small page |
 
 ## Analytics pages
 
 | Route | Category | Main issues | Components used | Fixed in this pass | Notes |
 |---|---|---|---|---|---|
-| `/analytics/digest` | A | None | `StatCard`, `DataTableShell`, `RiskBadge`, `SeverityBadge`, `ActionButton`, `SavedViewBar`, `StateBlocks` | No | |
-| `/analytics/buy-decisions` | A | None | `StatCard`, `SavedViewBar`, `QuickActionBar`, `ActionButton`, `BuyDecisionCandidateTable` (uses `DataTableShell` internally) | No | |
-| `/analytics/sell-decisions` | A | None | `StatCard`, `SavedViewBar`, `QuickActionBar`, `ActionButton`, `SellDecisionCandidateTable` (uses `DataTableShell` internally) | No | |
-| `/analytics/portfolio-risk` | A | None | `StatCard`, `DataTableShell`, `RiskBadge`, `SeverityBadge`, `RarityBadge`, `SavedViewBar` | No | |
 | `/analytics/collection` | A | Fixed: swapped the page-local `StatCard`/`PnlStatCard` (legacy `neutral-*` classes) for the shared `StatCard`, retokened header/toggle/checkbox/section markup to `text-text-*`/`bg-bg-surface`/`border-border-default`, converted the two ad-hoc concentration/cost-basis tables to the `.data-table` class | `DataTableShell`, `SavedViewBar`, `StatCard`, `CollectionAnalyticsBreakdownChart`, `CollectionAnalyticsBreakdownTable` (uses `DataTableShell` internally), `RarityBadge`, `CollectionStatusBadge`, `StateBlocks` | Yes | 505 lines. Header block kept as the established hand-rolled `h1`+cross-links pattern (matches `/analytics/digest`/`/analytics/buy-decisions`, which don't use the `PageHeader` component either) rather than switching to `PageHeader` |
 | `/analytics/wishlist` | A | Fixed: same local-`StatCard`-\>shared-`StatCard` swap, retokened header/checkboxes/section headings | `SavedViewBar`, `StatCard`, `WishlistAnalyticsBreakdownChart`, `WishlistAnalyticsBreakdownTable`, `WishlistAnalyticsTargetTable` (tables use `DataTableShell` internally), `StateBlocks` | Yes | 337 lines |
-| `/analytics/grading` | A | Fixed: same local-`StatCard`-\>shared-`StatCard` swap, retokened header/filters/pagination footer/section headings | `SavedViewBar`, `StatCard`, `GradingAnalyticsBreakdownTable`, `GradingSubmissionTable` (tables use `DataTableShell` internally), `StateBlocks` | Yes | 433 lines |
 
 ## Admin pages
 
@@ -62,7 +58,6 @@ Tailwind patterns: `bg-white`, `text-blue-*`, `rounded-xl`, `bg-gradient-*`,
 | `/admin/snkrdunk-candidates` | A | Fixed: added `PageHeader` + candidate-count `StatCard`, converted all row/detail-panel/bulk-rematch buttons to `ActionButton` (default/primary/dry-run/real), `StateBlocks` for loading/error/empty, tokenized `neutral-*` colors | `PageHeader`, `StatCard`/`StatGrid`, `ActionButton`, `DataTableShell`, `SavedViewBar`, `MatchStatusBadge`, `PaginationControls`, `StateBlocks` | Yes | 738 lines |
 | `/admin/card-audit` | A | Fixed: added `PageHeader`, `StatGrid`/`StatCard` (with tone), converted raw `<table>` to `DataTableShell`, cross-links restyled | `PageHeader`, `StatCard`/`StatGrid`, `DataTableShell`, `SeverityBadge`, `ErrorState`/`LoadingState`, `AdminAuthGate` | Yes | 408 → ~380 lines |
 | `/admin/system-check` | A | Fixed: added `PageHeader` (+ Re-run `ActionButton`), `StatGrid`/`StatCard`, converted raw `<table>` and catalog-ops stat blocks to `DataTableShell`/`StatCard` | `PageHeader`, `StatCard`/`StatGrid`, `DataTableShell`, `ActionButton`, `Badge`, `SeverityBadge`, `ErrorState`/`LoadingState`, `VersionFooter`, `AdminAuthGate` | Yes | 380 lines |
-| `/admin/market-workflow-runs` | A | Fixed: added `PageHeader`, converted summary cards to `StatGrid`/`StatCard`, raw `<table>` to `DataTableShell`, "View" button to `ActionButton` | `PageHeader`, `StatCard`/`StatGrid`, `DataTableShell`, `ActionButton`, `MarketWorkflowRunStatusBadge`, `ErrorState`/`LoadingState`, `PaginationControls` | Yes | 339 lines |
 | `/admin/refresh-runs` | A | Fixed: added `PageHeader`, converted raw `<table>` to `DataTableShell`, status filter chips restyled to vault tokens | `PageHeader`, `DataTableShell`, `RunStatusBadge`, `ErrorState`/`LoadingState`, `PaginationControls` | Yes | 237 lines |
 | `/admin/performance` | A | Fixed: added `PageHeader` (+ Re-run `ActionButton`), converted stat grid and all 3 raw `<table>` blocks to `StatGrid`/`StatCard`/`DataTableShell`; removed duplicate local `StatCard` | `PageHeader`, `StatCard`/`StatGrid`, `DataTableShell`, `ActionButton`, `Badge`, `SeverityBadge`, `ErrorState`/`LoadingState`, `VersionFooter`, `AdminAuthGate` | Yes | 423 lines |
 | `/admin/job-locks` | A | Fixed: added `PageHeader`, converted raw `<table>` to `DataTableShell`; force-release flow restyled with `ActionButton` (`real`/`danger` tiers) — confirm-phrase logic unchanged | `PageHeader`, `DataTableShell`, `ActionButton`, `Badge`, `ErrorState`/`LoadingState`, `VersionFooter`, `AdminAuthGate` | Yes | 372 lines |
@@ -79,17 +74,13 @@ Tailwind patterns: `bg-white`, `text-blue-*`, `rounded-xl`, `bg-gradient-*`,
 
 | Route | Category | Main issues | Components used | Fixed in this pass | Notes |
 |---|---|---|---|---|---|
-| `/market/opportunities` | A | Fixed: added `PageHeader`, replaced local `StatCard` with shared `StatGrid`/`StatCard` | `DataTableShell`, `SavedViewBar`, `PageHeader`, `StatCard`, `OpportunityCategoryBadge`, `WishlistPriorityBadge`, `GradingStatusBadge`, `MarketSignalEventStatusBadge`, `RarityBadge`, `CollectorTagBadge`, `CollectorGroupLabel`, `StateBlocks`, `PaginationControls` | Yes | 648 lines |
-| `/market/signals` | A | Fixed: added `PageHeader`, replaced local `StatCard` with shared `StatGrid`/`StatCard`, converted raw `<table>` wrapper to `DataTableShell`, loading/error states to `LoadingState`/`ErrorState` | `SavedViewBar`, `DataTableShell`, `PageHeader`, `StatCard`, `RarityBadge`, `SeverityBadge` | Yes | 505 lines |
-| `/market/signal-events` | A | Fixed: same `PageHeader`/`StatGrid`/`DataTableShell` treatment as `/market/signals` | `SavedViewBar`, `DataTableShell`, `PageHeader`, `StatCard`, `MarketSignalEventStatusBadge`, `RarityBadge`, `SeverityBadge`, `StateBlocks`, `PaginationControls` | Yes | 573 lines |
-| `/market/report` | A | Fixed: added `PageHeader`, converted raw `<table>` (top-5 opportunities) to `DataTableShell`, dropped the local `StatCard`'s bespoke `wrap` prop in favor of the shared `StatCard` (long text values now truncate like the rest of the app) | `OpportunityCategoryBadge`, `StateBlocks`, `DataTableShell`, `PageHeader`, `StatCard` | Yes | 482 lines |
 | `/market/movers` | A | Fixed: added `PageHeader`, converted raw `<table>` to `DataTableShell`, ad-hoc loading/error divs to `LoadingState`/`ErrorState` | `PriceTypeBadge`, `RarityBadge`, `SourceBadge`, `DataTableShell`, `PageHeader`, `LoadingState`, `ErrorState` | Yes | 313 lines; public, no auth |
 
 ## Misc
 
 | Route | Category | Main issues | Components used | Fixed in this pass | Notes |
 |---|---|---|---|---|---|
-| `/` (root) | A | None — 5-line redirect to `/dashboard`, no rendered UI of its own | n/a | No | Not a real page to style |
+| `/` (root) | A | None — at the time a 5-line redirect to `/dashboard` (now the public Discover page) | n/a | No | Not a real page to style |
 
 ## Summary counts
 

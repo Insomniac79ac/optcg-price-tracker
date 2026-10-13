@@ -20,7 +20,6 @@ def observability_summary_endpoint(db: Session = Depends(get_db)):
         status=summary.status,
         last_24h=ObservabilityLast24hOut(**summary.last_24h),
         latest_error=app_log_to_out(summary.latest_error) if summary.latest_error is not None else None,
-        latest_market_workflow_run=summary.latest_market_workflow_run,
         latest_price_refresh_run=summary.latest_price_refresh_run,
         latest_backup=summary.latest_backup,
         latest_system_check_status=summary.latest_system_check_status,

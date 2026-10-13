@@ -35,19 +35,16 @@ from app.api.collection import router as collection_router
 from app.api.collector import router as collector_router
 from app.api.collector_activity import router as collector_activity_router
 from app.api.collector_notes import router as collector_notes_router
-from app.api.dashboard import router as dashboard_router
 from app.api.env_check import router as env_check_router
 from app.api.file_jobs import router as file_jobs_router
 from app.api.grading import router as grading_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
 from app.api.market_value import router as market_value_router
-from app.api.market_workflow_runs import router as market_workflow_runs_router
 from app.api.prints import router as prints_router
 from app.api.refresh_runs import router as refresh_runs_router
 from app.api.releases import router as releases_router
 from app.api.saved_views import router as saved_views_router
-from app.api.search import router as search_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
 from app.api.yuyutei_candidates import router as yuyutei_candidates_router
 from app.api.source_mappings import router as source_mappings_router
@@ -125,7 +122,7 @@ async def _lock_held_error_handler(request: Request, exc: LockHeldError) -> JSON
     409 response shape, so no individual endpoint needs its own try/except
     for the common case (a Celery-triggered job still needs to translate the
     worker's lock_held result dict into this same exception first - see
-    app.services.refresh_trigger/market_workflow_trigger)."""
+    app.services.refresh_trigger)."""
     return JSONResponse(
         status_code=409,
         content={
@@ -194,7 +191,6 @@ app.include_router(collector_activity_router)
 app.include_router(grading_router)
 app.include_router(file_jobs_router)
 app.include_router(wishlist_router)
-app.include_router(dashboard_router)
 app.include_router(saved_views_router)
 app.include_router(analytics_router)
 app.include_router(market_value_router)
@@ -220,8 +216,6 @@ app.include_router(admin_performance_router)
 app.include_router(admin_price_source_health_router)
 app.include_router(admin_rate_limit_router)
 app.include_router(admin_release_status_router)
-app.include_router(market_workflow_runs_router)
-app.include_router(search_router)
 app.include_router(system_check_router)
 app.include_router(env_check_router)
 app.include_router(version_router)

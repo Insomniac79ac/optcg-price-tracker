@@ -23,10 +23,8 @@ router = APIRouter(
 # run that actually deleted rows) can change what the corresponding cached
 # response would return, so those prefixes are invalidated after the fact.
 _PRUNE_CACHE_PREFIXES_BY_TABLE = {
-    "market_intelligence_reports": ("dashboard", "market_report", "market_reports"),
-    "portfolio_valuation_snapshots": ("dashboard", "collection_history"),
-    "price_observations": ("dashboard", "collection_valuation", "market_signals", "market_opportunities"),
-    "market_signal_events": ("dashboard", "market_signals", "market_signal_events"),
+    "portfolio_valuation_snapshots": ("collection_history",),
+    "price_observations": ("collection_valuation",),
 }
 
 

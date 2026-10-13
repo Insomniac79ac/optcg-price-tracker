@@ -201,8 +201,11 @@ describe("shared public shell", () => {
       for (const name of ["Home", "Card Prices", "Market"]) {
         expect(within(drawer).getByRole("link", { name })).toBeInTheDocument();
       }
-      for (const name of ["My Collection", "Wishlist", "Grading", "Activity"]) {
+      for (const name of ["My Collection", "Wishlist"]) {
         expect(Boolean(within(drawer).queryByRole("link", { name }))).toBe(session.status === "authenticated");
+      }
+      for (const name of ["Grading", "Activity"]) {
+        expect(within(drawer).queryByRole("link", { name })).not.toBeInTheDocument();
       }
       expect(Boolean(within(drawer).queryByRole("link", { name: "Admin" }))).toBe(clientSession.data?.user.role === "admin");
       fireEvent.click(backdrop);
@@ -245,7 +248,7 @@ describe("shared public shell", () => {
     expect(screen.getByRole("button", { name: "Search cards" })).toBeInTheDocument();
   });
 
-  it.each(["/collection", "/analytics/collection", "/search", "/sign-in"])("preserves private/account presentation on %s", (pathname) => {
+  it.each(["/collection", "/analytics/collection", "/wishlist", "/sign-in"])("preserves private/account presentation on %s", (pathname) => {
     currentPathname = pathname;
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-public-shell]")).toBeNull();

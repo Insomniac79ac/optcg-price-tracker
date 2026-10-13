@@ -307,21 +307,11 @@ else
   fail "GET /version returned HTTP $HTTP_STATUS (route exists but is broken)"
 fi
 
-# /analytics/digest, /collection/summary, and /saved-views require a
-# signed-in session with no admin-token path (by design - see
-# scripts/phase8_audit.sh) - 200 or 401 are both healthy without a browser
-# session in hand.
-public_or_session_get "/analytics/digest"
+# /collection/summary and /saved-views require a signed-in session with no
+# admin-token path (by design) - 200 or 401 are both healthy without a
+# browser session in hand.
 public_or_session_get "/collection/summary"
 public_or_session_get "/saved-views?limit=5"
-
-# /market/opportunities has no auth requirement at all.
-http_get "$BASE_API_URL/market/opportunities?limit=5"
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  pass "GET /market/opportunities?limit=5 returned 200"
-else
-  fail "GET /market/opportunities?limit=5 returned HTTP $HTTP_STATUS (expected 200)"
-fi
 
 section "6b. Admin API checks (X-Admin-Token)"
 admin_get_required "/admin/system-check"
@@ -393,12 +383,13 @@ check_web_route() {
   fi
 }
 
-COLLECTOR_ROUTES=(/dashboard /search /collection /collection/vault /wishlist /grading /activity)
+# /dashboard, /search, /grading, /activity, /market/{signals,signal-events,
+# opportunities,report} and /analytics/{digest,buy-decisions,sell-decisions,
+# grading,portfolio-risk} were removed in Collector v1 S1 (they redirect or
+# 404; scripts/web_route_smoke.sh checks the redirects).
+COLLECTOR_ROUTES=(/collection /collection/vault /wishlist)
 MARKET_ANALYTICS_ROUTES=(
-  /market/opportunities /market/signals /market/signal-events
-  /analytics/digest /analytics/collection /analytics/wishlist
-  /analytics/buy-decisions /analytics/sell-decisions /analytics/grading
-  /analytics/portfolio-risk
+  /analytics /analytics/collection /analytics/wishlist
 )
 # /admin/source-mappings and /admin/env-check are intentionally kept in this
 # list even though neither has a frontend page in this codebase today (the

@@ -12,7 +12,6 @@ from worker.env_validation import validate_environment
 from worker.job_locks import LockHeldError, with_job_lock
 from worker.jobs.check_alerts import check_alerts
 from worker.jobs.refresh_prices import refresh_prices
-from worker.jobs.run_market_workflow import run_market_workflow
 from worker.settings import Settings, settings
 
 logger = logging.getLogger(__name__)
@@ -24,7 +23,7 @@ def _lock_held_result(exc: LockHeldError) -> dict:
     a custom exception cross the Celery result-backend boundary is fragile
     (the API service can't import worker.job_locks.LockHeldError to
     reconstruct it), so the lock conflict is reported as data instead. See
-    app.services.refresh_trigger/market_workflow_trigger, which turn this
+    app.services.refresh_trigger, which turns this
     back into an app.services.job_locks.LockHeldError (a *different* class,
     local to the api service) for admin_actions.py to turn into a 409."""
     return {
@@ -38,8 +37,8 @@ def _lock_held_result(exc: LockHeldError) -> dict:
 # production deployment should never come up processing jobs or scheduling
 # them. Runs once, at process import - both `celery -A worker.celery_app
 # worker` and `celery -A worker.celery_app beat` import this module, so this
-# covers both entry points, including the MARKET_WORKFLOW_* schedule vars
-# beat reads below in _build_beat_schedule. Development only warns (see
+# covers both entry points, including the schedule vars beat reads below
+# in _build_beat_schedule. Development only warns (see
 # worker/env_validation.py's rule 2) so local defaults keep working.
 _env_report = validate_environment()
 for _warning in _env_report.warnings:
@@ -58,29 +57,15 @@ SCHEDULED_YUYUTEI_REFRESH_LIMIT = 100
 
 def _build_beat_schedule(current_settings: Settings) -> dict:
     """Split out from module-level construction so tests can exercise the
-    MARKET_WORKFLOW_ENABLED on/off branch directly, without needing to
-    reimport this module under different environment variables."""
+    LEGACY_PRICE_REFRESH_ENABLED and DATA_RETENTION_ENABLED on/off branches
+    directly, without needing to reimport this module under different
+    environment variables."""
     schedule: dict = {}
 
     if current_settings.LEGACY_PRICE_REFRESH_ENABLED:
         schedule["refresh-yuyutei-prices"] = {
             "task": "worker.celery_app.refresh_yuyutei_prices",
             "schedule": timedelta(hours=current_settings.PRICE_REFRESH_INTERVAL_HOURS),
-        }
-
-    if current_settings.MARKET_WORKFLOW_ENABLED:
-        schedule["run-market-workflow"] = {
-            "task": "worker.celery_app.run_market_workflow_task",
-            "schedule": crontab(
-                hour=current_settings.MARKET_WORKFLOW_HOUR_UTC,
-                minute=current_settings.MARKET_WORKFLOW_MINUTE_UTC,
-            ),
-            "kwargs": {
-                "source": current_settings.MARKET_WORKFLOW_SOURCE,
-                "limit": current_settings.MARKET_WORKFLOW_LIMIT,
-                "send_telegram": current_settings.MARKET_WORKFLOW_SEND_TELEGRAM,
-                "dry_run": False,
-            },
         }
 
     if current_settings.DATA_RETENTION_ENABLED:
@@ -133,35 +118,6 @@ def refresh_yuyutei_prices(limit: int = SCHEDULED_YUYUTEI_REFRESH_LIMIT) -> dict
         logger.info(line)
 
     return asdict(summary)
-
-
-@app.task(name="worker.celery_app.run_market_workflow_task")
-def run_market_workflow_task(
-    source: str = "yuyutei",
-    limit: int | None = None,
-    send_telegram: bool = False,
-    dry_run: bool = False,
-) -> dict:
-    """Runs the full market intelligence workflow (see
-    worker/jobs/run_market_workflow.py): refresh prices, snapshot the
-    portfolio and market signals, generate a report, and optionally send a
-    Telegram digest. Scheduled daily by Celery Beat when
-    MARKET_WORKFLOW_ENABLED is true (see _build_beat_schedule above), and
-    also triggered on demand by the API's
-    POST /admin/actions/run-market-workflow via Celery send_task."""
-    db = SessionLocal()
-    try:
-        try:
-            result = run_market_workflow(
-                db, source=source, limit=limit, send_telegram=send_telegram, dry_run=dry_run
-            )
-        except LockHeldError as exc:
-            logger.warning("Market workflow run skipped: %s", exc)
-            return _lock_held_result(exc)
-    finally:
-        db.close()
-
-    return asdict(result)
 
 
 @app.task(name="worker.celery_app.run_price_refresh")

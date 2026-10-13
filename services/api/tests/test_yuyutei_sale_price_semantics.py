@@ -235,37 +235,6 @@ def test_regular_public_history_returns_after_sale(db_session, client, sale_worl
     assert get_market_index_for_print(db_session, printing.id).index_value_jpy == 180
 
 
-def test_archived_signal_quotes_are_hidden_without_mutating_archive(db_session, client, sale_world):
-    from copy import deepcopy
-    from tests.test_market_signal_events import make_event
-    from app.services.public_price_payload import public_price_payload
-
-    card, printing, source, mapping, sale = sale_world
-    stamp = sale.observed_at + timedelta(seconds=1)
-    payload = {"card_id": card.id, "message": "Yuyu 80 JPY", "metrics": {"price_change_pct": -50},
-               "latest_prices": {"yuyutei_sell": 80, "yuyutei_buy": None, "snkrdunk_floor": 1500}}
-    original = deepcopy(payload)
-    event = make_event(db_session, card_id=card.id, last_seen_at=stamp,
-                       last_payload_json=payload, message="Yuyu 80 JPY")
-    response = client.get(f"/market/signal-events/{event.id}")
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body["last_payload"]["latest_prices"]["yuyutei_sell"] is None
-    assert body["last_payload"]["latest_prices"]["snkrdunk_floor"] == 1500
-    assert body["message"] is None
-    assert event.last_payload_json == original
-    # Nested archived reports inherit the original event capture time.
-    make_observation(db_session, card, source, mapping, printing, price_jpy=200,
-                     promotion_state="none", observed_at=stamp + timedelta(seconds=1))
-    report = {"top_5": [{"card_id": card.id, "last_seen_at": stamp.isoformat(),
-                        "last_payload": payload}]}
-    visible = public_price_payload(db_session, report, captured_at=stamp + timedelta(days=1))
-    assert visible["top_5"][0]["last_payload"]["latest_prices"]["yuyutei_sell"] is None
-    assert report["top_5"][0]["last_payload"] == original
-    regular = public_price_payload(db_session, payload, captured_at=stamp + timedelta(days=1))
-    assert regular == original
-
-
 def test_mover_uses_latest_id_when_sale_and_regular_timestamps_tie(db_session, client, sale_world):
     card, printing, source, mapping, original = sale_world
     regular = make_observation(db_session, card, source, mapping, printing,

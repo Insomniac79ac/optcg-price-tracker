@@ -232,8 +232,9 @@ The same reasoning applies to `/cards/[id]`'s former "Market context" panel
 — removed from the public card-detail page for the same reason: it's exactly
 the buy/sell-signal framing this task's Phase 8 explicitly rules out, on a
 page every anonymous visitor reaches. The underlying signal-events/
-opportunities APIs and pages are unchanged and still directly reachable, per
-`SidebarNav`'s existing "still reachable directly, just not linked" policy.
+opportunities APIs and pages stayed directly reachable until Collector v1 S1
+(2026-10-13) removed them; those URLs now 308-redirect to `/analytics`, and
+the buy/sell-decision and portfolio-risk pages to `/collection`.
 
 ## Mock/staging status
 

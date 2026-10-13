@@ -108,11 +108,9 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       // ranking is deferred, not silently reimplemented - what replaces it is
       // catalogue correctness, which the old path did not have.
       //
-      // /api/search itself is untouched and still authenticated - it remains
-      // the signed-in command centre over collection, wishlist, grading, notes
-      // and activity, which the /search page still uses. Only this palette's
-      // CARD SUGGESTIONS changed; saved views and command visibility below
-      // still depend on the session exactly as before.
+      // /api/search and the /search page were deleted in Collector v1 S1
+      // (/search now redirects to /cards). Saved views and command visibility
+      // below still depend on the session exactly as before.
       const search = searchPublicCardFamilies(trimmed, PUBLIC_CARD_SEARCH_LIMIT);
 
       search

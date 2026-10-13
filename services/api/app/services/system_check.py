@@ -2,7 +2,7 @@
 Every check here only reads and reports - none of them repair or mutate
 anything. Meant as a quick "is this deployment healthy and internally
 consistent" answer, not a replacement for the more detailed admin pages
-(card audit, refresh runs, workflow runs, backup) it summarizes.
+(card audit, refresh runs, backup) it summarizes.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 
 from app.env import is_development_environment
 from app.models import (
-    AnalyticsDigestReport,
     Card,
     CanonicalCard,
     CardPrint,
@@ -24,10 +23,8 @@ from app.models import (
     FileJob,
     GradingSubmission,
     ImportValidationReport,
-    MarketIntelligenceReport,
     MarketIndexSnapshot,
     MarketSignalEvent,
-    MarketWorkflowRun,
     PortfolioValuationSnapshot,
     PriceObservation,
     ReleaseProduct,
@@ -458,24 +455,6 @@ def _check_latest_timestamp(
     return CheckResult(name, "pass", "info", f"Latest {label}: {latest.isoformat()}.")
 
 
-def _check_latest_workflow_run(db: Session) -> CheckResult:
-    run = db.scalar(
-        select(MarketWorkflowRun).order_by(MarketWorkflowRun.started_at.desc()).limit(1)
-    )
-    if run is None:
-        return CheckResult("latest_workflow_run", "warning", "warning", "No workflow runs yet.")
-    if run.status == "failed":
-        return CheckResult(
-            "latest_workflow_run",
-            "warning",
-            "warning",
-            f"Latest workflow run (#{run.id}) failed: {run.error_message or 'no error message'}.",
-        )
-    return CheckResult(
-        "latest_workflow_run", "pass", "info", f"Latest workflow run (#{run.id}): {run.status}."
-    )
-
-
 def _check_backup_tables_included(_db: Session) -> CheckResult:
     registry_errors = backup_registry_errors()
     if registry_errors:
@@ -490,30 +469,6 @@ def _check_backup_tables_included(_db: Session) -> CheckResult:
         "pass",
         "critical",
         f"All {len(BACKUP_REGISTRY)} registered tables have valid models and FK-safe order.",
-    )
-
-
-def _check_search_responds(db: Session) -> CheckResult:
-    # Imported lazily to avoid a module-level import cycle (search.py doesn't
-    # import this module, but keeping the dependency direction explicit here
-    # is cheap and avoids ever having to think about it).
-    from app.services.search import search_health_probe
-
-    probe = search_health_probe(db)
-    if not probe.ok:
-        return CheckResult(
-            "search_responds",
-            "fail",
-            "critical",
-            f"Search health probe failed: {probe.error}",
-        )
-    return CheckResult(
-        "search_responds",
-        "pass",
-        "critical",
-        "Search catalogue probe responded "
-        f"({probe.result_count} bounded result(s); providers: "
-        f"{', '.join(probe.providers_checked)}).",
     )
 
 
@@ -1124,23 +1079,7 @@ def run_system_check(db: Session) -> list[CheckResult]:
             "latest_portfolio_snapshot",
             "portfolio valuation snapshot",
         ),
-        _check_latest_timestamp(
-            db,
-            MarketIntelligenceReport,
-            MarketIntelligenceReport.created_at,
-            "latest_market_report",
-            "market intelligence report",
-        ),
-        _check_latest_timestamp(
-            db,
-            AnalyticsDigestReport,
-            AnalyticsDigestReport.created_at,
-            "latest_analytics_digest",
-            "analytics digest",
-        ),
-        _check_latest_workflow_run(db),
         _check_backup_tables_included(db),
-        _check_search_responds(db),
         _check_orphan_fk(
             db,
             GradingSubmission.collection_item_id,

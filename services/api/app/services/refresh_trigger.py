@@ -31,22 +31,12 @@ TRIGGER_TIMEOUT_SECONDS = 25
 # a separate deployable, see the module docstring below), so invalidation
 # happens here instead, once the triggering request gets its result back.
 _PRICE_REFRESH_CACHE_INVALIDATES = (
-    "dashboard",
     "collection_valuation",
     "collection_history",
     "collection_analytics",
     "wishlist_analytics",
-    "market_signals",
-    "market_signal_events",
-    "market_opportunities",
-    "market_report",
     "wishlist",
     "wishlist_summary",
-    "sell_decisions",
-    "buy_decisions",
-    "grading_analytics",
-    "portfolio_risk",
-    "analytics_digest",
 )
 
 

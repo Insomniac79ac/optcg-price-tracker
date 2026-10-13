@@ -68,29 +68,10 @@ def test_system_check_works_on_empty_db(client, db_session):
     assert checks["database_reachable"]["status"] == "pass"
     assert checks["required_sources"]["status"] == "fail"  # no sources seeded
     assert checks["cards_count"]["message"].endswith("0 row(s).")
-    assert checks["search_responds"]["status"] == "pass"
     assert checks["backup_tables_included"]["status"] == "pass"
-
-
-def test_system_check_reports_search_health_probe_failure(
-    client, db_session, monkeypatch
-):
-    from app.services import search as search_service
-
-    def fail_catalogue_provider(*_args, **_kwargs):
-        raise RuntimeError("catalogue unavailable")
-
-    monkeypatch.setattr(search_service, "_search_cards", fail_catalogue_provider)
-
-    response = client.get("/admin/system-check")
-
-    check = checks_by_name(response.json())["search_responds"]
-    assert check == {
-        "name": "search_responds",
-        "status": "fail",
-        "severity": "critical",
-        "message": "Search health probe failed: RuntimeError: catalogue unavailable",
-    }
+    # Checks for features removed in Collector v1 S1 are gone.
+    for removed in ("search_responds", "latest_market_report", "latest_analytics_digest", "latest_workflow_run"):
+        assert removed not in checks
 
 
 def test_system_check_passes_required_sources_when_present(client, db_session):

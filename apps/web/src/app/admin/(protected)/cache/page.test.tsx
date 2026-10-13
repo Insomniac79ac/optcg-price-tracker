@@ -83,20 +83,20 @@ describe("CachePage", () => {
 
   it("passes the typed prefix through to clearCache", async () => {
     fetchCacheStatus.mockResolvedValue(SAMPLE_STATUS);
-    clearCache.mockResolvedValue({ success: true, prefix: "dashboard", deleted_count: 1 });
+    clearCache.mockResolvedValue({ success: true, prefix: "collection_valuation", deleted_count: 1 });
     render(<CachePage />);
 
     await waitFor(() => expect(screen.getByText("redis")).toBeInTheDocument());
 
-    const prefixInput = screen.getByPlaceholderText("e.g. dashboard");
-    fireEvent.change(prefixInput, { target: { value: "dashboard" } });
+    const prefixInput = screen.getByPlaceholderText("e.g. collection_valuation");
+    fireEvent.change(prefixInput, { target: { value: "collection_valuation" } });
 
     const confirmInput = screen.getByRole("textbox", { name: /type clear to confirm/i });
     fireEvent.change(confirmInput, { target: { value: "CLEAR" } });
     fireEvent.click(screen.getByRole("button", { name: "Clear cache" }));
 
     await waitFor(() =>
-      expect(clearCache).toHaveBeenCalledWith({ prefix: "dashboard", confirm: "CLEAR" }),
+      expect(clearCache).toHaveBeenCalledWith({ prefix: "collection_valuation", confirm: "CLEAR" }),
     );
   });
 });

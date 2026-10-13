@@ -63,14 +63,10 @@ changelog entry) - they're what section E (Rollback) below needs to identify wha
 
 ## D. Post-deploy validation
 
-- [ ] `/dashboard` loads.
 - [ ] `/collection` loads.
-- [ ] `/market/report` loads.
+- [ ] `/analytics` and `/cards` load.
 - [ ] `/admin/system-check` passes (`status: "ok"`, or only expected warnings).
 - [ ] `/admin/logs` has no new critical errors since the deploy started.
-- [ ] Market workflow dry-run works: `POST /admin/actions/run-market-workflow` with `"dry_run":
-      true` (or the "Run market workflow" action on `/admin/actions` with Dry run checked) - see
-      [Market workflow scheduling](operations.md#market-workflow-scheduling).
 - [ ] Backup export works: `GET /admin/backup/export` (or the "Export" button on `/admin/backup`)
       returns a valid backup JSON.
 
@@ -109,13 +105,9 @@ sections in docs/deployment.md / docs/operations.md for the full procedure of ea
 
 - **Rotate `ADMIN_TOKEN`** if it was ever exposed (committed to git, logged, leaked) - see [How to
   rotate ADMIN_TOKEN](deployment.md#1e-how-to-rotate-admin_token).
-- **Disable the market workflow** - set `MARKET_WORKFLOW_ENABLED=false` in `.env.production` and
-  restart `beat` (`docker compose -f docker-compose.prod.yml --env-file .env.production restart
-  beat`) - see [Market workflow scheduling](operations.md#market-workflow-scheduling).
-- **Disable the Telegram digest** without disabling the whole workflow - set
-  `MARKET_WORKFLOW_SEND_TELEGRAM=false` (same restart as above), or unset
-  `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` entirely - see [Telegram
-  config](deployment.md#1b-telegram-config).
+- **Disable Telegram alerts** - unset `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` and restart the
+  worker - see [Telegram config](deployment.md#1b-telegram-config). (The market workflow and its
+  Telegram digest were removed in Collector v1 S1.)
 - **Disable rate limits temporarily** if legitimate traffic is being 429'd (or to rule rate
   limiting out while debugging) - set `RATE_LIMIT_ENABLED=false` in `.env.production` and restart
   `api`. Re-enable once done - see [Temporarily disabling rate

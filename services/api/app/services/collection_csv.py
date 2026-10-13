@@ -61,20 +61,12 @@ DEFAULT_STATUS = "hold"
 # app.services.file_jobs' background collection_import processing, so both
 # paths stay in sync.
 COLLECTION_WRITE_CACHE_PREFIXES = (
-    "dashboard",
     "collection_valuation",
     "collection_history",
     "collection_analytics",
     "wishlist_analytics",
-    "market_opportunities",
-    "market_signals",
     "wishlist_summary",
     "grading_summary",
-    "sell_decisions",
-    "buy_decisions",
-    "grading_analytics",
-    "portfolio_risk",
-    "analytics_digest",
     "admin/catalog_coverage",
 )
 
