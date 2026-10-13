@@ -1,0 +1,14 @@
+500 1 staging bbbbbbbb DeliberateSentryTestError
+{
+"method": "GET",
+"headers": {
+"host": "testserver",
+"accept": "*/*",
+"accept-encoding": "gzip, deflate, zstd",
+"connection": "keep-alive",
+"user-agent": "testclient"
+},
+"url": "http://testserver/admin/observability/sentry-test"
+}
+[[('ExceptionGroup', 'unhandled errors in a TaskGroup'), ('DeliberateSentryTestError', 'Deliberate Sentry test error (api). Safe to ignore.')]]
+leaks: [] False False

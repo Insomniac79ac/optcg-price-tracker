@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /workspaces/cp-cv1-s2/apps/web
+
+
+ Test Files  130 passed (130)
+      Tests  1682 passed (1682)
+   Start at  12:33:20
+   Duration  113.40s (transform 6.43s, setup 11.85s, import 28.65s, tests 110.24s, environment 153.46s)
+

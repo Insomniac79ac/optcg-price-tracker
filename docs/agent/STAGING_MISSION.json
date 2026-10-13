@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Collector v1 S2: About, Methodology and draft Privacy/Terms pages with footer links; Vercel Web Analytics and Sentry (web and API) installed off-by-default, no collector release",
+ "mission": "Record Collector v1 S2 delivery (documentation only): PR #114 merged at eaf9de7 with receipt and 0 collector deployments; staging page, Vercel Analytics and Sentry verification; analytics root-cause correction; PR #113 receipt carried from S3",
  "target": "staging",
- "classification": "AMBER",
+ "classification": "GREEN",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,80 +20,188 @@
  "impacts": [
   {
    "files": [
-    "apps/web/src/app/about/page.tsx",
-    "apps/web/src/app/methodology/page.tsx",
-    "apps/web/src/app/privacy/page.tsx",
-    "apps/web/src/app/terms/page.tsx",
-    "apps/web/src/components/Footer.tsx",
-    "apps/web/src/components/info/InfoPage.module.css",
-    "apps/web/src/components/info/InfoPage.tsx",
-    "apps/web/src/lib/publicRoutes.ts"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "New public pages /about and /methodology (indexable, in sitemap) and draft /privacy and /terms (noindex, visible 'Draft \u2013 under review' banner, operator 'Card Pirate', placeholders [CONTACT EMAIL] and [GOVERNING LAW]; owner decisions Q3/Q8). Footer links on every page. Methodology restates docs/market_value.md, market_index.md, INVARIANTS.md and collector_accounts.md: no pricing, Market Index or Market Value change. Static pages, no API reads. Draft legal text is not adopted; approval and removing noindex remain the owner's launch gate."
-  },
-  {
-   "files": [
-    "apps/web/next.config.ts",
-    "apps/web/package-lock.json",
-    "apps/web/package.json",
-    "apps/web/src/app/api/admin/observability/sentry-test/route.ts",
-    "apps/web/src/app/error.tsx",
-    "apps/web/src/app/layout.tsx",
-    "apps/web/src/app/sign-in/GoogleSignInButton.tsx",
-    "apps/web/src/components/SiteAnalytics.tsx",
-    "apps/web/src/instrumentation-client.ts",
-    "apps/web/src/instrumentation.ts",
-    "apps/web/src/lib/analytics.ts",
-    "apps/web/src/lib/cspSentryOrigin.ts",
-    "apps/web/src/lib/reportError.ts",
-    "apps/web/src/lib/sentry.ts"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "Vercel Web Analytics (cookieless) mounted only when NEXT_PUBLIC_VERCEL_WEB_ANALYTICS=1; custom events limited to the nine in plan \u00a7F2 with properties allowlisted to page_type and release_code; path-only page views, admin/API paths never sent. Sentry (@sentry/nextjs 10.75.0) client/server/error boundary, no-op and CSP unchanged unless NEXT_PUBLIC_SENTRY_DSN is set; sendDefaultPii false, no tracing, replay or session pings; beforeSend scrubs Authorization, cookies, bodies, query strings and user; environment staging, release = build SHA. Admin-session-only /api/admin/observability/sentry-test raises a deliberate test error. Free tiers only (owner Q3). Neither is configured on staging at merge, so behaviour there is unchanged."
-  },
-  {
-   "files": [
-    "deploy/railway/api.Dockerfile",
-    "services/api/app/api/admin_observability.py",
-    "services/api/app/error_tracking.py",
-    "services/api/app/main.py",
-    "services/api/requirements-observability.txt"
-   ],
-   "effects": [
-    "application",
-    "infrastructure"
-   ],
-   "reason": "API Sentry per plan \u00a7A rule 5: sentry-sdk==2.70.0 in services/api/requirements-observability.txt, installed only by deploy/railway/api.Dockerfile (two added lines). app.error_tracking is imported only by app.main, imports sentry_sdk lazily and is a no-op without SENTRY_DSN (unset on staging at merge). send_default_pii False, no locals, bodies, tracing or sessions; before_send scrubs credentials, cookies, queries and user. Admin-token GET /admin/observability/sentry-test raises on purpose (hidden from OpenAPI, writes nothing). No settings.py, app/models/** or requirements.txt change; collector import graph: 0 changed runtime inputs for snkrdunk and yuyutei."
-  },
-  {
-   "files": [
-    "apps/web/scripts/generate-build-version.test.js",
-    "apps/web/src/app/api/admin/observability/sentry-test/route.test.ts",
-    "apps/web/src/app/infoPages.test.tsx",
-    "apps/web/src/lib/analytics.test.ts",
-    "apps/web/src/lib/publicRoutes.test.ts",
-    "apps/web/src/lib/sentry.test.ts",
-    "services/api/tests/test_error_tracking.py",
-    "services/api/tests/test_error_tracking_import_graph.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Page render and metadata (noindex and banner on drafts, canonical, sitemap membership), footer links, analytics allowlist/no-PII and page-view scrubbing, Sentry beforeSend scrubbing, no-op without DSN, CSP origin, admin test route auth, API scrubbing/no-op/options, requirements isolation, collector import-graph."
-  },
-  {
-   "files": [
-    "docs/ui/evidence/2026-10-13-collector-v1-s2-info-pages/CONTRACT.md"
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/HANDOFF.md",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/analytics-deep-probe-webdriver.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/analytics-pageview-probe-staging.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/api-sentry-e2e-local.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/api-sentry-test-call-staging.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/browser-error-capture-local.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/capture.err",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/deploy-records-after-pr114.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/deploy-records-after-sentry-dsn.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/env-names-after-owner.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/env-names-before-pr.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/env-names-before-ready.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-49323c6-pg18.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-49323c6-pg18.xml",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-a3f6380-pg18.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-staging-b3862e6-pg18.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/import-graph-check-49323c6.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/import-graph-check-a3f6380.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-disabled-local.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-enabled-local.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-staging-after-redeploy.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-staging-after.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-credential-probe-49323c610964d7cab92514eec0e99f34aff4ed0b/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-0309a88145827469.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-desktop-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-desktop.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-mobile-footer.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-mobile.png",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/skip-comparison-a3f6380-vs-b3862e6.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/staging-after-pages.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/web-vitest-49323c6.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/web-vitest-final.txt",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/analytics_view_probe.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/api_sentry_e2e.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/capture.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/compare_skips.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/env_names_check.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/import_graph_check.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/network_probe.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/run_api_suite.sh",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/wait_for_merge_window.sh",
+    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/write_manifest.py",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/deploy-records-after-pr113.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-credential-probe-6c2e166204eb229952ee8711839cd151fdc65f1d/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-73ee4fc36018f7ca.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-c09334b69a28b1a7.json"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "ATLAS tranche contract for the info pages."
+   "reason": "Handoff, evidence (delivery receipts, Railway deployment records, test results, probes, screenshots) and read-only tools for Collector v1 S2, plus the PR #113 receipt carried from S3. No code, workflow, deploy or runtime input changes."
   }
  ],
  "deployment_verification": {
@@ -107,54 +215,5 @@
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
  },
- "safeguards": {
-  "impact": {
-   "resources": [
-    {
-     "name": "Vercel project optcg-price-tracker-staging (web build)",
-     "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
-    },
-    {
-     "name": "Staging API (image gains sentry-sdk; inert without SENTRY_DSN)",
-     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
-    }
-   ],
-   "routes": [
-    "New: /about, /methodology, /privacy, /terms (static), /api/admin/observability/sentry-test (admin session), API GET /admin/observability/sentry-test (admin token). Footer on every page gains four links. No existing route changes."
-   ],
-   "dependencies": [
-    "@vercel/analytics 2.0.1",
-    "@sentry/nextjs 10.75.0",
-    "sentry-sdk 2.70.0 (API image only)"
-   ],
-   "deployment_impact": "Web builds on merge through the Vercel Git integration. API, worker, beat and market-index-snapshot build through their normal GitHub triggers. No collector watch path or collector-imported module changes, so no collector build or rollout; collector_services is empty. No migration; revision stays 3b7d9c1a5e20.",
-   "database_writes": 0,
-   "source_requests": 0,
-   "estimated_runtime_minutes": 10
-  },
-  "recovery": {
-   "artifact": "66cc7f2ed4f557af12a782de0cb4652f8e3dced8",
-   "procedure": "Native revert of this PR (web and API redeploy through their normal triggers). If DSN or analytics variables were added later, removing NEXT_PUBLIC_SENTRY_DSN / NEXT_PUBLIC_VERCEL_WEB_ANALYTICS (Vercel, then redeploy) and SENTRY_DSN (Railway API) switches both off without a revert.",
-   "trigger": "verifier failure; any public page error or hydration error; any change in Market Value, Market Index or card/print responses; any collector deployment record after merge",
-   "backup": "Not applicable: no database or persistent-state change.",
-   "validation": [
-    "apps/web/src/app/infoPages.test.tsx",
-    "apps/web/src/lib/analytics.test.ts",
-    "apps/web/src/lib/sentry.test.ts",
-    "services/api/tests/test_error_tracking.py",
-    "services/api/tests/test_error_tracking_import_graph.py"
-   ]
-  },
-  "verification": {
-   "required_checks": [
-    "engineering-gate"
-   ],
-   "post_change": [
-    "scripts/verify_staging_delivery.py",
-    "scripts/generate_staging_state.py"
-   ],
-   "observation_window": "Delivery receipt with frontend and API at the merge, revision 3b7d9c1a5e20 and 0 collector deployments (Railway records); /about, /methodology 200 indexable, /privacy and /terms 200 noindex with banner; footer links on every page."
-  }
- },
- "diff_sha256": "2733f7eeca1ae5c2006262ddc42bb21cfc34169a7a366b7bd8585d4674c03a54"
+ "diff_sha256": "fdea7f9edca84058ff89975ae4e909e89f28038ec3554c786e6594dca5c8edd5"
 }

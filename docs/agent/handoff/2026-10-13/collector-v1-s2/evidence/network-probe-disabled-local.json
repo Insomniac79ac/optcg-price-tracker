@@ -1,0 +1,30 @@
+{
+ "label": "build-without-dsn-or-analytics-flag",
+ "base": "http://localhost:3100",
+ "pages": {
+  "/": {
+   "vercel_insights": [],
+   "sentry_ingest": [],
+   "sentry_initialised": false,
+   "console_errors": [
+    "Connecting to 'http://localhost:8000/analytics/index/movers' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked.",
+    "Fetch API cannot load http://localhost:8000/analytics/index/movers. Refused to connect because it violates the document's Content Security Policy.",
+    "Connecting to 'http://localhost:8000/analytics/market-value/releases' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked.",
+    "Fetch API cannot load http://localhost:8000/analytics/market-value/releases. Refused to connect because it violates the document's Content Security Policy.",
+    "Connecting to 'http://localhost:8000/prints?rarity=SR&sort=created_desc&limit=16' violates the following Content Security Policy directive: \"connect-src 'self'\". The action has been blocked."
+   ]
+  },
+  "/about": {
+   "vercel_insights": [],
+   "sentry_ingest": [],
+   "sentry_initialised": false,
+   "console_errors": []
+  },
+  "/privacy": {
+   "vercel_insights": [],
+   "sentry_ingest": [],
+   "sentry_initialised": false,
+   "console_errors": []
+  }
+ }
+}

@@ -1,0 +1,533 @@
+{
+ "label": "after",
+ "base": "https://optcg-price-tracker-staging.vercel.app",
+ "observed_at": "2026-10-13T22:27:03.447647+00:00",
+ "pages": {
+  "/ [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Know your cards.\nKnow the market."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_root-desktop.png"
+  },
+  "/ [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Know your cards. Know the market."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_root-mobile.png"
+  },
+  "/cards [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/cards"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Card Prices"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_cards-desktop.png"
+  },
+  "/cards [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/cards"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Card Prices"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_cards-mobile.png"
+  },
+  "/analytics [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Market \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/analytics"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "How is the One Piece market doing?"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_analytics-desktop.png"
+  },
+  "/analytics [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Market \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/analytics"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "How is the One Piece market doing?"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_analytics-mobile.png"
+  },
+  "/about [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "About \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/about"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "About Card Pirate"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_about-desktop.png"
+  },
+  "/about [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "About \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/about"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "About Card Pirate"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_about-mobile.png"
+  },
+  "/methodology [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "How we price cards \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/methodology"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "How we price cards"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_methodology-desktop.png"
+  },
+  "/methodology [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "How we price cards \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/methodology"
+   ],
+   "draft_banner": [],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "How we price cards"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_methodology-mobile.png"
+  },
+  "/privacy [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Privacy policy (draft) \u2014 Card Pirate",
+   "robots_meta": [
+    "noindex, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/privacy"
+   ],
+   "draft_banner": [
+    "Draft \u2013 under review\n\nThis text is not in effect yet and will change before Card Pirate opens sign-in to the public. Items in [square brackets] are still to be decided."
+   ],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Privacy policy"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_privacy-desktop.png"
+  },
+  "/privacy [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Privacy policy (draft) \u2014 Card Pirate",
+   "robots_meta": [
+    "noindex, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/privacy"
+   ],
+   "draft_banner": [
+    "Draft \u2013 under review\n\nThis text is not in effect yet and will change before Card Pirate opens sign-in to the public. Items in [square brackets] are still to be decided."
+   ],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Privacy policy"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_privacy-mobile.png"
+  },
+  "/terms [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Terms of use (draft) \u2014 Card Pirate",
+   "robots_meta": [
+    "noindex, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/terms"
+   ],
+   "draft_banner": [
+    "Draft \u2013 under review\n\nThis text is not in effect yet and will change before Card Pirate opens sign-in to the public. Items in [square brackets] are still to be decided."
+   ],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Terms of use"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_terms-desktop.png"
+  },
+  "/terms [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Terms of use (draft) \u2014 Card Pirate",
+   "robots_meta": [
+    "noindex, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/terms"
+   ],
+   "draft_banner": [
+    "Draft \u2013 under review\n\nThis text is not in effect yet and will change before Card Pirate opens sign-in to the public. Items in [square brackets] are still to be decided."
+   ],
+   "footer_links": [
+    [
+     "About",
+     "/about"
+    ],
+    [
+     "How we price cards",
+     "/methodology"
+    ],
+    [
+     "Privacy",
+     "/privacy"
+    ],
+    [
+     "Terms",
+     "/terms"
+    ]
+   ],
+   "h1": [
+    "Terms of use"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "after_terms-mobile.png"
+  }
+ }
+}

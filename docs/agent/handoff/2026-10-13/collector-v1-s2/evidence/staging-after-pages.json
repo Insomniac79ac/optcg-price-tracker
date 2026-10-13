@@ -1,0 +1,100 @@
+{
+"/ [desktop]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/ [mobile]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/cards [desktop]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/cards [mobile]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/analytics [desktop]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/analytics [mobile]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/about [desktop]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/about [mobile]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/methodology [desktop]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/methodology [mobile]": [
+200,
+[
+"index, follow"
+],
+4
+],
+"/privacy [desktop]": [
+200,
+[
+"noindex, follow"
+],
+4
+],
+"/privacy [mobile]": [
+200,
+[
+"noindex, follow"
+],
+4
+],
+"/terms [desktop]": [
+200,
+[
+"noindex, follow"
+],
+4
+],
+"/terms [mobile]": [
+200,
+[
+"noindex, follow"
+],
+4
+]
+}

@@ -1,0 +1,9 @@
+{
+ "called_at": "2026-10-13T23:03:37.362744+00:00",
+ "calls": 1,
+ "url": "GET /admin/observability/sentry-test",
+ "auth": "X-Admin-Token (value not recorded)",
+ "status": 500,
+ "body": "Internal Server Error",
+ "request_id_hint": null
+}

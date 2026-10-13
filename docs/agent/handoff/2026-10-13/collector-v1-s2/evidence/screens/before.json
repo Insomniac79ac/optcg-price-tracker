@@ -1,0 +1,287 @@
+{
+ "label": "before",
+ "base": "https://optcg-price-tracker-staging.vercel.app",
+ "observed_at": "2026-10-13T11:59:39.834242+00:00",
+ "pages": {
+  "/ [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/"
+   ],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "Know your cards.\nKnow the market."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_root-desktop.png"
+  },
+  "/ [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/"
+   ],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "Know your cards. Know the market."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_root-mobile.png"
+  },
+  "/cards [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/cards"
+   ],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "Card Prices"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_cards-desktop.png"
+  },
+  "/cards [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Prices \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/cards"
+   ],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "Card Prices"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_cards-mobile.png"
+  },
+  "/analytics [desktop]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Market \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/analytics"
+   ],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "How is the One Piece market doing?"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_analytics-desktop.png"
+  },
+  "/analytics [mobile]": {
+   "status": 200,
+   "x_robots_tag": null,
+   "title": "One Piece Card Market \u2014 Card Pirate",
+   "robots_meta": [
+    "index, follow"
+   ],
+   "canonical": [
+    "https://optcg-price-tracker-staging.vercel.app/analytics"
+   ],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "How is the One Piece market doing?"
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [],
+   "shot": "before_analytics-mobile.png"
+  },
+  "/about [desktop]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_about-desktop.png"
+  },
+  "/about [mobile]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_about-mobile.png"
+  },
+  "/methodology [desktop]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_methodology-desktop.png"
+  },
+  "/methodology [mobile]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_methodology-mobile.png"
+  },
+  "/privacy [desktop]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_privacy-desktop.png"
+  },
+  "/privacy [mobile]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_privacy-mobile.png"
+  },
+  "/terms [desktop]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_terms-desktop.png"
+  },
+  "/terms [mobile]": {
+   "status": 404,
+   "x_robots_tag": null,
+   "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+   "robots_meta": [
+    "noindex"
+   ],
+   "canonical": [],
+   "draft_banner": [],
+   "footer_links": [],
+   "h1": [
+    "This chart doesn\u2019t lead anywhere."
+   ],
+   "horizontal_overflow": false,
+   "broken_images": 0,
+   "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 ()"
+   ],
+   "shot": "before_terms-mobile.png"
+  }
+ }
+}

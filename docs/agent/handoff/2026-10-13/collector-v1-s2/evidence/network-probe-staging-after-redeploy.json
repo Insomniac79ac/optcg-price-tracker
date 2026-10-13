@@ -1,0 +1,24 @@
+{
+ "label": "staging-after-redeploy",
+ "base": "https://optcg-price-tracker-staging.vercel.app",
+ "pages": {
+  "/": {
+   "vercel_insights": [],
+   "sentry_ingest": [],
+   "sentry_initialised": true,
+   "console_errors": []
+  },
+  "/about": {
+   "vercel_insights": [],
+   "sentry_ingest": [],
+   "sentry_initialised": true,
+   "console_errors": []
+  },
+  "/privacy": {
+   "vercel_insights": [],
+   "sentry_ingest": [],
+   "sentry_initialised": true,
+   "console_errors": []
+  }
+ }
+}
