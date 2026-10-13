@@ -58,6 +58,7 @@ from app.core.rate_limit import RateLimitMiddleware
 from app.core.request_timing import RequestTimingMiddleware
 from app.core.response_size import ResponseSizeMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
+from app.error_tracking import init_error_tracking
 from app.services.app_logging import record_app_log
 from app.services.job_locks import LockHeldError
 from app.settings import settings
@@ -110,6 +111,10 @@ if not _env_report.ok:
         "Invalid production environment configuration - refusing to start: "
         + "; ".join(_env_report.errors)
     )
+
+# Sentry error tracking: a no-op unless SENTRY_DSN is set (app/error_tracking.py).
+# Initialised before the app exists so its FastAPI integration hooks in.
+init_error_tracking()
 
 app = FastAPI(title="optcg-price-tracker API")
 

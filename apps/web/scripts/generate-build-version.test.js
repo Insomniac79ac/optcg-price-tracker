@@ -91,6 +91,7 @@ function loadNextConfig(root, phase) {
   fs.copyFileSync(path.join(__dirname, "../next.config.ts"), path.join(web, "next.config.ts"));
   fs.mkdirSync(path.join(web, "src/lib"), { recursive: true });
   fs.copyFileSync(path.join(__dirname, "../src/lib/cspImageOrigin.ts"), path.join(web, "src/lib/cspImageOrigin.ts"));
+  fs.copyFileSync(path.join(__dirname, "../src/lib/cspSentryOrigin.ts"), path.join(web, "src/lib/cspSentryOrigin.ts"));
   fs.copyFileSync(path.join(__dirname, "../src/lib/metadataBots.ts"), path.join(web, "src/lib/metadataBots.ts"));
   fs.copyFileSync(path.join(__dirname, "../src/lib/legacyRedirects.ts"), path.join(web, "src/lib/legacyRedirects.ts"));
   fs.symlinkSync(path.resolve(__dirname, "../node_modules"), path.join(web, "node_modules"), "dir");

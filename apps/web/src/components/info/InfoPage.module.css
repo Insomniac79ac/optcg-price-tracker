@@ -1,0 +1,59 @@
+/* Waypoint numbers (01, 02, ...) on info-page sections, in document order,
+ * in the same gold display numerals as AtlasSectionIntro on the homepage.
+ * Decorative: screen readers get the plain heading. */
+.article {
+  min-width: 0;
+  counter-reset: info-section;
+}
+
+.section {
+  counter-increment: info-section;
+}
+
+.section > h2::before {
+  content: counter(info-section, decimal-leading-zero);
+  content: counter(info-section, decimal-leading-zero) / "";
+  display: inline-block;
+  min-width: 2.25rem;
+  margin-right: 0.5rem;
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+/* "Back to contents" only on pages with a contents list, below lg (where the
+ * sticky rail is not shown). */
+.backLink {
+  display: none;
+}
+
+.sections .backLink {
+  display: inline-block;
+}
+
+@media (min-width: 1024px) {
+  .sections .backLink {
+    display: none;
+  }
+}
+
+/* Contents entries carry the same numbers as the sections they point to. */
+.contents {
+  counter-reset: info-contents;
+}
+
+.contents li {
+  counter-increment: info-contents;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.contents li::before {
+  content: counter(info-contents, decimal-leading-zero);
+  flex: none;
+  min-width: 1.4rem;
+  color: var(--accent-gold);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  line-height: 1.45rem;
+}

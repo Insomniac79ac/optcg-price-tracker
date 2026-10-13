@@ -20,7 +20,11 @@
  * continues to exclude the seven legacy collector-data leaf pages beneath it
  * while leaving this one crawlable - the same shape "/cards/" has against
  * "/cards". */
-export const PUBLIC_INDEXABLE_ROUTES = ["/", "/analytics", "/cards"] as const;
+/* /about and /methodology joined on 2026-10-13 (Collector v1 S2). /privacy
+ * and /terms are drafts (noindex) and stay out until the owner approves them;
+ * they are deliberately not disallowed either, so a crawler can read their
+ * noindex. */
+export const PUBLIC_INDEXABLE_ROUTES = ["/", "/analytics", "/cards", "/about", "/methodology"] as const;
 
 /** Path prefixes a crawler is asked to stay out of: private collector data,
  * the admin surface, internal market analytics, the API proxy routes, and the

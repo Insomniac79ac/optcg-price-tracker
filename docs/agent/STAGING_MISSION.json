@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Self-host Fraunces and IBM Plex Mono via next/font/local so the staging web build never fetches Google Fonts (web only; no API, migration, collector or data change; no collector rollout)",
+ "mission": "Collector v1 S2: About, Methodology and draft Privacy/Terms pages with footer links; Vercel Web Analytics and Sentry (web and API) installed off-by-default, no collector release",
  "target": "staging",
- "classification": "GREEN",
+ "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,45 +20,82 @@
  "impacts": [
   {
    "files": [
-    "apps/web/src/app/fonts/Fraunces-latin.woff2",
-    "apps/web/src/app/fonts/IBMPlexMono-Regular-latin.woff2",
-    "apps/web/src/app/fonts/IBMPlexMono-Medium-latin.woff2",
-    "apps/web/src/app/fonts/IBMPlexMono-SemiBold-latin.woff2",
-    "apps/web/src/app/layout.tsx",
-    "apps/web/src/app/globals.css",
-    "apps/web/src/lib/chartExport.ts"
+    "apps/web/src/app/about/page.tsx",
+    "apps/web/src/app/methodology/page.tsx",
+    "apps/web/src/app/privacy/page.tsx",
+    "apps/web/src/app/terms/page.tsx",
+    "apps/web/src/components/Footer.tsx",
+    "apps/web/src/components/info/InfoPage.module.css",
+    "apps/web/src/components/info/InfoPage.tsx",
+    "apps/web/src/lib/publicRoutes.ts"
    ],
    "effects": [
-    "application",
-    "staging_deployment"
+    "application"
    ],
-   "reason": "Replace next/font/google Fraunces and IBM_Plex_Mono with next/font/local using the committed latin-subset woff2 files Google Fonts served (byte-identical to the previous build's emitted assets; same CSS variables, weights, styles, display). Comment updates in globals.css and chartExport.ts. Builds with fonts.googleapis.com and fonts.gstatic.com blocked; rendering, layout and chart export verified unchanged. Vercel frontend build only; no services/, packages/, deploy/, scripts/ or workflow change, no collector rollout or migration requested. Expected 0 collector deployment records."
+   "reason": "New public pages /about and /methodology (indexable, in sitemap) and draft /privacy and /terms (noindex, visible 'Draft \u2013 under review' banner, operator 'Card Pirate', placeholders [CONTACT EMAIL] and [GOVERNING LAW]; owner decisions Q3/Q8). Footer links on every page. Methodology restates docs/market_value.md, market_index.md, INVARIANTS.md and collector_accounts.md: no pricing, Market Index or Market Value change. Static pages, no API reads. Draft legal text is not adopted; approval and removing noindex remain the owner's launch gate."
   },
   {
    "files": [
-    "apps/web/src/app/layout.metadata.test.ts"
+    "apps/web/next.config.ts",
+    "apps/web/package-lock.json",
+    "apps/web/package.json",
+    "apps/web/src/app/api/admin/observability/sentry-test/route.ts",
+    "apps/web/src/app/error.tsx",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/app/sign-in/GoogleSignInButton.tsx",
+    "apps/web/src/components/SiteAnalytics.tsx",
+    "apps/web/src/instrumentation-client.ts",
+    "apps/web/src/instrumentation.ts",
+    "apps/web/src/lib/analytics.ts",
+    "apps/web/src/lib/cspSentryOrigin.ts",
+    "apps/web/src/lib/reportError.ts",
+    "apps/web/src/lib/sentry.ts"
+   ],
+   "effects": [
+    "application"
+   ],
+   "reason": "Vercel Web Analytics (cookieless) mounted only when NEXT_PUBLIC_VERCEL_WEB_ANALYTICS=1; custom events limited to the nine in plan \u00a7F2 with properties allowlisted to page_type and release_code; path-only page views, admin/API paths never sent. Sentry (@sentry/nextjs 10.75.0) client/server/error boundary, no-op and CSP unchanged unless NEXT_PUBLIC_SENTRY_DSN is set; sendDefaultPii false, no tracing, replay or session pings; beforeSend scrubs Authorization, cookies, bodies, query strings and user; environment staging, release = build SHA. Admin-session-only /api/admin/observability/sentry-test raises a deliberate test error. Free tiers only (owner Q3). Neither is configured on staging at merge, so behaviour there is unchanged."
+  },
+  {
+   "files": [
+    "deploy/railway/api.Dockerfile",
+    "services/api/app/api/admin_observability.py",
+    "services/api/app/error_tracking.py",
+    "services/api/app/main.py",
+    "services/api/requirements-observability.txt"
+   ],
+   "effects": [
+    "application",
+    "infrastructure"
+   ],
+   "reason": "API Sentry per plan \u00a7A rule 5: sentry-sdk==2.70.0 in services/api/requirements-observability.txt, installed only by deploy/railway/api.Dockerfile (two added lines). app.error_tracking is imported only by app.main, imports sentry_sdk lazily and is a no-op without SENTRY_DSN (unset on staging at merge). send_default_pii False, no locals, bodies, tracing or sessions; before_send scrubs credentials, cookies, queries and user. Admin-token GET /admin/observability/sentry-test raises on purpose (hidden from OpenAPI, writes nothing). No settings.py, app/models/** or requirements.txt change; collector import graph: 0 changed runtime inputs for snkrdunk and yuyutei."
+  },
+  {
+   "files": [
+    "apps/web/scripts/generate-build-version.test.js",
+    "apps/web/src/app/api/admin/observability/sentry-test/route.test.ts",
+    "apps/web/src/app/infoPages.test.tsx",
+    "apps/web/src/lib/analytics.test.ts",
+    "apps/web/src/lib/publicRoutes.test.ts",
+    "apps/web/src/lib/sentry.test.ts",
+    "services/api/tests/test_error_tracking.py",
+    "services/api/tests/test_error_tracking_import_graph.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Comment-only update: layout.tsx now uses next/font/local."
+   "reason": "Page render and metadata (noindex and banner on drafts, canonical, sitemap membership), footer links, analytics allowlist/no-PII and page-view scrubbing, Sentry beforeSend scrubbing, no-op without DSN, CSP origin, admin test route auth, API scrubbing/no-op/options, requirements isolation, collector import-graph."
   },
   {
    "files": [
-    "apps/web/src/app/fonts/Fraunces-OFL.txt",
-    "apps/web/src/app/fonts/IBMPlexMono-OFL.txt",
-    "apps/web/src/app/fonts/README.md",
-    "docs/brand.md",
-    "docs/interface_design_system.md",
-    ".claude/skills/cardpirate-collector-ui/SKILL.md"
+    "docs/ui/evidence/2026-10-13-collector-v1-s2-info-pages/CONTRACT.md"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "SIL OFL 1.1 licence texts (unmodified, google/fonts) next to the fonts, font provenance README with hashes and the unmodified-upstream alternative, and typography docs updated from next/font/google to next/font/local."
+   "reason": "ATLAS tranche contract for the info pages."
   }
  ],
- "diff_sha256": "5073d4160a676a675392e2a2f10da2dbaf03329af47f2d7e1a5adb995142dcdf",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "3b7d9c1a5e20",
@@ -69,5 +106,55 @@
   "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
- }
+ },
+ "safeguards": {
+  "impact": {
+   "resources": [
+    {
+     "name": "Vercel project optcg-price-tracker-staging (web build)",
+     "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
+    },
+    {
+     "name": "Staging API (image gains sentry-sdk; inert without SENTRY_DSN)",
+     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+    }
+   ],
+   "routes": [
+    "New: /about, /methodology, /privacy, /terms (static), /api/admin/observability/sentry-test (admin session), API GET /admin/observability/sentry-test (admin token). Footer on every page gains four links. No existing route changes."
+   ],
+   "dependencies": [
+    "@vercel/analytics 2.0.1",
+    "@sentry/nextjs 10.75.0",
+    "sentry-sdk 2.70.0 (API image only)"
+   ],
+   "deployment_impact": "Web builds on merge through the Vercel Git integration. API, worker, beat and market-index-snapshot build through their normal GitHub triggers. No collector watch path or collector-imported module changes, so no collector build or rollout; collector_services is empty. No migration; revision stays 3b7d9c1a5e20.",
+   "database_writes": 0,
+   "source_requests": 0,
+   "estimated_runtime_minutes": 10
+  },
+  "recovery": {
+   "artifact": "66cc7f2ed4f557af12a782de0cb4652f8e3dced8",
+   "procedure": "Native revert of this PR (web and API redeploy through their normal triggers). If DSN or analytics variables were added later, removing NEXT_PUBLIC_SENTRY_DSN / NEXT_PUBLIC_VERCEL_WEB_ANALYTICS (Vercel, then redeploy) and SENTRY_DSN (Railway API) switches both off without a revert.",
+   "trigger": "verifier failure; any public page error or hydration error; any change in Market Value, Market Index or card/print responses; any collector deployment record after merge",
+   "backup": "Not applicable: no database or persistent-state change.",
+   "validation": [
+    "apps/web/src/app/infoPages.test.tsx",
+    "apps/web/src/lib/analytics.test.ts",
+    "apps/web/src/lib/sentry.test.ts",
+    "services/api/tests/test_error_tracking.py",
+    "services/api/tests/test_error_tracking_import_graph.py"
+   ]
+  },
+  "verification": {
+   "required_checks": [
+    "engineering-gate"
+   ],
+   "post_change": [
+    "scripts/verify_staging_delivery.py",
+    "scripts/generate_staging_state.py"
+   ],
+   "observation_window": "Delivery receipt with frontend and API at the merge, revision 3b7d9c1a5e20 and 0 collector deployments (Railway records); /about, /methodology 200 indexable, /privacy and /terms 200 noindex with banner; footer links on every page."
+  }
+ },
+ "diff_sha256": "2733f7eeca1ae5c2006262ddc42bb21cfc34169a7a366b7bd8585d4674c03a54"
 }

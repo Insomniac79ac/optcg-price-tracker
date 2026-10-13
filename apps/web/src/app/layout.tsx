@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthSessionProvider } from "@/components/AuthSessionProvider";
 import { Footer } from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { publicSiteUrl } from "@/lib/publicRoutes";
 import { absoluteUrl } from "@/lib/publicSeo";
 import { brand } from "@/lib/brand";
@@ -75,6 +76,7 @@ export default function RootLayout({
           <div className="flex-1">{children}</div>
           <Footer />
         </AuthSessionProvider>
+        <SiteAnalytics />
       </body>
     </html>
   );
