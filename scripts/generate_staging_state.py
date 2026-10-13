@@ -189,6 +189,90 @@ def staging_environment():
     return environments[0]
 
 
+# deployment-provenance-divergence compares each service with what it actually
+# runs, not with the repository head. A docs or web merge moves the head while
+# every collector correctly stays on its release commit (and the API on its last
+# watched build), which used to raise this blocker falsely.
+GITHUB_BUILT_SERVICES = {"optcg-price-tracker", "market-index-snapshot"}
+
+
+def collector_of(name):
+    if name == "snkrdunk-collector":
+        return "snkrdunk"
+    if name.startswith("yuyutei-collector-shard-"):
+        return "yuyutei"
+    return None
+
+
+def _git(*args):
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+
+
+def _watched(path, patterns):
+    # Same matching as verify_staging_delivery.watched (over-matching only
+    # reports a divergence, never hides one).
+    import fnmatch
+
+    for pattern in patterns:
+        pattern = pattern.lstrip("/")
+        if pattern.endswith("/**") and path.startswith(pattern[:-2]):
+            return True
+        if fnmatch.fnmatchcase(path, pattern):
+            return True
+    return False
+
+
+def commit_provenance(name, deployed, head, *, git=_git, runtime_changes=None, watch_patterns=None):
+    """Is `deployed` current for what service `name` runs at `head`?
+
+    Collectors: no runtime input (scripts/collector_runtime_inputs.py) changed
+    between `deployed` and `head`, i.e. `deployed` is not older than the newest
+    commit that changed the collector's runtime inputs. GitHub-built services:
+    no path under their Railway watch patterns changed. Anything else must equal
+    the head. `deployed` must always be on the staging history. Every
+    undeterminable case is reported as not current (fail closed).
+    """
+    if deployed == head:
+        return {"current": True, "basis": "head", "changed": []}
+    if not re.fullmatch(r"[0-9a-f]{40}", deployed or ""):
+        return {"current": False, "basis": "unrecognised commit", "changed": []}
+    if git("merge-base", "--is-ancestor", deployed, head).returncode != 0:
+        return {"current": False, "basis": "not on the staging history", "changed": []}
+    collector = collector_of(name)
+    if collector:
+        if runtime_changes is None:
+            import collector_runtime_inputs as tool
+
+            def runtime_changes(component, target, key):
+                try:
+                    return tool.changed_runtime_inputs(component, target, key)
+                except Exception as error:  # noqa: BLE001 - any failure is a divergence
+                    return [f"undeterminable: {type(error).__name__}"], "error"
+
+        changed, basis = runtime_changes(deployed, head, collector)
+        return {"current": not changed, "basis": f"collector runtime inputs ({basis})", "changed": sorted(changed)}
+    if name in GITHUB_BUILT_SERVICES:
+        patterns = list(watch_patterns or [])
+        if not patterns or any(p.startswith("!") for p in patterns):
+            return {"current": False, "basis": "watch patterns undeterminable", "changed": []}
+        diff = git("diff", "--name-only", "--no-renames", deployed, head)
+        if diff.returncode != 0:
+            return {"current": False, "basis": "diff undeterminable", "changed": []}
+        changed = sorted(f for f in diff.stdout.splitlines() if f and _watched(f, patterns))
+        return {"current": not changed, "basis": "watch patterns", "changed": changed}
+    return {"current": False, "basis": "head", "changed": []}
+
+
+def service_provenance(service, head, **kwargs):
+    """Combine both recorded commits; they must agree when both are known."""
+    shas = {service[k] for k in ("git_sha", "reported_sha") if service.get(k, UNKNOWN) != UNKNOWN}
+    if not shas:
+        return UNKNOWN
+    if len(shas) > 1:
+        return {"current": False, "basis": "platform and exact-commit marker disagree", "changed": []}
+    return commit_provenance(service["name"], shas.pop(), head, **kwargs)
+
+
 def collect_live(database_expected_revisions=None):
     environment = staging_environment()
     services = []
@@ -227,6 +311,16 @@ def collect_live(database_expected_revisions=None):
         r"[0-9a-f]{40}", branch["commit"]["sha"]
     ):
         raise VerificationError("Refused: Git branch identity did not match staging")
+    head = branch["commit"]["sha"]
+    for service in services:
+        watch = None
+        if service["name"] in GITHUB_BUILT_SERVICES:
+            row = railway(
+                f'query {{ serviceInstance(environmentId:"{ENVIRONMENT}", '
+                f'serviceId:"{service["service_id"]}") {{ watchPatterns }} }}'
+            )["serviceInstance"]
+            watch = row.get("watchPatterns") or []
+        service["provenance"] = service_provenance(service, head, watch_patterns=watch)
     evidence = {
         "environment": "staging",
         "mode": "live",
@@ -264,6 +358,14 @@ def collect_live(database_expected_revisions=None):
             "sha": meta.get("githubCommitSha") or meta.get("gitCommitSha") or UNKNOWN,
         }
     return evidence
+
+
+def clean_provenance(value):
+    """Only the decision, its basis and changed repository paths are kept."""
+    if not isinstance(value, dict) or not isinstance(value.get("current"), bool):
+        return UNKNOWN
+    changed = [str(p) for p in value.get("changed", []) if re.fullmatch(r"[\w./@+-]+|undeterminable: \w+", str(p))]
+    return {"current": value["current"], "basis": str(value.get("basis", ""))[:80], "changed": changed[:50]}
 
 
 def sanitize(evidence):
@@ -382,17 +484,20 @@ def sanitize(evidence):
             "environment_id": rail["environment_id"],
             "services": [
                 {
-                    k: s.get(k, UNKNOWN)
-                    for k in [
-                        "name",
-                        "service_id",
-                        "due_work_configured",
-                        "schedule_utc",
-                        "deployment_id",
-                        "status",
-                        "git_sha",
-                        "reported_sha",
-                    ]
+                    **{
+                        k: s.get(k, UNKNOWN)
+                        for k in [
+                            "name",
+                            "service_id",
+                            "due_work_configured",
+                            "schedule_utc",
+                            "deployment_id",
+                            "status",
+                            "git_sha",
+                            "reported_sha",
+                        ]
+                    },
+                    "provenance": clean_provenance(s.get("provenance", UNKNOWN)),
                 }
                 for s in rail["services"]
             ],
@@ -497,15 +602,24 @@ def build_state(evidence):
             }
         )
     repo_sha = evidence["repository"]["sha"]
-    if front.get("sha", UNKNOWN) not in (UNKNOWN, repo_sha) or any(
-        s[key] not in (UNKNOWN, repo_sha)
-        for s in services
-        for key in ("reported_sha", "git_sha")
-    ):
+
+    def divergent(service):
+        provenance = service.get("provenance", UNKNOWN)
+        if isinstance(provenance, dict):
+            return not provenance["current"]
+        # Evidence recorded before provenance existed: the head rule.
+        return any(service[key] not in (UNKNOWN, repo_sha) for key in ("reported_sha", "git_sha"))
+
+    diverged = sorted(s["name"] for s in services if divergent(s))
+    # The frontend is built from every staging commit, so it must equal the head.
+    if front.get("sha", UNKNOWN) not in (UNKNOWN, repo_sha):
+        diverged.insert(0, "frontend")
+    if diverged:
         blockers.append(
             {
                 "id": "deployment-provenance-divergence",
                 "scope": "verify intended source before redeploying",
+                "services": diverged,
             }
         )
     blockers.extend(

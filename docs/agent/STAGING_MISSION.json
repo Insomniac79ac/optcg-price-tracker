@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Record Collector v1 S3 delivery on staging: PR #112 receipts, migration 3b7d9c1a5e20 evidence, flag-off /me checks, skip comparison; carry the pending PR #111 receipt (documentation only)",
+ "mission": "Capacity75 session 12: deployment-provenance-divergence compares each service with what it runs (collector runtime inputs, API watch patterns), not the repository head (tooling only)",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,80 +20,32 @@
  "impacts": [
   {
    "files": [
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/HANDOFF.md",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/backups-preflight-1.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/backups-preflight-2.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/backups-preflight-3.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/deploy-records-after-pr112.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/flag-check-after-deploy.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-793d203-pg18-delay65.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-ae73048-delay65.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-ea00c36-pg16.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/full-api-suite-staging-b9d1c21-pg18.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/import-graph-check-793d203.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/import-graph-check-ea00c36.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/legacy-dry-run-postmigration.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/legacy-dry-run-premigration.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/me-probe-after-deploy.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/me-probe-before-deploy.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/migration-3b7d9c1a5e20-offline.sql",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/migration-upgrade.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/openapi-me-after-deploy.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-credential-probe-10e2fbc1b1ef75f51c2fc64b014ca1e555eff68d/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-4a1530ec16286b6e.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr112-delivery/staging-delivery-5d86629fc8679849e9bcb79121d0407e813f2166/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/skip-comparison-793d203-vs-b9d1c21.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/staging-state-after-deploy.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/staging-state-preflight-1.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/apply_migration.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/backups.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/compare_skips.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/db.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/delay_after_collection.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/deploy_records.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/import_graph_check.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/me_probe.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/run_both.sh",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/run_suite.sh",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/tools/staging_readonly.py"
+    "scripts/generate_staging_state.py"
    ],
    "effects": [
-    "documentation",
     "state_observation"
    ],
-   "reason": "S3 handoff and read-only evidence under docs/agent/handoff/2026-10-13/collector-v1-s3/ (HANDOFF.md, downloaded PR #112 delivery and credential-probe artifacts, Railway deployment records, migration result and offline DDL, backup checks, table state, legacy dry run, /me and OpenAPI probes, flag presence check, API suite logs and skip comparison, import-graph check) plus the tools used. No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
+   "reason": "State generator only: per-service provenance decision. Collectors current when scripts/collector_runtime_inputs.py reports no changed runtime input between the deployed commit and the head; API and market-index-snapshot current when no watched path changed (Railway watchPatterns, read only); frontend must equal the head. Off-history commits, disagreeing platform/marker SHAs and undeterminable graphs still diverge. No Railway, Vercel or database write; no collector, API or web code change; scripts/ is outside every collector image and watch path."
   },
   {
    "files": [
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr111-delivery/staging-delivery-b9d1c211de51d55946d53d66d98f6f24ad33831b/evidence/staging-state-eac5de83941abd00.json"
+    "scripts/tests/test_generate_staging_state.py"
    ],
    "effects": [
-    "documentation",
-    "state_observation"
+    "tests"
    ],
-   "reason": "Pending PR #111 (S1 handoff) delivery receipt, downloaded read-only from CI run 38362184827 into the S1 evidence folder. No behaviour."
+   "reason": "Both cases: false alarm cleared (collector on its release commit after docs/web merges; API skipped for a docs merge) and real divergence still fires (collector behind a runtime-input change, off-history commit, watched API change, undeterminable inputs/patterns, SHA disagreement, frontend behind head)."
+  },
+  {
+   "files": [
+    "docs/agent/STAGING_DELIVERY.md"
+   ],
+   "effects": [
+    "documentation"
+   ],
+   "reason": "Records the new provenance rule and the session-12 counterfactual on real history."
   }
  ],
- "diff_sha256": "af3e9ae8f546ce5a75677cb1ebf5735e5634af7ddbae6ccd05f45919182ebc79",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "3b7d9c1a5e20",
@@ -104,5 +56,6 @@
   "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
- }
+ },
+ "diff_sha256": "0f93d06273f08408a0d0d302a5720686adce97db61bc2612a4acd897787a9738"
 }
