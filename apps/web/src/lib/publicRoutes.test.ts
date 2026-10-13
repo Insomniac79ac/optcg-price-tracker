@@ -29,7 +29,15 @@ describe("public indexable routes", () => {
     // landscape is a real, stable, parameter-free public page. The seven
     // legacy /analytics/* leaf pages did NOT join it - they stay excluded by
     // the "/analytics/" disallow prefix, which is asserted below.
-    expect([...PUBLIC_INDEXABLE_ROUTES]).toEqual(["/", "/analytics", "/cards"]);
+    // /about and /methodology joined on 2026-10-13 (Collector v1 S2).
+    expect([...PUBLIC_INDEXABLE_ROUTES]).toEqual(["/", "/analytics", "/cards", "/about", "/methodology"]);
+  });
+
+  it("keeps the draft legal pages out of the sitemap but crawlable for their noindex", () => {
+    for (const draft of ["/privacy", "/terms"]) {
+      expect([...PUBLIC_INDEXABLE_ROUTES]).not.toContain(draft);
+      expect(CRAWLER_DISALLOWED_PREFIXES.some((prefix) => draft.startsWith(prefix))).toBe(false);
+    }
   });
 
   it("indexes the market landscape without indexing collector analytics", () => {

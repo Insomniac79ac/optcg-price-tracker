@@ -1,4 +1,15 @@
+import Link from "next/link";
+
 import { brand } from "@/lib/brand";
+
+/** Info pages linked from every page (Collector v1 plan §G). Privacy and
+ * Terms are drafts (noindex, banner) until the owner approves them. */
+export const FOOTER_LINKS = [
+  { href: "/about", label: "About" },
+  { href: "/methodology", label: "How we price cards" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+] as const;
 
 /** Site-wide footer - the one place the legal disclaimer lives, so it
  * never needs restating per-page. Deliberately quiet (small text, no
@@ -19,6 +30,17 @@ export function Footer() {
   return (
     <footer className="mt-16 border-t border-border-muted px-4 py-7 text-xs">
       <div className="mx-auto flex max-w-7xl flex-col gap-2.5">
+        <nav aria-label="Site information" className="mb-1.5">
+          <ul className="flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
+            {FOOTER_LINKS.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="text-text-secondary hover:text-text-primary">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <p className="max-w-3xl leading-relaxed text-text-muted">{brand.legalDisclaimer}</p>
         <p className="max-w-3xl leading-relaxed text-text-muted">{brand.imageCredit}</p>
         <p className="flex flex-wrap items-baseline gap-x-1.5 text-text-muted">
