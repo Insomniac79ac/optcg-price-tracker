@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Capacity75 session 12: deployment-provenance-divergence compares each service with what it runs (collector runtime inputs, API watch patterns), not the repository head (tooling only)",
+ "mission": "Capacity75 session 12: guarded Yuyu identity-capture enqueue tool for approved NEW100 batches (tool and tests only; no intent written by this PR)",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,30 +20,21 @@
  "impacts": [
   {
    "files": [
-    "scripts/generate_staging_state.py"
+    "scripts/yuyu_identity_capture_enqueue.py"
    ],
    "effects": [
-    "state_observation"
+    "application"
    ],
-   "reason": "State generator only: per-service provenance decision. Collectors current when scripts/collector_runtime_inputs.py reports no changed runtime input between the deployed commit and the head; API and market-index-snapshot current when no watched path changed (Railway watchPatterns, read only); frontend must equal the head. Off-history commits, disagreeing platform/marker SHAs and undeterminable graphs still diverge. No Railway, Vercel or database write; no collector, API or web code change; scripts/ is outside every collector image and watch path."
+   "reason": "Operator tool, run explicitly; merging it writes nothing. Dry run by default; --apply writes pending Yuyu identity-evidence capture intents through the canonical freshness_queue.plan_discovery_scope writer, in the shape the collector's load_intent accepts. Approved list pinned by SHA-256; every entry re-resolved live (ambiguous family, unchanged digest, authoritative release_product_id, complete 2..12 siblings, listing identity, no active mapping, no reviewed decision, no other capture scope, no shared print); one failure refuses the batch with no write; reruns are no-ops. Never writes proposals, reviews or mappings; no source request; not imported by any collector (scripts/ is outside every collector image and watch path)."
   },
   {
    "files": [
-    "scripts/tests/test_generate_staging_state.py"
+    "services/api/tests/test_yuyu_identity_capture_enqueue_postgres.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Both cases: false alarm cleared (collector on its release commit after docs/web merges; API skipped for a docs merge) and real divergence still fires (collector behind a runtime-input change, off-history commit, watched API change, undeterminable inputs/patterns, SHA disagreement, frontend behind head)."
-  },
-  {
-   "files": [
-    "docs/agent/STAGING_DELIVERY.md"
-   ],
-   "effects": [
-    "documentation"
-   ],
-   "reason": "Records the new provenance rule and the session-12 counterfactual on real history."
+   "reason": "Postgres: dry run writes nothing; apply writes the exact intent and the real collector load_intent accepts it after a claim; rerun is a no-op; changed digest/release/siblings/candidate refuse the whole batch; active sibling mapping, other capture scope and shared prints refuse; list pinned and strict; no proposal or mapping writes; tool outside every collector runtime path. Test file only: not a collector runtime input."
   }
  ],
  "deployment_verification": {
@@ -57,5 +48,5 @@
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
  },
- "diff_sha256": "0f93d06273f08408a0d0d302a5720686adce97db61bc2612a4acd897787a9738"
+ "diff_sha256": "8e21aa3b3be4a3202132212a8a4073d72413d8baccf3875c4a66c4ccb48d586f"
 }
