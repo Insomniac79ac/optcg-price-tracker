@@ -23,6 +23,9 @@ WORKDIR /app
 
 COPY services/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# API-only error tracking (app/error_tracking.py); never in the collector images.
+COPY services/api/requirements-observability.txt .
+RUN pip install --no-cache-dir -r requirements-observability.txt
 
 COPY packages/opcg_source_identity /opt/opcg_source_identity
 RUN python -m pip install --no-cache-dir --no-deps /opt/opcg_source_identity

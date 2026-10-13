@@ -1,0 +1,4 @@
+# Error tracking for the API service only (Collector v1 plan §A rule 5).
+# Installed by deploy/railway/api.Dockerfile and nothing else: it must not
+# enter requirements.txt, which both collector images install.
+sentry-sdk==2.70.0

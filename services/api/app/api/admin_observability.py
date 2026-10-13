@@ -24,3 +24,14 @@ def observability_summary_endpoint(db: Session = Depends(get_db)):
         latest_backup=summary.latest_backup,
         latest_system_check_status=summary.latest_system_check_status,
     )
+
+
+class DeliberateSentryTestError(RuntimeError):
+    """Raised only by the endpoint below."""
+
+
+@router.get("/sentry-test", include_in_schema=False)
+def sentry_test_endpoint():
+    """Fail on purpose so an operator can confirm API error tracking reaches
+    Sentry (Collector v1 S2). Admin-token only, read-only, writes nothing."""
+    raise DeliberateSentryTestError("Deliberate Sentry test error (api). Safe to ignore.")
