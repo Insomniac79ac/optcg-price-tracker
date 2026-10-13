@@ -93,7 +93,7 @@
    "reason": "Pending PR #111 (S1 handoff) delivery receipt, downloaded read-only from CI run 38362184827 into the S1 evidence folder. No behaviour."
   }
  ],
- "diff_sha256": "208992e55737554cc0d3d4ac6664f4e32ec90650d6c04cf92c0feb12e43368e2",
+ "diff_sha256": "af3e9ae8f546ce5a75677cb1ebf5735e5634af7ddbae6ccd05f45919182ebc79",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "3b7d9c1a5e20",

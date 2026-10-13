@@ -173,6 +173,37 @@ nothing under `app/models/**`, `settings.py` or requirements touched.
 - Postgres tests need a server on **5544** with `opcg/opcg`; with only
   `TEST_POSTGRES_URL` on another port about 420 tests skip silently.
 
+## Follow-ups (proposed, not done)
+
+Both problems below produced **invalid first suite runs** in this session (an
+import error on every test, then about 420 silent Postgres skips). They were
+caught only by comparing the totals with S1's recorded numbers.
+
+1. **Stale `opcg_source_identity` in the shared venv.** `~/.venvs/cardpirate`
+   carries an old, non-editable copy without `raw_payload`, so `app.models` fails
+   to import from any worktree. Proposed fix: have the API test `conftest.py` fail
+   at once with a clear message when the imported `opcg_source_identity` is not
+   the copy under the same checkout's `packages/`. Then document one supported
+   way to run the suite from a worktree (`PYTHONPATH=<worktree>/packages/opcg_source_identity/src`,
+   or a per-worktree venv with `pip install -e packages/opcg_source_identity`).
+   Do not reinstall into the shared venv while other worktrees depend on it.
+2. **Tests hardcoding Postgres on port 5544.** About 38 test files default to
+   `localhost:5544` through `TEST_POSTGRES_HOST/PORT/USER/PASSWORD` or literal
+   URLs, ignoring `TEST_POSTGRES_URL`. When nothing listens there they skip
+   silently. Proposed fix: one shared `tests/postgres_env.py` helper that derives
+   every Postgres test connection from `TEST_POSTGRES_URL`, plus a
+   `REQUIRE_POSTGRES=1` switch (set in CI and in delivery sessions) that turns
+   "no Postgres reachable" skips into failures. Changing tests is application
+   work for a GREEN session, not a docs change.
+
+The runner scripts in `tools/` now read the local test database password from
+`LOCAL_TEST_PG_PASSWORD` (`run_both.sh`) and `TEST_POSTGRES_PASSWORD`
+(`run_suite.sh`), and stop with an error if it is unset. The first push of this
+handoff had a literal password in `run_both.sh`, which `scripts/check_secrets.sh`
+rejected (PR #113 CI run `38383681162`: `check-secrets`, `release-check`,
+`prod-compose` and so `engineering-gate` failed). Those jobs were not re-run.
+The fix is one new commit.
+
 ## Earlier evidence in this folder
 
 From the build session (2026-10-12/13 night): `backups-preflight-1.json`,
