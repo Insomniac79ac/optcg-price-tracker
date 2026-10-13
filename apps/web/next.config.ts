@@ -5,6 +5,7 @@ import { metadataBlockingBots } from "./src/lib/metadataBots";
 
 import { generateBuildVersion } from "./scripts/generate-build-version";
 import { buildImageSrcHosts } from "./src/lib/cspImageOrigin";
+import { sentryIngestOrigin } from "./src/lib/cspSentryOrigin";
 import { legacyRedirects } from "./src/lib/legacyRedirects";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -30,6 +31,11 @@ function buildConnectSrc(): string {
   const sources = new Set<string>(["'self'"]);
   const origin = apiOrigin();
   if (origin) sources.add(origin);
+  // Browser error reports go straight to Sentry's ingest host, only when the
+  // DSN is set (src/lib/sentry.ts). Vercel Web Analytics is same-origin
+  // (/_vercel/insights) and needs nothing here.
+  const sentry = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
+  if (sentry) sources.add(sentry);
   // Dev-only fallback so a fresh checkout without NEXT_PUBLIC_API_URL set
   // still works against the default local API port - see
   // "Quick deploy flow" in docs/deployment.md for the production equivalent.

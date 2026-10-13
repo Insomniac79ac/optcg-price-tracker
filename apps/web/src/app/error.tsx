@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { AtlasLogo } from "@/components/brand/AtlasLogo";
+import { reportError } from "@/lib/reportError";
 
 /** Root error boundary - Next.js requires this to be a Client Component.
  * Deliberately does not render <AppHeader /> (which itself does client-side
@@ -19,6 +20,7 @@ export default function GlobalError({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.error(error);
+    reportError(error);
   }, [error]);
 
   return (
