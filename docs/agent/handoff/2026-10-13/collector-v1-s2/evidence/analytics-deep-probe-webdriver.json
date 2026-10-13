@@ -1,0 +1,33 @@
+{
+ "va": "function",
+ "vaq": [
+  "beforeSend",
+  "pageview"
+ ],
+ "insights_scripts": [],
+ "webdriver": true,
+ "nonstatic_reqs": [
+  "/about?probe=1",
+  "/_next/image?url=%2Fbrand%2Fcardpirate-atlas-mark.png&w=1920&q=75",
+  "/_next/image?url=%2Fbrand%2Fcardpirate-atlas-logo.png&w=3840&q=75",
+  "/api/auth/session",
+  "/methodology?_rsc=Sdev7PUlRw12F58X",
+  "/analytics?_rsc=Sdev7PUlRw12F58X",
+  "/cards?_rsc=Sdev7PUlRw12F58X",
+  "/?_rsc=Sdev7PUlRw12F58X",
+  "/393b56be60fdc62b/script.js",
+  "/?_rsc=5oha_MqiFWlStH9F",
+  "/?_rsc=6Q1v7HcIw7d_mkmQ",
+  "/methodology?_rsc=5oha_MqiFWlStH9F",
+  "/methodology?_rsc=TQdStOPdTwPxeSqZ",
+  "/methodology?_rsc=ovzZmQnzOzrdi332",
+  "/?_rsc=IbqYazZHyjXYH_Ld",
+  "/analytics?_rsc=yMFZbW3py_RmPDJX",
+  "/cards?_rsc=yMFZbW3py_RmPDJX",
+  "/api/auth/session",
+  "/sign-in?callbackUrl=%2Fabout&_rsc=Sdev7PUlRw12F58X",
+  "/sign-in?callbackUrl=%2Fabout&_rsc=yMFZbW3py_RmPDJX",
+  "/sign-in?_rsc=Sdev7PUlRw12F58X"
+ ],
+ "console": []
+}

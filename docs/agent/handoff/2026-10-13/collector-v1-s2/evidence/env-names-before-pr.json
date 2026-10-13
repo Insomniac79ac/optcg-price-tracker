@@ -1,0 +1,14 @@
+{
+ "observed_at": "2026-10-13T13:08:41.658081+00:00",
+ "note": "key names only; no values read into this file",
+ "railway_api": {
+  "SENTRY_DSN_present": false,
+  "SENTRY_ENVIRONMENT_present": false,
+  "RAILWAY_GIT_COMMIT_SHA_present": false
+ },
+ "vercel_production": {
+  "NEXT_PUBLIC_SENTRY_DSN_present": false,
+  "NEXT_PUBLIC_VERCEL_WEB_ANALYTICS_present": false,
+  "NEXT_PUBLIC_APP_ENV_present": true
+ }
+}

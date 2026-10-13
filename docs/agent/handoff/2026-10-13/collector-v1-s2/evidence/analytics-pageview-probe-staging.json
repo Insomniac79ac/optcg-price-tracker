@@ -1,0 +1,104 @@
+{
+ "/": {
+  "webdriver": false,
+  "va_requests": [
+   [
+    "GET",
+    "/393b56be60fdc62b/script.js",
+    200,
+    ""
+   ],
+   [
+    "POST",
+    "/393b56be60fdc62b/view",
+    200,
+    "{\"o\":\"https://optcg-price-tracker-staging.vercel.app/\",\"sv\":\"0.1.3\",\"sdkn\":\"@vercel/analytics/next\",\"sdkv\":\"2.0.1\",\"ts\":1791932511794,\"dp\":\"/\",\"r\":\"\"}"
+   ]
+  ]
+ },
+ "/about": {
+  "webdriver": false,
+  "va_requests": [
+   [
+    "GET",
+    "/393b56be60fdc62b/script.js",
+    200,
+    ""
+   ],
+   [
+    "POST",
+    "/393b56be60fdc62b/view",
+    200,
+    "{\"o\":\"https://optcg-price-tracker-staging.vercel.app/about\",\"sv\":\"0.1.3\",\"sdkn\":\"@vercel/analytics/next\",\"sdkv\":\"2.0.1\",\"ts\":1791932518823,\"dp\":\"/about\",\"r\":\"\"}"
+   ]
+  ]
+ },
+ "/methodology": {
+  "webdriver": false,
+  "va_requests": [
+   [
+    "GET",
+    "/393b56be60fdc62b/script.js",
+    200,
+    ""
+   ],
+   [
+    "POST",
+    "/393b56be60fdc62b/view",
+    200,
+    "{\"o\":\"https://optcg-price-tracker-staging.vercel.app/methodology\",\"sv\":\"0.1.3\",\"sdkn\":\"@vercel/analytics/next\",\"sdkv\":\"2.0.1\",\"ts\":1791932525377,\"dp\":\"/methodology\",\"r\":\"\"}"
+   ]
+  ]
+ },
+ "/privacy": {
+  "webdriver": false,
+  "va_requests": [
+   [
+    "GET",
+    "/393b56be60fdc62b/script.js",
+    200,
+    ""
+   ],
+   [
+    "POST",
+    "/393b56be60fdc62b/view",
+    200,
+    "{\"o\":\"https://optcg-price-tracker-staging.vercel.app/privacy\",\"sv\":\"0.1.3\",\"sdkn\":\"@vercel/analytics/next\",\"sdkv\":\"2.0.1\",\"ts\":1791932531959,\"dp\":\"/privacy\",\"r\":\"\"}"
+   ]
+  ]
+ },
+ "/terms": {
+  "webdriver": false,
+  "va_requests": [
+   [
+    "GET",
+    "/393b56be60fdc62b/script.js",
+    200,
+    ""
+   ],
+   [
+    "POST",
+    "/393b56be60fdc62b/view",
+    200,
+    "{\"o\":\"https://optcg-price-tracker-staging.vercel.app/terms\",\"sv\":\"0.1.3\",\"sdkn\":\"@vercel/analytics/next\",\"sdkv\":\"2.0.1\",\"ts\":1791932538548,\"dp\":\"/terms\",\"r\":\"\"}"
+   ]
+  ]
+ },
+ "/cards": {
+  "webdriver": false,
+  "va_requests": [
+   [
+    "GET",
+    "/393b56be60fdc62b/script.js",
+    200,
+    ""
+   ],
+   [
+    "POST",
+    "/393b56be60fdc62b/view",
+    200,
+    "{\"o\":\"https://optcg-price-tracker-staging.vercel.app/cards\",\"sv\":\"0.1.3\",\"sdkn\":\"@vercel/analytics/next\",\"sdkv\":\"2.0.1\",\"ts\":1791932545613,\"dp\":\"/cards\",\"r\":\"\"}"
+   ]
+  ]
+ }
+}
