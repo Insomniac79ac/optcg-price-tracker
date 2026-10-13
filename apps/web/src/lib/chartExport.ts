@@ -77,8 +77,8 @@ export const DEFAULT_EXPORT_FONTS: ExportFonts = {
 
 /** The font families ACTUALLY loaded on the page.
  *
- * `next/font` generates hashed family names (`__Fraunces_1a2b3c`), so an
- * export cannot name them; it reads them off a live element instead and falls
+ * `next/font` generates the family names (`fraunces`, `ibmPlexMono` for the
+ * local fonts in app/layout.tsx), so an export cannot hardcode them; it reads them off a live element instead and falls
  * back to the generic stacks when there is no DOM to read (SSR, tests).
  */
 export function resolveExportFonts(element: Element | null): ExportFonts {

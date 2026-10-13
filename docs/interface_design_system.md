@@ -70,7 +70,7 @@ use the new signal tokens/utility classes directly.
 
 ## Typography
 
-- `next/font/google` self-hosts Manrope (`--font-manrope`, UI/body) and
+- `next/font/local` serves committed copies (`app/fonts`, OFL) of Manrope (`--font-manrope`, UI/body) and
   Fraunces (`--font-fraunces`, editorial display/headings), plus IBM Plex
   Mono (`--font-ibm-plex-mono`, unchanged) - all wired in `app/layout.tsx`
   and consumed by the `--font-sans`/`--font-display`/`--font-mono` theme
