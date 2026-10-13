@@ -1,8 +1,8 @@
 """Builds the GET /admin/observability/summary payload - a fast, single-call
 "is production healthy right now" snapshot that pulls together app_log_events
 counts with the latest run of each of the other admin-visible processes
-(market workflow, price refresh, db backup, system check), so an admin can
-see the whole picture without visiting four separate pages."""
+(price refresh, db backup, system check), so an admin can see the whole
+picture without visiting three separate pages."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import AppLogEvent, MarketWorkflowRun, PriceRefreshRun
+from app.models import AppLogEvent, PriceRefreshRun
 from app.services.app_logging import list_app_logs
 from app.services.db_backups import list_db_backups
 from app.services.system_check import overall_status, run_system_check
@@ -26,7 +26,6 @@ class ObservabilitySummary:
     status: str
     last_24h: dict[str, int]
     latest_error: AppLogEvent | None
-    latest_market_workflow_run: dict | None
     latest_price_refresh_run: dict | None
     latest_backup: dict | None
     latest_system_check_status: str | None
@@ -59,25 +58,6 @@ def build_observability_summary(db: Session) -> ObservabilitySummary:
         select(AppLogEvent)
         .where(AppLogEvent.level.in_(("error", "critical")))
         .order_by(AppLogEvent.created_at.desc(), AppLogEvent.id.desc())
-    )
-
-    latest_workflow_run = db.scalar(
-        select(MarketWorkflowRun).order_by(
-            MarketWorkflowRun.started_at.desc(), MarketWorkflowRun.id.desc()
-        )
-    )
-    latest_workflow_run_out = (
-        None
-        if latest_workflow_run is None
-        else {
-            "id": latest_workflow_run.id,
-            "status": latest_workflow_run.status,
-            "started_at": latest_workflow_run.started_at.isoformat(),
-            "finished_at": latest_workflow_run.finished_at.isoformat()
-            if latest_workflow_run.finished_at
-            else None,
-            "error_message": latest_workflow_run.error_message,
-        }
     )
 
     latest_refresh_run = db.scalar(
@@ -116,7 +96,6 @@ def build_observability_summary(db: Session) -> ObservabilitySummary:
         status=_summary_status(level_lookup),
         last_24h=level_lookup,
         latest_error=latest_error,
-        latest_market_workflow_run=latest_workflow_run_out,
         latest_price_refresh_run=latest_refresh_run_out,
         latest_backup=latest_backup_out,
         latest_system_check_status=system_check_status,

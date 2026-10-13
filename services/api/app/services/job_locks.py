@@ -1,7 +1,7 @@
 """Mutual-exclusion locks for background jobs/admin actions that must never
-run concurrently - price refresh, market workflow, portfolio/market-signal
-snapshots, report generation, Telegram digest sends, data retention pruning,
-and backup restore. See 'Worker job concurrency locking' in
+run concurrently - price refresh, the admin full market refresh, portfolio
+and Market Index snapshots, Market Value and Card Pirate Index writers, data
+retention pruning, and backup restore. See 'Worker job concurrency locking' in
 docs/operations.md, GET /admin/job-locks, and app.models.job_lock.JobLock.
 
 Design notes (read before changing acquire/release):
@@ -15,8 +15,8 @@ Design notes (read before changing acquire/release):
   expire_on_commit=True means every commit() on a session expires *every*
   object loaded in it, not just the ones that commit touched. A caller that
   acquires a lock, does its work, gets back a freshly-committed-and-refreshed
-  object (e.g. generate_market_report's MarketIntelligenceReport), and only
-  reads its attributes *after* the lock releases would see release_lock's
+  object (e.g. snapshot_portfolio_valuation's PortfolioValuationSnapshot),
+  and only reads its attributes *after* the lock releases would see release_lock's
   own commit silently expire that object out from under it - and if the
   caller has since closed its own session (a common CLI pattern: commit,
   close, then print), that expiry surfaces as a confusing
@@ -28,8 +28,9 @@ Design notes (read before changing acquire/release):
   waiting for it to free up. Every caller in this codebase acquires at most
   one NEW lock at a time (a job either holds none yet, or already holds a
   *different*-named lock and is acquiring another distinct one, e.g.
-  run_market_workflow holding market_workflow while refresh_prices acquires
-  price_refresh beneath it) - since acquisition never blocks, there is no
+  the admin full market refresh holding market_workflow while
+  snapshot_portfolio_valuation acquires portfolio_snapshot beneath it) -
+  since acquisition never blocks, there is no
   circular-wait condition and therefore no deadlock is possible, regardless
   of nesting order. This is what lets every job/endpoint listed in
   docs/operations.md acquire its own lock unconditionally, with no
@@ -86,10 +87,6 @@ LOCK_TTL_SECONDS: dict[str, int] = {
     # Index archive, so allow a full hour while still failing closed against a
     # concurrent writer.
     "market_value_writer": 60 * 60,
-    "market_signal_snapshot": 10 * 60,
-    "market_report_generation": 10 * 60,
-    "analytics_digest_generation": 10 * 60,
-    "telegram_market_digest": 5 * 60,
     "data_retention_prune": 30 * 60,
     "backup_restore": 60 * 60,
 }
@@ -133,7 +130,7 @@ def _naive(dt: datetime) -> datetime:
     raise TypeError under SQLite. Normalizing both sides to naive before
     comparing works correctly under either dialect, since every datetime
     this app stores is UTC regardless of whether the driver labels it as
-    such (same pattern as app.services.market_signals._naive)."""
+    such."""
     return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
 
 

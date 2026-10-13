@@ -10,13 +10,8 @@ import { formatDateTime } from "@/lib/format";
 // sync with SidebarNav's nav list, not auto-derived from it (that list is
 // nav-structure-shaped, not a flat route->label map).
 const ROUTE_LABELS: Record<string, string> = {
-  "/analytics/buy-decisions": "Buy Decisions",
-  "/analytics/sell-decisions": "Sell Decisions",
-  "/analytics/portfolio-risk": "Portfolio Risk",
   "/analytics/wishlist": "Wishlist Analytics",
   "/analytics/collection": "Collection Analytics",
-  "/analytics/grading": "Grading Analytics",
-  "/analytics/digest": "Analytics Digest",
   "/admin/source-mapping-quality": "Source Mapping Quality",
   "/admin/catalog-coverage": "Catalog Coverage",
   "/admin/price-source-health": "Price Source Health",
@@ -25,14 +20,9 @@ const ROUTE_LABELS: Record<string, string> = {
   "/admin/snkrdunk-candidates": "SNKRDUNK Candidates",
   "/collection": "Collection",
   "/wishlist": "Wishlist",
-  "/grading": "Grading",
-  "/market/opportunities": "Market Opportunities",
-  "/market/signals": "Market Signals",
-  "/market/signal-events": "Market Signal Events",
 };
 
-/** Pinned saved views across every scope, for /dashboard and
- * /admin/catalog-ops. Links go to the plain route_path only - none of this
+/** Pinned saved views across every scope, for /admin/catalog-ops. Links go to the plain route_path only - none of this
  * app's pages read filters from the URL (confirmed when SavedViewBar was
  * built), so a saved view's filters can't be pre-applied via a link click;
  * visiting the page and picking the view from its own SavedViewBar is the

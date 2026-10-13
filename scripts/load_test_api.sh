@@ -47,13 +47,10 @@ fi
 
 ENDPOINTS=(
   "/health"
-  "/dashboard/overview"
   "/collection/valuation"
-  "/market/opportunities?limit=20"
-  "/market/signals?limit=20"
+  "/market/movers"
   "/wishlist/summary"
   "/grading/summary"
-  "/search/suggestions?q=OP"
 )
 
 if [[ -n "$ADMIN_TOKEN" ]]; then

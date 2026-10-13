@@ -119,7 +119,7 @@ monorepo, and the cause of this staging deployment's original Railway build fail
 Most of the app already goes through Next.js server-side proxy routes (`apps/web/src/app/api/**`,
 using `API_INTERNAL_URL`) - notably every `/admin/*` curation workflow added after the original
 build (SNKRDUNK candidate matching, source-mapping quality review, card duplicate/merge, catalog
-coverage, price source health, saved views, analytics digest, dashboard overview, backup
+coverage, price source health, saved views, backup
 export/restore, etc. - see `fetchAdminJson`/`authedGet` callers wired to a `src/app/api/**` route
 in `apps/web/src/lib/api.ts`).
 
@@ -156,7 +156,7 @@ their corresponding update/delete functions.
 
 **What this means for staging**:
 - `NEXT_PUBLIC_API_URL` **must** be set to the Railway `api` service's public HTTPS URL, or
-  `/dashboard`, `/collection`, `/wishlist`, `/grading`, `/collector`, `/market/movers`, and card
+  `/collection`, `/wishlist`, `/collector`, `/market/movers`, and card
   detail pages will fail with network errors in the browser. (The admin alert/refresh-run/snkrdunk
   pages no longer need this - see the `fetchAlertEvents` note above.)
 - Because the browser calls a different origin (`*.up.railway.app`) than the page is served from
@@ -240,9 +240,9 @@ ADMIN_TOKEN=<staging-admin-token> \
 bash scripts/staging_smoke_test.sh
 ```
 
-Checks API `/health`, `/version` (if present), `/analytics/digest`, `/saved-views?limit=5`, the two
+Checks API `/health`, `/version` (if present), `/saved-views?limit=5`, the two
 admin checks (`/admin/system-check`, `/admin/catalog-coverage`) if `ADMIN_TOKEN` is set, and the
-web app's `/`, `/dashboard`, `/collection`, `/collection/vault`, `/analytics/digest`, and
+web app's `/`, `/analytics`, `/cards`, `/collection`, `/collection/vault`, and
 `/admin/catalog-ops` routes. Prints `PASS`/`FAIL` per check; does not run any destructive action.
 
 ## 9. Rollback notes

@@ -9,9 +9,8 @@ from app.models.collector_activity_event import EVENT_SOURCES
 from app.schemas import (
     CollectorActivityListOut,
     CollectorActivityListSummaryOut,
-    CollectorActivitySummaryOut,
 )
-from app.services.activity_timeline import get_activity_summary, list_activity_events
+from app.services.activity_timeline import list_activity_events
 
 router = APIRouter(prefix="/collector/activity", tags=["collector-activity"])
 
@@ -52,19 +51,4 @@ def list_activity(
         limit=limit,
         offset=offset,
         pagination=pagination_response(result.events, result.total_events, limit, offset),
-    )
-
-
-@router.get("/summary", response_model=CollectorActivitySummaryOut)
-def activity_summary(
-    db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
-):
-    result = get_activity_summary(db)
-    return CollectorActivitySummaryOut(
-        today_count=result.today_count,
-        last_7d_count=result.last_7d_count,
-        last_30d_count=result.last_30d_count,
-        by_source=result.by_source,
-        recent_events=result.recent_events,
     )

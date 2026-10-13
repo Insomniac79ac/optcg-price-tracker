@@ -79,8 +79,7 @@ except Exception:
 }
 
 # A 200 or 401 are both healthy outcomes for session-gated routes without a
-# real signed-in browser session in hand (see /analytics/digest,
-# /saved-views - same convention as scripts/release_candidate_audit.sh's
+# real signed-in browser session in hand (see /saved-views - same convention as scripts/release_candidate_audit.sh's
 # public_or_session_get). Anything else means the route is broken.
 api_get_public_or_session() {
   local path="$1"
@@ -137,8 +136,7 @@ else
 fi
 echo
 
-echo "-- 3. API analytics digest / saved views (session-gated, 200 or 401 both healthy) --"
-api_get_public_or_session "/analytics/digest"
+echo "-- 3. API saved views (session-gated, 200 or 401 both healthy) --"
 api_get_public_or_session "/saved-views?limit=5"
 echo
 
@@ -178,10 +176,10 @@ if [[ -z "$STAGING_WEB_URL" ]]; then
 else
   echo "-- 6. Web pages --"
   web_get "/"
-  web_get "/dashboard"
+  web_get "/analytics"
+  web_get "/cards"
   web_get "/collection"
   web_get "/collection/vault"
-  web_get "/analytics/digest"
   web_get "/admin/catalog-ops"
   echo
 fi

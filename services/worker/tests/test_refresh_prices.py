@@ -264,7 +264,9 @@ def test_portfolio_snapshot_failure_does_not_crash_refresh_job(db_session, monke
     assert db_session.query(PriceRefreshRun).filter_by(id=summary.id).one().status == "completed"
 
 
-def test_successful_non_dry_run_snapshots_market_signals(db_session):
+def test_refresh_no_longer_writes_market_signals_or_reports(db_session):
+    # The legacy signal/report cascade was removed with the market workflow
+    # (Collector v1 S1); a successful refresh writes neither table.
     source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
     make_source_card_mapping(db_session, source, card, "OP01-001")
     db_session.add(CollectionItem(card_id=card.id, quantity=1, target_sell_price_jpy=500))
@@ -274,80 +276,9 @@ def test_successful_non_dry_run_snapshots_market_signals(db_session):
     summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
 
     assert summary.status == "completed"
-    assert summary.market_signal_events_created == 1
-    assert summary.market_signal_events_updated == 0
-    assert summary.market_signal_events_resolved == 0
-
-    event = db_session.query(MarketSignalEvent).one()
-    assert event.signal_type == "owned_above_target_sell"
-    assert event.card_id == card.id
-
-    assert "market_signal_events_created=1 updated=0 resolved=0" in summary.report_lines()
-
-
-def test_dry_run_does_not_snapshot_market_signals(db_session):
-    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
-    make_source_card_mapping(db_session, source, card, "OP01-001")
-    db_session.add(CollectionItem(card_id=card.id, quantity=1, target_sell_price_jpy=500))
-    db_session.flush()
-    adapters = {"yuyutei": StubAdapter("yuyutei")}
-
-    summary = refresh_prices(limit=10, db=db_session, adapters=adapters, dry_run=True)
-
-    assert summary.market_signal_events_created is None
-    assert summary.market_signal_events_updated is None
-    assert summary.market_signal_events_resolved is None
     assert db_session.query(MarketSignalEvent).count() == 0
-
-
-def test_successful_non_dry_run_creates_market_report(db_session):
-    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
-    make_source_card_mapping(db_session, source, card, "OP01-001")
-    adapters = {"yuyutei": StubAdapter("yuyutei")}
-
-    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
-
-    assert summary.status == "completed"
-    assert summary.market_report_id is not None
-    report = (
-        db_session.query(MarketIntelligenceReport)
-        .filter_by(id=summary.market_report_id)
-        .one()
-    )
-    assert report.report_payload_json is not None
-    assert f"market_report_id={summary.market_report_id}" in summary.report_lines()
-
-
-def test_dry_run_does_not_create_market_report(db_session):
-    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
-    make_source_card_mapping(db_session, source, card, "OP01-001")
-    adapters = {"yuyutei": StubAdapter("yuyutei")}
-
-    summary = refresh_prices(limit=10, db=db_session, adapters=adapters, dry_run=True)
-
-    assert summary.market_report_id is None
     assert db_session.query(MarketIntelligenceReport).count() == 0
-
-
-def test_market_report_failure_does_not_crash_refresh_job(db_session, monkeypatch):
-    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
-    make_source_card_mapping(db_session, source, card, "OP01-001")
-    adapters = {"yuyutei": StubAdapter("yuyutei")}
-
-    def boom(db):
-        raise RuntimeError("report generation exploded")
-
-    monkeypatch.setattr(refresh_prices_module, "generate_market_report", boom)
-
-    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
-
-    assert summary.status == "completed"
-    assert summary.mappings_processed == 1
-    assert summary.market_report_id is None
-    assert db_session.query(MarketIntelligenceReport).count() == 0
-    # Session must still be usable afterward - a leftover failed transaction
-    # would break any caller that keeps using db after refresh_prices returns.
-    assert db_session.query(PriceRefreshRun).filter_by(id=summary.id).one().status == "completed"
+    assert not any("market_signal" in line or "market_report" in line for line in summary.report_lines())
 
 
 # --- print lineage ------------------------------------------------------

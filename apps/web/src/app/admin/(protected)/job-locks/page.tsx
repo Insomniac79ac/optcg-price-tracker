@@ -305,9 +305,6 @@ export default function JobLocksPage() {
               <Link href="/admin/actions" className="text-sky-400 hover:underline">
                 Admin actions
               </Link>
-              <Link href="/admin/market-workflow-runs" className="text-sky-400 hover:underline">
-                Workflow runs
-              </Link>
               <Link href="/admin/refresh-runs" className="text-sky-400 hover:underline">
                 Refresh runs
               </Link>

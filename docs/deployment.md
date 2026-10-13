@@ -93,7 +93,7 @@ cp .env.production.example .env.production
 | `YUYUTEI_REQUEST_DELAY_MS` / `SNKRDUNK_REQUEST_DELAY_MS` | yes | Positive integers (milliseconds) - throttling between scrape requests. Must be >= 1000 when `SCRAPING_MODE=live`. |
 | `PRICE_REFRESH_INTERVAL_HOURS` | yes | Positive integer - how often Celery Beat schedules the Yuyu-Tei refresh. |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | optional | Both or neither - see [Telegram config](#1b-telegram-config). |
-| `MARKET_WORKFLOW_*` | optional | Disabled by default - see [Market workflow schedule config](#1c-market-workflow-schedule-config). |
+| `MARKET_WORKFLOW_*` | optional | Inert since Collector v1 S1 removed the market workflow - see [Market workflow schedule config](#1c-market-workflow-schedule-config). |
 | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME` / `R2_PUBLIC_BASE_URL` | optional | Unset by default; required only by R2 storage/mirroring commands, never by normal API operation - see [Cloudflare R2 object storage config](#1f-cloudflare-r2-object-storage-config). |
 | `NEXT_PUBLIC_API_URL` | yes | Public URL the browser uses to reach the API. **Baked into the web image at build time** (Next.js inlines `NEXT_PUBLIC_*` vars at `next build`) - changing it requires rebuilding the `web` image, not just restarting the container. |
 | `API_INTERNAL_URL` | yes in production | Server-side-only URL the web app's Next.js API routes (`src/app/api/**`) use to reach `api` directly (e.g. `http://api:8000`), instead of `NEXT_PUBLIC_API_URL`. Never expose this as a `NEXT_PUBLIC_*` variable. |
@@ -149,9 +149,9 @@ regardless of environment for the scheduled digest to actually send.
 
 ### 1c. Market workflow schedule config
 
-Disabled by default - Celery Beat never runs the scheduled market intelligence workflow unless
-`MARKET_WORKFLOW_ENABLED=true` (see `services/worker/worker/celery_app.py::_build_beat_schedule`).
-When enabling it in production:
+**Inert since Collector v1 S1 (2026-10-13).** The scheduled market intelligence workflow, its beat
+entry and its admin trigger were removed, so these variables no longer schedule anything. They are
+still read and validated at startup until the deferred S9 clean-up removes them. For reference:
 
 | Variable | Valid values | Default |
 |---|---|---|
@@ -498,7 +498,7 @@ external dependency. Five groups, each independently configurable via env var (d
 | `collection_write` | Collection/wishlist/grading/note writes | `RATE_LIMIT_COLLECTION_WRITE_PER_5M=60` | 5 min |
 | `admin` | All `/admin/*` and `/snkrdunk/*` (admin-token-gated) | `RATE_LIMIT_ADMIN_PER_5M=120` | 5 min |
 | `import_export` | CSV import/export, backup export/validate/restore, DB backup listing | `RATE_LIMIT_IMPORT_EXPORT_PER_10M=20` | 10 min |
-| `search` | `/search`, `/search/suggestions` | `RATE_LIMIT_SEARCH_PER_5M=120` | 5 min |
+| ~~`search`~~ | group removed in Collector v1 S1 with `/search` and `/search/suggestions`; `RATE_LIMIT_SEARCH_PER_5M` is inert until S9 removes it from `settings.py` | n/a | n/a |
 
 A request over its group's limit gets `429` with `{"detail": "Rate limit exceeded",
 "retry_after_seconds": N}` and `Retry-After`/`X-RateLimit-Limit`/`X-RateLimit-Remaining`/
@@ -667,7 +667,7 @@ curl -H "X-Admin-Token: $ADMIN_TOKEN" http://localhost:8000/admin/release-status
 "version": ..., "git_commit": ..., "build_time": ..., "app_env": ...}`. `GET
 /admin/release-status` (admin-token gated, and its `/admin/release-status` web page - linked from
 the admin nav, `/admin/system-check`, and `/admin/actions`) additionally rolls up the latest
-system check, market workflow run, backup, and error into one `release_readiness` summary - see
+system check, backup, and error into one `release_readiness` summary - see
 [docs/release_checklist.md](release_checklist.md) section D ("Post-deploy validation"). The web
 app's own `GET /api/version` reports its own build metadata plus (best-effort) the backend's, for
 a single call that covers both services.

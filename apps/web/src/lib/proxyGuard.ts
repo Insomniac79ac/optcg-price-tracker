@@ -4,8 +4,7 @@
 // actually wired into the request pipeline.
 
 // Routes that expose the signed-in caller's own data (portfolio, wishlist,
-// grading submissions, personal analytics), plus the internal market-analytics
-// surfaces that are not part of the collector MVP.
+// personal analytics).
 //
 // The public collector product is exactly / and /cards, plus /prints/:id -
 // those are deliberately absent here and must stay reachable while signed
@@ -13,32 +12,21 @@
 // into /cards?sort=index_desc rather than a page: guarding it would bounce a
 // signed-out visitor to /sign-in on the way to a public catalogue.
 //
-// Added 2026-08-18 for the MVP launch cleanup:
-//   /search           - a signed-in "command center" over collection,
-//                       wishlist, grading, notes and activity. Linked only
-//                       from /dashboard, which is itself protected.
-//   /market/signals, /market/opportunities, /market/signal-events,
-//   /market/report    - analyst and data-health surfaces (signal counts,
-//                       buy/sell scoring, data-quality warnings, stale
-//                       intelligence reports). Unfinished for public use and
-//                       at odds with the Market Index's own "not a buy or
-//                       sell recommendation" framing.
-// Note /market/movers is NOT matched: :path* would not match the bare
-// /market/signals either, so each entry is listed with its own :path* form
-// and /market/movers simply never appears.
+// Collector v1 S1 (2026-10-13) deleted /grading, /dashboard, /activity,
+// /search and the internal market-analytics pages (/market/signals,
+// /market/opportunities, /market/signal-events, /market/report), so their
+// entries are gone. Those paths now answer the permanent redirects in
+// next.config.ts (which run before this proxy) or 404 (/grading).
 export const PROTECTED_MATCHER = [
   "/collection/:path*",
-  "/grading/:path*",
   "/wishlist/:path*",
-  "/dashboard/:path*",
-  "/activity/:path*",
   // `:path+`, NOT `:path*`, and the difference is the whole point: `*` is zero
   // or more segments and DOES match the bare parent, which was verified at
   // request time on 2026-09-06 (a signed-out GET /analytics answered 307 to
-  // /sign-in). `+` requires at least one segment, so the seven legacy leaf
-  // pages - /analytics/collection, /wishlist, /grading, /buy-decisions,
-  // /sell-decisions, /portfolio-risk, /digest - stay gated exactly as before,
-  // while /analytics itself is public.
+  // /sign-in). `+` requires at least one segment, so the remaining legacy leaf
+  // pages - /analytics/collection and /analytics/wishlist (deleted in S8) -
+  // stay gated exactly as before, while /analytics itself is public. The
+  // other former leaves are permanent redirects in next.config.ts.
   //
   // /analytics is the current market landscape (Analytics 1A-B): catalogue
   // pricing coverage, price distribution and Market Index composition. It
@@ -48,14 +36,9 @@ export const PROTECTED_MATCHER = [
   // is already public per-print through /prints.
   //
   // The neighbouring entries deliberately KEEP `:path*`, because for them the
-  // bare parent must be protected too: /collection, /wishlist, /grading,
-  // /dashboard and /activity are all real pages showing the caller's own data.
+  // bare parent must be protected too: /collection and /wishlist are real
+  // pages showing the caller's own data.
   "/analytics/:path+",
-  "/search/:path*",
-  "/market/signals/:path*",
-  "/market/opportunities/:path*",
-  "/market/signal-events/:path*",
-  "/market/report/:path*",
 ];
 
 // /cards/:id was gated here until 2026-09-01, because the page rendered the

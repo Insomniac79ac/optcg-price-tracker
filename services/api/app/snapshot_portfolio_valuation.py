@@ -57,8 +57,7 @@ def _snapshot_portfolio_valuation_locked(db: Session) -> PortfolioValuationSnaps
     db.commit()
     db.refresh(snapshot)
     # See 'Cache invalidation' in docs/operations.md - a new snapshot changes
-    # the dashboard's latest-snapshot widget and GET /collection/valuation/history.
-    delete_cache_prefix("dashboard")
+    # GET /collection/valuation/history.
     delete_cache_prefix("collection_history")
     return snapshot
 

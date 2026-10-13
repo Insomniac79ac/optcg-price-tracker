@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Phase 8 completion audit - verifies that the analytics digest feature
-# (backend service/endpoints/CLI/admin action, and the portfolio-risk work
-# it builds on) actually works end to end on top of the standard checks.
+# Phase 8 completion audit - the standard checks (secrets, test suites,
+# admin endpoints, web route smoke). The analytics digest and portfolio-risk
+# features this audit originally covered were removed in Collector v1 S1
+# (2026-10-13), so their checks were removed too.
 # Fails fast: stops at the first failing step, same convention as
 # scripts/phase7_audit.sh (which this is meant to run alongside/after).
 #
@@ -70,62 +71,9 @@ for path in "${ADMIN_GET_CHECKS[@]}"; do
   fi
 done
 
-# Real POST - generates (and persists) one analytics_digest_reports row, the
-# same side effect running the CLI or clicking the admin UI button would
-# have. Feeds section 4's no-auth GET checks below, which need at least one
-# stored report to return 200 instead of 404.
-digest_post_status=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 30 \
-  -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"valuation_mode": "raw_market"}' \
-  "$BASE_API_URL/admin/actions/generate-analytics-digest" 2>/dev/null) || digest_post_status="000"
-if [[ "$digest_post_status" == "200" ]]; then
-  echo "PASS: POST /admin/actions/generate-analytics-digest returned 200"
-else
-  fail "POST /admin/actions/generate-analytics-digest returned HTTP $digest_post_status (expected 200)"
-fi
 echo
 
-echo "== 4. New analytics endpoint checks (BASE_API_URL=$BASE_API_URL) =="
-# /analytics/digest and /analytics/portfolio-risk require a signed-in user
-# session (there is no admin-token path for them, by design - see 'Analytics
-# digest' in docs/operations.md), so this script can't fetch their 200
-# response without a real OAuth session. It instead confirms both routes
-# exist and correctly reject an unauthenticated request (401), which is
-# still a real, meaningful check - a 404/500/000 here means the route is
-# missing or broken, not just "needs a session".
-SESSION_ONLY_CHECKS=(
-  "/analytics/digest"
-  "/analytics/portfolio-risk"
-)
-for path in "${SESSION_ONLY_CHECKS[@]}"; do
-  http_status=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 \
-    "$BASE_API_URL$path" 2>/dev/null) || http_status="000"
-  if [[ "$http_status" == "401" ]]; then
-    echo "PASS: GET $path returned 401 (session required, as expected)"
-  else
-    fail "GET $path returned HTTP $http_status (expected 401 without a session)"
-  fi
-done
-
-# The persisted-report endpoints are not session-gated (same convention as
-# GET /market/report/latest) - after section 3's POST above, these must
-# return real data.
-NO_AUTH_CHECKS=(
-  "/analytics/digest/latest"
-  "/analytics/digest/reports"
-)
-for path in "${NO_AUTH_CHECKS[@]}"; do
-  http_status=$(curl -sS -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 \
-    "$BASE_API_URL$path" 2>/dev/null) || http_status="000"
-  if [[ "$http_status" == "200" ]]; then
-    echo "PASS: GET $path returned 200"
-  else
-    fail "GET $path returned HTTP $http_status (expected 200)"
-  fi
-done
-echo
-
-echo "== 5. Web route smoke (WEB_BASE_URL=$WEB_BASE_URL) =="
+echo "== 4. Web route smoke (WEB_BASE_URL=$WEB_BASE_URL) =="
 WEB_BASE_URL="$WEB_BASE_URL" bash scripts/web_route_smoke.sh || fail "scripts/web_route_smoke.sh"
 echo
 

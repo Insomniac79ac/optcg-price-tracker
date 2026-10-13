@@ -549,18 +549,6 @@ export default function CollectionPage() {
               <Link href="/analytics/collection" className="text-sky-400 hover:text-sky-300">
                 Analytics →
               </Link>
-              <Link href="/analytics/sell-decisions" className="text-sky-400 hover:text-sky-300">
-                Sell decisions →
-              </Link>
-              <Link href="/grading" className="text-sky-400 hover:text-sky-300">
-                Grading →
-              </Link>
-              <Link href="/analytics/grading" className="text-sky-400 hover:text-sky-300">
-                Grading ROI →
-              </Link>
-              <Link href="/analytics/portfolio-risk" className="text-sky-400 hover:text-sky-300">
-                Portfolio Risk →
-              </Link>
               <Link href="/wishlist" className="text-sky-400 hover:text-sky-300">
                 Wishlist →
               </Link>
@@ -1112,12 +1100,6 @@ export default function CollectionPage() {
                               ? "Deleting…"
                               : "Delete"}
                           </button>
-                          <Link
-                            href={`/grading?item_id=${item.id}`}
-                            className="text-xs font-medium text-violet-400 hover:text-violet-300"
-                          >
-                            Send to grading
-                          </Link>
                         </div>
                       </td>
                     </tr>

@@ -24,7 +24,7 @@ export const ADMIN_NAVIGATION = [
     label: "Operations",
     description: "Inspect workflow history, file jobs and operational alerts.",
     routes: [
-      ["/admin/actions", "Actions"], ["/admin/market-workflow-runs", "Workflow Runs"],
+      ["/admin/actions", "Actions"],
       ["/admin/refresh-runs", "Refresh Runs"], ["/admin/file-jobs", "File Jobs"],
       ["/admin/alerts", "Alerts"],
     ],

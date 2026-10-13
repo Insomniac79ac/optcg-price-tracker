@@ -92,12 +92,12 @@ describe("SidebarNav - signed in (collector session)", () => {
     expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
   });
 
-  it("additionally shows My Collection, Wishlist, Grading and Activity", () => {
+  it("additionally shows My Collection and Wishlist, and no deleted Grading or Activity page", () => {
     render(<SidebarNav />);
     expect(screen.getByText("My Collection")).toBeInTheDocument();
     expect(screen.getByText("Wishlist")).toBeInTheDocument();
-    expect(screen.getByText("Grading")).toBeInTheDocument();
-    expect(screen.getByText("Activity")).toBeInTheDocument();
+    expect(screen.queryByText("Grading")).not.toBeInTheDocument();
+    expect(screen.queryByText("Activity")).not.toBeInTheDocument();
   });
 
   it("still shows no Admin sections for an ordinary collector session", () => {

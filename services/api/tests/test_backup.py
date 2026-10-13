@@ -1,6 +1,6 @@
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -14,7 +14,9 @@ from app.models import (
     CollectorGroup,
     CollectorNote,
     CollectorTag,
+    DashboardPreference,
     GradingSubmission,
+    MarketIntelligenceReport,
     MarketReportDigestSend,
     MarketWorkflowRun,
     PortfolioValuationSnapshot,
@@ -25,9 +27,25 @@ from app.models import (
 )
 from app.services.backup import BACKUP_VERSION, OPTIONAL_TABLES, REQUIRED_TABLES, export_backup
 from app.services.job_locks import acquire_lock
-from app.services.market_report import generate_market_report
 
 # --- factories --------------------------------------------------------------
+
+
+def make_dashboard_preference(db_session) -> DashboardPreference:
+    # The legacy dashboard API that JIT-created this row was removed in
+    # Collector v1 S1; the table stays (and is backed up) until S9.
+    pref = DashboardPreference(preference_key="main_dashboard", preference_value_json={})
+    db_session.add(pref)
+    db_session.commit()
+    return pref
+
+
+def make_market_report(db_session) -> MarketIntelligenceReport:
+    # Same: the legacy report generator is gone, the table stays until S9.
+    report = MarketIntelligenceReport(report_date=date.today(), report_payload_json={})
+    db_session.add(report)
+    db_session.commit()
+    return report
 
 
 def make_card(db_session, **overrides) -> Card:
@@ -266,12 +284,12 @@ def test_export_includes_all_required_tables_with_data(client, db_session):
     make_item(db_session, card)
     make_alert_rule(db_session)
     make_snapshot(db_session)
-    report = generate_market_report(db_session)
+    report = make_market_report(db_session)
     make_digest_send(db_session, report.id)
     make_workflow_run(db_session, market_report_id=report.id)
     db_session.add(WishlistItem(user_id=1, card_id=card.id))
     db_session.commit()
-    client.get("/dashboard/preferences")  # JIT-creates the main_dashboard row
+    make_dashboard_preference(db_session)
 
     response = client.get("/admin/backup/export")
 
@@ -320,7 +338,7 @@ def test_backup_export_includes_phase5_tables(client, db_session):
     )
     db_session.add(SearchHistory(query="OP01-001", result_count=1))
     db_session.commit()
-    client.get("/dashboard/preferences")  # JIT-creates the main_dashboard row
+    make_dashboard_preference(db_session)
 
     response = client.get("/admin/backup/export")
     assert response.status_code == 200
@@ -372,7 +390,7 @@ def test_backup_export_includes_wishlist_items(client, db_session):
 
 
 def test_backup_export_includes_dashboard_preferences(client, db_session):
-    client.get("/dashboard/preferences")  # JIT-creates the main_dashboard row
+    make_dashboard_preference(db_session)
 
     response = client.get("/admin/backup/export")
 

@@ -11,6 +11,10 @@ AppHeader.tsx`) or from another page's own links (e.g. `/admin/release-status` c
 
 ## Public/user routes (frontend pages)
 
+Rows for routes removed in Collector v1 S1 (2026-10-13) were deleted from the tables below; see
+"Update (2026-10-13)" at the end for the removed routes and their redirects. The dated update
+sections are history and still mention them.
+
 All of these are server-rendered Next.js pages under `apps/web/src/app/`. "Auth required" is
 enforced by `apps/web/proxy.ts` (redirects an anonymous visitor to `/sign-in`, preserving the
 original path+query as `callbackUrl`) - it does **not** gate `/`, `/search`, `/market/*`, or
@@ -21,22 +25,11 @@ only links a reduced route set now).
 
 | Route | Purpose | Auth required | Expected status (healthy) | Nav-linked |
 |---|---|---|---|---|
-| `/dashboard` | Personalized portfolio/wishlist/grading overview (the opportunity, market report and signal-event widgets are withheld: admin-only data) | Google sign-in | 200 | Yes (primary nav, brand link) |
-| `/search` | Card search (Ctrl/Cmd+K opens it) | No | 200 | Yes (primary nav) |
 | `/collection` | Collection tracker: items, valuation, CSV import/export, links to wishlist/grading | Google sign-in | 200 | Yes (primary nav) |
 | `/collection/vault` | Collector vault view: grid of owned cards (CardVaultTile), search/set/rarity/variant/status/condition filters, valuation mode, sort, density, saved views | Google sign-in | 200 | Yes (Collection's "Vault View" nav child; linked from `/collection` and `/dashboard`) |
 | `/analytics/collection` | Collection analytics: composition, valuation exposure, cost basis, concentration risk, grading exposure | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/collection`, `/grading`) |
 | `/analytics/wishlist` | Wishlist analytics: budget planning, target hits, priority exposure, acquisition planning | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/wishlist`, `/analytics/collection`) |
-| `/analytics/buy-decisions` | Buy decision support: deterministic review-buy/wait/skip/monitor scoring for wishlist cards | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/wishlist`, `/analytics/wishlist`, `/market/opportunities`) |
-| `/analytics/grading` | Grading ROI analytics: submission costs, outcomes, pending returns, and post-grade value | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/grading`, `/analytics/collection`, `/collection`) |
-| `/analytics/sell-decisions` | Sell decision support: deterministic sell/hold/grade-first/monitor scoring for owned cards | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/collection`, `/analytics/collection`, `/market/opportunities`) |
 | `/wishlist` | Wishlist tracker: target prices, CSV import/export, convert-to-collection | Google sign-in | 200 | Yes (primary nav) |
-| `/grading` | Grading submission tracker (PSA/BGS/CGC/ARS/other) | Google sign-in | 200 | Yes (primary nav) |
-| `/activity` | Collector activity timeline | No | 200 | Yes (primary nav) |
-| `/market/report` | Market intelligence report (opportunities, portfolio snapshot, signal summary) | Admin session (collector session gets 404) | 200 (empty state if no report generated yet) | Yes (primary nav; links to opportunities, signal events, admin actions, admin workflow runs, collection) |
-| `/market/opportunities` | Opportunity-scored market moves | Admin session (collector session gets 404) | 200 | Yes (primary nav) |
-| `/market/signals` | Deterministic market signals (price moves, spreads, floor-vs-retail gaps) | Admin session (collector session gets 404) | 200 | Yes (primary nav) |
-| `/market/signal-events` | Persistent signal events with watch/dismiss/resolve workflow | Admin session (collector session gets 404) | 200 | Yes (primary nav) |
 | `/market/movers` | Public market-movers browsing page (the anonymous-visitor landing page) | No | 200 | Yes (admin dropdown - see note below) |
 | `/cards/[id]` | Single card detail: prices, history, signals | No | 200 (404 for an unknown id) | Linked from search/collection/market pages, not the top nav directly |
 
@@ -57,9 +50,8 @@ row-by-row, consistent with this doc's existing convention for a superseded tabl
 
 | Route | Purpose | Auth required | Expected status (healthy) | Nav-linked |
 |---|---|---|---|---|
-| `/admin/actions` | Manual triggers: refresh prices, snapshot portfolio/signals, generate report, full market refresh, send digest, run workflow | Admin token | 200 | Yes (admin dropdown) |
+| `/admin/actions` | Manual triggers: refresh prices, snapshot portfolio, full market refresh | Admin token | 200 | Yes (admin dropdown) |
 | `/admin/refresh-runs` | Price refresh run history | Admin token | 200 | Yes (admin dropdown) |
-| `/admin/market-workflow-runs` | Market workflow run history | Admin token | 200 | Yes (admin dropdown; linked from release-status, market/report) |
 | `/admin/backup` | JSON backup export/validate/restore | Admin token | 200 | Yes (admin dropdown; linked from release-status) |
 | `/admin/system-check` | Read-only DB/backup/cross-reference consistency sweep, including a catalog-operations summary (card audit status, duplicate risk, mapping quality critical count, catalog coverage/price source health, latest import validation status) | Admin token | 200 | Yes (admin dropdown; linked from release-status, `/admin/card-duplicates`, `/admin/catalog-coverage`, `/admin/price-source-health`, `/admin/catalog-ops`) |
 | `/admin/performance` | Table-growth counts, db index audit, latest slow requests; links to logs, system check, release status | Admin token | 200 | Yes (admin dropdown) |
@@ -96,17 +88,13 @@ per-endpoint sweep.
 | `/version` | `GET /version` | none | 200, version/git-commit/build-time |
 | `/analytics/market-value*` | `GET /analytics/market-value`, `/releases`, `/movers`, `/most-valuable` | none | 200 with persisted dates, partial JPY basket, separate movement and exact-print rankings; movers are one published daily step only; 404 unknown release, 422 invalid query, 503 unseeded or ranking integrity mismatch |
 | `/cards*` | `GET /cards`, `GET /cards/{id}`, `GET /cards/{id}/prices`, `POST`/`DELETE /cards/{id}/tags/{tag_id}` | none | 200 |
-| `/search*` | `GET /search`, `GET /search/suggestions` | none | 200 |
-| `/dashboard/*` | `GET`/`PATCH /dashboard/preferences`, `GET /dashboard/overview` | none (per-user personalization only via optional bearer) | 200 |
 | `/collection/*` | `GET/POST /collection`, `GET /collection/summary`, `GET /collection/valuation(/history)`, `GET/PATCH/DELETE /collection/{id}`, tag/group assignment, `GET /collection/export.csv`, `POST /collection/import.csv` | user | 200 (401 without a valid bearer token) |
 | `/wishlist/*` | `GET/POST /wishlist`, `GET /wishlist/summary`, `GET/PATCH/DELETE /wishlist/{id}`, `POST /wishlist/{id}/mark-purchased`, `POST /wishlist/{id}/convert-to-collection`, CSV import/export | user | 200 (401 without a valid bearer token) |
-| `/grading/*` | `GET/POST /grading/submissions`, `GET /grading/summary`, `GET/PATCH/DELETE /grading/submissions/{id}` | user | 200 (401 without a valid bearer token) |
-| `/analytics/*` | `GET /analytics/collection`, `GET /analytics/wishlist`, `GET /analytics/sell-decisions`, `GET /analytics/buy-decisions`, `GET /analytics/grading` | user | 200 (401 without a valid bearer token) |
+| `/grading/*` | `GET/POST /grading/submissions`, `GET /grading/summary`, `GET/PATCH/DELETE /grading/submissions/{id}` (API only since Collector v1 S1; removed with the legacy collection in S8) | user | 200 (401 without a valid bearer token) |
+| `/analytics/*` | `GET /analytics/collection`, `GET /analytics/wishlist` | user | 200 (401 without a valid bearer token) |
 | `/saved-views/*` | `GET/POST /saved-views`, `GET/PATCH/DELETE /saved-views/{id}`, `POST /saved-views/{id}/use`, `POST /saved-views/{id}/set-default`, `POST /saved-views/clear-default` | user | 200 (401 without a valid bearer token) |
-| `/collector/*` | `GET/POST/PATCH/DELETE /collector/tags`, `/collector/groups`; `GET /collector/activity(/summary)`; `GET/POST/PATCH/DELETE /collector/notes` | none | 200 |
+| `/collector/*` | `GET/POST/PATCH/DELETE /collector/tags`, `/collector/groups`; `GET /collector/activity`; `GET/POST/PATCH/DELETE /collector/notes` | none | 200 |
 | `/market/movers` | `GET /market/movers` | none | 200 |
-| `/market/*` (intelligence) | `GET /market/signals`, `/market/signal-events(/{id})` + PATCH/dismiss/watch/resolve, `/market/opportunities`, `/market/report/latest`, `/market/reports(/{id})` | admin | 200 (401 without `X-Admin-Token`): market-wide data carrying ownership/portfolio figures summed across every collection |
-| `/analytics/digest/*` (stored) | `GET /analytics/digest/latest`, `/analytics/digest/reports(/{id})` | admin | 200 (401 without `X-Admin-Token`); the caller's live `GET /analytics/digest` stays user-scoped |
 | `/admin/*` (+ `/snkrdunk/*`) | See "Admin routes" table above plus `/admin/actions/*` (7 POST triggers), `/admin/backup/{export,validate,restore}`, `/admin/db-backups`, `/admin/db-index-audit`, `/admin/performance/summary`, `/admin/alert-events(/{id})`, `/admin/alert-rules/{id}`, `/snkrdunk/candidates(/{id})` + match/reject | admin | 200 (401/403 without `X-Admin-Token`, 500 if `ADMIN_TOKEN` is unset outside development) |
 | `/admin/import-templates*`, `/admin/import-validation*` | `GET /admin/import-templates`, `GET /admin/import-templates/{type}.csv`, `POST /admin/import-validation/{import_type}` (dry-run only, never writes imported data), `GET /admin/import-validation/reports(/{id})` | admin | 200 (401/403 without `X-Admin-Token`) |
 
@@ -246,3 +234,30 @@ Closes the previous update's "tracked as the next one" gap. Full architecture in
   forwarding whatever the browser sent.
 - Google OAuth remains unconfigured, unchanged. This mechanism is explicitly temporary - see
   `docs/staging_deployment.md` section 13's migration path for its planned removal.
+
+## Update (2026-10-13) - Collector v1 S1: legacy deletion
+
+Removed pages, their components, Next.js API routes, FastAPI endpoints and services (plan:
+`docs/agent/plans/collector-v1/PLAN.md` section F). Each removed page answers with a permanent
+308 redirect from `apps/web/next.config.ts` `redirects()`, or 404 where no target is named:
+
+| Removed route (and sub-paths) | Now |
+|---|---|
+| `/analytics/buy-decisions`, `/analytics/sell-decisions`, `/analytics/portfolio-risk`, `/analytics/grading`, `/analytics/digest` | 308 to `/collection` |
+| `/dashboard`, `/activity` | 308 to `/collection` |
+| `/market/signals`, `/market/signal-events`, `/market/opportunities`, `/market/report` | 308 to `/analytics` |
+| `/search` | 308 to `/cards` (query string kept, so `/search?q=` lands on `/cards?q=`) |
+| `/grading` | 404 (the `/grading/*` API stays until S8) |
+| `/admin/market-workflow-runs` | 404 |
+
+Removed API endpoints: `/analytics/{buy-decisions,sell-decisions,portfolio-risk,grading,digest*}`,
+`/market/{signals,signal-events*,opportunities,report/latest,reports*}`, `/dashboard/*`,
+`/search*`, `/collector/activity/summary`, `/market-workflow-runs*`, and the admin actions
+`run-market-workflow`, `generate-analytics-digest`, `generate-market-report`,
+`send-market-report-digest`, `snapshot-market-signals`. The worker market workflow (job, beat
+entry, and the signal-snapshot and market-report steps after a price refresh) is gone too.
+
+Kept: `/analytics` (public Market page), `/analytics/collection` and `/analytics/wishlist`
+(removed in S8), `/collection*`, `/wishlist`, `/market/movers`, `/cards*`, `/prints/*`,
+`GET /collector/activity` (until S8). Legacy model files, settings flags and tables stay until the
+deferred S9 clean-up.

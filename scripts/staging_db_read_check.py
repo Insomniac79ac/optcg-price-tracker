@@ -9,7 +9,11 @@ service's public TCP proxy had been re-assigned (port 21415 -> 12258) and the
 CLI, for a window, kept injecting the *stale* `DATABASE_PUBLIC_URL`. The old
 port still had a live Postgres listening on it, so the connection **succeeded**,
 authenticated, and reported `current_database() = 'railway'` - identical to the
-real thing - while exposing an empty schema.
+real thing - while exposing an empty schema. Port 21415 was in fact the
+Railway *production* Postgres proxy. The production environment, including
+that proxy, was deleted on 2026-10-12 (see
+docs/agent/plans/production-deprecation/INVENTORY.md section 8), so the port
+no longer answers; staging is the only Railway environment.
 
 That is the failure mode this module exists to make impossible: a wrong
 destination that answers instead of erroring. Neither the endpoint nor the

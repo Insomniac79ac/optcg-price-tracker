@@ -105,15 +105,3 @@ def test_list_activity_pagination(client, db_session):
     assert len(data["events"]) == 2
 
 
-def test_activity_summary_endpoint(client, db_session):
-    make_event(db_session, event_source="collection")
-    make_event(db_session, event_source="wishlist")
-
-    response = client.get("/collector/activity/summary")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["today_count"] == 2
-    assert data["last_7d_count"] == 2
-    assert data["last_30d_count"] == 2
-    assert data["by_source"] == {"collection": 1, "wishlist": 1}
-    assert len(data["recent_events"]) == 2

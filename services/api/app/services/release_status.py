@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.version import get_version_info
-from app.models import AppLogEvent, MarketWorkflowRun
+from app.models import AppLogEvent
 from app.services.app_logging import list_app_logs
 from app.services.db_backups import list_db_backups
 from app.services.system_check import (
@@ -30,7 +30,6 @@ class ReleaseStatus:
     git_commit: str
     build_time: str
     app_env: str
-    latest_market_workflow_run: dict[str, Any] | None
     latest_system_check: dict[str, Any]
     latest_backup: dict[str, Any] | None
     latest_error: AppLogEvent | None
@@ -39,25 +38,6 @@ class ReleaseStatus:
 
 def build_release_status(db: Session) -> ReleaseStatus:
     version_info = get_version_info()
-
-    latest_workflow_run = db.scalar(
-        select(MarketWorkflowRun).order_by(
-            MarketWorkflowRun.started_at.desc(), MarketWorkflowRun.id.desc()
-        )
-    )
-    latest_workflow_run_out = (
-        None
-        if latest_workflow_run is None
-        else {
-            "id": latest_workflow_run.id,
-            "status": latest_workflow_run.status,
-            "started_at": latest_workflow_run.started_at.isoformat(),
-            "finished_at": latest_workflow_run.finished_at.isoformat()
-            if latest_workflow_run.finished_at
-            else None,
-            "error_message": latest_workflow_run.error_message,
-        }
-    )
 
     checks = run_system_check(db)
     system_check_status = overall_status(checks)
@@ -99,7 +79,6 @@ def build_release_status(db: Session) -> ReleaseStatus:
         git_commit=version_info["git_commit"],
         build_time=version_info["build_time"],
         app_env=version_info["app_env"],
-        latest_market_workflow_run=latest_workflow_run_out,
         latest_system_check=latest_system_check_out,
         latest_backup=latest_backup_out,
         latest_error=latest_error,

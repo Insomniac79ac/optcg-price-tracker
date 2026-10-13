@@ -83,9 +83,6 @@ export default function RefreshRunsPage() {
           <Link href="/admin/actions" className="text-sky-400 hover:underline">
             Admin actions
           </Link>
-          <Link href="/admin/market-workflow-runs" className="text-sky-400 hover:underline">
-            Market workflow runs
-          </Link>
           <Link href="/admin/price-source-health" className="text-sky-400 hover:underline">
             Price source health
           </Link>

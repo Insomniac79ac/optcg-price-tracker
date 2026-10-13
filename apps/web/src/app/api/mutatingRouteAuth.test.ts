@@ -39,19 +39,6 @@ const PUBLIC_READ_ALLOWLIST = new Set([
   "version/route.ts", // build identity
 ]);
 
-// Market intelligence and stored analytics digests: admin-only reads.
-const ADMIN_ONLY_READS = [
-  "market/signals/route.ts",
-  "market/signal-events/route.ts",
-  "market/opportunities/route.ts",
-  "market/report/latest/route.ts",
-  "market/reports/route.ts",
-  "market/reports/[id]/route.ts",
-  "analytics/digest/latest/route.ts",
-  "analytics/digest/reports/route.ts",
-  "analytics/digest/reports/[id]/route.ts",
-];
-
 function routeFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
@@ -65,7 +52,7 @@ describe("mutating API routes require authentication", () => {
 
   it("finds the route handlers it is meant to guard", () => {
     const relative = files.map((f) => path.relative(API_DIR, f));
-    expect(relative).toContain("market/signal-events/[id]/dismiss/route.ts");
+    expect(relative).toContain("admin/actions/refresh-prices/route.ts");
     expect(relative).toContain("admin/cache/clear/route.ts");
   });
 
@@ -89,7 +76,7 @@ describe("read API routes require authentication unless explicitly public", () =
 
   it("finds the read handlers it is meant to guard", () => {
     const reads = readFiles.map(relative);
-    expect(reads).toContain("market/signal-events/route.ts");
+    expect(reads).toContain("analytics/collection/route.ts");
     expect(reads).toContain("auth/[...nextauth]/route.ts");
   });
 
@@ -105,12 +92,5 @@ describe("read API routes require authentication unless explicitly public", () =
   it("has no stale public allowlist entries", () => {
     const reads = new Set(readFiles.map(relative));
     expect([...PUBLIC_READ_ALLOWLIST].filter((entry) => !reads.has(entry))).toEqual([]);
-  });
-
-  it("market intelligence and stored digest reads require an admin session", () => {
-    for (const route of ADMIN_ONLY_READS) {
-      const source = fs.readFileSync(path.join(API_DIR, route), "utf8");
-      expect(source, route).toContain("proxyAdminJson(");
-    }
   });
 });

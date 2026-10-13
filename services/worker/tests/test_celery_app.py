@@ -8,14 +8,12 @@ from worker.celery_app import (
     app,
     prune_data_retention_task,
     refresh_yuyutei_prices,
-    run_market_workflow_task,
     run_price_refresh,
 )
 from worker.models import (
     AppLogEvent,
     Card,
     CardPrint,
-    MarketWorkflowRun,
     PriceObservation,
     PriceRefreshRun,
     RawSnapshot,
@@ -150,67 +148,26 @@ def test_run_price_refresh_defaults_to_all_sources(db_session, monkeypatch):
     assert result["source_filter"] == "all"
 
 
-# --- run_market_workflow_task / beat schedule -------------------------------
+# --- legacy market workflow removed (Collector v1 S1) -----------------------
 
 
-def test_run_market_workflow_task_can_be_imported():
-    assert run_market_workflow_task.name == "worker.celery_app.run_market_workflow_task"
-    assert "worker.celery_app.run_market_workflow_task" in app.tasks
+def test_market_workflow_task_is_not_registered():
+    assert "worker.celery_app.run_market_workflow_task" not in app.tasks
 
 
-def test_run_market_workflow_task_delegates_to_job(db_session, monkeypatch):
-    monkeypatch.setattr(settings, "SCRAPING_MODE", "mock")
-    monkeypatch.setattr(celery_app_module, "SessionLocal", lambda: db_session)
-    seed_yuyutei_mapping(db_session)
-
-    result = run_market_workflow_task(source="yuyutei", limit=5)
-
-    assert result["status"] == "success"
-    assert result["market_workflow_run_id"] is not None
-
-    run = db_session.query(MarketWorkflowRun).filter_by(id=result["market_workflow_run_id"]).one()
-    assert run.source == "yuyutei"
-    assert run.limit == 5
-
-
-def test_beat_schedule_excludes_market_workflow_when_disabled():
-    disabled = Settings(_env_file=None, MARKET_WORKFLOW_ENABLED=False, LEGACY_PRICE_REFRESH_ENABLED=True)
-
-    schedule = _build_beat_schedule(disabled)
-
-    assert "run-market-workflow" not in schedule
-    assert "refresh-yuyutei-prices" in schedule
-
-
-def test_beat_schedule_includes_market_workflow_when_enabled():
+def test_beat_schedule_never_includes_market_workflow_even_if_flag_set():
+    # MARKET_WORKFLOW_* settings stay until the S9 clean-up but are inert.
     enabled = Settings(
         _env_file=None,
         MARKET_WORKFLOW_ENABLED=True,
-        MARKET_WORKFLOW_SOURCE="all",
-        MARKET_WORKFLOW_LIMIT=25,
-        MARKET_WORKFLOW_SEND_TELEGRAM=True,
-        MARKET_WORKFLOW_HOUR_UTC=3,
-        MARKET_WORKFLOW_MINUTE_UTC=45,
+        LEGACY_PRICE_REFRESH_ENABLED=True,
+        DATA_RETENTION_ENABLED=True,
     )
 
     schedule = _build_beat_schedule(enabled)
 
-    entry = schedule["run-market-workflow"]
-    assert entry["task"] == "worker.celery_app.run_market_workflow_task"
-    assert entry["schedule"] == crontab(hour=3, minute=45)
-    assert entry["kwargs"] == {
-        "source": "all",
-        "limit": 25,
-        "send_telegram": True,
-        "dry_run": False,
-    }
-
-
-def test_module_level_beat_schedule_disabled_by_default():
-    # MARKET_WORKFLOW_ENABLED defaults to False and no test in this session
-    # sets it in the real environment, so the schedule actually built at
-    # import time must not include the workflow entry.
-    assert settings.MARKET_WORKFLOW_ENABLED is False
+    assert "run-market-workflow" not in schedule
+    assert set(schedule) == {"refresh-yuyutei-prices", "prune-data-retention"}
     assert "run-market-workflow" not in app.conf.beat_schedule
 
 
@@ -239,14 +196,12 @@ def test_legacy_refresh_flag_does_not_affect_other_schedules():
     settings_with_others_enabled = Settings(
         _env_file=None,
         LEGACY_PRICE_REFRESH_ENABLED=False,
-        MARKET_WORKFLOW_ENABLED=True,
         DATA_RETENTION_ENABLED=True,
     )
 
     schedule = _build_beat_schedule(settings_with_others_enabled)
 
     assert "refresh-yuyutei-prices" not in schedule
-    assert "run-market-workflow" in schedule
     assert "prune-data-retention" in schedule
 
 

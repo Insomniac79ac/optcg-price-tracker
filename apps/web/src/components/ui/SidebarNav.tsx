@@ -57,13 +57,9 @@ export const PUBLIC_NAV_ITEMS: NavItem[] = [
   { href: "/analytics", label: "Market" },
 ];
 
-// Collector tier - only shown once a session exists. Trading/internal pages
-// (Opportunities, Signals, Signal Events, Report, Buy/Sell Decisions,
-// Portfolio Risk, and the rest of the old Analytics group) are deliberately
-// left out of navigation here, pending a later product decision on where
-// they belong - their routes still exist and are still reachable directly,
-// just not linked from here or from the command palette (see
-// commandRegistry.ts and CommandPalette.tsx).
+// Collector tier - only shown once a session exists. The old trading and
+// analytics pages (grading, activity, dashboard, search, signals, buy/sell
+// decisions, portfolio risk, digest) were deleted in Collector v1 S1.
 const COLLECTOR_ITEMS: NavItem[] = [
   {
     href: "/collection",
@@ -71,8 +67,6 @@ const COLLECTOR_ITEMS: NavItem[] = [
     children: [{ href: "/collection/vault", label: "Vault View" }],
   },
   { href: "/wishlist", label: "Wishlist" },
-  { href: "/grading", label: "Grading" },
-  { href: "/activity", label: "Activity" },
 ];
 
 // A role="admin" session gets exactly one entry here, not the full

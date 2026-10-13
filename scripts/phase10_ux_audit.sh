@@ -83,27 +83,15 @@ echo "== 3. Web route checks (BASE_WEB_URL=$BASE_WEB_URL) =="
 # Every apps/web/src/app/**/page.tsx route (see docs/frontend_styling_audit.md
 # for the full inventory this was cross-checked against) except /cards/[id]
 # (dynamic - needs a real card id, exercised separately/manually) and /
-# (a redirect, not an HTTP-200 page).
+# (a redirect, not an HTTP-200 page). Pages removed in Collector v1 S1 are
+# not listed (scripts/web_route_smoke.sh checks their redirects).
 WEB_ROUTES=(
-  /dashboard
-  /search
   /collection
   /collection/vault
   /wishlist
-  /grading
-  /activity
-  /analytics/digest
   /analytics/collection
   /analytics/wishlist
-  /analytics/buy-decisions
-  /analytics/sell-decisions
-  /analytics/grading
-  /analytics/portfolio-risk
   /market/movers
-  /market/report
-  /market/opportunities
-  /market/signals
-  /market/signal-events
   /admin/catalog-ops
   /admin/import-validation
   /admin/card-duplicates
@@ -116,7 +104,6 @@ WEB_ROUTES=(
   /admin/snkrdunk-candidates
   /admin/actions
   /admin/refresh-runs
-  /admin/market-workflow-runs
   /admin/backup
   /admin/performance
   /admin/logs
@@ -156,9 +143,6 @@ done
 # how scripts/release_candidate_audit.sh treats these same routes.
 SESSION_GATED_GET_CHECKS=(
   "/saved-views?limit=5"
-  "/analytics/digest"
-  "/analytics/buy-decisions?limit=5"
-  "/analytics/sell-decisions?limit=5"
 )
 for path in "${SESSION_GATED_GET_CHECKS[@]}"; do
   http_get "$BASE_API_URL$path"

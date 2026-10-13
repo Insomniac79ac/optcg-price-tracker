@@ -12,7 +12,7 @@ Breakpoints: **mobile** < 768px (check at 360px), **tablet** 768–1023px (check
 
 - [ ] Sidebar is visible and fixed; Collector/Analytics/Admin groups are separated.
 - [ ] Dense tables show every column without horizontal scroll (unless the table is unusually wide,
-      e.g. buy/sell decision candidate tables).
+      e.g. the collection analytics breakdowns).
 - [ ] Topbar shows the full search bar, "OPTCG Vault" wordmark, and auth control.
 
 ## 2. Tablet (768px)
@@ -51,7 +51,8 @@ Breakpoints: **mobile** < 768px (check at 360px), **tablet** 768–1023px (check
 
 ## 6. Analytics tables
 
-Buy decisions, sell decisions, portfolio risk, collection/wishlist/grading analytics breakdowns.
+Collection and wishlist analytics breakdowns (the buy/sell decision, portfolio-risk and grading
+analytics pages were removed in Collector v1 S1).
 
 - [ ] Table scrolls inside its own container on mobile, never the page.
 - [ ] Sticky header stays visible while scrolling the table vertically.
@@ -98,8 +99,8 @@ detail, merge preview.
 
 ## 11. Price basis labels
 
-- [ ] Every important price (dashboard, collection, vault, card detail, wishlist, grading, every
-      analytics page, market opportunities/signals) shows a JPY value.
+- [ ] Every important price (collection, vault, card detail, wishlist, every analytics page,
+      market movers) shows a JPY value.
 - [ ] Every price shows its source/basis (Yuyu-Tei sell/buy, SNKRDUNK floor, raw market, graded
       adjusted) — never a bare "Market" label.
 - [ ] Stale prices show a "stale" indicator; missing prices show "not available", never a blank
@@ -138,12 +139,11 @@ Spot-check per `docs/frontend_styling_audit.md` — every route below should sho
 the shared scrollable/sticky-header chrome (no visible difference in table look-and-feel from an
 already-established page like `/collection` or `/admin/card-duplicates`).
 
-- [ ] Collector: `/wishlist`, `/grading`, `/activity`
-- [ ] Market: `/market/opportunities`, `/market/signals`, `/market/signal-events`,
-      `/market/report`, `/market/movers`
-- [ ] Analytics: `/analytics/collection`, `/analytics/wishlist`, `/analytics/grading`
+- [ ] Collector: `/wishlist`
+- [ ] Market: `/market/movers`
+- [ ] Analytics: `/analytics/collection`, `/analytics/wishlist`
 - [ ] Admin (raw-table cluster): `/admin/data-retention`, `/admin/file-jobs`, `/admin/card-audit`,
-      `/admin/system-check`, `/admin/market-workflow-runs`, `/admin/refresh-runs`,
+      `/admin/system-check`, `/admin/refresh-runs`,
       `/admin/performance`, `/admin/job-locks`, `/admin/alerts`, `/admin/logs`
 - [ ] Admin (header/button cleanup): `/admin/cards`, `/admin/catalog-coverage`,
       `/admin/snkrdunk-candidates`, `/admin/backup`, `/admin/cache`, `/admin/actions`,

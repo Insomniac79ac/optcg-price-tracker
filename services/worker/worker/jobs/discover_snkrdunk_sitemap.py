@@ -372,7 +372,7 @@ def run_anchor_discovery_locked(
     """`run_anchor_discovery` under the shared advisory lock.
 
     Reuses worker.job_locks - the same non-blocking JobLock table that guards
-    price_refresh and market_workflow - rather than inventing a scheduler. A
+    price_refresh and data retention - rather than inventing a scheduler. A
     second execution raises LockHeldError instead of waiting, so two runs can
     never advance the checkpoint concurrently and split its history.
     """

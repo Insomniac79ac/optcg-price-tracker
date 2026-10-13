@@ -13,8 +13,6 @@ from worker.adapters.yuyutei import YuyuTeiAdapter
 from worker.app_logging import log_exception, record_app_log
 from worker.db import SessionLocal
 from worker.job_locks import LockHeldError, with_job_lock
-from worker.market_report import generate_market_report
-from worker.market_signal_events import snapshot_market_signals
 from worker.mapping_gate import (
     PRICEABLE_MAPPING_CONDITIONS,
     PRICEABLE_PRINT_CONDITIONS,
@@ -60,10 +58,6 @@ class RefreshRunSummary:
     observations_inserted: int = 0
     error_message: str | None = None
     portfolio_snapshot_id: int | None = None
-    market_signal_events_created: int | None = None
-    market_signal_events_updated: int | None = None
-    market_signal_events_resolved: int | None = None
-    market_report_id: int | None = None
 
     def report_lines(self) -> list[str]:
         lines = [
@@ -80,14 +74,6 @@ class RefreshRunSummary:
             lines.append(f"error_message: {self.error_message}")
         if self.portfolio_snapshot_id is not None:
             lines.append(f"portfolio_snapshot_id={self.portfolio_snapshot_id}")
-        if self.market_signal_events_created is not None:
-            lines.append(
-                f"market_signal_events_created={self.market_signal_events_created} "
-                f"updated={self.market_signal_events_updated} "
-                f"resolved={self.market_signal_events_resolved}"
-            )
-        if self.market_report_id is not None:
-            lines.append(f"market_report_id={self.market_report_id}")
         return lines
 
     def print_report(self) -> None:
@@ -122,9 +108,7 @@ def refresh_prices(
     before doing anything else, so a lock conflict never leaves an orphan
     'running' PriceRefreshRun row behind. skip_lock is test/dev-CLI only -
     never reachable from the Celery task or beat schedule. Raises
-    LockHeldError if another price_refresh (or, transitively, a
-    market_workflow run that's currently inside its own refresh_prices call)
-    is already in progress."""
+    LockHeldError if another price_refresh is already in progress."""
     with with_job_lock(
         db,
         "price_refresh",
@@ -412,55 +396,6 @@ def _refresh_prices_locked(
                 **_log_kwargs,
             )
 
-    market_signal_events_created: int | None = None
-    market_signal_events_updated: int | None = None
-    market_signal_events_resolved: int | None = None
-    if not dry_run and status != "failed":
-        try:
-            signal_result = snapshot_market_signals(db)
-            market_signal_events_created = signal_result.created
-            market_signal_events_updated = signal_result.updated
-            market_signal_events_resolved = signal_result.resolved
-        except Exception as signal_exc:
-            # Same rationale as the portfolio snapshot above - this must
-            # never mark an otherwise-successful refresh run as failed.
-            db.rollback()
-            logger.warning(
-                "Failed to snapshot market signal events after refresh run %s.",
-                run_id,
-                exc_info=True,
-            )
-            log_exception(
-                "worker",
-                "price_refresh",
-                f"Failed to snapshot market signal events after refresh run {run_id}.",
-                signal_exc,
-                **_log_kwargs,
-            )
-
-    market_report_id: int | None = None
-    if not dry_run and status != "failed":
-        try:
-            market_report_id = generate_market_report(db).id
-        except Exception as report_exc:
-            # Same rationale as the portfolio snapshot and market signal
-            # events above - report generation is a nice-to-have on top of
-            # the refresh itself and must never mark an otherwise-successful
-            # refresh run as failed.
-            db.rollback()
-            logger.warning(
-                "Failed to generate market intelligence report after refresh run %s.",
-                run_id,
-                exc_info=True,
-            )
-            log_exception(
-                "worker",
-                "price_refresh",
-                f"Failed to generate market intelligence report after refresh run {run_id}.",
-                report_exc,
-                **_log_kwargs,
-            )
-
     return RefreshRunSummary(
         id=run_id,
         status=status,
@@ -475,10 +410,6 @@ def _refresh_prices_locked(
         observations_parsed=observations_parsed,
         observations_inserted=observations_inserted,
         portfolio_snapshot_id=portfolio_snapshot_id,
-        market_signal_events_created=market_signal_events_created,
-        market_signal_events_updated=market_signal_events_updated,
-        market_signal_events_resolved=market_signal_events_resolved,
-        market_report_id=market_report_id,
         error_message=error_message,
     )
 

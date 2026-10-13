@@ -126,11 +126,11 @@ fi
 echo
 
 echo "-- 4. Web app --"
-http_get "$WEB_URL/dashboard" -L
+http_get "$WEB_URL/collection" -L
 if [[ "$HTTP_STATUS" == "200" ]]; then
-  pass "GET $WEB_URL/dashboard returned 200"
+  pass "GET $WEB_URL/collection returned 200"
 else
-  fail "GET $WEB_URL/dashboard returned HTTP $HTTP_STATUS (expected 200)"
+  fail "GET $WEB_URL/collection returned HTTP $HTTP_STATUS (expected 200)"
 fi
 echo
 

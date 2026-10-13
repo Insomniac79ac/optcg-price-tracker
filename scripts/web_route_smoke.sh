@@ -23,29 +23,16 @@ WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:3000}"
 
 CURL_OPTS=(-sS -L --connect-timeout 5 --max-time 15)
 
-# /dashboard, /collection, /wishlist, and /grading redirect an anonymous
-# visitor to /market/movers (see apps/web/middleware.ts) - -L above follows
-# that, so this only verifies "the app is up and routing works", not that
-# the page itself rendered its signed-in content. Same tradeoff
-# scripts/prod_smoke_test.sh already makes for the same pages.
+# /collection and /wishlist redirect an anonymous visitor (see
+# apps/web/src/proxy.ts) - -L above follows that, so this only verifies
+# "the app is up and routing works", not that the page itself rendered its
+# signed-in content. Same tradeoff scripts/prod_smoke_test.sh already makes
+# for the same pages.
 ROUTES=(
-  /dashboard
-  /search
   /collection
   /analytics/collection
   /wishlist
   /analytics/wishlist
-  /analytics/buy-decisions
-  /analytics/sell-decisions
-  /grading
-  /analytics/grading
-  /analytics/portfolio-risk
-  /analytics/digest
-  /activity
-  /market/report
-  /market/opportunities
-  /market/signals
-  /market/signal-events
   /admin/actions
   /admin/backup
   /admin/logs
@@ -64,6 +51,36 @@ for route in "${ROUTES[@]}"; do
     echo "PASS: GET $route returned 200"
   else
     echo "FAIL: GET $route returned HTTP $http_status (expected 200)" >&2
+    echo "Web route smoke test FAILED." >&2
+    exit 1
+  fi
+done
+
+# Routes removed in Collector v1 S1 answer with a permanent (308) redirect.
+# Checked without -L so the redirect itself is verified.
+REDIRECTS=(
+  "/dashboard /collection"
+  "/activity /collection"
+  "/analytics/buy-decisions /collection"
+  "/analytics/sell-decisions /collection"
+  "/analytics/portfolio-risk /collection"
+  "/analytics/grading /collection"
+  "/analytics/digest /collection"
+  "/market/signals /analytics"
+  "/market/signal-events /analytics"
+  "/market/opportunities /analytics"
+  "/market/report /analytics"
+  "/search /cards"
+)
+for pair in "${REDIRECTS[@]}"; do
+  read -r route target <<<"$pair"
+  result=$(curl -sS --connect-timeout 5 --max-time 15 -o /dev/null -w "%{http_code} %{redirect_url}" \
+    "$WEB_BASE_URL$route" 2>/dev/null) || result="000 "
+  read -r http_status location <<<"$result"
+  if [[ "$http_status" == "308" && "${location%%\?*}" == *"$target" ]]; then
+    echo "PASS: GET $route returned 308 to $target"
+  else
+    echo "FAIL: GET $route returned HTTP $http_status to '$location' (expected 308 to $target)" >&2
     echo "Web route smoke test FAILED." >&2
     exit 1
   fi

@@ -20,22 +20,12 @@ import {
 const CONFIRM_PHRASE = "CLEAR";
 
 const HELPFUL_PREFIXES = [
-  "dashboard",
   "collection_valuation",
   "collection_history",
-  "market_signals",
-  "market_signal_events",
-  "market_opportunities",
-  "market_report",
   "wishlist",
   "grading",
-  "analytics_digest",
   "collection_analytics",
   "wishlist_analytics",
-  "buy_decisions",
-  "sell_decisions",
-  "grading_analytics",
-  "portfolio_risk",
 ];
 
 export default function CachePage() {
@@ -69,7 +59,7 @@ export default function CachePage() {
       <main className="mx-auto max-w-5xl px-4 py-6">
         <PageHeader
           title="Cache"
-          description="Short-lived cache for dashboard and market read endpoints."
+          description="Short-lived cache for collection, wishlist and analytics read endpoints."
         />
 
         {unauthorized && (
@@ -222,7 +212,7 @@ function ClearCacheSection({ onCleared }: { onCleared: () => void }) {
             type="text"
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
-            placeholder="e.g. dashboard"
+            placeholder="e.g. collection_valuation"
             className={FILTER_INPUT_CLASS}
           />
         </label>

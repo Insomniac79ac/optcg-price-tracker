@@ -27,24 +27,13 @@ router = APIRouter(prefix="/admin/cards", tags=["admin"], dependencies=[Depends(
 # broadly, the same way a price refresh or market workflow does. See 'Cache
 # invalidation' in docs/operations.md.
 _CARD_CATALOG_CACHE_INVALIDATES = (
-    "dashboard",
     "collection_valuation",
     "collection_history",
     "collection_analytics",
     "wishlist_analytics",
-    "market_signals",
-    "market_signal_events",
-    "market_opportunities",
-    "market_report",
-    "market_reports",
     "wishlist",
     "wishlist_summary",
     "grading_summary",
-    "sell_decisions",
-    "buy_decisions",
-    "grading_analytics",
-    "portfolio_risk",
-    "analytics_digest",
     "admin/catalog_coverage",
     "admin/price_source_health",
 )

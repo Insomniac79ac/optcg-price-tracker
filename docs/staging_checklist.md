@@ -85,12 +85,14 @@ Run `STAGING_API_URL=<railway-api-url> STAGING_WEB_URL=<vercel-staging-url>
 ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh` and confirm:
 
 - [x] API `/health` works.
-- [x] Web `/dashboard` works.
+- [x] Web `/dashboard` works. (`/dashboard` was removed in Collector v1 S1, 2026-10-13; it now
+      308-redirects to `/collection`, and the smoke test checks `/analytics` and `/cards` instead.)
 - [x] Admin token works (`/admin/system-check` returns 200, not `critical`).
 - [x] Saved views works (`/saved-views?limit=5` returns 200 or 401 - 401 without a signed-in
       session is expected/healthy).
 - [x] Analytics digest works (`/analytics/digest` - same 200-or-401 note as saved views; web
-      `/analytics/digest` page itself returns 200).
+      `/analytics/digest` page itself returns 200). (Removed in Collector v1 S1; the smoke test no
+      longer checks it, and web `/analytics/digest` 308-redirects to `/collection`.)
 - [x] Catalog ops works (`/admin/catalog-coverage` returns 200; web `/admin/catalog-ops` page
       returns 200).
 - [ ] Source health works - manually check `/admin/price-source-health` in the web UI (no dedicated
@@ -100,7 +102,7 @@ ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh` and confir
 - [ ] Command palette works - manually verify (Ctrl/Cmd+K opens, searches, navigates) on the
       deployed staging URL; not automatable via curl. Not yet manually verified in a browser.
 - [x] Collection vault works (web `/collection/vault` returns 200 after following the sign-in
-      redirect, same as `/collection`/`/dashboard`).
+      redirect, same as `/collection`).
 
 ## After deploy
 
