@@ -1,0 +1,49 @@
+{
+ "observed_at": "2026-10-13T10:26:54.663246+00:00",
+ "url": "https://optcg-price-tracker-staging.up.railway.app/openapi.json",
+ "me_paths": [
+  "/me",
+  "/me/collection",
+  "/me/collection/value",
+  "/me/collection/{entry_id}",
+  "/me/export",
+  "/me/export/{section}.csv",
+  "/me/preferences",
+  "/me/watchlist",
+  "/me/watchlist/{entry_id}"
+ ],
+ "me_methods": {
+  "/me": [
+   "delete"
+  ],
+  "/me/collection": [
+   "get",
+   "post"
+  ],
+  "/me/collection/value": [
+   "get"
+  ],
+  "/me/collection/{entry_id}": [
+   "delete",
+   "patch"
+  ],
+  "/me/export": [
+   "get"
+  ],
+  "/me/export/{section}.csv": [
+   "get"
+  ],
+  "/me/preferences": [
+   "get",
+   "put"
+  ],
+  "/me/watchlist": [
+   "get",
+   "post"
+  ],
+  "/me/watchlist/{entry_id}": [
+   "delete",
+   "patch"
+  ]
+ }
+}

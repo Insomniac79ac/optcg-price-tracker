@@ -1,0 +1,105 @@
+{
+  "verified_at": "2026-10-13T10:25:44.153425+00:00",
+  "expected_commit": "5d86629fc8679849e9bcb79121d0407e813f2166",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_GN3GzNKPmBTwSA5J7SSLDw2NMX2Z",
+    "status": "READY",
+    "sha": "5d86629fc8679849e9bcb79121d0407e813f2166"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "3b7d9c1a5e20",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "4a1530ec16286b6e8c8d0aeb12438bfee24fbb5d5771e42356ac54ce822f73b8",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "b9d1c211de51d55946d53d66d98f6f24ad33831b",
+    "merge": "5d86629fc8679849e9bcb79121d0407e813f2166",
+    "decision": "full",
+    "files": [
+      "docs/agent/STAGING_MISSION.json",
+      "docs/collector_accounts.md",
+      "services/api/alembic/env.py",
+      "services/api/alembic/versions/3b7d9c1a5e20_add_collector_account_tables.py",
+      "services/api/app/accounts/__init__.py",
+      "services/api/app/accounts/config.py",
+      "services/api/app/accounts/migrate_legacy.py",
+      "services/api/app/accounts/models.py",
+      "services/api/app/accounts/router.py",
+      "services/api/app/accounts/schemas.py",
+      "services/api/app/accounts/service.py",
+      "services/api/app/accounts/valuation.py",
+      "services/api/app/main.py",
+      "services/api/tests/accounts_helpers.py",
+      "services/api/tests/test_accounts.py",
+      "services/api/tests/test_accounts_import_graph.py",
+      "services/api/tests/test_accounts_postgres.py",
+      "services/api/tests/test_admin_actor_assertion.py"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      "services/api/alembic/env.py",
+      "services/api/alembic/versions/3b7d9c1a5e20_add_collector_account_tables.py",
+      "services/api/app/accounts/__init__.py",
+      "services/api/app/accounts/config.py",
+      "services/api/app/accounts/migrate_legacy.py",
+      "services/api/app/accounts/models.py",
+      "services/api/app/accounts/router.py",
+      "services/api/app/accounts/schemas.py",
+      "services/api/app/accounts/service.py",
+      "services/api/app/accounts/valuation.py",
+      "services/api/app/main.py",
+      "services/api/tests/accounts_helpers.py",
+      "services/api/tests/test_accounts.py",
+      "services/api/tests/test_accounts_import_graph.py",
+      "services/api/tests/test_accounts_postgres.py",
+      "services/api/tests/test_admin_actor_assertion.py"
+    ]
+  },
+  "api_expectation": {
+    "mode": "build",
+    "sha": "5d86629fc8679849e9bcb79121d0407e813f2166",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": [
+      "services/api/alembic/env.py",
+      "services/api/alembic/versions/3b7d9c1a5e20_add_collector_account_tables.py",
+      "services/api/app/accounts/__init__.py",
+      "services/api/app/accounts/config.py",
+      "services/api/app/accounts/migrate_legacy.py",
+      "services/api/app/accounts/models.py",
+      "services/api/app/accounts/router.py",
+      "services/api/app/accounts/schemas.py",
+      "services/api/app/accounts/service.py",
+      "services/api/app/accounts/valuation.py",
+      "services/api/app/main.py",
+      "services/api/tests/accounts_helpers.py",
+      "services/api/tests/test_accounts.py",
+      "services/api/tests/test_accounts_import_graph.py",
+      "services/api/tests/test_accounts_postgres.py",
+      "services/api/tests/test_admin_actor_assertion.py"
+    ]
+  },
+  "production_accessed": false
+}

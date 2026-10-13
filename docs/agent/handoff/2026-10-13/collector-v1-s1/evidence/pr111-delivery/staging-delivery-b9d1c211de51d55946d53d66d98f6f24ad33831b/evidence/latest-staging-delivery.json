@@ -1,0 +1,99 @@
+{
+  "verified_at": "2026-10-13T07:49:09.797307+00:00",
+  "expected_commit": "b9d1c211de51d55946d53d66d98f6f24ad33831b",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_8eAkSYtsEFhi6ZNeuyAbrhaYGdes",
+    "status": "READY",
+    "sha": "b9d1c211de51d55946d53d66d98f6f24ad33831b"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "6c2242f6f439",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "eac5de83941abd002e0e3b5f8a38dc4bacda449b277179ab4d8717e13dd00e79",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "d55fc2082f3554639f9ccf1a8254d55f7691c8cc",
+    "merge": "b9d1c211de51d55946d53d66d98f6f24ad33831b",
+    "decision": "skip",
+    "files": [
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/HANDOFF.md",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/admin-signed-out-after.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/after.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/before.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/deploy-records-after-pr110.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-credential-probe-e6ffccba8f14397c7b6f986ed5eb4bdbc0971d1d/latest-staging-credential-probe.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/CURRENT_STATE.yaml",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/latest-delivery-scope.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/latest-staging-delivery.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-25c54499ae7392a9.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-283aa82e7283f0d3.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-3391abad5c997c5a.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-4683bfd6399a614e.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-62809ffe916fe79b.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-8dcfbf959cb15f6a.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-a05c36274c28de29.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/pr110-delivery/staging-delivery-d55fc2082f3554639f9ccf1a8254d55f7691c8cc/evidence/staging-state-c09334b69a28b1a7.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_analytics-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_analytics-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_cards-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_cards-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_market_movers-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_market_movers-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_prints_5661-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/after_prints_5661-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_analytics-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_analytics-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_cards-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_cards-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_market_movers-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_market_movers-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_prints_5661-desktop.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/screens/before_prints_5661-mobile.png",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/stale-branch-deletion.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/step0-closure.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/step0-staging-read.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/evidence/vercel-build-log-d55fc20.txt",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/tools/admin_signed_out.py",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/tools/capture.py",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/tools/deploy_records.py",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/tools/step0_closure.py",
+      "docs/agent/handoff/2026-10-13/collector-v1-s1/tools/step0_staging_read.py"
+    ],
+    "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "d55fc2082f3554639f9ccf1a8254d55f7691c8cc",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}

@@ -1,0 +1,8 @@
+commit: ea00c36 (before the test-only fix), postgres 16, no delay
+5 failed, 5480 passed, 49 skipped, 2681 warnings in 1640.61s (0:27:20)
+exit=1
+FAILED tests/test_admin_actor_assertion.py::test_method_path_and_body_are_bound[eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGNnLXdlYi1
+FAILED tests/test_admin_actor_assertion.py::test_method_path_and_body_are_bound[eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGNnLXdlYi1
+FAILED tests/test_admin_actor_assertion.py::test_method_path_and_body_are_bound[eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGNnLXdlYi1
+FAILED tests/test_canonical_original_set_code_nullable_migration_postgres.py::test_the_only_constraint_that_moves_is_the_set_codes_own_not_n
+FAILED tests/test_canonical_rarity_nullable_migration_postgres.py::test_the_only_constraint_that_moves_is_rarity_s_own_not_null

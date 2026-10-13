@@ -1,0 +1,27 @@
+{
+ "mode": "dry-run",
+ "observed_at": "2026-10-13T00:10:29.927732+00:00",
+ "account_tables_present": false,
+ "collection_items": [],
+ "wishlist_items": [],
+ "summary": {
+  "collection_items": {
+   "rows": 0,
+   "exact": 0,
+   "unresolved": 0,
+   "actions": {}
+  },
+  "wishlist_items": {
+   "rows": 0,
+   "exact": 0,
+   "unresolved": 0,
+   "actions": {}
+  },
+  "legacy_cards": {
+   "total": 25,
+   "exact": 10,
+   "multiple_prints": 6,
+   "no_print": 9
+  }
+ }
+}
