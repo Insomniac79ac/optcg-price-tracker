@@ -80,7 +80,8 @@ dominant red/green treatment.
 - **Monospace** (`--font-mono`, IBM Plex Mono): card codes, set codes,
   timestamps, and other small technical metadata only - never a page's
   primary voice.
-- Both self-hosted via `next/font/google`, `display: "swap"`, with system
+- All committed under `app/fonts` and loaded via `next/font/local`,
+  `display: "swap"`, with system
   CJK fallbacks appended for `name_jp` - see `docs/brand.md` "Typography."
 
 ## Component reuse

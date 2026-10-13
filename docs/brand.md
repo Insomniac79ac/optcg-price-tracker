@@ -121,10 +121,12 @@ equivalent ratio (previous faint was 2.5:1, previous muted was 4.1:1).
 - **UI/body** (`--font-sans`, Manrope): everything else.
 - **Monospace** (`--font-mono`, IBM Plex Mono, unchanged): card codes, set
   codes, timestamps, and other small technical/admin metadata only.
-- Both Manrope and Fraunces are self-hosted at build time via
-  `next/font/google` (no runtime font fetch, no CSP change needed) and use
-  `display: "swap"` with next/font's automatic fallback-metric matching, so
-  there's no layout shift while the real face loads.
+- Manrope, Fraunces and IBM Plex Mono are committed under
+  `apps/web/src/app/fonts` (with their OFL licences) and loaded via
+  `next/font/local` - no build-time or runtime font fetch, no CSP change
+  needed. They use `display: "swap"` with next/font's automatic
+  fallback-metric matching, so there's no layout shift while the real face
+  loads.
 - Japanese card names (`name_jp`) fall back per-glyph to system CJK faces
   (Hiragino/Yu Gothic/Yu Mincho/Noto Sans JP) appended to the end of both
   the sans and display font stacks - deliberately not a self-hosted CJK

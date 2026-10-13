@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -10,11 +9,12 @@ import { publicSiteUrl } from "@/lib/publicRoutes";
 import { absoluteUrl } from "@/lib/publicSeo";
 import { brand } from "@/lib/brand";
 
-// Self-hosted at build time by next/font (no runtime request to Google
-// Fonts, so this doesn't need a CSP font-src allowance). display: "swap"
-// means a missing/slow weight just falls back to the --font-sans/
-// --font-display/--font-mono system stack in globals.css rather than
-// blocking render - see docs/brand.md "Typography".
+// All three families are committed under ./fonts and served by next/font/local
+// - no build-time or runtime request to Google Fonts, so neither the Vercel
+// build nor CSP font-src depends on it (see fonts/README.md for provenance).
+// display: "swap" means a missing/slow weight just falls back to the
+// --font-sans/--font-display/--font-mono system stack in globals.css rather
+// than blocking render - see docs/brand.md "Typography".
 const manrope = localFont({
   src: "./fonts/Manrope-Variable.ttf",
   weight: "400 700",
@@ -22,16 +22,22 @@ const manrope = localFont({
   display: "swap",
 });
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+// Fraunces and IBM Plex Mono are the latin-subset files Google Fonts served to
+// next/font/google, committed unmodified, so they render exactly as before.
+const fraunces = localFont({
+  src: "./fonts/Fraunces-latin.woff2",
+  weight: "500 700",
   variable: "--font-fraunces",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const ibmPlexMono = localFont({
+  src: [
+    { path: "./fonts/IBMPlexMono-Regular-latin.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/IBMPlexMono-Medium-latin.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/IBMPlexMono-SemiBold-latin.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-ibm-plex-mono",
   display: "swap",
 });

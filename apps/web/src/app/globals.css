@@ -97,8 +97,9 @@
   --radius-panel-lg: var(--radius-panel-lg);
   --radius-modal: var(--radius-modal);
 
-  /* Manrope (UI/body) and Fraunces (editorial display) are self-hosted at
-   * build time via next/font/google in app/layout.tsx - display: "swap"
+  /* Manrope (UI/body), Fraunces (editorial display) and IBM Plex Mono are
+   * committed under app/fonts and loaded via next/font/local in
+   * app/layout.tsx - no Google Fonts request at build or run time. "swap"
    * with next/font's automatic fallback-metric matching avoids layout
    * shift. System CJK faces are appended (not a self-hosted CJK webfont -
    * see docs/brand.md "Typography") so name_jp renders correctly without
