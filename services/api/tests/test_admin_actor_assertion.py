@@ -136,16 +136,19 @@ def test_invalid_identity_or_trust_claims_fail(claim, value):
     assert error_code(response) == "admin_actor_assertion_invalid"
 
 
+# The parameters are claim overrides, not tokens: each 60-second assertion is
+# minted when its test runs. Minting at collection time let a slow suite reach
+# these tests after the tokens had already expired.
 @pytest.mark.parametrize(
-    "token",
+    "overrides",
     [
-        assertion(method="PATCH"),
-        assertion(path="/other"),
-        assertion(body=b"{}"),
+        {"method": "PATCH"},
+        {"path": "/other"},
+        {"body": b"{}"},
     ],
 )
-def test_method_path_and_body_are_bound(token):
-    response = post(token)
+def test_method_path_and_body_are_bound(overrides):
+    response = post(assertion(**overrides))
     assert response.status_code == 401
     assert error_code(response) == "admin_actor_assertion_request_mismatch"
 
