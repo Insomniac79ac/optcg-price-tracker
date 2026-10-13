@@ -44,9 +44,11 @@ have data there, dropping it is deleting user data and needs a human decision.
 | `GET/POST /me/watchlist`, `PATCH/DELETE /me/watchlist/{id}` | Watchlist with value and distance to target |
 | `GET/PUT /me/preferences` | JPY and private only (422 otherwise) |
 | `GET /me/export`, `GET /me/export/{collection,watchlist}.csv` | Everything stored about the user, generated on request |
-| `DELETE /me?confirm=delete my account` | Deletes the user and every row it owns, including legacy `saved_views` and `search_history` rows (SET NULL foreign keys) |
+| `DELETE /me?confirm=delete my account` | Deletes the user and every row it owns. Legacy `saved_views` and `search_history` rows (SET NULL foreign keys, not CASCADE) and legacy `file_jobs` rows (`user_id` without a foreign key) are deleted explicitly, with the job's stored CSV files |
 
-Another user's entry id answers 404, exactly like a missing id.
+Another user's entry id answers 404, exactly like a missing id. After `DELETE /me`,
+no table holds that user's id (`test_after_delete_me_no_table_carries_the_users_id`
+finds every `user_id` column and foreign key to `users` from the live schema).
 
 ## Value rules (PLAN C1, C2, C4)
 
@@ -77,6 +79,4 @@ several prints, 9 with none.
 
 ## Known gaps (later sessions)
 
-- `file_jobs` rows carry a `user_id` without a foreign key (legacy CSV import and
-  export). Account deletion does not remove them; the legacy CSV feature goes in S8.
 - No web UI yet (S5-S8). No price alerts (v2).

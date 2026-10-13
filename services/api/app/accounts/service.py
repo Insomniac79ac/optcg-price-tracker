@@ -25,10 +25,12 @@ from app.accounts.models import (
 )
 from app.models.canonical_card import CanonicalCard
 from app.models.card_print import CardPrint
+from app.models.file_job import FileJob
 from app.models.release_product import ReleaseProduct
 from app.models.saved_view import SavedView
 from app.models.search_history import SearchHistory
 from app.models.user import User
+from app.services import file_job_storage
 
 DEFAULT_PREFERENCES = {"currency": "JPY", "collection_visibility": "private"}
 
@@ -348,11 +350,29 @@ def delete_account(db: Session, user_id: int) -> None:
     """Delete the user and everything they own.
 
     The database cascade removes every collector-account table and the legacy
-    CASCADE tables. ``saved_views`` and ``search_history`` reference users with
-    SET NULL, which would keep the rows; they are deleted explicitly first. The
-    account tables are also deleted explicitly so the result does not depend on
-    the database enforcing foreign keys (SQLite in tests does not by default).
+    CASCADE tables (collection_items, wishlist_items, collector_tags,
+    collector_groups and their children). Rows that would otherwise survive
+    are deleted explicitly first:
+
+    * ``saved_views`` and ``search_history`` reference users with SET NULL,
+      which would keep the rows (the plan said CASCADE; the schema says SET NULL);
+    * ``file_jobs`` carries ``user_id`` with no foreign key at all. A user's jobs
+      are their own legacy collection/wishlist CSV imports and exports; admin
+      backup jobs have no user. Their stored input/output files hold the user's
+      data, so they are deleted too, after the commit, exactly as
+      ``cleanup_old_file_jobs`` does.
+
+    The account tables are also deleted explicitly so the result does not depend
+    on the database enforcing foreign keys (SQLite in tests does not by default).
     """
+    job_files = [
+        path
+        for row in db.execute(
+            select(FileJob.input_file_path, FileJob.output_file_path).where(FileJob.user_id == user_id)
+        )
+        for path in row
+        if path
+    ]
     for model in (
         CollectionEntryEvent,
         CollectionValuePoint,
@@ -361,7 +381,10 @@ def delete_account(db: Session, user_id: int) -> None:
         UserPreferences,
         SavedView,
         SearchHistory,
+        FileJob,
     ):
         db.execute(delete(model).where(model.user_id == user_id))
     db.execute(delete(User).where(User.id == user_id))
     db.commit()
+    for path in job_files:
+        file_job_storage.delete_file(path)

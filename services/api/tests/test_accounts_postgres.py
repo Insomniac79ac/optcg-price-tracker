@@ -285,3 +285,114 @@ def test_legacy_dry_run_is_read_only_on_postgres(db):
         db.execute(text("INSERT INTO user_preferences (user_id) VALUES (1)"))
     db.rollback()
     assert count(db, "collection_entries") == count(db, "watchlist_entries") == 0
+
+
+# Every column that identifies a user, discovered from the live schema rather
+# than a hand-kept list: any column named user_id plus any foreign key to users.
+USER_COLUMNS_SQL = """
+SELECT table_name, column_name FROM information_schema.columns
+ WHERE table_schema = 'public' AND column_name = 'user_id'
+UNION
+SELECT kcu.table_name, kcu.column_name
+  FROM information_schema.table_constraints tc
+  JOIN information_schema.key_column_usage kcu
+    ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
+  JOIN information_schema.constraint_column_usage ccu
+    ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+ WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'users'
+ ORDER BY 1, 2
+"""
+
+
+def test_after_delete_me_no_table_carries_the_users_id(db, pg, monkeypatch, tmp_path):
+    from app.models import (
+        Card,
+        CollectionItem,
+        CollectorGroup,
+        CollectorTag,
+        FileJob,
+        SavedView,
+        SearchHistory,
+        WishlistItem,
+    )
+    from app.settings import settings
+    from tests._auth_helpers import TEST_API_JWT_SECRET
+
+    engine, _ = pg
+    factory = sessionmaker(bind=engine, autoflush=False)
+
+    def override():
+        session = factory()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    monkeypatch.setenv(FLAG, "true")
+    monkeypatch.setattr(settings, "API_JWT_SECRET", TEST_API_JWT_SECRET)
+    monkeypatch.setattr(settings, "FILE_JOB_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setitem(app.dependency_overrides, get_db, override)
+
+    with engine.connect() as connection:
+        user_columns = [tuple(r) for r in connection.execute(text(USER_COLUMNS_SQL))]
+    # A new table that stores a user id must be added to this test and to
+    # delete_account deliberately.
+    assert sorted({table for table, _ in user_columns}) == sorted({
+        "collection_entries", "collection_entry_events", "collection_items",
+        "collection_value_points", "collector_groups", "collector_tags", "file_jobs",
+        "saved_views", "search_history", "user_preferences", "watchlist_entries",
+        "wishlist_items",
+    })
+
+    printing = make_print(db, make_canonical(db, card_code="OP01-001"), artwork_key="pg-sweep")
+    legacy = Card(card_code="OP01-001", set_code="OP01", rarity="R", language="jp")
+    db.add(legacy)
+    db.add(User(google_sub="keep", email="keep@example.com"))
+    db.commit()
+    keep = db.scalar(select(User.id).where(User.google_sub == "keep"))
+    (tmp_path / "output").mkdir()
+    (tmp_path / "output" / "mine.csv").write_text("my collection")
+    (tmp_path / "output" / "keep.csv").write_text("their collection")
+    for user_id in (1, keep):
+        mine = user_id == 1
+        db.add_all([
+            CollectionItem(user_id=user_id, card_id=legacy.id, quantity=1),
+            WishlistItem(user_id=user_id, card_id=legacy.id),
+            CollectorTag(user_id=user_id, name="t", slug=f"t{user_id}"),
+            CollectorGroup(user_id=user_id, name="g", slug=f"g{user_id}"),
+            SavedView(user_id=user_id, name="v", route_path="/cards", view_type="cards"),
+            SearchHistory(user_id=user_id, query="luffy"),
+            FileJob(user_id=user_id, job_type="collection_export", status="success",
+                    output_file_path="output/mine.csv" if mine else "output/keep.csv"),
+            CollectionEntry(user_id=user_id, card_print_id=printing.id, quantity=1, resolution="exact"),
+        ])
+        db.commit()
+        for statement in (
+            "INSERT INTO collection_entry_events (user_id, card_print_id, quantity_before, quantity_after) VALUES (:u, :p, 0, 1)",
+            "INSERT INTO watchlist_entries (user_id, card_print_id, resolution) VALUES (:u, :p, 'exact')",
+            "INSERT INTO user_preferences (user_id) VALUES (:u)",
+            "INSERT INTO collection_value_points (user_id, point_date, methodology_version, value_jpy, priced_cards,"
+            " total_cards, priced_entries, total_entries, segment_number) VALUES (:u, '2026-09-10', 1, 5, 1, 1, 1, 1, 1)",
+        ):
+            db.execute(text(statement), {"u": user_id, "p": printing.id})
+        db.commit()
+    db.add(FileJob(user_id=None, job_type="backup_export", status="success"))  # admin job
+    db.commit()
+    # Every user-bearing table really holds a row for the user before deletion.
+    for table, column in user_columns:
+        assert count(db, table, f'WHERE "{column}" = 1') > 0, table
+
+    response = TestClient(app).delete(
+        "/me?confirm=delete%20my%20account",
+        headers={"Authorization": f"Bearer {make_bearer_token()}"},
+    )
+    assert response.status_code == 204
+
+    db.expire_all()
+    assert count(db, "users", "WHERE id = 1") == 0
+    for table, column in user_columns:
+        assert count(db, table, f'WHERE "{column}" = 1') == 0, table
+        assert count(db, table, f'WHERE "{column}" = {keep}') > 0, table
+    assert count(db, "file_jobs", "WHERE user_id IS NULL") == 1  # admin job untouched
+    assert not (tmp_path / "output" / "mine.csv").exists()
+    assert (tmp_path / "output" / "keep.csv").read_text() == "their collection"

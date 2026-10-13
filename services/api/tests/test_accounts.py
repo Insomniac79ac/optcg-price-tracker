@@ -8,6 +8,7 @@ test_accounts_import_graph.py.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from sqlalchemy import func, select
@@ -23,6 +24,7 @@ from app.accounts.models import (
 )
 from app.models import (
     CollectionItem,
+    FileJob,
     MarketIndexSnapshot,
     SavedView,
     SearchHistory,
@@ -30,6 +32,7 @@ from app.models import (
     WishlistItem,
 )
 from app.services.print_market_index import get_market_index_for_prints
+from app.settings import settings
 from app.snapshot_market_index import build_snapshot_row
 from tests._auth_helpers import make_bearer_token
 from tests.accounts_helpers import (
@@ -582,8 +585,15 @@ def test_delete_account_requires_confirmation_and_removes_everything(client, db_
         SavedView(name="mine", route_path="/cards", view_type="cards", user_id=1),
         SavedView(name="theirs", route_path="/cards", view_type="cards", user_id=other),
         SearchHistory(query="luffy", user_id=1),
+        FileJob(user_id=1, job_type="collection_export", status="success", output_file_path="output/mine.csv"),
+        FileJob(user_id=other, job_type="wishlist_export", status="success", output_file_path="output/theirs.csv"),
+        FileJob(user_id=None, job_type="backup_export", status="success"),
     ])
     db_session.commit()
+    storage = Path(settings.FILE_JOB_STORAGE_DIR) / "output"
+    storage.mkdir(parents=True)
+    (storage / "mine.csv").write_text("my collection")
+    (storage / "theirs.csv").write_text("their wishlist")
 
     assert client.delete("/me").status_code == 422
     assert client.delete("/me?confirm=yes").status_code == 422
@@ -592,11 +602,15 @@ def test_delete_account_requires_confirmation_and_removes_everything(client, db_
 
     db_session.expire_all()
     assert db_session.get(User, 1) is None
-    for model in (CollectionEntry, CollectionEntryEvent, WatchlistEntry, UserPreferences, SavedView, SearchHistory):
+    for model in (CollectionEntry, CollectionEntryEvent, WatchlistEntry, UserPreferences, SavedView, SearchHistory, FileJob):
         assert db_session.scalar(select(func.count()).select_from(model).where(model.user_id == 1)) == 0
     # The other user is untouched.
     assert db_session.scalar(select(func.count()).select_from(CollectionEntry).where(CollectionEntry.user_id == other)) == 1
     assert db_session.scalar(select(func.count()).select_from(SavedView).where(SavedView.user_id == other)) == 1
+    assert db_session.scalar(select(func.count()).select_from(FileJob).where(FileJob.user_id == other)) == 1
+    assert db_session.scalar(select(func.count()).select_from(FileJob).where(FileJob.user_id.is_(None))) == 1
+    assert not (storage / "mine.csv").exists()
+    assert (storage / "theirs.csv").read_text() == "their wishlist"
 
 
 # --------------------------------------------------------------------------
