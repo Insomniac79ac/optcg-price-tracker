@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Record capacity75 session 12 (documentation only): a504e47 trigger NOT FIRED and verified; provenance fix PR #115; NEW50 approved and enqueued via PR #116 tool; degraded signals and freshness analysis; receipts PR #106, #113, #115, #116",
+ "mission": "Self-host Fraunces and IBM Plex Mono via next/font/local so the staging web build never fetches Google Fonts (web only; no API, migration, collector or data change; no collector rollout)",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,117 +20,45 @@
  "impacts": [
   {
    "files": [
-    "docs/agent/handoff/2026-10-13/capacity75-session12/CONTINUATION.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/CURRENT_STATE-end.yaml",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/CURRENT_STATE-start.yaml",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/HANDOFF.md",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/backups-start.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/coverage-start.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/degraded-signals.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/deploy-records-after-pr113.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/fleet-vs-receipt-end.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/fleet-vs-receipt-start.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/freshness-detail.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/import-graph-provenance-pr.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/live-state-end.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/live-state-start.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new100-replan-preapply.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new100-replan.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new100-storage.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new50-amber-preflight.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new50-approved.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new50-enqueue-apply.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new50-enqueue-dryrun.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/new50-postapply-check.txt",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-credential-probe-85854bb7438d3ae674775d85bb8ad221ebc5ea14/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-11275805b82bdf0c.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr106-delivery/staging-delivery-e1e2a0bebae7650b7048f08485a2a0441cb88637/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-credential-probe-6c2e166204eb229952ee8711839cd151fdc65f1d/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-73ee4fc36018f7ca.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-credential-probe-b8a592af930e96efb75c303681d3a3ac00c99f89/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-2a1fb85ab17b0c0b.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr115-delivery/staging-delivery-f1d92673f3b660f4df18fd42baaa011d79175b98/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-credential-probe-25670f5d3401531cd46d6f9be769b2c64d6d5ca5/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-07812ae4540952ae.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/pr116-delivery/staging-delivery-6e4079a6b1c0e7a73d89ffa190bda6903e5be04c/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/provenance-counterfactual.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/requests-24h.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/staging-state-16899c922881a135.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/staging-state-db1ffa0c31484d30.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/staging-state-f71ff96a20a70bd0.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/storage-db-breakdown.txt",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/storage-rates-current-code.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/trigger-decision.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/trigger-status-start.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/trigger-window.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/verify-lossless-from-50072.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/volume-series-5min.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/evidence/volume-series.json",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/backups.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/coverage.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/db.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/degraded_signals.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/fleet_vs_receipt.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/freshness_detail.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/live_a504e47.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/make_approved_list.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/new100_replan.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/new100_storage.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/proposal_digest_verify.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/requests_window.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/snkr24h.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/storage_rates.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/storage_rates_current.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/trigger_decision.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/trigger_status.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/trigger_window.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/verify_all.py",
-    "docs/agent/handoff/2026-10-13/capacity75-session12/tools/volume_series.py"
+    "apps/web/src/app/fonts/Fraunces-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-Regular-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-Medium-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-SemiBold-latin.woff2",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/app/globals.css",
+    "apps/web/src/lib/chartExport.ts"
    ],
    "effects": [
-    "documentation",
-    "state_observation"
+    "application",
+    "staging_deployment"
    ],
-   "reason": "Session-12 handoff under docs/agent/handoff/2026-10-13/capacity75-session12/ (HANDOFF.md, CONTINUATION.json, CURRENT_STATE start/end, read-only evidence, downloaded delivery receipts, tools used). No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout or migration requested. Expected 0 collector deployment records."
+   "reason": "Replace next/font/google Fraunces and IBM_Plex_Mono with next/font/local using the committed latin-subset woff2 files Google Fonts served (byte-identical to the previous build's emitted assets; same CSS variables, weights, styles, display). Comment updates in globals.css and chartExport.ts. Builds with fonts.googleapis.com and fonts.gstatic.com blocked; rendering, layout and chart export verified unchanged. Vercel frontend build only; no services/, packages/, deploy/, scripts/ or workflow change, no collector rollout or migration requested. Expected 0 collector deployment records."
+  },
+  {
+   "files": [
+    "apps/web/src/app/layout.metadata.test.ts"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Comment-only update: layout.tsx now uses next/font/local."
+  },
+  {
+   "files": [
+    "apps/web/src/app/fonts/Fraunces-OFL.txt",
+    "apps/web/src/app/fonts/IBMPlexMono-OFL.txt",
+    "apps/web/src/app/fonts/README.md",
+    "docs/brand.md",
+    "docs/interface_design_system.md",
+    ".claude/skills/cardpirate-collector-ui/SKILL.md"
+   ],
+   "effects": [
+    "documentation"
+   ],
+   "reason": "SIL OFL 1.1 licence texts (unmodified, google/fonts) next to the fonts, font provenance README with hashes and the unmodified-upstream alternative, and typography docs updated from next/font/google to next/font/local."
   }
  ],
+ "diff_sha256": "5073d4160a676a675392e2a2f10da2dbaf03329af47f2d7e1a5adb995142dcdf",
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "3b7d9c1a5e20",
@@ -141,6 +69,5 @@
   "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
- },
- "diff_sha256": "8012153d9bc60e3c7239bb78c44833441f50b98b1068ea086fd653249f94e971"
+ }
 }
