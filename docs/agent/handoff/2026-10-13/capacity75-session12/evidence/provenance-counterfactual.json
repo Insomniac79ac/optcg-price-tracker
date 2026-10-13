@@ -1,0 +1,41 @@
+{
+ "yuyutei-collector-shard-0@a852244": {
+  "current": false,
+  "basis": "collector runtime inputs (import-graph)",
+  "changed": [
+   "services/api/app/services/physical_artwork_proof.py",
+   "services/api/app/services/source_mapping_proposals.py"
+  ],
+  "changed_count": 2
+ },
+ "snkrdunk-collector@a852244": {
+  "current": true,
+  "basis": "collector runtime inputs (import-graph)",
+  "changed": [],
+  "changed_count": 0
+ },
+ "yuyutei-collector-shard-0@a504e47": {
+  "current": true,
+  "basis": "collector runtime inputs (import-graph)",
+  "changed": [],
+  "changed_count": 0
+ },
+ "optcg-price-tracker@a504e47": {
+  "current": false,
+  "basis": "watch patterns",
+  "changed": [
+   "services/api/alembic/env.py",
+   "services/api/alembic/versions/3b7d9c1a5e20_add_collector_account_tables.py",
+   "services/api/alembic/versions/6c2242f6f439_add_card_print_image_assets.py",
+   "services/api/app/accounts/__init__.py",
+   "services/api/app/accounts/config.py"
+  ],
+  "changed_count": 104
+ },
+ "optcg-price-tracker@5d86629": {
+  "current": true,
+  "basis": "watch patterns",
+  "changed": [],
+  "changed_count": 0
+ }
+}

@@ -1,0 +1,60 @@
+{
+  "verified_at": "2026-10-13T15:19:30.907907+00:00",
+  "expected_commit": "f1d92673f3b660f4df18fd42baaa011d79175b98",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_G6JLnNJqMMraR3qrPt8Znet3yA9C",
+    "status": "READY",
+    "sha": "f1d92673f3b660f4df18fd42baaa011d79175b98"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "3b7d9c1a5e20",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "2a1fb85ab17b0c0bc1651a7a0ff0c590d0c101bbdbec3be53d0ea62257a09dae",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "b3862e6aa82acb0c0d565a75efbbb74fea02fd42",
+    "merge": "f1d92673f3b660f4df18fd42baaa011d79175b98",
+    "decision": "full",
+    "files": [
+      "docs/agent/STAGING_DELIVERY.md",
+      "docs/agent/STAGING_MISSION.json",
+      "scripts/generate_staging_state.py",
+      "scripts/tests/test_generate_staging_state.py"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      "scripts/generate_staging_state.py",
+      "scripts/tests/test_generate_staging_state.py"
+    ]
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "5d86629fc8679849e9bcb79121d0407e813f2166",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}

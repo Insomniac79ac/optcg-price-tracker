@@ -1,0 +1,7 @@
+## select count(*) n, count(*) filter (where kind='discovery' and state='pending' and attempt_count=0) pending_unclaimed, c
+{"n": 50, "pending_unclaimed": 50, "claimed": 0, "attempted": 0, "min": "2026-10-13 16:06:13.078226+00:00", "max": "2026-10-13 16:06:13.078226+00:00", "reserved_cost": 5000, "explicit": true}
+## select count(*) n from freshness_work where id between 3678 and 3727 and scope_key like 'yuyu-identity:%:sha256:%'
+{"n": 50}
+## select a.outcome, count(*) from freshness_attempts a where a.work_id between 3678 and 3727 group by 1
+## select count(*) approved_created_since_apply from source_mapping_proposal_groups where review_status='approved' and (cre
+{"approved_created_since_apply": 0}

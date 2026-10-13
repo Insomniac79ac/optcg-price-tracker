@@ -1,0 +1,658 @@
+{
+ "now": [
+  {
+   "t": "2026-10-13 14:45:13.347427"
+  }
+ ],
+ "recurring_items": {
+  "error": "column \"last_success_at\" does not exist"
+ },
+ "recurring_first_attempts": [
+  {
+   "id": 1958,
+   "first_start": "2026-10-12 01:13:38.068253+00:00",
+   "first_finish": "2026-10-12 01:13:46.461030+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1959,
+   "first_start": "2026-10-12 01:25:50.211060+00:00",
+   "first_finish": "2026-10-12 01:25:59.627433+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1960,
+   "first_start": "2026-10-12 01:34:54.055407+00:00",
+   "first_finish": "2026-10-12 01:35:02.447833+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1973,
+   "first_start": "2026-10-12 01:35:38.647943+00:00",
+   "first_finish": "2026-10-12 01:35:48.232471+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1976,
+   "first_start": "2026-10-12 01:37:14.097997+00:00",
+   "first_finish": "2026-10-12 01:37:25.394778+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1942,
+   "first_start": "2026-10-12 01:37:44.752506+00:00",
+   "first_finish": "2026-10-12 01:38:04.707150+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1972,
+   "first_start": "2026-10-12 02:05:06.730119+00:00",
+   "first_finish": "2026-10-12 02:05:15.562618+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2535,
+   "first_start": "2026-10-12 03:39:47.377006+00:00",
+   "first_finish": "2026-10-12 03:40:01.355251+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2536,
+   "first_start": "2026-10-12 03:45:37.737875+00:00",
+   "first_finish": "2026-10-12 03:45:47.293491+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2537,
+   "first_start": "2026-10-12 03:52:55.953257+00:00",
+   "first_finish": "2026-10-12 03:53:06.457857+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2539,
+   "first_start": "2026-10-12 03:54:54.011552+00:00",
+   "first_finish": "2026-10-12 03:55:09.766733+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2540,
+   "first_start": "2026-10-12 03:58:03.416228+00:00",
+   "first_finish": "2026-10-12 03:58:14.780092+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2541,
+   "first_start": "2026-10-12 04:08:02.966167+00:00",
+   "first_finish": "2026-10-12 04:08:14.782633+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2542,
+   "first_start": "2026-10-12 04:08:30.478693+00:00",
+   "first_finish": "2026-10-12 04:08:43.058543+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 2538,
+   "first_start": "2026-10-12 04:14:34.000676+00:00",
+   "first_finish": "2026-10-12 04:14:43.084734+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1940,
+   "first_start": "2026-10-12 13:46:08.132137+00:00",
+   "first_finish": "2026-10-12 13:46:26.028046+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1941,
+   "first_start": "2026-10-12 13:46:27.980375+00:00",
+   "first_finish": "2026-10-12 13:46:47.928960+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1924,
+   "first_start": "2026-10-12 13:46:49.796527+00:00",
+   "first_finish": "2026-10-12 13:47:03.666779+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1925,
+   "first_start": "2026-10-12 13:47:05.556388+00:00",
+   "first_finish": "2026-10-12 13:47:20.284957+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1937,
+   "first_start": "2026-10-12 13:47:22.146979+00:00",
+   "first_finish": "2026-10-12 13:47:36.825089+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1934,
+   "first_start": "2026-10-12 13:47:38.670195+00:00",
+   "first_finish": "2026-10-12 13:47:52.925431+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1932,
+   "first_start": "2026-10-12 13:47:54.775174+00:00",
+   "first_finish": "2026-10-12 13:48:10.549682+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1935,
+   "first_start": "2026-10-12 13:48:12.881007+00:00",
+   "first_finish": "2026-10-12 13:48:28.459276+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1928,
+   "first_start": "2026-10-12 13:48:30.311050+00:00",
+   "first_finish": "2026-10-12 13:48:44.520268+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1926,
+   "first_start": "2026-10-12 13:48:46.388801+00:00",
+   "first_finish": "2026-10-12 13:49:01.777196+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1938,
+   "first_start": "2026-10-12 13:49:03.689467+00:00",
+   "first_finish": "2026-10-12 13:49:18.057912+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1936,
+   "first_start": "2026-10-12 13:49:20.013099+00:00",
+   "first_finish": "2026-10-12 13:49:36.004507+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1939,
+   "first_start": "2026-10-12 13:49:37.831537+00:00",
+   "first_finish": "2026-10-12 13:49:51.884758+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1927,
+   "first_start": "2026-10-12 13:49:53.756953+00:00",
+   "first_finish": "2026-10-12 13:50:08.451947+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1929,
+   "first_start": "2026-10-12 13:50:10.369611+00:00",
+   "first_finish": "2026-10-12 13:50:24.696758+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1930,
+   "first_start": "2026-10-12 13:50:26.515916+00:00",
+   "first_finish": "2026-10-12 13:50:41.929566+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1931,
+   "first_start": "2026-10-12 13:51:20.935791+00:00",
+   "first_finish": "2026-10-12 13:51:34.448558+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1933,
+   "first_start": "2026-10-12 13:51:36.111650+00:00",
+   "first_finish": "2026-10-12 13:51:49.230769+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1922,
+   "first_start": "2026-10-12 13:51:50.861218+00:00",
+   "first_finish": "2026-10-12 13:52:04.534486+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1923,
+   "first_start": "2026-10-12 13:52:06.352358+00:00",
+   "first_finish": "2026-10-12 13:52:19.398744+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1920,
+   "first_start": "2026-10-12 13:52:11.663671+00:00",
+   "first_finish": "2026-10-12 13:52:26.367497+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1921,
+   "first_start": "2026-10-12 13:52:21.176849+00:00",
+   "first_finish": "2026-10-12 13:52:37.253489+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1955,
+   "first_start": "2026-10-12 13:52:28.313308+00:00",
+   "first_finish": "2026-10-12 13:52:42.779418+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1964,
+   "first_start": "2026-10-12 13:52:39.002909+00:00",
+   "first_finish": "2026-10-12 13:52:51.013089+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1963,
+   "first_start": "2026-10-12 13:52:44.798051+00:00",
+   "first_finish": "2026-10-12 13:52:56.713131+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1971,
+   "first_start": "2026-10-12 13:52:52.663679+00:00",
+   "first_finish": "2026-10-12 13:53:02.933336+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1953,
+   "first_start": "2026-10-12 13:52:58.606672+00:00",
+   "first_finish": "2026-10-12 13:53:08.207669+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1961,
+   "first_start": "2026-10-12 13:53:04.544042+00:00",
+   "first_finish": "2026-10-12 13:53:14.220914+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1968,
+   "first_start": "2026-10-12 13:53:10.126515+00:00",
+   "first_finish": "2026-10-12 13:53:20.845603+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1970,
+   "first_start": "2026-10-12 13:53:16.716173+00:00",
+   "first_finish": "2026-10-12 13:53:27.817240+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1977,
+   "first_start": "2026-10-12 14:02:03.665244+00:00",
+   "first_finish": "2026-10-12 14:02:12.311769+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1957,
+   "first_start": "2026-10-12 14:02:13.767037+00:00",
+   "first_finish": "2026-10-12 14:02:21.543228+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1962,
+   "first_start": "2026-10-12 14:09:57.244587+00:00",
+   "first_finish": "2026-10-12 14:10:10.425347+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1965,
+   "first_start": "2026-10-12 14:10:12.779210+00:00",
+   "first_finish": "2026-10-12 14:10:26.340481+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1966,
+   "first_start": "2026-10-12 14:10:28.659465+00:00",
+   "first_finish": "2026-10-12 14:10:40.672530+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1974,
+   "first_start": "2026-10-12 14:10:42.992049+00:00",
+   "first_finish": "2026-10-12 14:11:03.352945+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1975,
+   "first_start": "2026-10-12 14:11:05.417943+00:00",
+   "first_finish": "2026-10-12 14:11:16.442318+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1978,
+   "first_start": "2026-10-12 14:11:19.584662+00:00",
+   "first_finish": "2026-10-12 14:11:28.658055+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1967,
+   "first_start": "2026-10-12 14:11:18.655120+00:00",
+   "first_finish": "2026-10-12 14:11:30.549568+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1969,
+   "first_start": "2026-10-12 14:11:30.605324+00:00",
+   "first_finish": "2026-10-12 14:11:39.048401+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1943,
+   "first_start": "2026-10-12 14:11:32.878798+00:00",
+   "first_finish": "2026-10-12 14:11:45.393860+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1944,
+   "first_start": "2026-10-12 14:11:40.602660+00:00",
+   "first_finish": "2026-10-12 14:11:50.481877+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1945,
+   "first_start": "2026-10-12 14:11:47.433278+00:00",
+   "first_finish": "2026-10-12 14:11:59.839424+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1946,
+   "first_start": "2026-10-12 14:11:52.186872+00:00",
+   "first_finish": "2026-10-12 14:12:00.381708+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1947,
+   "first_start": "2026-10-12 14:16:53.980589+00:00",
+   "first_finish": "2026-10-12 14:17:05.067243+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1948,
+   "first_start": "2026-10-12 14:17:06.915106+00:00",
+   "first_finish": "2026-10-12 14:17:17.162115+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1949,
+   "first_start": "2026-10-12 14:17:19.339436+00:00",
+   "first_finish": "2026-10-12 14:17:29.996436+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1950,
+   "first_start": "2026-10-12 14:17:31.950397+00:00",
+   "first_finish": "2026-10-12 14:17:43.726492+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1952,
+   "first_start": "2026-10-12 14:17:45.939580+00:00",
+   "first_finish": "2026-10-12 14:17:57.789836+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1951,
+   "first_start": "2026-10-12 14:17:59.884477+00:00",
+   "first_finish": "2026-10-12 14:18:11.533898+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1954,
+   "first_start": "2026-10-12 14:18:13.645381+00:00",
+   "first_finish": "2026-10-12 14:18:24.747989+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  },
+  {
+   "id": 1956,
+   "first_start": "2026-10-12 14:18:26.811937+00:00",
+   "first_finish": "2026-10-12 14:18:37.602876+00:00",
+   "first_outcome": "completed",
+   "attempts": 2
+  }
+ ],
+ "discovery_attempts_by_day": [
+  {
+   "d": "2026-10-12 00:00:00+00:00",
+   "outcome": "completed",
+   "n": 67,
+   "req": 3732
+  },
+  {
+   "d": "2026-10-13 00:00:00+00:00",
+   "outcome": "completed",
+   "n": 67,
+   "req": 3730
+  }
+ ],
+ "discovery_failures_since_rollout": [
+  {
+   "n": 0
+  }
+ ],
+ "pending_resolver_1_2_current": [
+  {
+   "source_id": 2,
+   "n": 323
+  }
+ ],
+ "current_by_resolver": [
+  {
+   "source_id": 1,
+   "resolver_version": "source-mapping-proposals/1.0",
+   "review_status": "approved",
+   "n": 1500
+  },
+  {
+   "source_id": 1,
+   "resolver_version": "source-mapping-proposals/1.2",
+   "review_status": "approved",
+   "n": 519
+  },
+  {
+   "source_id": 1,
+   "resolver_version": "source-mapping-proposals/1.3",
+   "review_status": "pending",
+   "n": 2164
+  },
+  {
+   "source_id": 2,
+   "resolver_version": "source-mapping-proposals/1.0",
+   "review_status": "approved",
+   "n": 151
+  },
+  {
+   "source_id": 2,
+   "resolver_version": "source-mapping-proposals/1.2",
+   "review_status": "pending",
+   "n": 323
+  }
+ ],
+ "listings_versioned_more_than_once_since_merge": {
+  "error": "column \"source_listing_key\" does not exist"
+ },
+ "versions_by_hour_since_merge": [
+  {
+   "source_id": 1,
+   "h": "2026-10-12 01:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 265
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-12 02:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 34
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-12 03:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 476
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-12 04:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 140
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-12 13:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 1247
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-12 14:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 2
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-13 01:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 4
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-13 02:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 2
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-13 03:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 15
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-13 04:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 4
+  },
+  {
+   "source_id": 1,
+   "h": "2026-10-13 13:00:00+00:00",
+   "resolver_version": "source-mapping-proposals/1.3",
+   "n": 49
+  }
+ ],
+ "approved_now": [
+  {
+   "source_id": 1,
+   "approved_exact": 2019,
+   "approved_with_proof": 298
+  },
+  {
+   "source_id": 2,
+   "approved_exact": 151,
+   "approved_with_proof": 0
+  }
+ ],
+ "approved_superseded_since_merge": [
+  {
+   "n": 0
+  }
+ ],
+ "approved_demoted_or_changed_since_merge": [
+  {
+   "n": 0
+  }
+ ],
+ "reviews_since_merge": [],
+ "approved_created_since_merge": [
+  {
+   "n": 0
+  }
+ ],
+ "active_mappings": [
+  {
+   "source_id": 1,
+   "n": 2622
+  },
+  {
+   "source_id": 2,
+   "n": 359
+  },
+  {
+   "source_id": 3,
+   "n": 20
+  }
+ ],
+ "table_sizes": [
+  {
+   "groups_bytes": 63922176,
+   "alts_bytes": 16384000,
+   "group_rows": 32489
+  }
+ ]
+}

@@ -1,0 +1,460 @@
+{
+ "batch": "NEW50",
+ "expected_count": 50,
+ "replan_observed_at": "2026-10-13T15:57:01.511618+00:00",
+ "resolver_version": "source-mapping-proposals/1.3",
+ "entries": [
+  {
+   "candidate_id": 548,
+   "evidence_digest": "bcbc6dafb4d564d56dfb2fcdd0c1f4c55ca93f968068a58a1c3344db5583c9a8",
+   "release_product_id": 179,
+   "considered_print_ids": [
+    4667,
+    4668
+   ]
+  },
+  {
+   "candidate_id": 549,
+   "evidence_digest": "923dce302567b5658396975d55ca509090ac541ab06bbdf887d235ab11d817b2",
+   "release_product_id": 179,
+   "considered_print_ids": [
+    4691,
+    4692
+   ]
+  },
+  {
+   "candidate_id": 550,
+   "evidence_digest": "e5f3ec88e84da3820d185d3acbc51fd2060efe786977c43b08330e0d118d7001",
+   "release_product_id": 179,
+   "considered_print_ids": [
+    4757,
+    4758
+   ]
+  },
+  {
+   "candidate_id": 2731,
+   "evidence_digest": "64f8ac2dfe829da8187e63d1a3b7d3a70de49fb9d07016863b07fe9a8b7db34a",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4627,
+    4628,
+    4629
+   ]
+  },
+  {
+   "candidate_id": 2733,
+   "evidence_digest": "110d6f310f450e3968602bb95e75726b1bd1f194095c56fab7cf34c1d67535df",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4630,
+    4631
+   ]
+  },
+  {
+   "candidate_id": 2736,
+   "evidence_digest": "30246338fd02a63d3f24f2935faf4b3ecd888a81dfad3e4ef10266df6b6c2b7d",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4489,
+    4490
+   ]
+  },
+  {
+   "candidate_id": 2737,
+   "evidence_digest": "b4dcb66883b88877492c39f03f0b26f8f945d5684a3f5e891d1f94c1313c2b85",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4497,
+    4498
+   ]
+  },
+  {
+   "candidate_id": 2738,
+   "evidence_digest": "52784fa85b6b6092e2b3aa5e8dff96e42a58c9c36f6ed368502839a172b1eb69",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4523,
+    4524
+   ]
+  },
+  {
+   "candidate_id": 2739,
+   "evidence_digest": "6e8f024cb70710f21868f15446e653a6edb2c0093b45e7fbcc486aa189403c5b",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4547,
+    4548
+   ]
+  },
+  {
+   "candidate_id": 2740,
+   "evidence_digest": "bb390ed8bdaad161bd4895b0400695838dd14447ab5c2d4400d0aff161f02402",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4551,
+    4552
+   ]
+  },
+  {
+   "candidate_id": 2741,
+   "evidence_digest": "042800df914b183fbefac0f61553089a975e6e6acf9ff5fafb94423abf96311d",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4566,
+    4567
+   ]
+  },
+  {
+   "candidate_id": 2742,
+   "evidence_digest": "6c796fe44c2b8ad27901cf3c002599f8dccd8159ee4dc1fb90b932cb8b46fa1e",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4570,
+    4571
+   ]
+  },
+  {
+   "candidate_id": 2743,
+   "evidence_digest": "0c3e015fb886727daa3c72d9528d754d39e85bf9e0eaf9ab04214da94eb010f1",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4596,
+    4597
+   ]
+  },
+  {
+   "candidate_id": 2744,
+   "evidence_digest": "a92adba3e60f81d9c48b69a9aa46b180b3ac64e937238bad8b30c867abfd68b1",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4600,
+    4601
+   ]
+  },
+  {
+   "candidate_id": 2745,
+   "evidence_digest": "c6928f86a23e793feba4a3ff6a3f8af11cebd0bf8c28c16f04c17b02d4e01c4e",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4607,
+    4608
+   ]
+  },
+  {
+   "candidate_id": 2756,
+   "evidence_digest": "98aa3d19d45eb555aea45b7d20a06fc8f1b2283a7c6dcbc121e56928a291c0a1",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4494,
+    4495
+   ]
+  },
+  {
+   "candidate_id": 2757,
+   "evidence_digest": "c884f0516068f24e385a9bab85c75eb88cfd46243d7935c660cb753ca2dc56f2",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4506,
+    4507
+   ]
+  },
+  {
+   "candidate_id": 2758,
+   "evidence_digest": "801f496fb226042f16accf83f9f6d9b6c1e3417e4c3f174cfb498f11a13d770f",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4514,
+    4515
+   ]
+  },
+  {
+   "candidate_id": 2759,
+   "evidence_digest": "6f7fab40b2ba87564c63ba2fc76df8cc9bea1801d4a47d77568a5cb3ca37ab9d",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4542,
+    4543
+   ]
+  },
+  {
+   "candidate_id": 2760,
+   "evidence_digest": "6ddc73819b43b3befae342ee403e444f643292a680e9ed0c9433a1f0959318e7",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4574,
+    4575
+   ]
+  },
+  {
+   "candidate_id": 2761,
+   "evidence_digest": "302f25bc4f34eb361b4a994e48d59013403cba9c8c1f9ba959ea47bca2ae544d",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4582,
+    4583
+   ]
+  },
+  {
+   "candidate_id": 2762,
+   "evidence_digest": "69b810c9d721efcbb9f1479cd465df25a7ed8eced5114a3ecc7717254a91b279",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4587,
+    4588
+   ]
+  },
+  {
+   "candidate_id": 2763,
+   "evidence_digest": "081ce81258e972f0d5eb75ab5c0bebcfe797bc5edb1a81601a492bc7df7b62f2",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4613,
+    4614
+   ]
+  },
+  {
+   "candidate_id": 2764,
+   "evidence_digest": "7393e75477fad22e4599c8adff6da0c435426d75819d4a610801c85234ad2ee0",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4622,
+    4623
+   ]
+  },
+  {
+   "candidate_id": 2866,
+   "evidence_digest": "0d5ebe0f44f3c5dfbeea047c0827386cb11d5564d2bf92597789baa3d3a4d45c",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4485,
+    4486
+   ]
+  },
+  {
+   "candidate_id": 2867,
+   "evidence_digest": "b6d1b0a733746ea8d8abb80cf51d483b2ff0068d1ceb18b7f8ffa722ca6779d5",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4510,
+    4511
+   ]
+  },
+  {
+   "candidate_id": 2868,
+   "evidence_digest": "3fb371d4a6230ce3eb121b8aeb5ec280a6eac782ceb22f560900aa5db2db31a8",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4512,
+    4513
+   ]
+  },
+  {
+   "candidate_id": 2869,
+   "evidence_digest": "87c77433356f0d43396e09119ee7fdf9404658ee4d4ffe8d61cb32ad57d82dd9",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4533,
+    4534
+   ]
+  },
+  {
+   "candidate_id": 2870,
+   "evidence_digest": "557e1848755c90efbaf0c00f5d2678750d67af215d026366b11c6e7ac21f7b74",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4535,
+    4536
+   ]
+  },
+  {
+   "candidate_id": 2871,
+   "evidence_digest": "d4085381a7a3fa500d58e0297da6253df5ee670fa19b9eb5ea8d9991a5b1aaf5",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4560,
+    4561
+   ]
+  },
+  {
+   "candidate_id": 2884,
+   "evidence_digest": "8906e332e80671958ab76e8ac51c0abd97ba9c7bdfbbac80f7e6ff7a7399362d",
+   "release_product_id": 180,
+   "considered_print_ids": [
+    4633,
+    4634
+   ]
+  },
+  {
+   "candidate_id": 564,
+   "evidence_digest": "b08bbde71251b98b31276d00ccd2485662cfcef654cf03452968fceecf42aae5",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4472,
+    4473,
+    4474
+   ]
+  },
+  {
+   "candidate_id": 566,
+   "evidence_digest": "e527be4955317b34bcc806662d1178988ef690ef558f98a76feb1230932fe049",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4475,
+    4476
+   ]
+  },
+  {
+   "candidate_id": 569,
+   "evidence_digest": "0eb8a90c1c4a3371702238807e968b9c410f8ecfbfd8325342e3330e14d4def8",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4346,
+    4347
+   ]
+  },
+  {
+   "candidate_id": 570,
+   "evidence_digest": "142793361d43cc0081cf05e500b131b09b083408f353f8d0d7b1fc92262c63a5",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4348,
+    4349
+   ]
+  },
+  {
+   "candidate_id": 571,
+   "evidence_digest": "76ea4871ee22e7e25008c9925f0bc7b43e3573466add2bf03458a4efee631bcd",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4365,
+    4366
+   ]
+  },
+  {
+   "candidate_id": 572,
+   "evidence_digest": "9f010471f55e9a0e84879305f6dfacf31fe158977fb1b1c5b35088c5f97184ca",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4371,
+    4372
+   ]
+  },
+  {
+   "candidate_id": 573,
+   "evidence_digest": "d3bbe16b609e9862cbc2ed272503a7b3c59ddc0bbfd25e3a600c5c97e880bc75",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4398,
+    4399
+   ]
+  },
+  {
+   "candidate_id": 574,
+   "evidence_digest": "70e09429a409264b158d8a59e3074b1362143b229ec532a22ad9f9655081b6ed",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4408,
+    4409
+   ]
+  },
+  {
+   "candidate_id": 575,
+   "evidence_digest": "ba5bf57877f7f52bfbe7121ff633d76b913c0811c857c93fd560d144defea1e7",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4420,
+    4421
+   ]
+  },
+  {
+   "candidate_id": 576,
+   "evidence_digest": "066e7be31a1e5ca8e692afb621e327b379a94bf0564634a8d545e0f8bf43557c",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4437,
+    4438
+   ]
+  },
+  {
+   "candidate_id": 577,
+   "evidence_digest": "9a8b687b58554b26c6a6c689e01c57b12efcc1f557273a7e4df1dd5dba4a01bf",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4445,
+    4446
+   ]
+  },
+  {
+   "candidate_id": 578,
+   "evidence_digest": "94ed031d40830ac4abbc094085cf558f3a9827da76f8541f953e1ea6c979e0c9",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4454,
+    4455
+   ]
+  },
+  {
+   "candidate_id": 589,
+   "evidence_digest": "8b9abfb572c6d3c2e16ef9aa1108f37351f5e5b299d08b271b0d3884f5826ed4",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4339,
+    4340
+   ]
+  },
+  {
+   "candidate_id": 590,
+   "evidence_digest": "459deaf572bfba22221da035f41bdaa20656a303b0b1498e30c47b0a563739c5",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4367,
+    4368
+   ]
+  },
+  {
+   "candidate_id": 591,
+   "evidence_digest": "9e13c09e7af8cd553b2ddb67ebda97230490648333d46c42ad3c4d189adbb06b",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4375,
+    4376
+   ]
+  },
+  {
+   "candidate_id": 592,
+   "evidence_digest": "071b11954cd4475622322521e6e2e4d7556fe64ea91f65a9e689c37ff30acb83",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4384,
+    4385
+   ]
+  },
+  {
+   "candidate_id": 593,
+   "evidence_digest": "21fb4d0ec8b96d3120b494800da566e069370f63bb77cf87e57c4c312c03431c",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4403,
+    4404
+   ]
+  },
+  {
+   "candidate_id": 594,
+   "evidence_digest": "dbaa82be732bd2d078a4743fa8dd907929972929a4aa447d71b9c7e2719915d5",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4416,
+    4417
+   ]
+  },
+  {
+   "candidate_id": 595,
+   "evidence_digest": "c077b181983a3588fee2685f3bbd51c547abbc1e40ec175fe323795873cb0c25",
+   "release_product_id": 181,
+   "considered_print_ids": [
+    4435,
+    4436
+   ]
+  }
+ ]
+}

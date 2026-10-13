@@ -1,0 +1,83 @@
+{
+ "now": [
+  {
+   "t": "2026-10-13 14:45:50.836099"
+  }
+ ],
+ "window": [
+  {
+   "start_utc": "2026-10-12 14:18:37.602876+00:00",
+   "end_utc": "2026-10-13 14:18:37.602876+00:00"
+  }
+ ],
+ "versions_24h_after_cycle": [
+  {
+   "source_id": 1,
+   "resolver_version": "source-mapping-proposals/1.3",
+   "review_status": "pending",
+   "resolution_status": "ambiguous",
+   "n": 53
+  },
+  {
+   "source_id": 1,
+   "resolver_version": "source-mapping-proposals/1.3",
+   "review_status": "pending",
+   "resolution_status": "release_unresolved",
+   "n": 13
+  },
+  {
+   "source_id": 1,
+   "resolver_version": "source-mapping-proposals/1.3",
+   "review_status": "pending",
+   "resolution_status": "unresolved_identity",
+   "n": 8
+  }
+ ],
+ "versions_24h_total": [
+  {
+   "n": 74
+  }
+ ],
+ "early_signal_2026_10_13_0112_0415": [
+  {
+   "n": 25,
+   "min": "2026-10-13 01:40:03.114141+00:00",
+   "max": "2026-10-13 04:14:58.309622+00:00"
+  }
+ ],
+ "early_signal_attempts": [
+  {
+   "n": 15,
+   "completed": 15,
+   "req": 836
+  }
+ ],
+ "what_superseded_in_window": [
+  {
+   "resolver_version": "source-mapping-proposals/1.3",
+   "review_status": "pending",
+   "n": 74
+  }
+ ],
+ "listings_versioned_more_than_once_since_merge": [
+  {
+   "source_id": 1,
+   "listings": 74,
+   "max_versions": 2
+  }
+ ],
+ "reasons_for_window_versions": [
+  {
+   "reason": "multiple_eligible_sibling_prints_in_resolved_release",
+   "n": 53
+  },
+  {
+   "reason": "source_series_does_not_resolve_to_release_product",
+   "n": 19
+  },
+  {
+   "reason": "card_code_does_not_resolve_to_canonical_card",
+   "n": 8
+  }
+ ]
+}
