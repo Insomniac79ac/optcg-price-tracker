@@ -1288,6 +1288,11 @@ warning specifically if the `market_workflow` lock (the longest-running one) is 
 
 ## Scheduled index jobs (Railway cron)
 
+**2026-10-14:** the coordinator `python -m app.market_index_daily_pipeline` is
+the live staging start command of `market-index-snapshot` (checked read-only);
+the chained command below is the earlier baseline. The rest of this section
+predates activation.
+
 An opt-in coordinator is prepared at `python -m app.market_index_daily_pipeline`.
 It is not the configured Railway start command. See [the daily pipeline
 activation checklist](market_value_daily_pipeline.md) for its behavior,

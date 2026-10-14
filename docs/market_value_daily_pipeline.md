@@ -1,4 +1,15 @@
-# Daily Market Value pipeline (prepared, inactive)
+# Daily Market Value pipeline
+
+**Status (checked read-only 2026-10-14):** active on staging. The
+`market-index-snapshot` service's start command is
+`python -m app.market_index_daily_pipeline`, cron `0 20 * * *`. The text below
+was written before activation.
+
+**Collection value stage (Collector v1 S4).** After CPI, the coordinator runs
+`app.accounts.value_history.run_stage` for the receipted day in its own session,
+transaction and lock, and reports it as `collection_value`. It reads only the
+receipted archive and the collectors' holdings ledger and writes only
+`collection_value_points`; see [collector accounts](collector_accounts.md#recorded-history-plan-b3-c3-s4).
 
 The opt-in coordinator uses the existing snapshot writer, C1B0 receipt verifier,
 Market Value forward publisher, and Card Pirate Index writer. Source collectors

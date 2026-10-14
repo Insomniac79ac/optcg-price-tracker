@@ -135,14 +135,72 @@ class PaidOut(BaseModel):
     change_pct: str | None
 
 
+class RecordedChangeOut(BaseModel):
+    window: str
+    available: bool
+    reason: str | None
+    from_date: date | None
+    to_date: date | None
+    change_pct: str | None
+    missing_dates: list[date]
+    failed_step_date: date | None
+
+
+class HistoryPointOut(BaseModel):
+    date: date
+    value_jpy: int | None
+    priced_cards: int
+    total_cards: int
+    step_publishable: bool | None
+    step_reason: str | None
+    segment_number: int
+
+
+class HistoryOut(BaseModel):
+    """The collection's own recorded daily values (S4 daily stage)."""
+
+    kind: Literal["recorded"] = "recorded"
+    methodology_version: int
+    change: RecordedChangeOut
+    points: list[HistoryPointOut]
+
+
+PREVIEW_LABEL = (
+    "Preview: how the cards you hold now moved over the last 30 days. "
+    "This is not your collection's recorded history."
+)
+
+
+class PreviewPointOut(BaseModel):
+    date: date
+    value_jpy: int | None
+    priced_cards: int
+    step_publishable: bool | None
+    step_reason: str | None
+
+
+class PreviewOut(BaseModel):
+    """Derived on read from today's cards and archived values; never stored."""
+
+    kind: Literal["preview"] = "preview"
+    label: str = PREVIEW_LABEL
+    from_date: date | None
+    to_date: date | None
+    total_cards: int
+    change: RecordedChangeOut
+    points: list[PreviewPointOut]
+
+
 class CollectionValueOut(BaseModel):
     currency: Currency = "JPY"
     as_of: date | None
-    window: Literal["7d", "30d"]
+    window: Literal["7d", "30d", "all"]
     summary: CoverageOut
     movers: MoversOut
     by_release: list[ReleaseShareOut]
     paid: PaidOut
+    history: HistoryOut
+    preview: PreviewOut
 
 
 class WatchlistEntryCreateIn(BaseModel):

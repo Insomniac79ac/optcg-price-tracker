@@ -22,7 +22,7 @@ collectors import `app.settings`; a new field there would be a collector release
 | `collection_entry_events` | Append-only holdings ledger (`quantity_before` → `quantity_after`), so a card added later is never a gain. |
 | `watchlist_entries` | Watched versions with an optional target price. |
 | `user_preferences` | `currency` (JPY only) and `collection_visibility` (private only). No row = defaults. |
-| `collection_value_points` | One value per user per completed market day. Created now, written by the S4 daily stage. |
+| `collection_value_points` | One value per user per completed market day, written by the S4 daily stage (below). |
 
 All reference `users.id` with ON DELETE CASCADE and `card_prints.id` with RESTRICT.
 The package is not imported by `app.models`; `alembic/env.py` and `app/main.py`
@@ -40,7 +40,7 @@ have data there, dropping it is deleting user data and needs a human decision.
 | `GET /me/collection` | Entries with value per card and in total, coverage, `as_of` |
 | `POST /me/collection` | Add an exact, active print (409 if already held) |
 | `PATCH/DELETE /me/collection/{id}` | Change or remove; each quantity change writes a ledger event |
-| `GET /me/collection/value?window=7d\|30d` | Coverage, what moved it, by set, what you paid |
+| `GET /me/collection/value?window=7d\|30d\|all` | Coverage, what moved it, by set, what you paid, recorded history (`history`) and the day-one preview (`preview`) |
 | `GET/POST /me/watchlist`, `PATCH/DELETE /me/watchlist/{id}` | Watchlist with value and distance to target |
 | `GET/PUT /me/preferences` | JPY and private only (422 otherwise) |
 | `GET /me/export`, `GET /me/export/{collection,watchlist}.csv` | Everything stored about the user, generated on request |
@@ -66,7 +66,47 @@ finds every `user_id` column and foreign key to `users` from the live schema).
   impacts sum to the window's comparable change.
 - By set groups on `CardPrint.release_product_id`, never a code prefix.
 - What you paid compares only entries with both a price paid and a price today.
-- Recorded 7D/30D/ALL history is S4.
+
+## Recorded history (PLAN B3, C3; S4)
+
+**Daily stage.** `app.accounts.value_history.run_stage` is the last stage of
+`python -m app.market_index_daily_pipeline` (the `market-index-snapshot` cron,
+20:00 UTC). It runs only after the receipt gate, and after Market Value and the
+Card Pirate Index, in its own session, REPEATABLE READ transaction and job lock
+(`collection_value_history`), still under the coordinator's shared guard on the
+producer lock. Its failure is reported as `collection_value` in the JSON report
+(exit 1, or 2 if its lock is held); it cannot block or change the earlier
+stages. With no users it reports `no_op`, 0 rows.
+
+- One row per user holding at least one exact card, for the receipted day only.
+  Holdings come from the ledger as of that day's receipt `completed_at`, so a
+  rerun computes the same rows; later changes belong to the next day.
+- Insert-only: `ON CONFLICT DO NOTHING`, then every stored field must equal the
+  recomputed draft or the stage fails and rolls back (like the Market Value
+  writer). A missed day stays missing; nothing is backfilled.
+- `value_jpy` uses the same per-card values as above (`null` when nothing is
+  priced, never 0). The step to the previous day is computed only when that day
+  has a verified receipt (else `prior_day_missing`): units held on both days,
+  the Market Value comparability rule, `P > 0` and the 80% comparable-value guard
+  at both ends, no minimum card count (Q4). `P`/`Q` are stored only when `P > 0`.
+- `segment_number` starts at 1 and increments after any break.
+
+**Read (`history`).** 7D/30D chain the stored daily `Q/P` ratios over every day
+of the window (integer products, one division, 50-digit Decimal). ALL runs from
+the user's first point. A day without a point (`history_missing`, with the
+dates), a step that is not publishable (its reason and `failed_step_date`) or a
+window older than the first point (`not_enough_history`) makes the change
+unavailable; it is never 0%. `points` lists the stored points in the window.
+Movers for `window=all` compare the first recorded day with today.
+
+**Day-one preview (`preview`, Q5).** Derived on read, never stored: the cards
+held now, valued on each of the last 30 receipted days, with the same step rule
+for its change. Days without a verified receipt are absent (the line breaks
+there). It carries `kind: "preview"` and a label saying it is not the
+collection's recorded history; the UI (S7) must show it visually separate.
+
+**Rollback.** Revert the code; delete the private, non-published rows with
+`DELETE FROM collection_value_points WHERE methodology_version = 1`.
 
 ## Legacy copy
 

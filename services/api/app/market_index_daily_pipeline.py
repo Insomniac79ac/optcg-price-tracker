@@ -8,12 +8,13 @@ orders them, verifies the committed snapshot, and reports independent outcomes.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date
 
 from sqlalchemy import select
 
 from app import card_pirate_index_writer, market_value_publisher, snapshot_market_index
+from app.accounts import value_history
 from app.db import SessionLocal
 from app.models.job_lock import JobLock
 from app.services.job_locks import LockHeldError, with_job_lock
@@ -39,6 +40,8 @@ class PipelineResult:
     receipt: Stage
     market_value: Stage
     card_pirate_index: Stage
+    # Collector v1 S4: runs last, in its own session, transaction and lock.
+    collection_value: Stage = field(default_factory=lambda: Stage("skipped"))
 
     @property
     def exit_code(self) -> int:
@@ -47,6 +50,7 @@ class PipelineResult:
             self.receipt,
             self.market_value,
             self.card_pirate_index,
+            self.collection_value,
         )
         if any(stage.status == "locked" for stage in statuses):
             return 2
@@ -171,7 +175,23 @@ def _run_downstream(snapshot_stage: Stage, receipt_stage: Stage) -> PipelineResu
     except Exception as exc:
         cpi_stage = _failure(exc)
 
-    return PipelineResult(snapshot_stage, receipt_stage, market_value_stage, cpi_stage)
+    # Personal collection history reads only receipted archive values. It
+    # starts after both index writers have finished, so its outcome can
+    # neither block nor change theirs.
+    try:
+        with SessionLocal() as db:
+            recorded = value_history.run_stage(db, receipt_stage.dates[0])
+        collection_stage = Stage(
+            "succeeded" if recorded.inserted else "no_op",
+            dates=(recorded.point_date,),
+            inserted=recorded.inserted,
+        )
+    except Exception as exc:
+        collection_stage = _failure(exc)
+
+    return PipelineResult(
+        snapshot_stage, receipt_stage, market_value_stage, cpi_stage, collection_stage
+    )
 
 
 def run_pipeline() -> PipelineResult:
