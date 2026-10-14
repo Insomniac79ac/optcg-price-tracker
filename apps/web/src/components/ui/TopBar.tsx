@@ -247,12 +247,24 @@ function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: b
 
   return (
     <div className="flex items-center gap-2 text-xs text-text-secondary">
-      <span
-        className={`hidden max-w-[10rem] truncate ${adminShell ? "xl:inline" : "sm:inline"}`}
-        title={session.user?.email ?? undefined}
-      >
-        {session.user?.name || session.user?.email}
-      </span>
+      {session.sessionKind === "collector" ? (
+        // The collector's own account page (Collector v1 S5, PLAN §D4).
+        <Link
+          href="/account"
+          title={session.user?.email ?? undefined}
+          className="flex h-11 min-w-0 shrink items-center rounded-control px-1.5 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8"
+        >
+          <span className="hidden max-w-[10rem] truncate sm:inline">{session.user?.name || session.user?.email}</span>
+          <span className="sm:hidden">Account</span>
+        </Link>
+      ) : (
+        <span
+          className={`hidden max-w-[10rem] truncate ${adminShell ? "xl:inline" : "sm:inline"}`}
+          title={session.user?.email ?? undefined}
+        >
+          {session.user?.name || session.user?.email}
+        </span>
+      )}
       <button
         type="button"
         onClick={() => signOut({ callbackUrl: "/" })}
