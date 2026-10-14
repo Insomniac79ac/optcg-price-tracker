@@ -1,0 +1,8 @@
+ RUN  v4.1.10 /workspaces/cp-r2img-fu/apps/web
+
+
+ Test Files  130 passed (130)
+      Tests  1683 passed (1683)
+   Start at  08:36:02
+   Duration  110.90s (transform 7.26s, setup 12.18s, import 29.99s, tests 107.17s, environment 149.23s)
+

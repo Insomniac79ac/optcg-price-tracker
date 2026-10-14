@@ -1,0 +1,30 @@
+{
+ "checked_at": "2026-10-14T08:40:08Z",
+ "head": "7fa11d8a252449731b97cbcce89a74c17e791795",
+ "base": "99806ef9d114ac310a4b6b9bc241e44966cf139e",
+ "changed_files": [
+  "apps/web/src/lib/shareCard.tsx",
+  "apps/web/src/lib/shareContent.test.tsx",
+  "docs/agent/STAGING_MISSION.json",
+  "docs/official_images.md",
+  "scripts/generate_staging_state.py",
+  "scripts/tests/test_generate_staging_state.py",
+  "services/api/app/mirror_official_images.py",
+  "services/api/app/official_images/lock.py",
+  "services/api/tests/test_official_images_lock_postgres.py"
+ ],
+ "collectors": {
+  "snkrdunk": {
+   "runtime_inputs_at_head": 62,
+   "pr_files_in_runtime_inputs": [],
+   "changed_runtime_inputs_base_to_head": [],
+   "basis": "import-graph"
+  },
+  "yuyutei": {
+   "runtime_inputs_at_head": 73,
+   "pr_files_in_runtime_inputs": [],
+   "changed_runtime_inputs_base_to_head": [],
+   "basis": "import-graph"
+  }
+ }
+}

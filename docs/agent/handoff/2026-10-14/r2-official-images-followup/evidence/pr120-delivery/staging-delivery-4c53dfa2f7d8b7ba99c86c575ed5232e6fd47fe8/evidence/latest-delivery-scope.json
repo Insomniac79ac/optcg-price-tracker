@@ -1,0 +1,26 @@
+{
+  "base": "99806ef9d114ac310a4b6b9bc241e44966cf139e",
+  "merge": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8",
+  "decision": "full",
+  "files": [
+    "apps/web/src/lib/shareCard.tsx",
+    "apps/web/src/lib/shareContent.test.tsx",
+    "docs/agent/STAGING_MISSION.json",
+    "docs/official_images.md",
+    "scripts/generate_staging_state.py",
+    "scripts/tests/test_generate_staging_state.py",
+    "services/api/app/mirror_official_images.py",
+    "services/api/app/official_images/lock.py",
+    "services/api/tests/test_official_images_lock_postgres.py"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    "apps/web/src/lib/shareCard.tsx",
+    "apps/web/src/lib/shareContent.test.tsx",
+    "scripts/generate_staging_state.py",
+    "scripts/tests/test_generate_staging_state.py",
+    "services/api/app/mirror_official_images.py",
+    "services/api/app/official_images/lock.py",
+    "services/api/tests/test_official_images_lock_postgres.py"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+ "merge": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8",
+ "since": "2026-10-14T09:56:52Z",
+ "checked_at": "2026-10-14T10:10:47Z",
+ "services": {
+  "market-index-snapshot": [
+   {
+    "id": "4a27570d-83ec-4394-8cf1-4b56c195d3d3",
+    "status": "SUCCESS",
+    "created_at": "2026-10-14T09:56:55.019Z",
+    "commit": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+   }
+  ],
+  "yuyutei-collector-shard-8": [],
+  "yuyutei-collector-shard-5": [],
+  "beat": [
+   {
+    "id": "06699694-a861-4b1f-aa6d-72a609acd96f",
+    "status": "SKIPPED",
+    "created_at": "2026-10-14T09:56:55.821Z",
+    "commit": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+   }
+  ],
+  "optcg-price-tracker": [
+   {
+    "id": "e5b623b9-6aa1-472d-948b-ff1946494278",
+    "status": "SUCCESS",
+    "created_at": "2026-10-14T09:56:55.018Z",
+    "commit": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+   }
+  ],
+  "Postgres": [],
+  "tmp-yuyu-shard-rehearsal": [],
+  "yuyutei-collector-shard-3": [],
+  "snkrdunk-collector": [],
+  "tmp-yuyu-discovery-4b": [],
+  "yuyutei-collector-shard-1": [],
+  "yuyutei-collector": [],
+  "Redis": [],
+  "yuyutei-collector-shard-0": [],
+  "yuyutei-collector-shard-4-v2": [],
+  "yuyutei-collector-shard-6": [],
+  "yuyutei-collector-shard-2": [],
+  "worker": [
+   {
+    "id": "931f00f9-de01-4b37-89fa-775de02fa562",
+    "status": "SKIPPED",
+    "created_at": "2026-10-14T09:56:55.881Z",
+    "commit": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+   }
+  ],
+  "yuyutei-collector-shard-7": []
+ },
+ "collector_services": 10,
+ "collector_non_skipped_deployments_since_merge": 0
+}
