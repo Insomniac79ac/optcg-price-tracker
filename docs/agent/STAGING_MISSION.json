@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Card images follow-up (owner approval 2026-10-13): run lock for the official image mirror so a daily staging Railway cron (official-images-mirror, 07:15 UTC, mirror then check_official_images) can be added; a failed run becomes the staging state blocker official-images-check-failed; image credit on share/OG images; docs state exactly where the credit appears. Staging only; no collector release.",
+ "mission": "Collector v1 S4: daily collection value history stage (collection_value_points) after the receipt gate, plus 7D/30D/ALL and the labelled day-one preview on the dark /me/collection/value; no collector release",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,52 +20,38 @@
  "impacts": [
   {
    "files": [
-    "services/api/app/mirror_official_images.py",
-    "services/api/app/official_images/lock.py"
+    "services/api/app/accounts/router.py",
+    "services/api/app/accounts/schemas.py",
+    "services/api/app/accounts/value_history.py",
+    "services/api/app/market_index_daily_pipeline.py"
    ],
    "effects": [
     "application",
-    "source_envelope"
+    "subsystem_activation"
    ],
-   "reason": "Session-scoped PostgreSQL advisory lock held for a whole --write run; a second concurrent run fetches nothing and exits 3. --dry-run and check_official_images take no lock. Enables a daily scheduled run: recurring Bandai requests only for prints pending a verified copy (0 pending today), under the unchanged built-in limits (one at a time, >= 1 s apart, stop after 5 consecutive transient failures). Not imported by any collector: scripts/collector_runtime_inputs.py at head gives 0 PR files among SNKRDUNK's 62 and Yuyu-Tei's 73 runtime inputs. No models/ or settings.py change. No identity, price, Market Index or Market Value change."
+   "reason": "New independent last stage of the live market-index-snapshot coordinator (python -m app.market_index_daily_pipeline, 20:00 UTC): after the receipt gate and after Market Value and CPI have finished, app.accounts.value_history.run_stage writes collection_value_points for the receipted day in its own session, REPEATABLE READ transaction and job lock (collection_value_history), insert-only with ON CONFLICT DO NOTHING plus full-field comparison. Its failure or held lock is reported as collection_value and cannot block or change the Market Value or CPI stages (fixture-comparison tests on SQLite and Postgres). Values are the existing Market Value usable values (receipted archive, positive only, Yuyu sale excluded); 80% comparable-value guard, no minimum card counts (owner Q4). /me/collection/value (404 while COLLECTOR_ACCOUNTS_ENABLED is off; unset on staging) gains window=all, recorded history and the labelled day-one preview (Q5). No change to Market Value, CPI, identity, prices, app/models/**, app/settings.py or requirements; collector import graph: 0 changed runtime inputs."
   },
   {
    "files": [
-    "scripts/generate_staging_state.py"
-   ],
-   "effects": [
-    "state_observation"
-   ],
-   "reason": "Observes the official-images-mirror Railway service like market-index-snapshot (GitHub-built, watch-pattern provenance). Its latest deployment CRASHED or FAILED adds blocker official-images-check-failed; SUCCESS or an absent service adds nothing."
-  },
-  {
-   "files": [
-    "apps/web/src/lib/shareCard.tsx"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "Share/OG images (all four kinds) add brand.imageCredit as a second footer line; date and independence disclaimer share the first line. Same 1200x630 canvas and footer height; no copy string added. /cards/[id] intentionally unchanged (retired in collector-v1 S6)."
-  },
-  {
-   "files": [
-    "apps/web/src/lib/shareContent.test.tsx",
-    "scripts/tests/test_generate_staging_state.py",
-    "services/api/tests/test_official_images_lock_postgres.py"
+    "services/api/tests/test_collection_value_history.py",
+    "services/api/tests/test_collection_value_history_import_graph.py",
+    "services/api/tests/test_collection_value_history_postgres.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Credit present on every share kind; blocker raised for CRASHED/FAILED and silent for SUCCESS/absent; lock refuses a second holder, releases on error, CLI exits 3 while locked (real PostgreSQL)."
+   "reason": "Step/window math vs an independent Fraction oracle; quantity changes never gain or loss; missing receipt or missing stage day is a break, never 0%; 80% guard with no minimum count; unpriced never 0; Yuyu sale excluded via the real snapshot path; idempotent rerun and fail-closed conflict; Market Value and CPI outputs identical with the stage stubbed, present, failing or locked; producer guard held during the stage; REPEATABLE READ; collector import graph."
   },
   {
    "files": [
-    "docs/official_images.md"
+    "docs/collector_accounts.md",
+    "docs/market_value_daily_pipeline.md",
+    "docs/operations.md"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "Corrects where the image credit appears (it was claimed under the card on every card page) and documents the run lock and the daily job, its variables and its blocker."
+   "reason": "Recorded history rules, report field and rollback in collector_accounts.md; dated notes that the coordinator is the live staging start command (checked read-only 2026-10-14) in market_value_daily_pipeline.md and operations.md."
   }
  ],
  "deployment_verification": {
@@ -83,50 +69,43 @@
   "impact": {
    "resources": [
     {
-     "name": "Staging API (watched services/api change: rebuild on merge)",
-     "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
-     "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+     "name": "Staging API",
      "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
     },
     {
-     "name": "market-index-snapshot (same watch patterns: rebuild on merge; schedule and command unchanged)",
+     "name": "market-index-snapshot cron (API image, coordinator gains a last stage)",
      "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2"
     },
     {
-     "name": "Vercel staging frontend (share image footer)"
-    },
-    {
-     "name": "New Railway cron service official-images-mirror on the API image, created by the owner after merge (not by this PR); variables DATABASE_URL and R2_* only"
-    },
-    {
-     "name": "R2 bucket: new content-addressed objects only for newly pending prints; never overwritten or deleted"
+     "name": "Staging Postgres: collection_value_points (exists since 3b7d9c1a5e20, 0 rows)",
+     "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+     "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7"
     }
    ],
    "routes": [
-    "/share/[kind]/[id] PNG: credit line added to the footer",
-    "Daily 07:15 UTC: www.onepiece-cardgame.com GETs only for prints pending a verified copy, one at a time, >= 1 s apart, stop after 5 consecutive transient failures"
+    "GET /me/collection/value: window=all accepted; response gains history and preview. Still 404 while COLLECTOR_ACCOUNTS_ENABLED is off (staging: unset). No other route changes."
    ],
    "dependencies": [
-    "card_print_image_assets (6c2242f6f439, already applied)",
-    "R2_* on the API service",
-    "staging DATABASE_URL",
-    "PostgreSQL advisory locks"
+    "market_index_snapshot_completions receipts and market_index_snapshots (read only)",
+    "collection_entry_events ledger (read only)",
+    "collection_value_points table from migration 3b7d9c1a5e20 (no new migration)"
    ],
-   "deployment_impact": "API and market-index-snapshot rebuild on merge through their GitHub triggers; web redeploys through Vercel Git. No collector watch path or collector-imported module changes, so no collector build or rollout; collector_services is empty. No migration.",
-   "database_writes": 300,
-   "source_requests": 900,
-   "estimated_runtime_minutes": 30
+   "deployment_impact": "API and market-index-snapshot redeploy on merge through their normal GitHub triggers. No web, collector watch path or collector-imported module change, so no collector build or rollout; collector_services is empty. No migration; revision stays 3b7d9c1a5e20. The next natural 20:00 UTC run executes the new stage; staging has 0 users and 0 ledger events, so it writes 0 rows.",
+   "database_writes": 0,
+   "source_requests": 0,
+   "estimated_runtime_minutes": 10
   },
   "recovery": {
-   "artifact": "99806ef9d114ac310a4b6b9bc241e44966cf139e",
-   "procedure": "Native revert of this PR restores the unlocked CLI, the old share footer and the old state generator. The cron service is stopped by clearing its Cron Schedule (or removing the service) in Railway. Rows and R2 objects are insert-only and stay.",
-   "trigger": "official-images-check-failed blocker; any 403/429/challenge from Bandai (run stops itself); broken share images; verifier failure",
-   "backup": "No existing row or object is modified: the mirror only inserts rows for pending prints and writes only empty content-addressed keys. Postgres backup not applicable.",
+   "artifact": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8",
+   "procedure": "Native revert of this PR (API and market-index-snapshot redeploy through their normal triggers). Then delete the private, non-published rows: DELETE FROM collection_value_points WHERE methodology_version = 1 (0 rows expected on staging).",
+   "trigger": "verifier failure; Market Value or CPI stage status or inserted count leaving the usual pattern (succeeded, 60 and 1 on 2026-10-08..13) at the next 20:00 UTC run; collection_value stage failed; any /me route answering other than 404 while the flag is off; any collector deployment record after merge",
+   "backup": "Staging Postgres volume backup younger than 24 h confirmed immediately before merge (id and time in the S4 handoff). The change writes only collection_value_points (0 rows on staging) and modifies no existing row.",
    "validation": [
-    "services/api/tests/test_official_images_lock_postgres.py",
-    "scripts/tests/test_generate_staging_state.py",
-    "apps/web/src/lib/shareContent.test.tsx",
-    "docs/official_images.md"
+    "services/api/tests/test_collection_value_history.py",
+    "services/api/tests/test_collection_value_history_postgres.py",
+    "services/api/tests/test_collection_value_history_import_graph.py",
+    "services/api/tests/test_market_index_daily_pipeline.py",
+    "docs/collector_accounts.md"
    ]
   },
   "verification": {
@@ -135,11 +114,10 @@
    ],
    "post_change": [
     "scripts/verify_staging_delivery.py",
-    "scripts/generate_staging_state.py",
-    "services/api/app/check_official_images.py"
+    "scripts/generate_staging_state.py"
    ],
-   "observation_window": "Delivery receipt with 0 collector rollouts; share images for home, print and market show the credit on the staging alias; after the owner creates the cron service, its first scheduled 07:15 UTC run exits 0 and the regenerated state has no official-images-check-failed blocker."
+   "observation_window": "Delivery receipt with API at the merge, revision 3b7d9c1a5e20 and 0 collector deployments (Railway records); then the next natural 20:00 UTC market-index-snapshot run: report contains collection_value (no_op, 0 rows), Market Value and CPI succeeded with their usual inserted counts, exit 0."
   }
  },
- "diff_sha256": "c84555c56e89eeb80b2b54ee10ad4df0feb5c3ea246b8195648db96a00eb4f42"
+ "diff_sha256": "22b5547c1f7d7efa24332da850cfe2669a2ae90a6dfa24fc7e588315754de2bf"
 }
