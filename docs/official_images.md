@@ -4,9 +4,20 @@ Owner decision, 2026-10-11: Card Pirate stores and serves the official Bandai
 card list images itself, unmodified, instead of re-serving them from
 `www.onepiece-cardgame.com` on every request. The aims are resilience if
 Bandai's URLs or embedding rules change, and fewer requests to Bandai as
-traffic grows. The images remain their owners' property. The site shows an
-image credit in the footer and under the card on every card page
-(`brand.imageCredit`).
+traffic grows. The images remain their owners' property.
+
+The image credit (`brand.imageCredit`, `apps/web/src/lib/brand.ts`) appears in
+exactly these places:
+
+- the site footer on every HTML page (`components/Footer.tsx`, mounted by the
+  root layout);
+- under the card on `/prints/[id]` (`app/prints/[id]/PrintClient.tsx`);
+- the bottom line of every share/OG image, all four kinds: home, print, market
+  and release (`lib/shareCard.tsx`, served by `/share/[kind]/[id]`);
+- the `/about` and `/terms` pages.
+
+It is not repeated under the card on `/cards/[id]`. That page is retired in
+collector-v1 S6 and is covered by the footer until then.
 
 Scope: only the official images that `card_prints.image_url` points at.
 Yuyu-Tei and SNKRDUNK images are out of scope and unchanged.
@@ -63,11 +74,41 @@ python -m app.check_official_images                     # silent when healthy, e
 python -m app.check_official_images --verify-objects    # also HEAD every object
 ```
 
-**After a catalogue import** that adds prints or changes an `image_url`, run
-`mirror_official_images --write`.
+**After a catalogue import** that adds prints or changes an `image_url`, the
+daily job below mirrors them. Run `mirror_official_images --write` by hand only
+to mirror sooner.
 - The importer itself stays frozen-input and never fetches from Bandai.
 - Until the mirror runs, the new prints are served through the proxy fallback.
 - `check_official_images` reports them as `missing_copy`.
+
+**Run lock.** `--write` takes a session-scoped PostgreSQL advisory lock
+(`app/official_images/lock.py`) for the whole run. A second `--write` run while
+one is active fetches nothing and exits 3, so a hand-run backfill and the daily
+job never double the Bandai request rate. `--dry-run` and
+`check_official_images` take no lock.
+
+## Daily job (staging Railway cron)
+
+Owner approval 2026-10-13. Railway service `official-images-mirror`, on the API
+image like `market-index-snapshot`, staging environment only.
+
+- Schedule `15 7 * * *` (07:15 UTC). That is outside 02:00-06:00 and the
+  19:30-20:30 pipeline window. Restart policy `NEVER`.
+- Start command, with the same `/bin/sh -c` wrapper and reason as
+  `market-index-snapshot` (see `docs/operations.md`, "Scheduled index jobs"):
+
+  ```
+  /bin/sh -c "python -m app.mirror_official_images --write --quiet && exec python -m app.check_official_images"
+  ```
+
+- Variables: `DATABASE_URL` and the `R2_*` settings only. No collector
+  service or collector variable is involved.
+- The Bandai limits are the built-in ones above (one request at a time, at
+  least 1 s apart, stop after five consecutive transient failures).
+- **Failure is visible.** A mirror failure, a held run lock or an unhealthy
+  check exits non-zero, so the run ends as a failed deployment.
+  `scripts/generate_staging_state.py` then reports the blocker
+  `official-images-check-failed`. A healthy run adds nothing.
 
 ## Rollback
 

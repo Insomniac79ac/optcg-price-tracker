@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Record Collector v1 S2 delivery (documentation only): PR #114 merged at eaf9de7 with receipt and 0 collector deployments; staging page, Vercel Analytics and Sentry verification; analytics root-cause correction; PR #113 receipt carried from S3",
+ "mission": "Card images follow-up (owner approval 2026-10-13): run lock for the official image mirror so a daily staging Railway cron (official-images-mirror, 07:15 UTC, mirror then check_official_images) can be added; a failed run becomes the staging state blocker official-images-check-failed; image credit on share/OG images; docs state exactly where the credit appears. Staging only; no collector release.",
  "target": "staging",
- "classification": "GREEN",
+ "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,188 +20,52 @@
  "impacts": [
   {
    "files": [
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/HANDOFF.md",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/analytics-deep-probe-webdriver.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/analytics-pageview-probe-staging.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/api-sentry-e2e-local.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/api-sentry-test-call-staging.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/browser-error-capture-local.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/capture.err",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/deploy-records-after-pr114.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/deploy-records-after-sentry-dsn.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/env-names-after-owner.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/env-names-before-pr.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/env-names-before-ready.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-49323c6-pg18.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-49323c6-pg18.xml",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-a3f6380-pg18.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/full-api-suite-staging-b3862e6-pg18.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/import-graph-check-49323c6.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/import-graph-check-a3f6380.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-disabled-local.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-enabled-local.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-staging-after-redeploy.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/network-probe-staging-after.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-credential-probe-49323c610964d7cab92514eec0e99f34aff4ed0b/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-0309a88145827469.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr114-delivery/staging-delivery-eaf9de78eccb8c5c47b2097aa2436e30e9d1a2b3/evidence/staging-state-c09334b69a28b1a7.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_about-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_analytics-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_cards-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_methodology-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_privacy-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_root-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local-r1/after-r1_terms-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_about-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_analytics-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_cards-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_methodology-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_privacy-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_root-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-local/after-local_terms-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_about-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_analytics-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_cards-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_methodology-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_privacy-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_root-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens-staging-after/after_terms-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_about-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_analytics-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_cards-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_methodology-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_privacy-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_root-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-desktop-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-desktop.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-mobile-footer.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/screens/before_terms-mobile.png",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/skip-comparison-a3f6380-vs-b3862e6.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/staging-after-pages.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/web-vitest-49323c6.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/web-vitest-final.txt",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/analytics_view_probe.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/api_sentry_e2e.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/capture.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/compare_skips.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/env_names_check.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/import_graph_check.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/network_probe.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/run_api_suite.sh",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/wait_for_merge_window.sh",
-    "docs/agent/handoff/2026-10-13/collector-v1-s2/tools/write_manifest.py",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/deploy-records-after-pr113.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-credential-probe-6c2e166204eb229952ee8711839cd151fdc65f1d/latest-staging-credential-probe.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/CURRENT_STATE.yaml",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/latest-delivery-scope.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/latest-staging-delivery.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-25c54499ae7392a9.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-283aa82e7283f0d3.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-3391abad5c997c5a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-62809ffe916fe79b.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-73ee4fc36018f7ca.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-8dcfbf959cb15f6a.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-a05c36274c28de29.json",
-    "docs/agent/handoff/2026-10-13/collector-v1-s3/evidence/pr113-delivery/staging-delivery-b3862e6aa82acb0c0d565a75efbbb74fea02fd42/evidence/staging-state-c09334b69a28b1a7.json"
+    "services/api/app/mirror_official_images.py",
+    "services/api/app/official_images/lock.py"
+   ],
+   "effects": [
+    "application",
+    "source_envelope"
+   ],
+   "reason": "Session-scoped PostgreSQL advisory lock held for a whole --write run; a second concurrent run fetches nothing and exits 3. --dry-run and check_official_images take no lock. Enables a daily scheduled run: recurring Bandai requests only for prints pending a verified copy (0 pending today), under the unchanged built-in limits (one at a time, >= 1 s apart, stop after 5 consecutive transient failures). Not imported by any collector: scripts/collector_runtime_inputs.py at head gives 0 PR files among SNKRDUNK's 62 and Yuyu-Tei's 73 runtime inputs. No models/ or settings.py change. No identity, price, Market Index or Market Value change."
+  },
+  {
+   "files": [
+    "scripts/generate_staging_state.py"
+   ],
+   "effects": [
+    "state_observation"
+   ],
+   "reason": "Observes the official-images-mirror Railway service like market-index-snapshot (GitHub-built, watch-pattern provenance). Its latest deployment CRASHED or FAILED adds blocker official-images-check-failed; SUCCESS or an absent service adds nothing."
+  },
+  {
+   "files": [
+    "apps/web/src/lib/shareCard.tsx"
+   ],
+   "effects": [
+    "application"
+   ],
+   "reason": "Share/OG images (all four kinds) add brand.imageCredit as a second footer line; date and independence disclaimer share the first line. Same 1200x630 canvas and footer height; no copy string added. /cards/[id] intentionally unchanged (retired in collector-v1 S6)."
+  },
+  {
+   "files": [
+    "apps/web/src/lib/shareContent.test.tsx",
+    "scripts/tests/test_generate_staging_state.py",
+    "services/api/tests/test_official_images_lock_postgres.py"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Credit present on every share kind; blocker raised for CRASHED/FAILED and silent for SUCCESS/absent; lock refuses a second holder, releases on error, CLI exits 3 while locked (real PostgreSQL)."
+  },
+  {
+   "files": [
+    "docs/official_images.md"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "Handoff, evidence (delivery receipts, Railway deployment records, test results, probes, screenshots) and read-only tools for Collector v1 S2, plus the PR #113 receipt carried from S3. No code, workflow, deploy or runtime input changes."
+   "reason": "Corrects where the image credit appears (it was claimed under the card on every card page) and documents the run lock and the daily job, its variables and its blocker."
   }
  ],
  "deployment_verification": {
@@ -215,5 +79,67 @@
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
  },
- "diff_sha256": "fdea7f9edca84058ff89975ae4e909e89f28038ec3554c786e6594dca5c8edd5"
+ "safeguards": {
+  "impact": {
+   "resources": [
+    {
+     "name": "Staging API (watched services/api change: rebuild on merge)",
+     "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+     "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+    },
+    {
+     "name": "market-index-snapshot (same watch patterns: rebuild on merge; schedule and command unchanged)",
+     "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2"
+    },
+    {
+     "name": "Vercel staging frontend (share image footer)"
+    },
+    {
+     "name": "New Railway cron service official-images-mirror on the API image, created by the owner after merge (not by this PR); variables DATABASE_URL and R2_* only"
+    },
+    {
+     "name": "R2 bucket: new content-addressed objects only for newly pending prints; never overwritten or deleted"
+    }
+   ],
+   "routes": [
+    "/share/[kind]/[id] PNG: credit line added to the footer",
+    "Daily 07:15 UTC: www.onepiece-cardgame.com GETs only for prints pending a verified copy, one at a time, >= 1 s apart, stop after 5 consecutive transient failures"
+   ],
+   "dependencies": [
+    "card_print_image_assets (6c2242f6f439, already applied)",
+    "R2_* on the API service",
+    "staging DATABASE_URL",
+    "PostgreSQL advisory locks"
+   ],
+   "deployment_impact": "API and market-index-snapshot rebuild on merge through their GitHub triggers; web redeploys through Vercel Git. No collector watch path or collector-imported module changes, so no collector build or rollout; collector_services is empty. No migration.",
+   "database_writes": 300,
+   "source_requests": 900,
+   "estimated_runtime_minutes": 30
+  },
+  "recovery": {
+   "artifact": "99806ef9d114ac310a4b6b9bc241e44966cf139e",
+   "procedure": "Native revert of this PR restores the unlocked CLI, the old share footer and the old state generator. The cron service is stopped by clearing its Cron Schedule (or removing the service) in Railway. Rows and R2 objects are insert-only and stay.",
+   "trigger": "official-images-check-failed blocker; any 403/429/challenge from Bandai (run stops itself); broken share images; verifier failure",
+   "backup": "No existing row or object is modified: the mirror only inserts rows for pending prints and writes only empty content-addressed keys. Postgres backup not applicable.",
+   "validation": [
+    "services/api/tests/test_official_images_lock_postgres.py",
+    "scripts/tests/test_generate_staging_state.py",
+    "apps/web/src/lib/shareContent.test.tsx",
+    "docs/official_images.md"
+   ]
+  },
+  "verification": {
+   "required_checks": [
+    "engineering-gate"
+   ],
+   "post_change": [
+    "scripts/verify_staging_delivery.py",
+    "scripts/generate_staging_state.py",
+    "services/api/app/check_official_images.py"
+   ],
+   "observation_window": "Delivery receipt with 0 collector rollouts; share images for home, print and market show the credit on the staging alias; after the owner creates the cron service, its first scheduled 07:15 UTC run exits 0 and the regenerated state has no official-images-check-failed blocker."
+  }
+ },
+ "diff_sha256": "c84555c56e89eeb80b2b54ee10ad4df0feb5c3ea246b8195648db96a00eb4f42"
 }

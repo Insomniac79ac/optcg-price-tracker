@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ShareCard } from "./shareCard";
+import { brand } from "./brand";
 import { marketShareContent, printShareContent, socialFaction, publicArtwork } from "./shareContent";
 import { printFixture } from "./publicDiscoveryFixtures";
 import fixtures from "./__fixtures__/marketValue.json";
@@ -34,5 +35,12 @@ describe("dynamic proof content", () => {
     expect(html).toContain("WANTED");
     const neutral = renderToStaticMarkup(<ShareCard content={{ ...content, theme: "neutral" }} />);
     expect(neutral).not.toContain("WANTED");
+  });
+  it("credits the official card images on every share image kind", () => {
+    const base = printShareContent(detail);
+    for (const kind of ["home", "print", "market", "release"] as const) {
+      const html = renderToStaticMarkup(<ShareCard content={{ ...base, kind }} />);
+      expect(html).toContain(brand.imageCredit);
+    }
   });
 });

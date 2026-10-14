@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- next/og requires native image elements. */
 import type { CSSProperties, ReactNode } from "react";
+import { brand } from "./brand";
 export interface ShareCardContent {
   kind: "home" | "print" | "market" | "release";
   title: string; identity: string; value: string; context: string; date: string;
@@ -79,8 +80,8 @@ export function ShareCard({ content: c }: { content: ShareCardContent }) {
       </div>
     </div>}
     <div style={{ ...col, height: 42, borderTop: "1px solid #999589", padding: "5px 34px", justifyContent: "space-between", fontSize: 10, color: "#494a43" }}>
-      <Text>{c.date || "Japanese cards · Prices in JPY"}</Text>
-      <Text>Card Pirate is independent. Not affiliated with Bandai, Shueisha or Toei Animation.</Text>
+      <div style={{ ...row, justifyContent: "space-between" }}><Text>{c.date || "Japanese cards · Prices in JPY"}</Text><Text>Card Pirate is independent. Not affiliated with Bandai, Shueisha or Toei Animation.</Text></div>
+      <Text>{brand.imageCredit}</Text>
     </div>
   </div>;
 }

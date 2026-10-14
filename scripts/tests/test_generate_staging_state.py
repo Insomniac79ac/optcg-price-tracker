@@ -230,6 +230,43 @@ class StateTests(unittest.TestCase):
         self.assertIn("duplicate-active-exact-mapping", blockers)
         self.assertIn("deployment-provenance-divergence", blockers)
 
+    def _official_images(self, status):
+        evidence = fixture()
+        evidence["railway"]["services"].append(
+            {
+                "name": "official-images-mirror",
+                "service_id": "test-official",
+                "due_work_configured": False,
+                "schedule_utc": "15 7 * * *",
+                "deployment_id": "test-official-deployment",
+                "status": status,
+                "git_sha": "a" * 40,
+                "reported_sha": "unknown",
+            }
+        )
+        state = generator.build_state(generator.sanitize(evidence))
+        return [b for b in state["blockers"] if b["id"] == "official-images-check-failed"]
+
+    def test_failed_official_images_run_is_a_blocker(self):
+        for status in ("CRASHED", "FAILED"):
+            self.assertEqual(
+                self._official_images(status),
+                [
+                    {
+                        "id": "official-images-check-failed",
+                        "scope": "self-hosted official card images",
+                        "deployment_id": "test-official-deployment",
+                    }
+                ],
+            )
+
+    def test_healthy_or_absent_official_images_run_is_silent(self):
+        self.assertEqual(self._official_images("SUCCESS"), [])
+        state = generator.build_state(generator.sanitize(fixture()))
+        self.assertNotIn(
+            "official-images-check-failed", [b["id"] for b in state["blockers"]]
+        )
+
     def test_query_file_contains_only_expected_reads(self):
         queries = generator.load_queries()
         self.assertEqual(len(queries), 16)
