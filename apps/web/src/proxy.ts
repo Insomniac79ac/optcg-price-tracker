@@ -8,8 +8,7 @@ import {
   buildSignInRedirect,
   failClosedOutcome,
   guardDidEvaluate,
-  guardOutcome,
-  hasCollectorSession,
+  sessionGuardOutcome,
   type GuardOutcome,
 } from "@/lib/proxyGuard";
 
@@ -26,8 +25,10 @@ import {
 // auth logic, just a response header, never appeared on any response) while
 // diagnosing why staging's /collection etc. weren't redirecting.
 //
-// /collection, /wishlist and /analytics/* require a signed-in collector -
-// they expose the caller's own portfolio/wishlist/analytics data. The
+// /collection, /wishlist, /account and /analytics/* require a signed-in
+// collector - they expose the caller's own collection/wishlist/account data.
+// Since Collector v1 S5 that means a collector (Google) session specifically:
+// an admin session gets the same sign-in invite as a signed-out visitor. The
 // /grading, /dashboard, /activity, /search and internal market-analytics
 // pages were deleted in Collector v1 S1 (2026-10-13); next.config.ts
 // redirects them (before this proxy runs) or they 404.
@@ -80,7 +81,7 @@ function toResponse(outcome: GuardOutcome, origin: string, pathname: string, sea
 const evaluate = auth((req) => {
   const { pathname, search, origin } = req.nextUrl;
   const response = toResponse(
-    guardOutcome(pathname, hasCollectorSession(req.auth), req.auth?.sessionKind === "admin" && req.auth.adminSessionExpired === true),
+    sessionGuardOutcome(pathname, req.auth),
     origin,
     pathname,
     search,
@@ -149,6 +150,7 @@ export const config = {
   matcher: [
     "/collection/:path*",
     "/wishlist/:path*",
+    "/account/:path*",
     // `:path+` - one or more segments, so the bare /analytics (the public
     // market landscape) is NOT matched while every legacy /analytics/* leaf
     // page still is. See proxyGuard.ts for why, and proxy.test.ts for the

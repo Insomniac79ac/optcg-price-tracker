@@ -17,9 +17,16 @@ const AUTH_MARKERS = [
   "proxyAdminJson", // admin session + server-side X-Admin-Token
   "proxyAdminActorJson", // admin session + actor assertion
   "requireAdminOrResponse", // admin session (streaming/multipart routes)
-  "proxySavedViews", // user session bearer token
-  "session.apiToken", // user session bearer token
+  "proxySavedViews", // collector session, server-minted token (+ CSRF check)
+  "proxyMe", // collector session, server-minted token (+ CSRF check)
+  "collectorAuthHeaders", // collector session, server-minted token (src/lib/collectorApi.ts)
 ];
+
+// Collector v1 S5: a mutating handler that acts for a collector must also
+// refuse cross-site requests. These helpers do it themselves; any other
+// collector handler must call crossSiteRejection() directly.
+const CSRF_MARKERS = ["crossSiteRejection", "proxyMe", "proxySavedViews"];
+const COLLECTOR_MARKERS = ["collectorAuthHeaders", "proxyMe", "proxySavedViews"];
 
 // Relative paths that are intentionally unauthenticated.
 const ALLOWLIST = new Set([
@@ -66,6 +73,18 @@ describe("mutating API routes require authentication", () => {
       .map((file) => path.relative(API_DIR, file));
 
     expect(unauthenticated).toEqual([]);
+  });
+
+  it("every mutating collector handler refuses cross-site requests (CSRF)", () => {
+    const collectorWrites = files.filter((file) => {
+      const source = fs.readFileSync(file, "utf8");
+      return MUTATING_EXPORT.test(source) && COLLECTOR_MARKERS.some((m) => source.includes(m));
+    });
+    expect(collectorWrites.map((f) => path.relative(API_DIR, f))).toContain("me/[[...path]]/route.ts");
+    const unprotected = collectorWrites
+      .filter((file) => !CSRF_MARKERS.some((m) => fs.readFileSync(file, "utf8").includes(m)))
+      .map((file) => path.relative(API_DIR, file));
+    expect(unprotected).toEqual([]);
   });
 });
 

@@ -68,6 +68,7 @@ ROUTES = [
     ("post", "/me/watchlist"),
     ("patch", "/me/watchlist/1"),
     ("delete", "/me/watchlist/1"),
+    ("get", "/me/profile"),
     ("get", "/me/preferences"),
     ("put", "/me/preferences"),
     ("get", "/me/export"),

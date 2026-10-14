@@ -8,6 +8,8 @@ import {
   guardDidEvaluate,
   guardOutcome,
   hasCollectorSession,
+  hasSession,
+  sessionGuardOutcome,
 } from "./proxyGuard";
 
 /** Next's matcher syntax, reduced to the prefix it actually guards:
@@ -225,30 +227,78 @@ describe("guardDidEvaluate", () => {
   });
 });
 
-describe("hasCollectorSession", () => {
-  it("accepts a real resolved session", () => {
-    expect(hasCollectorSession({ user: { email: "collector@example.com" } })).toBe(true);
+describe("hasSession (the /admin/* shape check)", () => {
+  it("accepts a real resolved session of either kind", () => {
+    expect(hasSession({ user: { email: "collector@example.com" }, sessionKind: "collector" })).toBe(true);
+    expect(hasSession({ user: { email: "admin@example.com" }, sessionKind: "admin" })).toBe(true);
   });
 
   it("rejects the absence of a session", () => {
-    expect(hasCollectorSession(null)).toBe(false);
-    expect(hasCollectorSession(undefined)).toBe(false);
+    expect(hasSession(null)).toBe(false);
+    expect(hasSession(undefined)).toBe(false);
   });
 
   it("rejects a truthy value that is not a session", () => {
     // The case that made the guard fail open: Auth.js could not evaluate the
     // session, logged MissingSecret, and still handed the callback something
     // truthy. Boolean(req.auth) read that as "signed in".
-    expect(hasCollectorSession({})).toBe(false);
-    expect(hasCollectorSession({ error: "MissingSecret" })).toBe(false);
-    expect(hasCollectorSession(new Error("MissingSecret"))).toBe(false);
-    expect(hasCollectorSession("session")).toBe(false);
-    expect(hasCollectorSession(true)).toBe(false);
-    expect(hasCollectorSession(1)).toBe(false);
+    expect(hasSession({})).toBe(false);
+    expect(hasSession({ error: "MissingSecret" })).toBe(false);
+    expect(hasSession(new Error("MissingSecret"))).toBe(false);
+    expect(hasSession("session")).toBe(false);
+    expect(hasSession(true)).toBe(false);
+    expect(hasSession(1)).toBe(false);
   });
 
   it("rejects a session whose user is not an object", () => {
-    expect(hasCollectorSession({ user: null })).toBe(false);
-    expect(hasCollectorSession({ user: "collector@example.com" })).toBe(false);
+    expect(hasSession({ user: null })).toBe(false);
+    expect(hasSession({ user: "collector@example.com" })).toBe(false);
+  });
+});
+
+describe("hasCollectorSession (Collector v1 S5: collector sessions only)", () => {
+  it("accepts a resolved collector session", () => {
+    expect(hasCollectorSession({ user: { email: "collector@example.com" }, sessionKind: "collector" })).toBe(true);
+  });
+
+  it("rejects admin sessions, active or expired, and sessions without a kind", () => {
+    expect(hasCollectorSession({ user: { email: "admin@example.com", role: "admin" }, sessionKind: "admin" })).toBe(false);
+    expect(hasCollectorSession({ user: {}, sessionKind: "admin", adminSessionExpired: true })).toBe(false);
+    expect(hasCollectorSession({ user: { email: "collector@example.com" } })).toBe(false);
+  });
+
+  it("rejects everything hasSession rejects", () => {
+    for (const value of [null, undefined, {}, { error: "MissingSecret" }, true, { user: null, sessionKind: "collector" }]) {
+      expect(hasCollectorSession(value)).toBe(false);
+    }
+  });
+});
+
+describe("sessionGuardOutcome", () => {
+  const collector = { user: { email: "collector@example.com" }, sessionKind: "collector" };
+  const admin = { user: { email: "admin@example.com", role: "admin" }, sessionKind: "admin", adminSessionExpired: false };
+  const expiredAdmin = { user: { email: "admin@example.com" }, sessionKind: "admin", adminSessionExpired: true };
+
+  it.each(["/collection", "/collection/vault", "/wishlist", "/account", "/analytics/collection"])(
+    "gives an admin session the sign-in invite on collector route %s",
+    (path) => {
+      expect(sessionGuardOutcome(path, admin)).toEqual({ kind: "redirect-sign-in" });
+      expect(sessionGuardOutcome(path, expiredAdmin)).toEqual({ kind: "redirect-sign-in" });
+      expect(sessionGuardOutcome(path, null)).toEqual({ kind: "redirect-sign-in" });
+      expect(sessionGuardOutcome(path, collector)).toEqual({ kind: "allow" });
+    },
+  );
+
+  it("keeps the admin routes on any session, with the expired-admin redirect", () => {
+    expect(sessionGuardOutcome("/admin/logs", admin)).toEqual({ kind: "allow" });
+    expect(sessionGuardOutcome("/admin/logs", expiredAdmin)).toEqual({ kind: "redirect-admin-login", expired: true });
+    expect(sessionGuardOutcome("/admin/logs", null)).toEqual({ kind: "redirect-admin-login" });
+    expect(sessionGuardOutcome("/admin/login", null)).toEqual({ kind: "allow" });
+    // A collector passes the optimistic proxy; the admin layout rejects it.
+    expect(sessionGuardOutcome("/admin/logs", collector)).toEqual({ kind: "allow" });
+  });
+
+  it("guards /account like the other collector routes", () => {
+    expect(PROTECTED_MATCHER).toContain("/account/:path*");
   });
 });

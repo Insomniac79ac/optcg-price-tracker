@@ -20,6 +20,9 @@
 export const PROTECTED_MATCHER = [
   "/collection/:path*",
   "/wishlist/:path*",
+  // Collector v1 S5 (PLAN §D4): the account section (profile, preferences,
+  // export, delete). Signed-in collectors only; the page checks again.
+  "/account/:path*",
   // `:path+`, NOT `:path*`, and the difference is the whole point: `*` is zero
   // or more segments and DOES match the bare parent, which was verified at
   // request time on 2026-09-06 (a signed-out GET /analytics answered 307 to
@@ -169,9 +172,38 @@ export function guardDidEvaluate(headers: { get(name: string): string | null }):
  * So the shape is checked instead: a session is an object carrying a `user`.
  * Anything else - null, undefined, an error, a bare object - is treated as no
  * session, which routes the request into the signed-out (fail-closed) policy.
+ * This is the /admin/* check; the real admin boundary is server-side.
  */
-export function hasCollectorSession(auth: unknown): boolean {
+export function hasSession(auth: unknown): boolean {
   if (!auth || typeof auth !== "object") return false;
   const user = (auth as { user?: unknown }).user;
   return Boolean(user && typeof user === "object");
+}
+
+/** Whether `auth` is a signed-in *collector* (Google) session - the check for
+ * collector routes (/collection, /wishlist, /account, legacy /analytics/*).
+ *
+ * Collector v1 S5 (PLAN §D1 item 3): a session alone is not enough. An admin
+ * session (active or expired) has no collector account behind it, so on a
+ * collector route it gets the same sign-in invite a signed-out visitor gets,
+ * not a page that would fail on its first per-user request.
+ */
+export function hasCollectorSession(auth: unknown): boolean {
+  return hasSession(auth) && (auth as { sessionKind?: unknown }).sessionKind === "collector";
+}
+
+function isAdminPath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+/** The whole guard decision for one matched request, from the raw
+ * `req.auth` value: /admin/* needs any session (and flags an expired admin),
+ * every other matched route needs a collector session. */
+export function sessionGuardOutcome(pathname: string, auth: unknown): GuardOutcome {
+  if (isAdminPath(pathname)) {
+    const session = auth as { sessionKind?: unknown; adminSessionExpired?: unknown } | null | undefined;
+    const expiredAdmin = hasSession(auth) && session?.sessionKind === "admin" && session.adminSessionExpired === true;
+    return guardOutcome(pathname, hasSession(auth), expiredAdmin);
+  }
+  return guardOutcome(pathname, hasCollectorSession(auth));
 }

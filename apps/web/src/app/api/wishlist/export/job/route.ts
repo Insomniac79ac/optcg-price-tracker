@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { collectorAuthHeaders, crossSiteRejection } from "@/lib/collectorApi";
 
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.apiToken) {
+  const rejected = crossSiteRejection(request);
+  if (rejected) return rejected;
+  const collectorAuth = await collectorAuthHeaders();
+  if (!collectorAuth) {
     return NextResponse.json({ error: "Sign-in required" }, { status: 401 });
   }
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${session.apiToken}`,
+    ...collectorAuth,
     "Content-Type": "application/json",
   };
 

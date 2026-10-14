@@ -1,4 +1,3 @@
-import { getSession } from "next-auth/react";
 
 // The approval screen shows the same artwork the public catalogue does, so
 // it reuses the catalogue's display-image contract rather than restating it.
@@ -892,12 +891,12 @@ export function apiDelete<T = void>(path: string, options?: ApiRequestOptions): 
 
 // --- Per-user (signed-in) requests --------------------------------------
 //
-// /collection, /grading, and /collector are gated by a real user session
-// (Google login via NextAuth), not the admin token. NextAuth mints a
-// short-lived bearer token in its session callback (see src/lib/auth.ts) -
-// these helpers fetch the current session client-side and attach it as
-// Authorization: Bearer, mirroring adminHeaders()/apiGet() above but for
-// per-user auth instead of the shared admin secret.
+// The legacy /collection and /wishlist pages (deleted in Collector v1 S8) are
+// gated by a real collector session (Google login via Auth.js), not the
+// admin token. Since S5 (PLAN §D1) the browser never holds a bearer token:
+// these helpers call the same-origin route handler /api/me/legacy/<path>,
+// which checks the session cookie and mints a 5-minute API token on the
+// server (src/lib/collectorApi.ts, src/lib/meProxy.ts).
 
 export class AuthRequiredError extends Error {
   constructor() {
@@ -906,65 +905,44 @@ export class AuthRequiredError extends Error {
   }
 }
 
-async function authedHeaders(): Promise<Record<string, string>> {
-  const session = await getSession();
-  return session?.apiToken ? { Authorization: `Bearer ${session.apiToken}` } : {};
+/** Same-origin URL for a legacy per-user API path. */
+export function collectorProxyUrl(path: string): string {
+  return `/api/me/legacy${path}`;
+}
+
+async function authedFetch(method: string, path: string, body?: unknown): Promise<Response> {
+  const res = await fetch(collectorProxyUrl(path), {
+    method,
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) throw new AuthRequiredError();
+  if (!res.ok) throw await _errorFromResponse(res, path);
+  return res;
 }
 
 async function authedGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    cache: "no-store",
-    headers: await authedHeaders(),
-  });
-  if (res.status === 401) throw new AuthRequiredError();
-  if (!res.ok) throw await _errorFromResponse(res, path);
-  return res.json() as Promise<T>;
+  return (await authedFetch("GET", path)).json() as Promise<T>;
 }
 
 async function authedPost<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "POST",
-    headers: {
-      ...(await authedHeaders()),
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (res.status === 401) throw new AuthRequiredError();
-  if (!res.ok) throw await _errorFromResponse(res, path);
-  return res.json() as Promise<T>;
+  return (await authedFetch("POST", path, body || undefined)).json() as Promise<T>;
 }
 
 async function authedPatch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "PATCH",
-    headers: { ...(await authedHeaders()), "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (res.status === 401) throw new AuthRequiredError();
-  if (!res.ok) throw await _errorFromResponse(res, path);
-  return res.json() as Promise<T>;
+  return (await authedFetch("PATCH", path, body)).json() as Promise<T>;
 }
 
 async function authedDelete(path: string): Promise<void> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "DELETE",
-    headers: await authedHeaders(),
-  });
-  if (res.status === 401) throw new AuthRequiredError();
-  if (!res.ok) throw await _errorFromResponse(res, path);
+  await authedFetch("DELETE", path);
 }
 
 /** Like authedDelete, but for unassign-style endpoints that return the
  * updated parent resource instead of 204 No Content. */
 async function authedDeleteReturning<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "DELETE",
-    headers: await authedHeaders(),
-  });
-  if (res.status === 401) throw new AuthRequiredError();
-  if (!res.ok) throw await _errorFromResponse(res, path);
-  return res.json() as Promise<T>;
+  return (await authedFetch("DELETE", path)).json() as Promise<T>;
 }
 
 export function fetchCards(): Promise<Card[]> {
@@ -3686,14 +3664,7 @@ export function updateWishlistItem(
 /** Soft delete - the backend sets status=removed rather than physically
  * deleting the row, and returns the updated item (not 204). */
 export function removeWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
-  const path = `/wishlist/${wishlistItemId}`;
-  return (async () => {
-    const headers = await authedHeaders();
-    const res = await fetch(`${API_URL}${path}`, { method: "DELETE", headers });
-    if (res.status === 401) throw new AuthRequiredError();
-    if (!res.ok) throw await _errorFromResponse(res, path);
-    return res.json() as Promise<WishlistItem>;
-  })();
+  return authedDeleteReturning<WishlistItem>(`/wishlist/${wishlistItemId}`);
 }
 
 export function markWishlistItemPurchased(
