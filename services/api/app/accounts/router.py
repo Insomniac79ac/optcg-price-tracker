@@ -31,6 +31,7 @@ from app.accounts.schemas import (
     PreferencesOut,
     PreviewOut,
     PreviewPointOut,
+    ProfileOut,
     RecordedChangeOut,
     ReleaseShareOut,
     StepOut,
@@ -402,6 +403,12 @@ def remove_from_watchlist(
 # --------------------------------------------------------------------------
 # Preferences, export, account deletion
 # --------------------------------------------------------------------------
+
+
+@router.get("/profile", response_model=ProfileOut)
+def get_profile(response: Response, user: User = Depends(require_current_user)):
+    _private(response)
+    return ProfileOut(email=user.email, name=user.name, member_since=user.created_at)
 
 
 @router.get("/preferences", response_model=PreferencesOut)

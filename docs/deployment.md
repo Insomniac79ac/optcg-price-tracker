@@ -100,7 +100,7 @@ cp .env.production.example .env.production
 | `API_JWT_SECRET` | yes in production | Shared between `api` and `web` - verifies the per-user bearer token the web app mints on sign-in. See [Per-user auth](#10-per-user-auth-google-login). Generate with e.g. `openssl rand -hex 32`, distinct from `ADMIN_TOKEN`. |
 | `AUTH_SECRET` | yes in production | Auth.js's own session-encryption secret (web only). Generate with `openssl rand -base64 33`. |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | yes in production | From a Google Cloud OAuth 2.0 Client ID (web only). See [Per-user auth](#10-per-user-auth-google-login). |
-| `CORS_ALLOWED_ORIGINS` / `CORS_ALLOW_ORIGIN_REGEX` | optional | Locks the API's CORS policy down to your deployed frontend's origin(s) instead of the dev default `*`. See `services/api/app/main.py`. |
+| `CORS_ALLOWED_ORIGINS` / `CORS_ALLOW_ORIGIN_REGEX` | recommended | The browser origins allowed to call the API. Unset: `*` only in development, the staging alias on staging, no cross-origin access otherwise (Collector v1 S5). See `services/api/app/web_cors.py`. |
 | `WEB_PORT` | optional | Host port `web` is published on - default `3000`. See [section 6](#6-starting-production-services). |
 | `RATE_LIMIT_ENABLED` | optional | Default `true`. See [section 12](#12-security-headers-csp-and-rate-limiting) - leaving this on is strongly recommended unless a reverse proxy already enforces limits. |
 | `RATE_LIMIT_PUBLIC_READ_PER_5M` / `RATE_LIMIT_COLLECTION_WRITE_PER_5M` / `RATE_LIMIT_ADMIN_PER_5M` / `RATE_LIMIT_IMPORT_EXPORT_PER_10M` / `RATE_LIMIT_SEARCH_PER_5M` | optional | Per-route-group request limits - see [section 12](#12-security-headers-csp-and-rate-limiting) for defaults and what each group covers. |
@@ -379,17 +379,20 @@ accounts at all.
 
 **How it works**: the web app uses [Auth.js](https://authjs.dev) (`next-auth@5`) with a Google
 provider, in stateless JWT session mode (no database adapter - Auth.js itself never touches
-Postgres). On sign-in, `apps/web/src/lib/auth.ts`'s `session` callback mints a *separate*,
-short-lived (1 hour) HS256 bearer token signed with `API_JWT_SECRET`, exposed to client code as
-`session.apiToken`. Every `/collection`/`/grading`/`/collector` request attaches this as
-`Authorization: Bearer <token>`; the API verifies it with the same `API_JWT_SECRET`
-(`services/api/app/auth.py::require_current_user`) and JIT-provisions a `User` row the first time
-a given Google account is seen - there is no separate signup step. This two-token design (Auth.js's
-own encrypted session cookie, plus this app-specific bearer token) exists because the API is
-typically deployed on a different host/domain than the web app (see the Railway+Vercel section
-below) - a cross-domain cookie would hit browser SameSite/third-party-cookie restrictions, and
-replicating Auth.js's own JWE session-decryption in Python is needlessly fragile. A plain shared
-secret + bearer header works identically regardless of hosting topology.
+Postgres). Since Collector v1 S5 (2026-10-14) the browser never holds an API token: the Auth.js
+session object carries none. Collector pages call same-origin Next route handlers (`/api/me/**`,
+and `/api/me/legacy/**` for the pre-v1 collection and wishlist pages), which check the
+collector session cookie and mint a *separate*, short-lived (5 minute) HS256 bearer token signed
+with `API_JWT_SECRET` server-side (`apps/web/src/lib/collectorApi.ts`), then call
+`API_INTERNAL_URL` with `Authorization: Bearer <token>`. The API verifies it with the same
+`API_JWT_SECRET` (`services/api/app/auth.py::require_current_user`) and JIT-provisions a `User`
+row the first time a given Google account is seen - there is no separate signup step. Only a
+Google ("collector") session gets a token; an admin session never does. Mutating collector routes
+also refuse cross-site requests (`Origin`/`Sec-Fetch-Site`). This two-token design (Auth.js's own
+encrypted session cookie, plus this app-specific bearer token) exists because the API is typically
+deployed on a different host than the web app, and replicating Auth.js's JWE session decryption
+in Python is needlessly fragile; keeping the token server-side means no script on the page can
+read it.
 
 **Setup**:
 1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth

@@ -50,6 +50,7 @@ const PROTECTED_TOOLS = [
   "/collection",
   "/collection/vault",
   "/wishlist",
+  "/account",
   "/analytics/collection",
   "/analytics/wishlist",
 ];
@@ -121,7 +122,7 @@ describe("expired admin navigation", () => {
 
 describe("signed-in visitor", () => {
   beforeEach(() => {
-    authMode = { mode: "session", session: { user: { email: "collector@example.com" } } };
+    authMode = { mode: "session", session: { user: { email: "collector@example.com" }, sessionKind: "collector" } };
   });
 
   it("reaches protected tools", async () => {
@@ -135,6 +136,22 @@ describe("signed-in visitor", () => {
   it("keeps the existing legacy card-keyed behaviour", async () => {
     const res = await get("/cards/1");
     expect(isNotFoundRewrite(res)).toBe(false);
+    expect(location(res)).toBe("");
+  });
+});
+
+describe("admin session on collector routes (Collector v1 S5)", () => {
+  beforeEach(() => {
+    authMode = { mode: "session", session: { user: { email: "admin@example.com", role: "admin" }, sessionKind: "admin" } };
+  });
+
+  it.each(PROTECTED_TOOLS)("sends an admin on %s to the sign-in invite", async (path) => {
+    const res = await get(path);
+    expect(location(res), path).toBe(`/sign-in?callbackUrl=${encodeURIComponent(path)}`);
+  });
+
+  it("still lets the admin into /admin", async () => {
+    const res = await get("/admin/logs");
     expect(location(res)).toBe("");
   });
 });

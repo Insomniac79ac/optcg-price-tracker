@@ -33,13 +33,20 @@ COPY services/api/. .
 RUN python -c "from app.services.canonical_listing_identity import canonical_source_listing_identity as derive; from opcg_source_identity.vectors import verify_contract; verify_contract(derive)"
 
 # Release/build metadata - see app/core/version.py (GET /version, GET
-# /health, GET /admin/release-status). Same convention as
-# services/api/Dockerfile - set these as Railway build args if you want
-# GET /version to report a real git commit/build time instead of "unknown".
+# /health, GET /admin/release-status) and app/error_tracking.py (Sentry
+# release). Same convention as services/api/Dockerfile.
+#
+# Railway passes its own build-time variables to a Dockerfile build only
+# when the Dockerfile declares them with ARG
+# (https://docs.railway.com/guides/dockerfiles, checked 2026-10-14). A
+# GitHub-triggered deploy sets RAILWAY_GIT_COMMIT_SHA, so declaring it here
+# is what makes /health and Sentry carry the deployed commit instead of
+# "unknown"; an explicit GIT_COMMIT build arg still works for other builds.
+ARG RAILWAY_GIT_COMMIT_SHA
 ARG GIT_COMMIT=unknown
 ARG BUILD_TIME=unknown
 ARG APP_VERSION=0.1.0
-ENV GIT_COMMIT=${GIT_COMMIT}
+ENV GIT_COMMIT=${RAILWAY_GIT_COMMIT_SHA:-${GIT_COMMIT}}
 ENV BUILD_TIME=${BUILD_TIME}
 ENV APP_VERSION=${APP_VERSION}
 

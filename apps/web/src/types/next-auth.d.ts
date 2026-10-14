@@ -4,7 +4,6 @@ declare module "next-auth" {
   interface Session {
     sessionKind?: "admin" | "collector";
     adminSessionExpired?: boolean;
-    apiToken?: string;
     user?: DefaultSession["user"] & {
       id?: string;
       // Only ever "admin", for the temporary Credentials-based admin login

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { collectorAuthHeaders } from "@/lib/collectorApi";
 
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
 // Defaults to the docker-compose service DNS name so this route works from
@@ -10,11 +10,11 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.apiToken) {
+  const collectorAuth = await collectorAuthHeaders();
+  if (!collectorAuth) {
     return NextResponse.json({ error: "Sign-in required" }, { status: 401 });
   }
-  const headers: Record<string, string> = { Authorization: `Bearer ${session.apiToken}` };
+  const headers: Record<string, string> = { ...collectorAuth };
 
   const backendUrl = `${API_INTERNAL_URL}/wishlist/export.csv`;
 

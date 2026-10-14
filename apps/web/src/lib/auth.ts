@@ -3,9 +3,6 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { JWT } from "next-auth/jwt";
-import { SignJWT } from "jose";
-
-const API_JWT_TTL = "1h";
 
 // Temporary staging-only admin login (collector-blueprint.pdf, admin-login
 // task) - a Credentials provider alongside the existing Google provider,
@@ -20,14 +17,6 @@ const API_JWT_TTL = "1h";
 // standing up a full NextAuth request/response cycle - see auth.test.ts.
 export const ADMIN_CREDENTIALS_PROVIDER_ID = "admin-credentials";
 const ADMIN_LOGIN_MAX_INPUT_LENGTH = 1024;
-
-function apiJwtSecretKey(): Uint8Array {
-  const secret = process.env.API_JWT_SECRET;
-  if (!secret) {
-    throw new Error("API_JWT_SECRET is not configured");
-  }
-  return new TextEncoder().encode(secret);
-}
 
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
 // Same convention/fallback as every /api/admin/** route handler (see
@@ -190,9 +179,14 @@ export function applyJwtCallback({ token, profile, user, account }: JwtCallbackP
 }
 
 /** The session callback body - see auth.test.ts for what this must and
- * must not expose (role, never API_JWT_SECRET/ADMIN_TOKEN/a password hash;
- * never mints the collector apiToken for an admin session - see the
- * comment inline below for why). */
+ * must not expose (role, never API_JWT_SECRET/ADMIN_TOKEN/a password hash,
+ * and never a bearer token of any kind).
+ *
+ * Collector v1 S5 (PLAN §D1, owner decision Q2): the session no longer
+ * carries an `apiToken`. Everything on this object reaches the browser
+ * through /api/auth/session, so a bearer token here was readable by any
+ * script on the page. Per-user API calls now go through same-origin route
+ * handlers that mint a 5-minute token server-side (src/lib/collectorApi.ts). */
 export async function applySessionCallback({
   session,
   token,
@@ -206,34 +200,8 @@ export async function applySessionCallback({
     session.user.id = token.sub as string;
     session.user.role = token.role === "admin" && !session.adminSessionExpired ? "admin" : undefined;
   }
-
-  if (session.sessionKind === "admin") {
-    // Admin sessions authenticate to the backend via a server-side-
-    // injected ADMIN_TOKEN (see src/lib/adminProxy.ts), never this
-    // per-user bearer JWT - minting one here would needlessly JIT-
-    // provision a phantom `users` row for the fixed "staging-admin"
-    // subject the moment anything ever presented it to
-    // require_current_user (see services/api/app/auth.py).
-    delete session.apiToken;
-    return session;
-  }
-
-  // Mints a short-lived, separately-signed bearer token for the FastAPI
-  // backend (which lives on a different host/domain and can't easily
-  // verify NextAuth's own encrypted session JWE) - see docs/deployment.md
-  // for the full rationale. Session-only; never persisted anywhere besides
-  // the client's in-memory session object.
-  const apiToken = await new SignJWT({
-    email: token.email as string,
-    name: token.name as string | undefined,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(token.sub as string)
-    .setIssuedAt()
-    .setExpirationTime(API_JWT_TTL)
-    .sign(apiJwtSecretKey());
-
-  session.apiToken = apiToken;
+  // Defensive: nothing upstream should set it any more.
+  delete (session as Session & { apiToken?: unknown }).apiToken;
   return session;
 }
 

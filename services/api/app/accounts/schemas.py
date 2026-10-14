@@ -239,6 +239,14 @@ class WatchlistOut(BaseModel):
     entries: list[WatchlistEntryOut]
 
 
+class ProfileOut(BaseModel):
+    """What /account shows. Name and email come from Google at sign-in."""
+
+    email: str
+    name: str | None
+    member_since: datetime
+
+
 class PreferencesOut(BaseModel):
     currency: Currency
     collection_visibility: Literal["private"]

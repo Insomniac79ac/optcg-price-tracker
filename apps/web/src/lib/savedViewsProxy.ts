@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { collectorAuthHeaders, crossSiteRejection } from "@/lib/collectorApi";
 
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
 // Defaults to the docker-compose service DNS name so this route works from
@@ -20,8 +20,10 @@ export async function proxySavedViews(
   request: NextRequest,
   backendPath: string,
 ): Promise<NextResponse> {
-  const session = await auth();
-  if (!session?.apiToken) {
+  const rejected = crossSiteRejection(request);
+  if (rejected) return rejected;
+  const collectorAuth = await collectorAuthHeaders();
+  if (!collectorAuth) {
     return NextResponse.json({ error: "Sign-in required" }, { status: 401 });
   }
 
@@ -40,7 +42,7 @@ export async function proxySavedViews(
     backendResponse = await fetch(backendUrl, {
       method,
       headers: {
-        Authorization: `Bearer ${session.apiToken}`,
+        ...collectorAuth,
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
       body,

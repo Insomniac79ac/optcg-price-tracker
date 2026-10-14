@@ -232,10 +232,10 @@ function makeAccount(provider: string): Account {
 describe("applyJwtCallback", () => {
   it("recovers an already-demoted legacy administrator without granting access", async () => {
     const token = applyJwtCallback({ token: { sub: "staging-admin", email: "admin@example.com" } });
-    const session = await applySessionCallback({ session: { user: {}, apiToken: "stale" } as Session, token });
+    const session = await applySessionCallback({ session: { user: {}, apiToken: "stale" } as unknown as Session, token });
     expect(session).toMatchObject({ sessionKind: "admin", adminSessionExpired: true });
     expect(session.user?.role).toBeUndefined();
-    expect(session.apiToken).toBeUndefined();
+    expect(session).not.toHaveProperty("apiToken");
     expect(token.roleExpiresAt).toBeUndefined();
   });
 
@@ -266,10 +266,10 @@ describe("applyJwtCallback", () => {
       expect(token).toMatchObject({ sessionKind: "admin", adminSessionExpired: true });
       expect(token.role).toBeUndefined();
       expect(applyJwtCallback({ token }).role).toBeUndefined();
-      const session = await applySessionCallback({ session: { user: {}, apiToken: "stale" } as Session, token });
+      const session = await applySessionCallback({ session: { user: {}, apiToken: "stale" } as unknown as Session, token });
       expect(session).toMatchObject({ sessionKind: "admin", adminSessionExpired: true });
       expect(session.user?.role).toBeUndefined();
-      expect(session.apiToken).toBeUndefined();
+      expect(session).not.toHaveProperty("apiToken");
       expect(JSON.stringify(session)).not.toMatch(/roleExpiresAt|password|hash|secret|ADMIN_TOKEN|stale/);
       token = applyJwtCallback({ token, ...signIn() });
       expect(token).toMatchObject({ role: "admin", sessionKind: "admin", adminSessionExpired: false, roleExpiresAt: Date.now() + ADMIN_SESSION_MAX_AGE_MS });
@@ -367,23 +367,22 @@ describe("applySessionCallback", () => {
     expect(result.user?.role).toBe("admin");
   });
 
-  it("does not mint a collector apiToken for an admin session", async () => {
-    const session = { user: {} } as Session;
-    const token = { role: "admin", sub: "staging-admin", email: "admin@example.com" } as JWT;
-
-    const result = await applySessionCallback({ session, token });
-
-    expect(result.apiToken).toBeUndefined();
-  });
-
-  it("mints an apiToken for a collector (non-admin) session", async () => {
-    const session = { user: {} } as Session;
-    const token = { sub: "google-123", email: "collector@example.com" } as JWT;
-
-    const result = await applySessionCallback({ session, token });
-
-    expect(typeof result.apiToken).toBe("string");
-    expect(result.apiToken?.split(".")).toHaveLength(3);
+  // Collector v1 S5 (PLAN §D1): the session object reaches the browser via
+  // /api/auth/session, so it must never carry a bearer token of any kind.
+  it.each([
+    ["admin", { role: "admin", sub: "staging-admin", email: "admin@example.com" }],
+    ["collector", { sub: "google-123", email: "collector@example.com", sessionKind: "collector" }],
+  ] as const)("puts no bearer token on a %s session", async (_kind, claims) => {
+    vi.stubEnv("API_JWT_SECRET", "test-secret-value-for-session-json");
+    try {
+      const result = await applySessionCallback({ session: { user: {} } as Session, token: { ...claims } as JWT });
+      const json = JSON.stringify(result);
+      expect(result).not.toHaveProperty("apiToken");
+      expect(json).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\./);
+      expect(json).not.toMatch(/apiToken|Bearer|test-secret-value/);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("leaves role undefined on a collector session", async () => {

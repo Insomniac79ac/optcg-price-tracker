@@ -147,8 +147,9 @@ by the Auth.js session cookie instead. `matchSnkrdunkCandidate`/`rejectSnkrdunkC
 direct-to-backend but are dead code - no page currently calls them (the live snkrdunk-candidates
 page uses the newer `/admin/snkrdunk-candidates/*` proxy routes for match/reject actions instead).
 
-**Per-user pages** (`authedGet`/`authedPost`/`authedPatch`/`authedDelete`, bearer token from the
-NextAuth session attached): every read/write behind `/collection`, `/wishlist`, `/grading`, and
+**Per-user pages** (`authedGet`/`authedPost`/`authedPatch`/`authedDelete`; since Collector v1 S5
+these call the same-origin `/api/me/legacy/**` route handler, which mints a 5-minute bearer token
+server-side - the browser holds no token and never calls the API for per-user data): every read/write behind `/collection`, `/wishlist`, `/grading`, and
 `/collector` (tags/groups/notes/activity) - e.g. `fetchCollectionItems`, `createCollectionItem`,
 `fetchGradingSubmissions`, `createGradingSubmission`, `fetchWishlistItems`,
 `createWishlistItem`, `fetchCollectorTags`, `createCollectorTag`, `fetchCollectorActivity`, and
@@ -160,8 +161,9 @@ their corresponding update/delete functions.
   detail pages will fail with network errors in the browser. (The admin alert/refresh-run/snkrdunk
   pages no longer need this - see the `fetchAlertEvents` note above.)
 - Because the browser calls a different origin (`*.up.railway.app`) than the page is served from
-  (`*.vercel.app`), Railway's `api` service **must** set `CORS_ALLOWED_ORIGINS`/
-  `CORS_ALLOW_ORIGIN_REGEX` to the Vercel staging domain (see `services/api/app/main.py`), or every
+  (`*.vercel.app`) for public reads, Railway's `api` service sets `CORS_ALLOWED_ORIGINS` to the
+  Vercel staging alias (without it, staging falls back to that alias; see
+  `services/api/app/web_cors.py`). Any other origin is refused, so every
   one of these calls fails as a CORS error, not a 4xx/5xx - check the browser console, not just
   the Network tab's status codes, if these pages don't load.
 - `api` therefore cannot be made Railway-private-only for this app in its current form, unlike a

@@ -61,7 +61,7 @@ from app.core.security_headers import SecurityHeadersMiddleware
 from app.error_tracking import init_error_tracking
 from app.services.app_logging import record_app_log
 from app.services.job_locks import LockHeldError
-from app.settings import settings
+from app.web_cors import cors_options
 
 logger = logging.getLogger(__name__)
 
@@ -158,17 +158,9 @@ async def _lock_held_error_handler(request: Request, exc: LockHeldError) -> JSON
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS_ALLOWED_ORIGINS unset (dev default) keeps the wide-open "*" this app
-# has always used locally. Set it (e.g. to the Vercel frontend's origin) to
-# lock this down in production - see app/settings.py.
-_cors_origins = [o.strip() for o in (settings.CORS_ALLOWED_ORIGINS or "").split(",") if o.strip()]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins or ["*"],
-    allow_origin_regex=settings.CORS_ALLOW_ORIGIN_REGEX,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Allowed browser origins: app/web_cors.py (Collector v1 S5). Unset
+# CORS_ALLOWED_ORIGINS no longer means "*" outside development.
+app.add_middleware(CORSMiddleware, **cors_options())
 app.add_middleware(RequestTimingMiddleware)
 app.add_middleware(ResponseSizeMiddleware)
 

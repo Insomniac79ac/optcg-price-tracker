@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { adminAuthHeaders } from "@/lib/adminProxy";
 import { auth } from "@/lib/auth";
+import { collectorAuthHeadersFor } from "@/lib/collectorApi";
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
@@ -12,7 +13,7 @@ const BACKEND_TIMEOUT_MS = 15_000;
 async function buildHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   const session = await auth();
-  if (session?.apiToken) headers["Authorization"] = `Bearer ${session.apiToken}`;
+  Object.assign(headers, (await collectorAuthHeadersFor(session)) ?? {});
   if (session?.user?.role === "admin") Object.assign(headers, adminAuthHeaders());
   return headers;
 }
