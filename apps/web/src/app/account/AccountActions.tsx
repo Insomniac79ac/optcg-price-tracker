@@ -50,7 +50,6 @@ export function DeleteAccount() {
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
           className="min-h-11 w-full rounded-control border border-border-default bg-transparent px-3 text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 sm:max-w-xs md:min-h-9"
-          placeholder={DELETE_CONFIRMATION}
         />
         <ActionButton variant="danger" className={BUTTON_SIZE} disabled={!confirmed || state === "deleting"} onClick={deleteAccount}>
           {state === "deleting" ? "Deleting…" : "Delete my account"}

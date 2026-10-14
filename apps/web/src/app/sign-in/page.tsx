@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/AppHeader";
 import { AtlasMapSurface, AtlasVisualSystem } from "@/components/ui/AtlasPrimitives";
@@ -42,12 +43,15 @@ export default async function SignInPage({
   const params = await searchParams;
   const callbackUrl = sanitizeCallbackUrl(params.callbackUrl);
   const googleConfigured = isGoogleOAuthConfigured();
-  let adminSignedIn = false;
+  let sessionKind: string | undefined;
   try {
-    adminSignedIn = (await auth())?.sessionKind === "admin";
+    sessionKind = (await auth())?.sessionKind;
   } catch {
     // An unreadable session is treated as signed out; the invite is the same.
   }
+  // Already a collector: nothing to invite to, go where they were heading.
+  if (sessionKind === "collector") redirect(callbackUrl);
+  const adminSignedIn = sessionKind === "admin";
 
   return (
     <div className="min-h-screen">

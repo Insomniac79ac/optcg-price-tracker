@@ -251,8 +251,9 @@ function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: b
         // The collector's own account page (Collector v1 S5, PLAN §D4).
         <Link
           href="/account"
-          title={session.user?.email ?? undefined}
-          className="flex h-11 min-w-0 shrink items-center rounded-control px-1.5 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8"
+          title={`Your account (${session.user?.email ?? ""})`}
+          aria-current={pathname === "/account" ? "page" : undefined}
+          className={`flex h-11 min-w-0 shrink items-center rounded-control px-1.5 font-medium underline-offset-4 transition-colors hover:text-text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 ${pathname === "/account" ? "text-text-primary underline decoration-accent-gold" : "text-text-secondary"}`}
         >
           <span className="hidden max-w-[10rem] truncate sm:inline">{session.user?.name || session.user?.email}</span>
           <span className="sm:hidden">Account</span>

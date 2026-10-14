@@ -7,6 +7,7 @@ vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
+  redirect: (url: string) => { throw new Error(`NEXT_REDIRECT ${url}`); },
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/sign-in",
 }));
@@ -112,5 +113,10 @@ describe("SignInPage (neutral sign-in-required route)", () => {
     const { container } = render(ui);
     expect(container.innerHTML).not.toContain("super-secret-client-id-value");
     expect(container.innerHTML).not.toContain("super-secret-client-secret-value");
+  });
+
+  it("sends an already signed-in collector on to the requested page", async () => {
+    authMock.mockResolvedValueOnce({ user: { email: "c@example.com" }, sessionKind: "collector" });
+    await expect(SignInPage({ searchParams: Promise.resolve({ callbackUrl: "/account" }) })).rejects.toThrow("NEXT_REDIRECT /account");
   });
 });
