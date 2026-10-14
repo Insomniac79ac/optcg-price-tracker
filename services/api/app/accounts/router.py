@@ -7,12 +7,13 @@ bearer token). Every read and write is scoped to that user.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
-from app.accounts import service, valuation
+from app.accounts import service, valuation, value_history
 from app.accounts.config import require_accounts_enabled
 from app.accounts.schemas import (
     CollectionEntryCreateIn,
@@ -21,11 +22,16 @@ from app.accounts.schemas import (
     CollectionOut,
     CollectionValueOut,
     CoverageOut,
+    HistoryOut,
+    HistoryPointOut,
     MoverOut,
     MoversOut,
     PaidOut,
     PreferencesIn,
     PreferencesOut,
+    PreviewOut,
+    PreviewPointOut,
+    RecordedChangeOut,
     ReleaseShareOut,
     StepOut,
     WatchlistEntryCreateIn,
@@ -77,6 +83,53 @@ def _step(step: valuation.EndpointStep) -> dict:
 
 def _mover(mover: valuation.Mover) -> MoverOut:
     return MoverOut(**mover.__dict__)
+
+
+def _recorded_change(change: value_history.RecordedChange) -> RecordedChangeOut:
+    return RecordedChangeOut(
+        window=change.window,
+        available=change.available,
+        reason=change.reason,
+        from_date=change.from_date,
+        to_date=change.to_date,
+        change_pct=change.change_pct,
+        missing_dates=list(change.missing_dates),
+        failed_step_date=change.failed_step_date,
+    )
+
+
+def _history(points, window: str, as_of) -> HistoryOut:
+    change = value_history.recorded_change(points, window, as_of)
+    days = value_history.HISTORY_WINDOWS[window]
+    start = None if days is None or as_of is None else as_of - timedelta(days=days)
+    return HistoryOut(
+        methodology_version=value_history.METHODOLOGY_VERSION,
+        change=_recorded_change(change),
+        points=[
+            HistoryPointOut(
+                date=point.point_date,
+                value_jpy=point.value_jpy,
+                priced_cards=point.priced_cards,
+                total_cards=point.total_cards,
+                step_publishable=point.step_publishable,
+                step_reason=point.step_reason,
+                segment_number=point.segment_number,
+            )
+            for point in points
+            if (start is None or point.point_date >= start)
+            and (as_of is None or point.point_date <= as_of)
+        ],
+    )
+
+
+def _preview(result: value_history.Preview) -> PreviewOut:
+    return PreviewOut(
+        from_date=result.from_date,
+        to_date=result.to_date,
+        total_cards=result.total_cards,
+        change=_recorded_change(result.change),
+        points=[PreviewPointOut(**point.__dict__) for point in result.points],
+    )
 
 
 def _valued_collection(db: Session, user: User):
@@ -186,16 +239,27 @@ def remove_from_collection(
 @router.get("/collection/value", response_model=CollectionValueOut)
 def get_collection_value(
     response: Response,
-    window: Literal["7d", "30d"] = Query(default="7d"),
+    window: Literal["7d", "30d", "all"] = Query(default="7d"),
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ):
-    """Value today, what moved it, by set, and what you paid (PLAN C2, C4)."""
+    """Value today, what moved it, by set, what you paid, recorded history
+    and the day-one preview (PLAN C2, C3, C4)."""
     _private(response)
     entries, dates, as_of, values, _, coverage = _valued_collection(db, user)
-    inputs = valuation.load_window(
-        db, user.id, as_of=as_of, window_days=valuation.WINDOWS[window], dates=dates
-    )
+    points = value_history.list_points(db, user.id)
+    if window == "all":
+        # Movers for ALL compare the collection's first recorded day with today.
+        first = points[0].point_date if points else None
+        days = (as_of - first).days if first and as_of and first < as_of else None
+    else:
+        days = valuation.WINDOWS[window]
+    if days is None and as_of is not None:
+        inputs = valuation.EndpointStep(
+            available=False, reason="not_enough_price_history", prior_date=None, current_date=as_of
+        )
+    else:
+        inputs = valuation.load_window(db, user.id, as_of=as_of, window_days=days, dates=dates)
     step = valuation.window_step(inputs)
     releases = valuation.by_release(
         db, entries=entries, values=values, total_value=coverage.value_jpy, window=inputs
@@ -230,6 +294,19 @@ def get_collection_value(
             paid_jpy=paid.paid_jpy,
             priced_today_jpy=paid.priced_today_jpy,
             change_pct=paid.change_pct,
+        ),
+        history=_history(points, window, as_of),
+        preview=_preview(
+            value_history.preview(
+                db,
+                current_held={
+                    entry.card_print_id: entry.quantity
+                    for entry in entries
+                    if entry.card_print_id is not None
+                },
+                as_of=as_of,
+                dates=dates,
+            )
         ),
     )
 
