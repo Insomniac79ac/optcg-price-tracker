@@ -1,0 +1,11 @@
+{
+ "session": "collector-v1-s4",
+ "date": "2026-10-14",
+ "delivered": {"pr": 121, "merge_commit": "20f167e6383a6329513882d64c7f427911f4b51b", "receipt_verified_at": "2026-10-14T10:40:58Z", "collector_deployments": 0, "migration_revision": "3b7d9c1a5e20"},
+ "pending": [
+  "Natural 20:00Z market-index-snapshot run on 2026-10-14: collection_value no_op 0 rows; market_value 60 and card_pirate_index 1 succeeded; exit 0 (see HANDOFF.md 'Tonight's 20:00 UTC run')",
+  "This handoff PR's own staging-delivery receipt (expected scope skip, 0 collector deployments)"
+ ],
+ "next": "S5 (auth + account section): see HANDOFF.md 'For S5'",
+ "flags": {"COLLECTOR_ACCOUNTS_ENABLED": "unset", "PSA10": "off", "production": "not accessed"}
+}

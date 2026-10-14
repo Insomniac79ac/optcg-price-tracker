@@ -1,0 +1,39 @@
+{
+ "observed_at": "2026-10-14T08:43:45.617719+00:00",
+ "installed_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+ "base": "99806ef9d114ac310a4b6b9bc241e44966cf139e",
+ "head": "d3f51590619fea7ae8276daa1d32178a36f17faa",
+ "pr_files": [
+  "docs/collector_accounts.md",
+  "docs/market_value_daily_pipeline.md",
+  "docs/operations.md",
+  "services/api/app/accounts/router.py",
+  "services/api/app/accounts/schemas.py",
+  "services/api/app/accounts/value_history.py",
+  "services/api/app/market_index_daily_pipeline.py",
+  "services/api/tests/test_collection_value_history.py",
+  "services/api/tests/test_collection_value_history_import_graph.py",
+  "services/api/tests/test_collection_value_history_postgres.py"
+ ],
+ "touches_models_or_settings": [],
+ "collectors": {
+  "snkrdunk": {
+   "basis": "import-graph",
+   "changed_runtime_inputs_component_to_head": [],
+   "pr_files_in_import_set": [],
+   "import_set_size": 62,
+   "accounts_modules_reached": [],
+   "models_init_imported": true,
+   "settings_imported": true
+  },
+  "yuyutei": {
+   "basis": "import-graph",
+   "changed_runtime_inputs_component_to_head": [],
+   "pr_files_in_import_set": [],
+   "import_set_size": 73,
+   "accounts_modules_reached": [],
+   "models_init_imported": true,
+   "settings_imported": true
+  }
+ }
+}
