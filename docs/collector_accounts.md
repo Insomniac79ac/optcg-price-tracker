@@ -33,10 +33,22 @@ Apply: `alembic upgrade head` against staging (as for every migration,
 The downgrade **refuses** if any of the five tables holds a row: once collectors
 have data there, dropping it is deleting user data and needs a human decision.
 
+## From the browser (S5)
+
+The browser never calls these endpoints directly and never holds the bearer
+JWT. Pages use the same-origin route handler `/api/me/**` (for example
+`/api/me/export`, `DELETE /api/me?confirm=delete%20my%20account`), which
+requires a collector (Google) session, refuses cross-site mutating requests,
+mints a 5-minute token server-side and forwards to the path below
+(`apps/web/src/lib/collectorApi.ts`, `meProxy.ts`). The account page is
+`/account` (profile from `GET /me/profile`, preferences, export, delete,
+sign out).
+
 ## Endpoints (all under `/me`, bearer JWT, `Cache-Control: private, no-store`)
 
 | Method and path | What |
 |---|---|
+| `GET /me/profile` | Email, name and member-since date for `/account` (S5) |
 | `GET /me/collection` | Entries with value per card and in total, coverage, `as_of` |
 | `POST /me/collection` | Add an exact, active print (409 if already held) |
 | `PATCH/DELETE /me/collection/{id}` | Change or remove; each quantity change writes a ledger event |
