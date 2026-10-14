@@ -1,0 +1,101 @@
+"""Write docs/agent/STAGING_MISSION.json for the S4 code PR from the current diff vs origin/staging."""
+import json, subprocess, sys
+sys.path.insert(0, "scripts")
+import staging_policy as policy
+
+BASE = subprocess.check_output(["git", "merge-base", "HEAD", "origin/staging"], text=True).strip()
+files, digest = policy.change_evidence(BASE, "HEAD")
+code = [
+    "services/api/app/accounts/router.py",
+    "services/api/app/accounts/schemas.py",
+    "services/api/app/accounts/value_history.py",
+    "services/api/app/market_index_daily_pipeline.py",
+]
+tests = [
+    "services/api/tests/test_collection_value_history.py",
+    "services/api/tests/test_collection_value_history_import_graph.py",
+    "services/api/tests/test_collection_value_history_postgres.py",
+]
+docs = ["docs/collector_accounts.md", "docs/market_value_daily_pipeline.md", "docs/operations.md"]
+assert sorted(files) == sorted(code + tests + docs), sorted(set(files) ^ set(code + tests + docs))
+mission = {
+    "schema_version": 1,
+    "mission": "Collector v1 S4: daily collection value history stage (collection_value_points) after the receipt gate, plus 7D/30D/ALL and the labelled day-one preview on the dark /me/collection/value; no collector release",
+    "target": "staging",
+    "classification": "AMBER",
+    "red_decisions": {k: False for k in sorted(policy.RED)},
+    "impacts": [
+        {
+            "files": code,
+            "effects": ["application", "subsystem_activation"],
+            "reason": "New independent last stage of the live market-index-snapshot coordinator (python -m app.market_index_daily_pipeline, 20:00 UTC): after the receipt gate and after Market Value and CPI have finished, app.accounts.value_history.run_stage writes collection_value_points for the receipted day in its own session, REPEATABLE READ transaction and job lock (collection_value_history), insert-only with ON CONFLICT DO NOTHING plus full-field comparison. Its failure or held lock is reported as collection_value and cannot block or change the Market Value or CPI stages (fixture-comparison tests on SQLite and Postgres). Values are the existing Market Value usable values (receipted archive, positive only, Yuyu sale excluded); 80% comparable-value guard, no minimum card counts (owner Q4). /me/collection/value (404 while COLLECTOR_ACCOUNTS_ENABLED is off; unset on staging) gains window=all, recorded history and the labelled day-one preview (Q5). No change to Market Value, CPI, identity, prices, app/models/**, app/settings.py or requirements; collector import graph: 0 changed runtime inputs.",
+        },
+        {
+            "files": tests,
+            "effects": ["tests"],
+            "reason": "Step/window math vs an independent Fraction oracle; quantity changes never gain or loss; missing receipt or missing stage day is a break, never 0%; 80% guard with no minimum count; unpriced never 0; Yuyu sale excluded via the real snapshot path; idempotent rerun and fail-closed conflict; Market Value and CPI outputs identical with the stage stubbed, present, failing or locked; producer guard held during the stage; REPEATABLE READ; collector import graph.",
+        },
+        {
+            "files": docs,
+            "effects": ["documentation"],
+            "reason": "Recorded history rules, report field and rollback in collector_accounts.md; dated notes that the coordinator is the live staging start command (checked read-only 2026-10-14) in market_value_daily_pipeline.md and operations.md.",
+        },
+    ],
+    "deployment_verification": {
+        "api_sha": "merge",
+        "revision": "3b7d9c1a5e20",
+        "checks": [
+            "scripts/verify_snkr_published_discovery_component.py",
+            "scripts/verify_yuyu_raw_reader_component.py",
+        ],
+        "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+        "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+        "yuyu_capacity_cadence": True,
+    },
+    "safeguards": {
+        "impact": {
+            "resources": [
+                {"name": "Staging API", "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"},
+                {"name": "market-index-snapshot cron (API image, coordinator gains a last stage)", "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2"},
+                {"name": "Staging Postgres: collection_value_points (exists since 3b7d9c1a5e20, 0 rows)", "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a", "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7"},
+            ],
+            "routes": [
+                "GET /me/collection/value: window=all accepted; response gains history and preview. Still 404 while COLLECTOR_ACCOUNTS_ENABLED is off (staging: unset). No other route changes.",
+            ],
+            "dependencies": [
+                "market_index_snapshot_completions receipts and market_index_snapshots (read only)",
+                "collection_entry_events ledger (read only)",
+                "collection_value_points table from migration 3b7d9c1a5e20 (no new migration)",
+            ],
+            "deployment_impact": "API and market-index-snapshot redeploy on merge through their normal GitHub triggers. No web, collector watch path or collector-imported module change, so no collector build or rollout; collector_services is empty. No migration; revision stays 3b7d9c1a5e20. The next natural 20:00 UTC run executes the new stage; staging has 0 users and 0 ledger events, so it writes 0 rows.",
+            "database_writes": 0,
+            "source_requests": 0,
+            "estimated_runtime_minutes": 10,
+        },
+        "recovery": {
+            "artifact": BASE,
+            "procedure": "Native revert of this PR (API and market-index-snapshot redeploy through their normal triggers). Then delete the private, non-published rows: DELETE FROM collection_value_points WHERE methodology_version = 1 (0 rows expected on staging).",
+            "trigger": "verifier failure; Market Value or CPI stage status or inserted count leaving the usual pattern (succeeded, 60 and 1 on 2026-10-08..13) at the next 20:00 UTC run; collection_value stage failed; any /me route answering other than 404 while the flag is off; any collector deployment record after merge",
+            "backup": "Staging Postgres volume backup younger than 24 h confirmed immediately before merge (id and time in the S4 handoff). The change writes only collection_value_points (0 rows on staging) and modifies no existing row.",
+            "validation": [
+                "services/api/tests/test_collection_value_history.py",
+                "services/api/tests/test_collection_value_history_postgres.py",
+                "services/api/tests/test_collection_value_history_import_graph.py",
+                "services/api/tests/test_market_index_daily_pipeline.py",
+                "docs/collector_accounts.md",
+            ],
+        },
+        "verification": {
+            "required_checks": ["engineering-gate"],
+            "post_change": ["scripts/verify_staging_delivery.py", "scripts/generate_staging_state.py"],
+            "observation_window": "Delivery receipt with API at the merge, revision 3b7d9c1a5e20 and 0 collector deployments (Railway records); then the next natural 20:00 UTC market-index-snapshot run: report contains collection_value (no_op, 0 rows), Market Value and CPI succeeded with their usual inserted counts, exit 0.",
+        },
+    },
+    "diff_sha256": digest,
+}
+with open(policy.MANIFEST, "w") as handle:
+    json.dump(mission, handle, indent=1)
+    handle.write("\n")
+result = policy.evaluate(mission, files, digest)
+print(json.dumps(result))
+sys.exit(0 if result["eligible"] else 1)

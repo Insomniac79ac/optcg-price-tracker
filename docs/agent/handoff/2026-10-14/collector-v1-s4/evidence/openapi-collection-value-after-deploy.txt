@@ -1,0 +1,2 @@
+[{'enum': ['7d', '30d', 'all'], 'type': 'string', 'default': '7d', 'title': 'Window'}]
+['as_of', 'by_release', 'currency', 'history', 'movers', 'paid', 'preview', 'summary', 'window']

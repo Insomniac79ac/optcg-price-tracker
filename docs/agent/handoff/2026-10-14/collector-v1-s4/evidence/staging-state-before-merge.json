@@ -1,0 +1,72 @@
+{
+ "observed_at": "2026-10-14T08:45:11.712479+00:00",
+ "alembic": [
+  "3b7d9c1a5e20"
+ ],
+ "table_count": 60,
+ "account_tables": {
+  "collection_entries": {
+   "exists": true,
+   "rows": 0,
+   "total_bytes": 49152,
+   "indexes": [
+    "collection_entries_pkey",
+    "ix_collection_entries_card_print_id",
+    "ix_collection_entries_user_id",
+    "uq_collection_entries_legacy_item",
+    "uq_collection_entries_user_print"
+   ],
+   "columns": 12
+  },
+  "collection_entry_events": {
+   "exists": true,
+   "rows": 0,
+   "total_bytes": 16384,
+   "indexes": [
+    "collection_entry_events_pkey",
+    "ix_collection_entry_events_user_print_time"
+   ],
+   "columns": 6
+  },
+  "watchlist_entries": {
+   "exists": true,
+   "rows": 0,
+   "total_bytes": 49152,
+   "indexes": [
+    "ix_watchlist_entries_card_print_id",
+    "ix_watchlist_entries_user_id",
+    "uq_watchlist_entries_legacy_item",
+    "uq_watchlist_entries_user_print",
+    "watchlist_entries_pkey"
+   ],
+   "columns": 10
+  },
+  "user_preferences": {
+   "exists": true,
+   "rows": 0,
+   "total_bytes": 8192,
+   "indexes": [
+    "user_preferences_pkey"
+   ],
+   "columns": 4
+  },
+  "collection_value_points": {
+   "exists": true,
+   "rows": 0,
+   "total_bytes": 8192,
+   "indexes": [
+    "pk_collection_value_points"
+   ],
+   "columns": 16
+  }
+ },
+ "legacy_rows": {
+  "users": 0,
+  "collection_items": 0,
+  "wishlist_items": 0,
+  "cards": 25,
+  "saved_views": 0,
+  "search_history": 0
+ },
+ "database_bytes": 2929923775
+}

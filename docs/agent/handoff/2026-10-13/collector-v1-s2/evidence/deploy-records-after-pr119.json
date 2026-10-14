@@ -1,0 +1,160 @@
+{
+ "observed_at": "2026-10-14T10:42:52.379328+00:00",
+ "since": "2026-10-13T23:05:00Z",
+ "services": {
+  "Postgres": {
+   "since": [],
+   "latest": "176a0445-1ce8-4e4d-84cc-51dae3f6ec31"
+  },
+  "Redis": {
+   "since": [],
+   "latest": "bb0fba59-638c-48c9-8f24-b418c7d193cf"
+  },
+  "beat": {
+   "since": [
+    {
+     "id": "111e48cd-363a-4abf-a2cf-89c3082243a1",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-14T10:27:34.749Z",
+     "commitHash": "20f167e6383a6329513882d64c7f427911f4b51b"
+    },
+    {
+     "id": "06699694-a861-4b1f-aa6d-72a609acd96f",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-14T09:56:55.821Z",
+     "commitHash": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+    },
+    {
+     "id": "821fba4e-1841-4a21-9c5b-ce75469ea690",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-13T23:23:00.319Z",
+     "commitHash": "99806ef9d114ac310a4b6b9bc241e44966cf139e"
+    }
+   ],
+   "latest": "111e48cd-363a-4abf-a2cf-89c3082243a1"
+  },
+  "market-index-snapshot": {
+   "since": [
+    {
+     "id": "0538f22f-7546-4f70-afc5-d25494552be1",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-14T10:27:34.084Z",
+     "commitHash": "20f167e6383a6329513882d64c7f427911f4b51b"
+    },
+    {
+     "id": "4a27570d-83ec-4394-8cf1-4b56c195d3d3",
+     "status": "REMOVED",
+     "createdAt": "2026-10-14T09:56:55.019Z",
+     "commitHash": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+    },
+    {
+     "id": "09a9909f-9179-4dd3-b7c6-291ec56020b1",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-13T23:23:00.414Z",
+     "commitHash": "99806ef9d114ac310a4b6b9bc241e44966cf139e"
+    }
+   ],
+   "latest": "0538f22f-7546-4f70-afc5-d25494552be1"
+  },
+  "optcg-price-tracker": {
+   "since": [
+    {
+     "id": "3157a5ce-e074-4b23-9ac5-b45832a93d2e",
+     "status": "SUCCESS",
+     "createdAt": "2026-10-14T10:27:34.084Z",
+     "commitHash": "20f167e6383a6329513882d64c7f427911f4b51b"
+    },
+    {
+     "id": "e5b623b9-6aa1-472d-948b-ff1946494278",
+     "status": "REMOVED",
+     "createdAt": "2026-10-14T09:56:55.018Z",
+     "commitHash": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+    },
+    {
+     "id": "766ea18e-32e8-4223-ad3e-2d7f766b7434",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-13T23:23:00.346Z",
+     "commitHash": "99806ef9d114ac310a4b6b9bc241e44966cf139e"
+    }
+   ],
+   "latest": "3157a5ce-e074-4b23-9ac5-b45832a93d2e"
+  },
+  "snkrdunk-collector": {
+   "since": [],
+   "latest": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97"
+  },
+  "tmp-yuyu-discovery-4b": {
+   "since": [],
+   "latest": "f7ecde7b-3d13-438b-bf98-0db0a1c83c97"
+  },
+  "tmp-yuyu-shard-rehearsal": {
+   "since": [],
+   "latest": "a549db5a-331b-4f21-8452-502f51c97612"
+  },
+  "worker": {
+   "since": [
+    {
+     "id": "27a61eb5-db39-47f1-ad9f-74a1f9a8b438",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-14T10:27:34.721Z",
+     "commitHash": "20f167e6383a6329513882d64c7f427911f4b51b"
+    },
+    {
+     "id": "931f00f9-de01-4b37-89fa-775de02fa562",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-14T09:56:55.881Z",
+     "commitHash": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8"
+    },
+    {
+     "id": "0b58366e-58de-4abc-8fe4-c1902a264259",
+     "status": "SKIPPED",
+     "createdAt": "2026-10-13T23:23:00.384Z",
+     "commitHash": "99806ef9d114ac310a4b6b9bc241e44966cf139e"
+    }
+   ],
+   "latest": "27a61eb5-db39-47f1-ad9f-74a1f9a8b438"
+  },
+  "yuyutei-collector": {
+   "since": [],
+   "latest": "889fed4a-64f0-4e00-8aff-7795efd70294"
+  },
+  "yuyutei-collector-shard-0": {
+   "since": [],
+   "latest": "0a3c7f35-d282-4e25-8197-70f8f3283bfa"
+  },
+  "yuyutei-collector-shard-1": {
+   "since": [],
+   "latest": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a"
+  },
+  "yuyutei-collector-shard-2": {
+   "since": [],
+   "latest": "ac493f4b-bf25-4598-bd48-5f73c9d2c011"
+  },
+  "yuyutei-collector-shard-3": {
+   "since": [],
+   "latest": "e42e9c4a-b54d-495d-9010-072ecdaa3241"
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "since": [],
+   "latest": "548d1a23-9bc2-49d4-9d15-62a08edeca0d"
+  },
+  "yuyutei-collector-shard-5": {
+   "since": [],
+   "latest": "06d64d9a-6bfa-4f27-b75a-732b446bedbf"
+  },
+  "yuyutei-collector-shard-6": {
+   "since": [],
+   "latest": "5b4ff8a2-9465-4619-b321-8df037bcf925"
+  },
+  "yuyutei-collector-shard-7": {
+   "since": [],
+   "latest": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823"
+  },
+  "yuyutei-collector-shard-8": {
+   "since": [],
+   "latest": "ee64bf59-544e-47c3-a604-2fa2041f3baf"
+  }
+ },
+ "collector_services": 11,
+ "collector_deployments_since": 0
+}

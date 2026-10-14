@@ -1,0 +1,20 @@
+commit: 99806ef
+postgres: 18.6 (Debian 18.6-1.pgdg13+2) (localhost:5545); TEST_POSTGRES_URL/HOST/PORT/USER/PASSWORD set
+ignored: tests/test_raw_dictionary_storage_postgres.py (hardcoded :5544, held by another session)
+exit=0
+5154 passed, 41 skipped in 1069.49s (0:17:49)
+SKIPPED [1] tests/test_alembic_url_forms_postgres.py:43: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5545/opcg_test_a
+SKIPPED [1] tests/test_alembic_url_forms_postgres.py:43: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5545/opcg_test_b
+SKIPPED [1] tests/test_database_url_forms_postgres.py:32: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5545/opcg_test_a
+SKIPPED [1] tests/test_database_url_forms_postgres.py:32: No PostgreSQL server reachable at postgresql+psycopg://opcg:opcg@localhost:5545/opcg_test_b
+SKIPPED [1] tests/test_official_snapshot.py:477: no local snapshot to compare
+SKIPPED [1] tests/test_official_snapshot.py:573: no local snapshot to compare
+SKIPPED [1] tests/test_official_snapshot.py:599: no local snapshot to compare
+SKIPPED [1] tests/test_official_snapshot.py:620: no local snapshot to compare
+SKIPPED [1] tests/test_personal_search_ownership_migration.py:51: Set SEC8B_TEST_POSTGRES_URL to a disposable local PostgreSQL database
+SKIPPED [1] tests/test_personal_search_ownership_migration.py:70: Set SEC8B_TEST_POSTGRES_URL to a disposable local PostgreSQL database
+SKIPPED [6] tests/test_uncoded_product_evidence.py:41: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [6] tests/test_uncoded_product_evidence.py:53: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [1] tests/test_uncoded_product_evidence.py:64: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [6] tests/test_uncoded_product_evidence.py:71: frozen catalogue snapshots are gitignored (~1GB) and not checked out
+SKIPPED [12] tests/test_uncoded_product_evidence.py:102: frozen catalogue snapshots are gitignored (~1GB) and not checked out
