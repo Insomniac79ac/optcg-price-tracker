@@ -13,7 +13,7 @@ import { trackEvent } from "@/lib/analytics";
  * here. */
 export function GoogleSignInButton({ callbackUrl }: { callbackUrl: string }) {
   return (
-    <ActionButton variant="primary" onClick={() => {
+    <ActionButton variant="primary" className="min-h-11 px-4 text-sm font-semibold md:min-h-9" onClick={() => {
         trackEvent("sign_in_started", { page_type: "sign_in" });
         void signIn("google", { callbackUrl });
       }}>
