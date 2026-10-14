@@ -193,7 +193,13 @@ def staging_environment():
 # runs, not with the repository head. A docs or web merge moves the head while
 # every collector correctly stays on its release commit (and the API on its last
 # watched build), which used to raise this blocker falsely.
-GITHUB_BUILT_SERVICES = {"optcg-price-tracker", "market-index-snapshot"}
+GITHUB_BUILT_SERVICES = {"optcg-price-tracker", "market-index-snapshot", "official-images-mirror"}
+
+# Daily Railway cron on the API image (docs/official_images.md): the mirror,
+# then check_official_images. Either one exiting non-zero ends the run as a
+# failed deployment, which must be a blocker. A healthy run stays silent.
+OFFICIAL_IMAGES_SERVICE = "official-images-mirror"
+FAILED_RUN_STATUSES = {"CRASHED", "FAILED"}
 
 
 def collector_of(name):
@@ -283,6 +289,7 @@ def collect_live(database_expected_revisions=None):
             "optcg-price-tracker",
             "snkrdunk-collector",
             "market-index-snapshot",
+            OFFICIAL_IMAGES_SERVICE,
         } and not name.startswith("yuyutei-collector-shard-"):
             continue
         deployment = service.get("latestDeployment") or {}
@@ -599,6 +606,15 @@ def build_state(evidence):
             {
                 "id": "intentional-history-gap-populated",
                 "scope": "published history integrity",
+            }
+        )
+    official_images = by_name.get(OFFICIAL_IMAGES_SERVICE)
+    if official_images and official_images["status"] in FAILED_RUN_STATUSES:
+        blockers.append(
+            {
+                "id": "official-images-check-failed",
+                "scope": "self-hosted official card images",
+                "deployment_id": official_images["deployment_id"],
             }
         )
     repo_sha = evidence["repository"]["sha"]

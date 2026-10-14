@@ -12,7 +12,8 @@ and never overwritten or deleted. The only database write is one insert-only
 card_print_image_assets row per verified print.
 
 Exit codes: 0 all selected prints verified; 1 a failure, digest mismatch or a
-stopped run; 2 R2 not configured.
+stopped run; 2 R2 not configured; 3 another --write run holds the run lock
+(app.official_images.lock), so nothing was fetched.
 """
 
 from __future__ import annotations
@@ -21,7 +22,8 @@ import argparse
 import json
 import sys
 
-from app.db import SessionLocal
+from app.db import SessionLocal, engine
+from app.official_images.lock import mirror_run_lock
 from app.official_images.mirror import MIN_INTERVAL_FLOOR, pending_targets, run_mirror
 from app.services.object_storage import R2ConfigurationError, R2ObjectStorage
 
@@ -37,11 +39,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quiet", action="store_true", help="No per-print progress lines.")
     args = parser.parse_args(argv)
 
+    if args.dry_run:
+        with SessionLocal() as db:
+            targets = pending_targets(db, print_ids=args.print_ids, limit=args.limit)
+        print(json.dumps({"pending": len(targets), "first_print_ids": [t.card_print_id for t in targets[:10]]}))
+        return 0
+    with mirror_run_lock(engine) as acquired:
+        if not acquired:
+            print("Another official image mirror run holds the run lock; nothing fetched.", file=sys.stderr)
+            return 3
+        return _write(args)
+
+
+def _write(args: argparse.Namespace) -> int:
     with SessionLocal() as db:
         targets = pending_targets(db, print_ids=args.print_ids, limit=args.limit)
-        if args.dry_run:
-            print(json.dumps({"pending": len(targets), "first_print_ids": [t.card_print_id for t in targets[:10]]}))
-            return 0
         try:
             storage = R2ObjectStorage.from_settings()
         except R2ConfigurationError as exc:
