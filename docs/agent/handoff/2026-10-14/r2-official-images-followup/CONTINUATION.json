@@ -1,0 +1,42 @@
+{
+ "status": "code_delivered_service_pending_owner",
+ "written_at": "2026-10-14T10:25:00Z",
+ "staging_only": true,
+ "production_accessed": false,
+ "pr": 120,
+ "merge": "4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8",
+ "migration_revision": "3b7d9c1a5e20",
+ "collector_deployments_since_merge": 0,
+ "service": {
+  "name": "official-images-mirror",
+  "exists": false,
+  "schedule": "15 7 * * *",
+  "start_command": "/bin/sh -c \"python -m app.mirror_official_images --write --quiet && exec python -m app.check_official_images\"",
+  "variables": [
+   "DATABASE_URL",
+   "R2_ACCOUNT_ID",
+   "R2_ACCESS_KEY_ID",
+   "R2_SECRET_ACCESS_KEY",
+   "R2_BUCKET_NAME",
+   "R2_PUBLIC_BASE_URL"
+  ],
+  "create_steps": "RAILWAY-STEPS.md",
+  "create_after": "now: PR #121 delivery released 2026-10-14T10:40:58Z; avoid 19:30-20:30Z"
+ },
+ "receipts": {
+  "pr120": {
+   "ci_run": 38544725025,
+   "artifacts": [
+    "staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8",
+    "staging-credential-probe-52ed2a32c286d585fc6d6cd9b5e71a7c671866e0"
+   ],
+   "downloaded": "evidence/pr120-delivery/"
+  },
+  "pending": "this record's own docs-only PR: download its staging-delivery-<merge sha> artifact first"
+ },
+ "next": [
+  "read back official-images-mirror config from Railway (read-only, variable names only)",
+  "verify first 07:15 UTC run exits 0 and regenerated state has no official-images-check-failed",
+  "confirm 0 collector deployments after service creation"
+ ]
+}
