@@ -9,7 +9,6 @@ from app.settings import settings
 
 ACTION_PATHS = [
     "/admin/actions/refresh-prices",
-    "/admin/actions/snapshot-portfolio",
     "/admin/actions/full-market-refresh",
 ]
 
@@ -147,17 +146,6 @@ def test_refresh_prices_returns_409_when_lock_held(client, monkeypatch):
     assert body["expires_at"] == expires_at.isoformat()
 
 
-# --- POST /admin/actions/snapshot-portfolio ---------------------------------
-
-
-def test_snapshot_portfolio_creates_a_snapshot(client, db_session):
-    response = client.post("/admin/actions/snapshot-portfolio")
-
-    assert response.status_code == 200
-    snapshot_id = response.json()["snapshot_id"]
-    assert db_session.get(PortfolioValuationSnapshot, snapshot_id) is not None
-
-
 # --- POST /admin/actions/full-market-refresh --------------------------------
 
 
@@ -175,12 +163,13 @@ def test_full_market_refresh_happy_path(client, monkeypatch, db_session):
     assert body["price_refresh_run_id"] == 7
     assert body["dry_run"] is False
     assert body["warnings"] == []
-    assert body["portfolio_snapshot_id"] is not None
+    # The legacy collection snapshot was removed (Collector v1 S8).
+    assert body["portfolio_snapshot_id"] is None
+    assert db_session.query(PortfolioValuationSnapshot).count() == 0
     # The legacy signal/report/digest steps were removed (Collector v1 S1).
     assert "market_report_id" not in body
     assert "market_signal_snapshot" not in body
 
-    assert db_session.get(PortfolioValuationSnapshot, body["portfolio_snapshot_id"]) is not None
     assert db_session.query(MarketIntelligenceReport).count() == 0
 
 
@@ -221,28 +210,7 @@ def test_full_market_refresh_warns_on_price_refresh_failure_without_failing_requ
     body = response.json()
     assert body["price_refresh_run_id"] == 9
     assert any("adapter exploded" in w for w in body["warnings"])
-    # The snapshot still runs even though the refresh itself failed.
-    assert body["portfolio_snapshot_id"] is not None
-
-
-def test_full_market_refresh_reports_partial_failure_as_warning(client, monkeypatch, db_session):
-    monkeypatch.setattr(
-        admin_actions_module,
-        "trigger_price_refresh",
-        lambda source, limit, dry_run: ("job-9", {"id": 10, "status": "completed"}),
-    )
-
-    def failing_snapshot(db):
-        raise RuntimeError("disk full")
-
-    monkeypatch.setattr(admin_actions_module, "snapshot_portfolio_valuation", failing_snapshot)
-
-    response = client.post("/admin/actions/full-market-refresh", json={})
-
-    assert response.status_code == 200
-    body = response.json()
     assert body["portfolio_snapshot_id"] is None
-    assert any("disk full" in w for w in body["warnings"])
 
 
 def test_full_market_refresh_surfaces_trigger_failure_as_502(client, monkeypatch, db_session):

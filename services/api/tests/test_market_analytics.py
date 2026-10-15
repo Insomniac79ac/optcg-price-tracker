@@ -716,10 +716,9 @@ def test_market_analytics_is_public_like_the_rest_of_the_pricing_surface(client,
     assert not any(
         guarded(prints_api.router, route.path) for route in prints_api.router.routes
     )
-    # And the holdings endpoints in this SAME router stay gated, which is what
-    # makes the split data-subject-shaped rather than prefix-shaped.
-    assert guarded(analytics_api.router, "/analytics/collection")
-    assert guarded(analytics_api.router, "/analytics/wishlist")
+    # The holdings endpoints that once shared this router were removed in
+    # Collector v1 S8; holdings now live behind /me (accounts router).
+    assert not any(r.path in ("/analytics/collection", "/analytics/wishlist") for r in analytics_api.router.routes)
 
 
 # --- filter vocabulary (GET /analytics/market/filters) ----------------------

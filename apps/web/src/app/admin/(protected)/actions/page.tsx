@@ -13,17 +13,14 @@ import {
   AdminAuthRequiredError,
   triggerFullMarketRefresh,
   triggerRefreshPrices,
-  triggerSnapshotPortfolio,
 } from "@/lib/api";
 
 type ActionKey =
   | "refresh-prices"
-  | "snapshot-portfolio"
   | "full-market-refresh";
 
 const ACTION_LABELS: Record<ActionKey, string> = {
   "refresh-prices": "Refresh prices",
-  "snapshot-portfolio": "Portfolio snapshot",
   "full-market-refresh": "Full market refresh",
 };
 
@@ -45,17 +42,11 @@ function summarizeResult(action: ActionKey, data: unknown): { label: string; val
         { label: "Job ID", value: d.job_id ? String(d.job_id) : "not available" },
         { label: "Status", value: d.status ? String(d.status) : "not available" },
       ];
-    case "snapshot-portfolio":
-      return [{ label: "Snapshot ID", value: String(d.snapshot_id) }];
     case "full-market-refresh": {
       return [
         {
           label: "Price refresh run ID",
           value: d.price_refresh_run_id != null ? String(d.price_refresh_run_id) : "not available",
-        },
-        {
-          label: "Portfolio snapshot ID",
-          value: d.portfolio_snapshot_id != null ? String(d.portfolio_snapshot_id) : "not available",
         },
         { label: "Dry run", value: d.dry_run ? "yes" : "no" },
       ];
@@ -185,19 +176,6 @@ export default function AdminActionsPage() {
                   }
                 >
                   Run price refresh
-                </ActionButton>
-              </ActionCard>
-
-              <ActionCard title="Portfolio snapshot">
-                <p className="text-xs text-text-muted">
-                  Create one portfolio valuation snapshot from current data.
-                </p>
-                <ActionButton
-                  disabled={isBusy}
-                  pending={pendingAction === "snapshot-portfolio"}
-                  onClick={() => runAction("snapshot-portfolio", () => triggerSnapshotPortfolio())}
-                >
-                  Create portfolio snapshot
                 </ActionButton>
               </ActionCard>
 

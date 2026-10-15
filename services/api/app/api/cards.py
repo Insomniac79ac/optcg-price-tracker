@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.accounts.migrate_legacy import resolve_legacy_cards
 
-from app.auth import require_current_user, require_current_user_optional
+from app.auth import require_current_user_optional
 from app.core.pagination import pagination_response
 from app.db import get_db
-from app.models import Card, CardTag, CollectorTag, PriceObservation, Source, User
+from app.models import Card, CollectorTag, PriceObservation, Source, User
 from app.services.customer_prices import customer_price_clause
 from app.schemas import CardCatalogueListOut, CardOut, MarketIndexOut, PriceObservationOut
 from app.services.card_catalogue import SORT_KEYS, SortKey, get_catalogue_facets, list_catalogue
@@ -53,13 +53,6 @@ def _get_card_or_404(db: Session, card_id: int) -> Card:
     if card is None:
         raise HTTPException(status_code=404, detail="Card not found")
     return card
-
-
-def _get_tag_or_404(db: Session, tag_id: int, user: User) -> CollectorTag:
-    tag = db.get(CollectorTag, tag_id)
-    if tag is None or tag.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Tag not found")
-    return tag
 
 
 @router.get("/catalogue", response_model=CardCatalogueListOut)
@@ -214,44 +207,3 @@ def get_card_prices(card_id: int, db: Session = Depends(get_db)):
         for observation, source_name in rows
     ]
 
-
-@router.post("/{card_id}/tags/{tag_id}", response_model=CardOut)
-def assign_card_tag(
-    card_id: int,
-    tag_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_current_user),
-):
-    card = _get_card_or_404(db, card_id)
-    _get_tag_or_404(db, tag_id, user)
-
-    existing = db.scalar(
-        select(CardTag).where(CardTag.card_id == card_id, CardTag.tag_id == tag_id)
-    )
-    if existing is None:
-        db.add(CardTag(card_id=card_id, tag_id=tag_id))
-        db.commit()
-
-    tags_by_card = get_tags_for_cards(db, {card_id}, user_id=user.id)
-    return _to_card_out(card, tags_by_card.get(card_id, []))
-
-
-@router.delete("/{card_id}/tags/{tag_id}", response_model=CardOut)
-def unassign_card_tag(
-    card_id: int,
-    tag_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_current_user),
-):
-    card = _get_card_or_404(db, card_id)
-    _get_tag_or_404(db, tag_id, user)
-
-    assignment = db.scalar(
-        select(CardTag).where(CardTag.card_id == card_id, CardTag.tag_id == tag_id)
-    )
-    if assignment is not None:
-        db.delete(assignment)
-        db.commit()
-
-    tags_by_card = get_tags_for_cards(db, {card_id}, user_id=user.id)
-    return _to_card_out(card, tags_by_card.get(card_id, []))

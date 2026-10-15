@@ -2350,10 +2350,6 @@ export interface RefreshPricesResponse {
   warnings: string[];
 }
 
-export interface SnapshotPortfolioResponse {
-  snapshot_id: number;
-}
-
 export interface FullMarketRefreshRequest {
   source: string;
   limit?: number | null;
@@ -2362,7 +2358,6 @@ export interface FullMarketRefreshRequest {
 
 export interface FullMarketRefreshResponse {
   price_refresh_run_id: number | null;
-  portfolio_snapshot_id: number | null;
   dry_run: boolean;
   warnings: string[];
 }
@@ -2376,14 +2371,6 @@ export function triggerRefreshPrices(
   return fetchAdminJson<RefreshPricesResponse>("/api/admin/actions/refresh-prices", {
     method: "POST",
     body,
-  });
-}
-
-/** Routed through the Next.js server proxy (see
- * src/app/api/admin/actions/snapshot-portfolio/route.ts). */
-export function triggerSnapshotPortfolio(): Promise<SnapshotPortfolioResponse> {
-  return fetchAdminJson<SnapshotPortfolioResponse>("/api/admin/actions/snapshot-portfolio", {
-    method: "POST",
   });
 }
 

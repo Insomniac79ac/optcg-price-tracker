@@ -9,7 +9,6 @@ from worker.models import (
     AlertRule,
     Card,
     CollectionItem,
-    PortfolioValuationSnapshot,
     PriceObservation,
     Source,
 )
@@ -55,30 +54,6 @@ def make_collection_item(db_session, card: Card, **overrides) -> CollectionItem:
     db_session.add(item)
     db_session.flush()
     return item
-
-
-def make_snapshot(db_session, **overrides) -> PortfolioValuationSnapshot:
-    fields = dict(
-        total_items=1,
-        total_quantity=1,
-        total_cost_basis_jpy=1000,
-        retail_value_jpy=1000,
-        liquidation_value_jpy=1000,
-        market_floor_value_jpy=1000,
-        pnl_vs_retail_jpy=0,
-        pnl_vs_liquidation_jpy=0,
-        pnl_vs_market_floor_jpy=0,
-        items_missing_yuyutei_sell=0,
-        items_missing_yuyutei_buy=0,
-        items_missing_snkrdunk_floor=0,
-        items_missing_cost_basis=0,
-        cards_above_target_sell=0,
-    )
-    fields.update(overrides)
-    snapshot = PortfolioValuationSnapshot(**fields)
-    db_session.add(snapshot)
-    db_session.flush()
-    return snapshot
 
 
 @pytest.fixture(autouse=True)
@@ -247,53 +222,3 @@ def test_dry_run_logs_expected_alert_without_sending(db_session, stub_telegram, 
     assert len(stub_telegram) == 0
     assert db_session.query(AlertEvent).count() == 0
     assert "[dry-run] would send Telegram alert" in caplog.text
-
-
-def test_portfolio_value_change_alert_fires(db_session, stub_telegram):
-    add_rule(
-        db_session, name="Portfolio value change 10%", rule_type="portfolio_value_change_pct",
-        threshold_pct=10.0,
-    )
-
-    now = datetime.now(timezone.utc)
-    make_snapshot(db_session, market_floor_value_jpy=1000, created_at=now - timedelta(hours=1))
-    make_snapshot(db_session, market_floor_value_jpy=1300, created_at=now)
-
-    events = check_alerts(db_session, dry_run=False)
-
-    assert len(events) == 1
-    assert events[0].event_type == "portfolio_value_up"
-    assert events[0].status == "sent"
-
-    stored = db_session.query(AlertEvent).one()
-    assert "1000" in stored.message
-    assert "1300" in stored.message
-
-
-def test_portfolio_value_change_below_threshold_creates_no_event(db_session, stub_telegram):
-    add_rule(
-        db_session, name="Portfolio value change 10%", rule_type="portfolio_value_change_pct",
-        threshold_pct=10.0,
-    )
-
-    now = datetime.now(timezone.utc)
-    make_snapshot(db_session, market_floor_value_jpy=1000, created_at=now - timedelta(hours=1))
-    make_snapshot(db_session, market_floor_value_jpy=1050, created_at=now)  # only +5%
-
-    events = check_alerts(db_session, dry_run=False)
-
-    assert events == []
-    assert db_session.query(AlertEvent).count() == 0
-
-
-def test_portfolio_value_change_skips_with_fewer_than_two_snapshots(db_session, stub_telegram):
-    add_rule(
-        db_session, name="Portfolio value change 10%", rule_type="portfolio_value_change_pct",
-        threshold_pct=10.0,
-    )
-    make_snapshot(db_session, market_floor_value_jpy=1000)
-
-    events = check_alerts(db_session, dry_run=False)
-
-    assert events == []
-    assert db_session.query(AlertEvent).count() == 0
