@@ -11,7 +11,11 @@ Without ``SENTRY_DSN`` (or without the package) this is a no-op.
 Privacy contract: ``send_default_pii=False``, no local variables in stack
 frames, no request bodies, no tracing, no release-health sessions, and
 ``scrub_event`` removes Authorization/cookie/admin headers, cookies, query
-strings and the user before an event is sent.
+strings and the user before an event is sent. It also redacts exception
+messages, log messages and breadcrumb messages: a database error's text
+carries the statement's bound parameters (SQLAlchemy ``[parameters: ...]``,
+Postgres ``DETAIL: Key (email)=(...)``), which can hold a collector's email,
+name or note.
 """
 
 from __future__ import annotations
@@ -31,6 +35,36 @@ _SENSITIVE_HEADER = re.compile(
 )
 
 
+_SQL_PARAMETERS = re.compile(r"\[parameters: .*?\](?=\s*(?:\(Background on this error|$))", re.DOTALL)
+_PG_DETAIL = re.compile(r"^DETAIL:.*$", re.MULTILINE)
+_EMAIL = re.compile(r"[^\s@'\"(),;:<>\[\]]+@[^\s@'\"(),;:<>\[\]]+\.[A-Za-z]{2,}")
+
+
+def redact_text(value: Any) -> Any:
+    """Drop SQL bound parameters and Postgres key details; mask emails."""
+    if not isinstance(value, str):
+        return value
+    value = _SQL_PARAMETERS.sub("[parameters: redacted]", value)
+    value = _PG_DETAIL.sub("DETAIL: redacted", value)
+    return _EMAIL.sub("[email redacted]", value)
+
+
+def _redact_messages(event: dict[str, Any]) -> None:
+    exceptions = event.get("exception")
+    values = exceptions.get("values") if isinstance(exceptions, dict) else None
+    for exc in values or []:
+        if isinstance(exc, dict) and "value" in exc:
+            exc["value"] = redact_text(exc["value"])
+    logentry = event.get("logentry")
+    if isinstance(logentry, dict):
+        for key in ("message", "formatted"):
+            if key in logentry:
+                logentry[key] = redact_text(logentry[key])
+        logentry.pop("params", None)
+    if "message" in event:
+        event["message"] = redact_text(event["message"])
+
+
 def _strip_query(value: Any) -> Any:
     if not isinstance(value, str):
         return value
@@ -38,7 +72,8 @@ def _strip_query(value: Any) -> Any:
 
 
 def scrub_event(event: dict[str, Any], hint: Any = None) -> dict[str, Any]:
-    """``before_send``: drop credentials, cookies, bodies, queries and the user."""
+    """``before_send``: drop credentials, cookies, bodies, queries and the user,
+    and redact personal data from exception, log and breadcrumb messages."""
     request = event.get("request")
     if isinstance(request, dict):
         for key in ("cookies", "data", "query_string"):
@@ -53,11 +88,14 @@ def scrub_event(event: dict[str, Any], hint: Any = None) -> dict[str, Any]:
     crumbs = event.get("breadcrumbs")
     values = crumbs.get("values") if isinstance(crumbs, dict) else crumbs
     for crumb in values or []:
+        if isinstance(crumb, dict) and "message" in crumb:
+            crumb["message"] = redact_text(crumb["message"])
         data = crumb.get("data") if isinstance(crumb, dict) else None
         if isinstance(data, dict):
             for key in ("url", "from", "to"):
                 if key in data:
                     data[key] = _strip_query(data[key])
+    _redact_messages(event)
     return event
 
 

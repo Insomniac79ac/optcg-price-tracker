@@ -183,3 +183,51 @@ def test_only_main_imports_error_tracking():
     )
     assert importers == ["app/main.py"]
     assert "import sentry_sdk" not in Path(error_tracking.__file__).read_text().split("def init_error_tracking")[0]
+
+
+def _integrity_error_text():
+    """The real text of a unique-constraint failure on the users table."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.orm import Session
+
+    from app.db import Base
+    from app.models import User
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine, tables=[User.__table__])
+    with Session(engine) as db:
+        db.add(User(google_sub="sub-1", email="collector@example.com", name="Collector Name"))
+        db.commit()
+        db.add(User(google_sub="sub-1", email="collector@example.com", name="Collector Name"))
+        try:
+            db.commit()
+        except IntegrityError as error:
+            return str(error)
+    raise AssertionError("expected an IntegrityError")
+
+
+def test_scrub_event_redacts_sql_parameters_and_emails_from_messages():
+    text = _integrity_error_text()
+    assert "collector@example.com" in text and "Collector Name" in text  # the leak being fixed
+    pg = 'duplicate key value violates unique constraint "users_email_key"\nDETAIL:  Key (email)=(collector@example.com) already exists.'
+    event = {
+        "exception": {"values": [{"type": "IntegrityError", "value": text}, {"type": "UniqueViolation", "value": pg}]},
+        "logentry": {"message": "lookup for %s failed", "params": ["collector@example.com"]},
+        "message": "user collector@example.com",
+        "breadcrumbs": {"values": [{"message": "INSERT ... [parameters: ('sub-1', 'collector@example.com', 'Collector Name')]"}]},
+    }
+
+    out = repr(scrub_event(event))
+
+    assert "collector@example.com" not in out
+    assert "Collector Name" not in out
+    assert "sub-1" not in out
+    assert "IntegrityError" in out and "UNIQUE constraint failed" in out  # the useful part stays
+
+
+def test_redact_text_leaves_ordinary_messages_alone():
+    from app.error_tracking import redact_text
+
+    assert redact_text("Rate limit exceeded for group 'admin'") == "Rate limit exceeded for group 'admin'"
+    assert redact_text(None) is None
