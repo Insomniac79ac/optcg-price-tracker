@@ -84,6 +84,30 @@ headroom. A missing prior success cannot establish a revisit gap; null remains n
 Due means the successful-check age is due, even when retries or quarantine currently
 prevent dispatch. Oldest actionable due excludes blocked/claimed/backoff work.
 
+### Quarantined work is its own category (owner decision 2026-10-14)
+
+Blocked (identity-quarantined or contained) refresh work is reported beside the
+deadline figures, never inside them. `scripts/quarantine_reporting.py` (state tooling
+only; the shared aggregate and its SQL are collector runtime inputs and are unchanged):
+
+- lists blocked items with the same `ELIGIBLE` population as `DUE_SQL`, in the same
+  read-only transaction;
+- removes them from `due`, `overdue`, `never_checked`, `over_24h` and `deadline_misses`,
+  so they no longer produce `due_work_deficit` or `deadline_compliance: not_met`;
+- reduces a run summary's `deadline_misses`/`never_checked` only by items blocked since
+  before that run started and already overdue at its start, so a real miss in a run is
+  never hidden;
+- always shows `quarantine` per source and in `raw_due_work`: count, overdue and
+  never-checked counts, oldest blocked-since time and age, oldest successful-check age
+  (count 0 and null ages when empty);
+- freshness: `by_source.<source>.quarantine` and `actionable_*` counts; the
+  `freshness-deadline-deficit` blocker follows actionable work only, and a separate
+  `quarantined-refresh-work` blocker carries the count and oldest blocked-since time.
+
+Fail closed: evidence without the item list (recorded before 2026-10-15), or a list that
+disagrees with a shard's authoritative `quarantined` count, excludes nothing. No
+threshold, target, budget or guard changed; real overdue work still fails every check.
+
 `operational_health` in CURRENT_STATE contains concise current source/shard
 aggregates and latest retained execution identity. `latest_natural_run` stays null
 when provenance is unknown. Hash-linked sanitized state artifacts retain the full
