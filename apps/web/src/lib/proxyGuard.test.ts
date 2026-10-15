@@ -59,7 +59,7 @@ describe("the public collector surface stays reachable while signed out", () => 
   });
 
   it("G. keeps every unrelated protected route protected", () => {
-    for (const p of ["/collection", "/wishlist", "/analytics/collection"]) {
+    for (const p of ["/collection", "/watchlist", "/analytics/collection"]) {
       expect(isMatched(p)).toBe(true);
       expect(guardOutcome(p, false)).toEqual({ kind: "redirect-sign-in" });
       expect(failClosedOutcome(p)).toEqual({ kind: "redirect-sign-in" });
@@ -98,7 +98,7 @@ describe("collector-private routes remain guarded", () => {
   it.each([
     "/collection",
     "/collection/vault",
-    "/wishlist",
+    "/watchlist",
     "/analytics/collection",
     "/analytics/wishlist",
   ])("%s is guarded", (pathname) => {
@@ -134,11 +134,11 @@ describe("the market landscape is public, the collector analytics beneath it are
 
   it("uses :path+ for analytics and :path* for the routes whose parent is private", () => {
     // The neighbours must NOT be converted along with it: /collection and
-    // /wishlist are real pages showing the caller's own data, so their bare
+    // /watchlist are real pages showing the caller's own data, so their bare
     // parent has to stay matched.
     expect(PROTECTED_MATCHER).toContain("/analytics/:path+");
     expect(PROTECTED_MATCHER).not.toContain("/analytics/:path*");
-    for (const parent of ["/collection", "/wishlist"]) {
+    for (const parent of ["/collection", "/watchlist"]) {
       expect(PROTECTED_MATCHER).toContain(`${parent}/:path*`);
       expect(isMatched(parent), `${parent} must stay guarded`).toBe(true);
     }
@@ -161,7 +161,7 @@ describe("FULL_MATCHER composition", () => {
 
 describe("guardOutcome - signed out", () => {
   it("sends normal protected routes to sign-in", () => {
-    for (const p of ["/collection", "/wishlist", "/analytics/collection"]) {
+    for (const p of ["/collection", "/watchlist", "/analytics/collection"]) {
       expect(guardOutcome(p, false), p).toEqual({ kind: "redirect-sign-in" });
     }
   });
@@ -185,7 +185,7 @@ describe("failClosedOutcome - authentication could not be evaluated", () => {
     for (const p of [
       "/collection",
       "/collection/vault",
-      "/wishlist",
+      "/watchlist",
       "/analytics/collection",
       "/analytics/wishlist",
       "/cards/1",
@@ -198,7 +198,7 @@ describe("failClosedOutcome - authentication could not be evaluated", () => {
   it("keeps each route's own established public behaviour", () => {
     // Not one blanket response: an admin route goes to the admin login and
     // ordinary protected tools stay a sign-in redirect.
-    expect(failClosedOutcome("/wishlist")).toEqual({ kind: "redirect-sign-in" });
+    expect(failClosedOutcome("/watchlist")).toEqual({ kind: "redirect-sign-in" });
     expect(failClosedOutcome("/admin/logs")).toEqual({ kind: "redirect-admin-login" });
   });
 
@@ -279,7 +279,7 @@ describe("sessionGuardOutcome", () => {
   const admin = { user: { email: "admin@example.com", role: "admin" }, sessionKind: "admin", adminSessionExpired: false };
   const expiredAdmin = { user: { email: "admin@example.com" }, sessionKind: "admin", adminSessionExpired: true };
 
-  it.each(["/collection", "/collection/vault", "/wishlist", "/account", "/analytics/collection"])(
+  it.each(["/collection", "/collection/vault", "/watchlist", "/account", "/analytics/collection"])(
     "gives an admin session the sign-in invite on collector route %s",
     (path) => {
       expect(sessionGuardOutcome(path, admin)).toEqual({ kind: "redirect-sign-in" });

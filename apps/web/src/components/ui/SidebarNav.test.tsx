@@ -54,7 +54,7 @@ describe("SidebarNav - signed out", () => {
   it("does not show collector-authenticated links", () => {
     render(<SidebarNav />);
     expect(screen.queryByText("My Collection")).not.toBeInTheDocument();
-    expect(screen.queryByText("Wishlist")).not.toBeInTheDocument();
+    expect(screen.queryByText("Watchlist")).not.toBeInTheDocument();
     expect(screen.queryByText("Grading")).not.toBeInTheDocument();
     expect(screen.queryByText("Activity")).not.toBeInTheDocument();
   });
@@ -92,10 +92,10 @@ describe("SidebarNav - signed in (collector session)", () => {
     expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
   });
 
-  it("additionally shows My Collection and Wishlist, and no deleted Grading or Activity page", () => {
+  it("additionally shows My Collection and Watchlist, and no deleted Grading or Activity page", () => {
     render(<SidebarNav />);
     expect(screen.getByText("My Collection")).toBeInTheDocument();
-    expect(screen.getByText("Wishlist")).toBeInTheDocument();
+    expect(screen.getByText("Watchlist")).toBeInTheDocument();
     expect(screen.queryByText("Grading")).not.toBeInTheDocument();
     expect(screen.queryByText("Activity")).not.toBeInTheDocument();
   });

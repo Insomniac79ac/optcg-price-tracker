@@ -49,7 +49,7 @@ const isNotFoundRewrite = (res: NextResponse) =>
 const PROTECTED_TOOLS = [
   "/collection",
   "/collection/vault",
-  "/wishlist",
+  "/watchlist",
   "/account",
   "/analytics/collection",
   "/analytics/wishlist",
@@ -175,7 +175,7 @@ describe("auth evaluation throws (missing or malformed AUTH_SECRET)", () => {
   });
 
   it("never leaks the failure reason to the browser", async () => {
-    const res = await get("/wishlist");
+    const res = await get("/watchlist");
     const serialised = JSON.stringify([...res.headers.entries()]);
     expect(serialised).not.toMatch(/MissingSecret/i);
     expect(serialised).not.toMatch(/secret/i);

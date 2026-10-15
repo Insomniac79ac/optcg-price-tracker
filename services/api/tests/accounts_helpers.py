@@ -27,8 +27,11 @@ def source_values(value, contributors=(SNKR_FLOOR,)):
     ]
 
 
-def snapshot_row(card_print_id, day, value, *, contributors=(SNKR_FLOOR,), index_version=3, semantics=3):
+def snapshot_row(
+    card_print_id, day, value, *, contributors=(SNKR_FLOOR,), index_version=3, semantics=3, checked_at=None
+):
     return MarketIndexSnapshot(
+        freshest_eligible_source_at=checked_at,
         card_print_id=card_print_id,
         calculated_at=datetime.combine(day, time(20, 0), tzinfo=timezone.utc),
         snapshot_date=day,

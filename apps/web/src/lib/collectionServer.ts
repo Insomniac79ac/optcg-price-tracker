@@ -8,6 +8,7 @@ import {
   type CollectionWindow,
 } from "@/lib/collection";
 import { API_INTERNAL_URL, type CollectorIdentity, mintApiToken } from "@/lib/collectorApi";
+import type { WatchlistResponse } from "@/lib/watchlist";
 
 export type CollectionPage =
   | {
@@ -79,6 +80,25 @@ export async function loadCollectionPage(identity: CollectorIdentity): Promise<C
     return { state: "ok", collection, values: { "7d": week, "30d": month, all } };
   } catch (error) {
     await values;
+    if (error instanceof UpstreamStatus && error.status === 404) return { state: "disabled" };
+    return { state: "error" };
+  }
+}
+
+export type WatchlistPage = { state: "ok"; watchlist: WatchlistResponse } | { state: "disabled" } | { state: "error" };
+
+/** The watchlist, read server-side the same way as the collection. */
+export async function loadWatchlistPage(identity: CollectorIdentity): Promise<WatchlistPage> {
+  let token: string;
+  try {
+    token = await mintApiToken(identity);
+  } catch (error) {
+    logAccountUpstreamFailure("mint API token", { error });
+    return { state: "error" };
+  }
+  try {
+    return { state: "ok", watchlist: await getMe<WatchlistResponse>("watchlist", "GET /me/watchlist", token) };
+  } catch (error) {
     if (error instanceof UpstreamStatus && error.status === 404) return { state: "disabled" };
     return { state: "error" };
   }

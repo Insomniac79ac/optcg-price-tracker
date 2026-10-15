@@ -7,10 +7,12 @@ bearer token). Every read and write is scoped to that user.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.accounts import service, valuation, value_history
@@ -42,6 +44,7 @@ from app.accounts.schemas import (
 )
 from app.auth import require_current_user
 from app.db import get_db
+from app.models import MarketIndexSnapshot
 from app.models.user import User
 
 router = APIRouter(prefix="/me", tags=["me"], dependencies=[Depends(require_accounts_enabled)])
@@ -318,13 +321,49 @@ def get_collection_value(
 # --------------------------------------------------------------------------
 
 
-def _watch_out(entry, values: dict, prints: dict) -> WatchlistEntryOut:
+WATCH_CHANGE_DAYS = 7
+
+
+@dataclass(frozen=True)
+class _WatchContext:
+    as_of: date | None
+    values: dict
+    prints: dict
+    checked: dict
+    change_from: date | None
+    window_reason: str | None
+    missing_dates: tuple[date, ...]
+    prior_values: dict
+
+
+def _watch_change(entry, ctx: _WatchContext) -> tuple[str | None, str | None]:
+    """(pct, None) for a comparable version, else (None, reason). Never 0% for a gap."""
+    if entry.card_print_id is None:
+        return None, "unresolved"
+    if ctx.window_reason is not None:
+        return None, ctx.window_reason
+    print_id = entry.card_print_id
+    step = valuation.endpoint_step(
+        prior_date=ctx.change_from,
+        current_date=ctx.as_of,
+        prior_held={print_id: 1},
+        current_held={print_id: 1},
+        prior_values=ctx.prior_values,
+        current_values=ctx.values,
+    )
+    if step.available:
+        return step.change_pct, None
+    return None, step.exclusions[0][0] if step.exclusions else step.reason
+
+
+def _watch_out(entry, ctx: _WatchContext) -> WatchlistEntryOut:
     if entry.card_print_id is None:
         status, value = "unresolved", None
     else:
-        archived = values.get(entry.card_print_id)
+        archived = ctx.values.get(entry.card_print_id)
         value = archived.value_jpy if archived is not None else None
         status = "priced" if value is not None else "no_price"
+    pct, reason = _watch_change(entry, ctx)
     return WatchlistEntryOut(
         id=entry.id,
         card_print_id=entry.card_print_id,
@@ -334,20 +373,63 @@ def _watch_out(entry, values: dict, prints: dict) -> WatchlistEntryOut:
         legacy_card_id=entry.legacy_card_id,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
-        print=prints.get(entry.card_print_id),
+        print=ctx.prints.get(entry.card_print_id),
         value_status=status,
         value_jpy=value,
         target_gap_jpy=(
             value - entry.target_jpy if value is not None and entry.target_jpy is not None else None
         ),
+        checked_at=ctx.checked.get(entry.card_print_id) if value is not None else None,
+        change_7d_pct=pct,
+        change_7d_reason=reason,
     )
 
 
-def _watch_values(db: Session, entries):
-    as_of = valuation.latest_verified_day(db)
+def _checked_at(db: Session, day: date | None, ids: set[int]) -> dict[int, datetime]:
+    if day is None or not ids:
+        return {}
+    rows = db.execute(
+        select(MarketIndexSnapshot.card_print_id, MarketIndexSnapshot.freshest_eligible_source_at).where(
+            MarketIndexSnapshot.snapshot_date == day,
+            MarketIndexSnapshot.card_print_id.in_(ids),
+        )
+    ).all()
+    return {row.card_print_id: row.freshest_eligible_source_at for row in rows if row.freshest_eligible_source_at}
+
+
+def _watch_context(db: Session, entries) -> _WatchContext:
+    dates = valuation.receipt_dates(db)
+    as_of = valuation.latest_verified_day(db, dates)
     ids = {e.card_print_id for e in entries} - {None}
     values = valuation.load_day_values(db, as_of, ids) if as_of is not None else {}
-    return as_of, values, service.print_summaries(db, ids)
+    prints = service.print_summaries(db, ids)
+    checked = _checked_at(db, as_of, ids)
+    # The window gate is the collection's own (load_window): both ends
+    # verified and no unreceipted day between them.
+    change_from, reason, missing, prior_values = None, None, (), {}
+    if as_of is None:
+        reason = "no_prices_yet"
+    else:
+        change_from = as_of - timedelta(days=WATCH_CHANGE_DAYS)
+        receipted = set(dates)
+        missing = tuple(
+            change_from + timedelta(days=offset)
+            for offset in range(WATCH_CHANGE_DAYS + 1)
+            if change_from + timedelta(days=offset) not in receipted
+        )
+        if change_from < dates[0]:
+            reason, missing = "not_enough_price_history", ()
+        elif missing:
+            reason = "prices_missing"
+        elif not valuation.is_verified_day(db, change_from):
+            reason, missing = "prices_missing", (change_from,)
+        else:
+            prior_values = valuation.load_day_values(db, change_from, ids)
+    return _WatchContext(as_of, values, prints, checked, change_from, reason, missing, prior_values)
+
+
+def _watch_one(db: Session, entry) -> WatchlistEntryOut:
+    return _watch_out(entry, _watch_context(db, [entry]))
 
 
 @router.get("/watchlist", response_model=WatchlistOut)
@@ -358,8 +440,13 @@ def get_watchlist(
 ):
     _private(response)
     entries = service.list_watchlist(db, user.id)
-    as_of, values, prints = _watch_values(db, entries)
-    return WatchlistOut(as_of=as_of, entries=[_watch_out(e, values, prints) for e in entries])
+    ctx = _watch_context(db, entries)
+    return WatchlistOut(
+        as_of=ctx.as_of,
+        entries=[_watch_out(e, ctx) for e in entries],
+        change_7d_from=ctx.change_from,
+        change_7d_missing_dates=list(ctx.missing_dates),
+    )
 
 
 @router.post("/watchlist", response_model=WatchlistEntryOut, status_code=201)
@@ -371,8 +458,7 @@ def add_to_watchlist(
 ):
     _private(response)
     entry = service.add_watchlist_entry(db, user.id, body.model_dump())
-    as_of, values, prints = _watch_values(db, [entry])
-    return _watch_out(entry, values, prints)
+    return _watch_one(db, entry)
 
 
 @router.patch("/watchlist/{entry_id}", response_model=WatchlistEntryOut)
@@ -387,8 +473,7 @@ def update_watchlist_entry(
     entry = service.update_watchlist_entry(
         db, user.id, entry_id, body.model_dump(exclude_unset=True)
     )
-    as_of, values, prints = _watch_values(db, [entry])
-    return _watch_out(entry, values, prints)
+    return _watch_one(db, entry)
 
 
 @router.delete("/watchlist/{entry_id}", status_code=204)

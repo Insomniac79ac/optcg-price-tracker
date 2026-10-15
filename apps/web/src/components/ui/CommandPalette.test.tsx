@@ -235,11 +235,11 @@ describe("CommandPalette", () => {
     await screen.findByText("Pages");
 
     fireEvent.change(screen.getByPlaceholderText(/search by name or code/i), {
-      target: { value: "wishlist" },
+      target: { value: "watchlist" },
     });
 
     await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
-    expect(screen.queryByText("Wishlist")).not.toBeInTheDocument();
+    expect(screen.queryByText("Watchlist")).not.toBeInTheDocument();
   });
 
   it("shows collector-scoped commands once a session exists", async () => {
@@ -251,10 +251,10 @@ describe("CommandPalette", () => {
     await screen.findByText("Pages");
 
     fireEvent.change(screen.getByPlaceholderText(/search by name or code/i), {
-      target: { value: "wishlist" },
+      target: { value: "watchlist" },
     });
 
-    await waitFor(() => expect(screen.getByText("Wishlist")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Watchlist")).toBeInTheDocument());
   });
 
   it("renders saved views under a Saved Views group", async () => {
@@ -355,7 +355,7 @@ describe("CommandPalette - public card search (signed out)", () => {
     expect(screen.getByRole("img").getAttribute("alt")).toContain("version preview");
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
     expect(fetchSearch).not.toHaveBeenCalled();
-    if (signedIn) expect(screen.getByText("My Collection (Table)")).toBeInTheDocument();
+    if (signedIn) expect(screen.getByText("My Collection")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View all results" })).toHaveAttribute("href", "/cards?q=collection");
     expect(screen.queryByText(/\d+ printings/)).not.toBeInTheDocument();
   });
@@ -381,7 +381,7 @@ describe("CommandPalette - public card search (signed out)", () => {
 
   it("filters private recents on sign-out without deleting local history", async () => {
     const entries = [
-      { item_type: "saved_view", label: "Private wish list", route_path: "/wishlist" },
+      { item_type: "saved_view", label: "Private wish list", route_path: "/watchlist" },
       { item_type: "route", label: "Private report", route_path: "/market/report" },
       { item_type: "admin_action", label: "Private admin", route_path: "/admin/catalog" },
       { item_type: "card", label: "Recent Kaido", route_path: "/cards/code/OP04-044" },
@@ -557,7 +557,7 @@ describe("CommandPalette - public card search (signed out)", () => {
     await screen.findByText("Pages");
     for (const label of [
       /^Collection$/,
-      /^Wishlist$/,
+      /^Watchlist$/,
       /^Grading$/,
       /^Dashboard$/,
       /^Saved Views$/,

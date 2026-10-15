@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 const { mintApiToken } = vi.hoisted(() => ({ mintApiToken: vi.fn() }));
 vi.mock("@/lib/collectorApi", () => ({ API_INTERNAL_URL: "http://api.test", mintApiToken }));
 
-import { loadCollectionPage } from "./collectionServer";
+import { loadCollectionPage, loadWatchlistPage } from "./collectionServer";
 
 const IDENTITY = { sub: "google-123", email: "nami@example.com", name: "Nami" };
 const TOKEN = "eyJ.test-token.sig";
@@ -79,5 +79,25 @@ describe("loadCollectionPage", () => {
     expect(await loadCollectionPage(IDENTITY)).toEqual({ state: "error" });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledWith("[account] mint API token failed error=Error");
+  });
+});
+
+describe("loadWatchlistPage", () => {
+  it("reads /me/watchlist with a server-side token", async () => {
+    mintApiToken.mockResolvedValueOnce(TOKEN);
+    const fetchMock = vi.fn(async () => json({ as_of: "2026-10-14", entries: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await loadWatchlistPage(IDENTITY)).toEqual({ state: "ok", watchlist: { as_of: "2026-10-14", entries: [] } });
+    expect(fetchMock).toHaveBeenCalledWith("http://api.test/me/watchlist", expect.objectContaining({ headers: { Authorization: `Bearer ${TOKEN}` }, cache: "no-store" }));
+  });
+
+  it("is 'disabled' on 404 and an error, logged by status only, otherwise", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    mintApiToken.mockResolvedValue(TOKEN);
+    vi.stubGlobal("fetch", vi.fn(async () => json({}, 404)));
+    expect(await loadWatchlistPage(IDENTITY)).toEqual({ state: "disabled" });
+    vi.stubGlobal("fetch", vi.fn(async () => json({}, 502)));
+    expect(await loadWatchlistPage(IDENTITY)).toEqual({ state: "error" });
+    expect(error).toHaveBeenCalledWith("[account] GET /me/watchlist failed status=502");
   });
 });

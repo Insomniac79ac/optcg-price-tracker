@@ -11,8 +11,7 @@ const GENERAL_SHORTCUTS: { keys: string; description: string }[] = [
 
 const GOTO_SHORTCUTS: { keys: string; description: string }[] = [
   { keys: "g c", description: "Go to My Collection" },
-  { keys: "g v", description: "Go to Collection Vault" },
-  { keys: "g w", description: "Go to Wishlist" },
+  { keys: "g w", description: "Go to Watchlist" },
 ];
 
 /** Plain reference modal for keyboard shortcuts - opened from the topbar "?"
@@ -20,8 +19,8 @@ const GOTO_SHORTCUTS: { keys: string; description: string }[] = [
  * ConfirmActionModal/CommandPalette.
  *
  * The goto sequences are listed only for a signed-in collector: every one of
- * them targets a collector-tier route (My Collection, Vault, Wishlist), so
- * advertising them to a signed-out visitor documents three shortcuts that can
+ * them targets a collector-tier route (My Collection, Watchlist), so
+ * advertising them to a signed-out visitor documents two shortcuts that can
  * only ever land them on the sign-in wall. The shortcuts themselves are
  * unchanged - AppShell still owns them - this is only about not printing a
  * reference to capability the reader does not have. */

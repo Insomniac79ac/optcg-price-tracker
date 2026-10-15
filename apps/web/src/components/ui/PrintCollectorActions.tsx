@@ -304,14 +304,15 @@ export function CollectionForm({
   );
 }
 
-function WatchForm({
+export function WatchForm({
   cardPrintId,
   versionLabel,
   watched,
   onCancel,
   onDone,
 }: {
-  cardPrintId: number;
+  /** null for a watch that still needs a version: edit only, never a POST. */
+  cardPrintId: number | null;
   versionLabel: string;
   watched: { entryId: number; targetJpy: number | null } | null;
   onCancel: () => void;
@@ -333,7 +334,7 @@ function WatchForm({
     setProblem(null);
     try {
       if (watched) await meRequest("PATCH", `watchlist/${watched.entryId}`, { target_jpy: value });
-      else await meRequest("POST", "watchlist", { card_print_id: cardPrintId, target_jpy: value });
+      else if (cardPrintId !== null) await meRequest("POST", "watchlist", { card_print_id: cardPrintId, target_jpy: value });
       onDone();
     } catch (error) {
       setProblem(failureMessage(error));

@@ -61,12 +61,8 @@ export const PUBLIC_NAV_ITEMS: NavItem[] = [
 // analytics pages (grading, activity, dashboard, search, signals, buy/sell
 // decisions, portfolio risk, digest) were deleted in Collector v1 S1.
 const COLLECTOR_ITEMS: NavItem[] = [
-  {
-    href: "/collection",
-    label: "My Collection",
-    children: [{ href: "/collection/vault", label: "Vault View" }],
-  },
-  { href: "/wishlist", label: "Wishlist" },
+  { href: "/collection", label: "My Collection" },
+  { href: "/watchlist", label: "Watchlist" },
 ];
 
 // A role="admin" session gets exactly one entry here, not the full

@@ -18,7 +18,7 @@ function toneClass(variant: string): string {
   return "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30";
 }
 
-/** Shared with CardImageFrame/CardVaultTile so a rare variant gets the same
+/** Shared with CardImageFrame so a rare variant gets the same
  * restrained gold/purple glow on its frame as its badge uses. */
 export function accentForVariant(variant: string | null | undefined): "gold" | "purple" | null {
   if (!variant) return null;

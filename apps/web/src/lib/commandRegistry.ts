@@ -25,7 +25,7 @@
 // it is a live lookup over GET /prints (see lib/publicCardSearch.ts), not
 // part of this static list.
 
-export type CommandGroup = "Navigate" | "Cards" | "Collection" | "Wishlist" | "Grading" | "Market" | "Admin";
+export type CommandGroup = "Navigate" | "Cards" | "Collection" | "Watchlist" | "Grading" | "Market" | "Admin";
 
 export type CommandScope = "public" | "collector" | "admin";
 
@@ -80,30 +80,21 @@ export const COMMAND_REGISTRY: Command[] = [
   }),
   // --- Collector -----------------------------------------------------------
   cmd({
-    id: "nav-collection-table",
-    label: "My Collection (Table)",
-    description: "Owned cards in table view",
+    id: "nav-collection",
+    label: "My Collection",
+    description: "The cards you own and what they are worth",
     group: "Collection",
     route_path: "/collection",
-    keywords: ["owned", "table"],
+    keywords: ["owned", "vault"],
     scope: "collector",
   }),
   cmd({
-    id: "nav-collection-vault",
-    label: "My Collection (Vault)",
-    description: "Owned cards in card-grid vault view",
-    group: "Collection",
-    route_path: "/collection/vault",
-    keywords: ["owned", "grid", "vault"],
-    scope: "collector",
-  }),
-  cmd({
-    id: "nav-wishlist",
-    label: "Wishlist",
-    description: "Cards you want to acquire",
-    group: "Wishlist",
-    route_path: "/wishlist",
-    keywords: ["want", "target"],
+    id: "nav-watchlist",
+    label: "Watchlist",
+    description: "Cards you're watching, with your target prices",
+    group: "Watchlist",
+    route_path: "/watchlist",
+    keywords: ["want", "target", "wishlist"],
     scope: "collector",
   }),
 
