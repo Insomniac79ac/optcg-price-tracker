@@ -338,6 +338,16 @@ def wait_for_delivery(expected, api_sha, deadline, *, collect=None, clock=time.m
         sleep(min(15, max(0, deadline-clock())))
 
 
+def collector_token_check(read=None):
+    """The API must accept a pass the website signs: both hold API_JWT_SECRET
+    and the copies diverged once unnoticed (2026-10-15). The website route
+    signs a pass that cannot create or open an account; see
+    apps/web/src/lib/collectorTokenCheck.ts."""
+    status = (read or get)(WEB + "/api/collector-token-check").get("status")
+    require(status == "ok", f"Website-signed collector pass not accepted by the API ({status})")
+    return status
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected", required=True)
@@ -369,6 +379,7 @@ def main():
     require(api_version.get("app_env") == "staging", "API destination is not staging")
     require(api_version.get("git_commit") in (args.api_sha, "unknown"), "API runtime SHA disagrees with platform")
     get(WEB + "/api/auth/session")
+    token_check = collector_token_check()
     evidence = state.collect_live()
     validate_state(evidence, args.expected, args.api_sha, args.revision)
     # Warm the route cache before the paced invariant audit. A single cold
@@ -389,6 +400,7 @@ def main():
               "frontend": evidence["frontend"], "api": api_version,
               "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
               "migration_revision": args.revision, "routes": routes, "sale_invariant": sale,
+              "collector_token_check": token_check,
               "state_evidence_sha256": snapshot["evidence"]["sha256"],
               "get_timeout_retries": {"count": len(timeout_retries), "requests": timeout_retries},
               "delivery_scope": scope,

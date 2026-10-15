@@ -8,10 +8,19 @@ from urllib.error import HTTPError, URLError
 from io import StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from verify_staging_delivery import validate_state, get, state, wait_for_delivery, run_component_checks, decide_api, resolve_api_sha
+from verify_staging_delivery import validate_state, get, state, wait_for_delivery, run_component_checks, decide_api, resolve_api_sha, collector_token_check
 
 
 class VerificationTests(unittest.TestCase):
+    def test_collector_token_check_requires_the_api_to_accept_the_website_pass(self):
+        seen = []
+        read = lambda url: seen.append(url) or {"status": "ok"}
+        self.assertEqual(collector_token_check(read), "ok")
+        self.assertEqual(seen, ["https://optcg-price-tracker-staging.vercel.app/api/collector-token-check"])
+        for status in ("mismatch", "disabled", "unconfigured", "unexpected", "unreachable", None):
+            with self.assertRaises(state.VerificationError):
+                collector_token_check(lambda url, status=status: {"status": status})
+
     def test_natural_checks_keep_full_bounded_cycle_and_other_checks_keep_300s(self):
         checks = [
             "scripts/verify_yuyu_raw_reader_component.py",
