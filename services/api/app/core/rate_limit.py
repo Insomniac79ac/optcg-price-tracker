@@ -249,8 +249,9 @@ def rate_limit_status() -> dict:
 
 def _collector_key(request: Request) -> str | None:
     """Rate-limit key for a /me request: a digest of the collector subject in a
-    bearer token that verifies exactly as app.auth.require_current_user would
-    (HS256, API_JWT_SECRET, unexpired). None when it does not verify; such a
+    bearer token whose signature and expiry verify as in
+    app.auth.require_current_user (HS256, API_JWT_SECRET; the route also
+    requires an email claim). None when it does not verify; such a
     request is keyed by IP and is refused with 401 by the route itself."""
     secret = settings.API_JWT_SECRET
     authorization = request.headers.get("authorization") or ""
@@ -271,7 +272,9 @@ def _rate_limit_key(request: Request) -> str:
         key = _collector_key(request)
         if key:
             return key
-    return _client_ip(request)
+    # Prefixed so a client-chosen X-Forwarded-For value can never name a
+    # collector's "user:" bucket.
+    return "ip:" + _client_ip(request)
 
 
 def _client_ip(request: Request) -> str:

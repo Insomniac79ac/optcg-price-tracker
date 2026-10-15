@@ -283,3 +283,17 @@ def test_repeated_429_logged_at_most_once_per_window(client, db_session, monkeyp
         db_session.query(AppLogEvent).filter(AppLogEvent.event_type == "rate_limit").all()
     )
     assert len(rate_limit_logs) == 1
+
+
+def test_a_forwarded_for_value_cannot_name_a_collectors_bucket(client, db_session, monkeypatch):
+    import hashlib
+
+    monkeypatch.setenv(FLAG, "true")
+    monkeypatch.setattr(settings, "RATE_LIMIT_COLLECTION_WRITE_PER_5M", 1)
+    victim_key = "user:" + hashlib.sha256(b"user-a").hexdigest()[:32]
+
+    spoofed = {"Authorization": "Bearer junk", "X-Forwarded-For": victim_key}
+    client.put("/me/preferences", json={}, headers=spoofed)
+    client.put("/me/preferences", json={}, headers=spoofed)
+
+    assert client.put("/me/preferences", json={"currency": "JPY"}, headers=_bearer("user-a")).status_code == 200
