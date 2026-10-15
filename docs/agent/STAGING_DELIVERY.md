@@ -66,6 +66,58 @@ mission establishes that implementation under explicit mission authority.
 Metadata is an accountable impact declaration, not a semantic proof that arbitrary
 application code is safe. Review remains necessary for truthful impact assessment.
 
+## Delivery lanes (2026-10-15)
+
+Lanes are defined in [AUTONOMY_POLICY.md](AUTONOMY_POLICY.md#delivery-lanes-owner-decision-2026-10-15).
+Everything above is the DATA-lane contract and is unchanged.
+
+**Classification.** `policy-gate` runs the base branch's `staging_policy.py`,
+which first asks the base branch's `product_lane.py`. PRODUCT requires all of:
+
+- the PR does not edit `STAGING_MISSION.json`;
+- every path (merge-base to head) is under `apps/web/` (not `vercel.json`),
+  `services/api/tests/`, `docs/` outside `docs/agent/` (plus
+  `docs/agent/PRODUCT_LOG.md`), one new file in `services/api/alembic/versions/`,
+  or an allowlisted collector-facing API module (`PRODUCT_API`: `app/accounts`
+  except valuation/value history, `web_cors`, collection/wishlist/saved-view/
+  notes/activity/file-job/grading/alerts/health/version routers) whose name has
+  no price/identity/source/Market Value/Index term;
+- no changed API path is a collector runtime input at base or head;
+- a new migration is structurally allowlisted: only `op`/`sa` imports, literal
+  revision assignments, `upgrade()`/`downgrade()`; `upgrade()` only creates new
+  tables and adds nullable/defaulted columns, indexes or constraints on tables it
+  creates or on the collector-account tables; foreign keys only to `users` or
+  those tables; it chains onto the base's single head and leaves one head;
+- auth/security paths, and the web app's build and supply chain
+  (`package.json`, lockfile, `.npmrc`, Dockerfiles, `apps/web/scripts/`,
+  `next.config`), carry an `Independent security review:` line in the PR
+  description.
+
+Anything else, or any error, runs today's mission checks unchanged against the
+PR's manifest.
+
+**Delivery.** A PRODUCT merge still takes the shared concurrency group, merges
+natively and verifies. `staging_delivery_scope.py` returns `product`, so collector
+rollout and RAW DDL never run. Verification expects the merged API (`api_sha=merge`)
+and the repository's single Alembic head. If a merge with an unchanged manifest
+is neither documentation nor PRODUCT, delivery fails instead of replaying the
+earlier mission's rollout or DDL. A product migration is applied by the existing
+manual `railway run --service api alembic upgrade head` right after merge; until
+then the receipt fails on the revision, which is the intended signal. Before
+arming a PRODUCT PR with a migration, `staging-credential-presence` runs
+`scripts/staging_backup_age.py` (read-only) and refuses without a staging
+Postgres backup younger than 24 h. Railway's backup record has no status
+field, so the check is on age only.
+
+**Arming and timing (all lanes).** `staging-pr-live` reads the live PR before
+anything joins the delivery group: a push and `ready_for_review` in the same
+second gave PR #123 one run with a stale head and one with a stale draft flag,
+so nothing armed until the owner toggled draft. While waiting for the native
+merge, `staging-automerge` disarms auto-merge at 19:30 UTC, waits until 20:30
+and re-arms the same head, so no merge lands in the market-index window; the
+30-minute merge budget is extended by the held time and the job timeout is
+240 minutes.
+
 ## Activation boundary — currently blocked
 
 Observed GitHub facts: native auto-merge is false, staging is unprotected, and the

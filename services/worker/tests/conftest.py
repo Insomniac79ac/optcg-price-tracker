@@ -1,5 +1,13 @@
+from pathlib import Path
+
 import pytest
-from sqlalchemy import create_engine
+
+from tests._source_identity_guard import check_source_identity_package
+
+# Before worker.* (which may import opcg_source_identity) is imported.
+check_source_identity_package(Path(__file__).parent)
+
+from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 

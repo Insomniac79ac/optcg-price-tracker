@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError, OperationalError
+from tests.pg_url import postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import sessionmaker
 
 from worker.adapters.base import PriceObservationData, RawSnapshotData
@@ -31,9 +32,7 @@ from worker.db import Base
 from worker.jobs.refresh_prices import refresh_prices
 from worker.models import Card, CardPrint, PriceObservation, Source, SourceCardMapping
 
-TEST_POSTGRES_URL = os.environ.get(
-    "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
-)
+TEST_POSTGRES_URL = postgres_url()
 
 
 class StubAdapter:
@@ -72,7 +71,7 @@ def postgres_session():
             pass
     except OperationalError:
         engine.dispose()
-        pytest.skip(f"No PostgreSQL server reachable at {TEST_POSTGRES_URL}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
 
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:

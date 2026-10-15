@@ -10,12 +10,13 @@ from alembic.operations import Operations
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 
+from tests.pg_url import postgres_url, require_reachable
+
 
 @pytest.fixture
 def pg_connection():
-    url = os.getenv("TEST_POSTGRES_URL")
-    if not url:
-        pytest.skip("TEST_POSTGRES_URL must explicitly identify disposable PostgreSQL")
+    url = postgres_url()
+    require_reachable(url)
     engine = create_engine(url)
     schema = "identity_test_" + uuid4().hex
     with engine.connect() as connection:

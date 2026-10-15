@@ -37,6 +37,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError, OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import sessionmaker
 
 from app.db import get_db
@@ -60,11 +61,7 @@ from tests._repo_root import find_repo_root
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
+ADMIN_URL = admin_url()
 
 TEST_ADMIN_TOKEN = "test-admin-token"
 
@@ -88,7 +85,7 @@ CANDIDATE_TITLE = "ポートガス・D・エース SR [OP02-013] (ブースタ�
 class _Database:
     def __init__(self, name: str):
         self.name = name
-        self.url = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{name}"
+        self.url = postgres_url(name)
         self.admin = create_engine(ADMIN_URL, isolation_level="AUTOCOMMIT")
         with self.admin.connect() as conn:
             conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
@@ -230,7 +227,7 @@ def chain():
     try:
         db = _Database("opcg_test_snkrdunk_e2e")
     except OperationalError:
-        pytest.skip(f"No PostgreSQL server reachable at {HOST}:{PORT}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
 
     _alembic_upgrade(db.url)
     SessionLocal = sessionmaker(bind=db.engine, autoflush=False, autocommit=False)

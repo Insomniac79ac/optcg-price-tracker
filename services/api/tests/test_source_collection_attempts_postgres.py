@@ -24,14 +24,11 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
+ADMIN_URL = admin_url()
 
 PREVIOUS_HEAD = "c4a7e9d15b83"
 THIS_REVISION = "b8e3f1a70d95"
@@ -57,7 +54,7 @@ def _alembic(url: str, *args: str, expect_success: bool = True):
 class _Database:
     def __init__(self, name: str):
         self.name = name
-        self.url = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{name}"
+        self.url = postgres_url(name)
         self.admin = create_engine(ADMIN_URL, isolation_level="AUTOCOMMIT")
         with self.admin.connect() as conn:
             conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
@@ -75,7 +72,7 @@ def _new_database(name: str) -> _Database:
     try:
         return _Database(name)
     except OperationalError:
-        pytest.skip(f"No PostgreSQL server reachable at {HOST}:{PORT}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
 
 
 def _seed_subject(db: _Database) -> dict:

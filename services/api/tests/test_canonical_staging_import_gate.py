@@ -781,23 +781,10 @@ def test_j_the_runner_never_fetches_from_bandai():
 
 def _disposable_postgres_url() -> str:
     """The local throwaway Postgres, or a skip. Never canonical staging."""
-    import os
+    from tests.pg_url import admin_url, require_reachable
 
-    from sqlalchemy import create_engine, text
-    from sqlalchemy.exc import OperationalError
-
-    host = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-    port = os.environ.get("TEST_POSTGRES_PORT", "5544")
-    user = os.environ.get("TEST_POSTGRES_USER", "opcg")
-    password = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-    url = f"postgresql+psycopg://{user}:{password}@{host}:{port}/postgres"
-    try:
-        engine = create_engine(url)
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-        engine.dispose()
-    except OperationalError:
-        pytest.skip(f"No PostgreSQL server reachable at {host}:{port}")
+    url = admin_url()
+    require_reachable(url)
     return url
 
 

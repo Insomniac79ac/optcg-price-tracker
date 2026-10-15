@@ -14,6 +14,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 
 from freshness_offline import offline_only
+from tests.pg_url import postgres_unavailable, postgres_url, server_label
 
 from app.db import Base
 
@@ -29,14 +30,9 @@ TABLES = (
 
 
 def test_additive_migration_upgrade_downgrade_and_model_parity():
-    url = make_url(
-        os.environ.get(
-            "TEST_POSTGRES_URL",
-            "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test",
-        )
-    )
+    url = make_url(postgres_url())
     if url.host not in {"localhost", "127.0.0.1"} or url.database != "opcg_test":
-        pytest.skip("requires local disposable PostgreSQL")
+        postgres_unavailable(f"requires local disposable opcg_test, not {server_label()}")
     admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT")
     name = "freshness_migration_" + uuid4().hex[:12]
     try:
@@ -44,7 +40,7 @@ def test_additive_migration_upgrade_downgrade_and_model_parity():
             conn.execute(text(f'CREATE DATABASE "{name}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip("disposable PostgreSQL is unavailable")
+        postgres_unavailable(f"disposable PostgreSQL is unavailable at {server_label()}")
     target = url.set(database=name)
     engine = create_engine(target)
 

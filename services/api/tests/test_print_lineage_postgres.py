@@ -13,15 +13,14 @@ import os
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError, OperationalError
+from tests.pg_url import postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401  (registers all models on Base.metadata)
 from app.db import Base
 from app.models import Card, CanonicalCard, CardPrint, PriceObservation, Source, SourceCardMapping
 
-TEST_POSTGRES_URL = os.environ.get(
-    "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
-)
+TEST_POSTGRES_URL = postgres_url()
 
 
 @pytest.fixture()
@@ -32,7 +31,7 @@ def postgres_session():
             pass
     except OperationalError:
         engine.dispose()
-        pytest.skip(f"No PostgreSQL server reachable at {TEST_POSTGRES_URL}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
 
     # Full schema (not just the tables this file touches directly) - several
     # of them (price_observations -> raw_snapshots/snkrdunk_candidates, ...)

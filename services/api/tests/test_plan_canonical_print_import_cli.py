@@ -17,14 +17,13 @@ import os
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import InternalError, OperationalError, ProgrammingError
+from tests.pg_url import postgres_unavailable, postgres_url, server_label
 
 from app import plan_canonical_print_import as cli
 from app.db import Base
 from app.models import CanonicalCard
 
-TEST_POSTGRES_URL = os.environ.get(
-    "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
-)
+TEST_POSTGRES_URL = postgres_url()
 
 
 # --- no write path -----------------------------------------------------------
@@ -181,7 +180,7 @@ def postgres_ready():
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
     except (OperationalError, InternalError):
-        pytest.skip("no PostgreSQL server on 5544")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
     CanonicalCard.__table__.create(bind=engine, checkfirst=True)
     yield engine
     engine.dispose()

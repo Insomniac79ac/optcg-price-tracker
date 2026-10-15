@@ -24,23 +24,14 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-TEST_POSTGRES_HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-TEST_POSTGRES_PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-TEST_POSTGRES_USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-TEST_POSTGRES_PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
 
-ADMIN_URL = (
-    f"postgresql+psycopg://{TEST_POSTGRES_USER}:{TEST_POSTGRES_PASSWORD}"
-    f"@{TEST_POSTGRES_HOST}:{TEST_POSTGRES_PORT}/postgres"
-)
+ADMIN_URL = admin_url()
 MIGRATION_DB = "opcg_test_release_products"
-MIGRATION_URL = (
-    f"postgresql+psycopg://{TEST_POSTGRES_USER}:{TEST_POSTGRES_PASSWORD}"
-    f"@{TEST_POSTGRES_HOST}:{TEST_POSTGRES_PORT}/{MIGRATION_DB}"
-)
+MIGRATION_URL = postgres_url(MIGRATION_DB)
 
 PREVIOUS_HEAD = "a9c4e17b6d52"
 THIS_REVISION = "b6e3a9c15d47"
@@ -92,7 +83,7 @@ def migrated_db():
             conn.execute(text(f'CREATE DATABASE "{MIGRATION_DB}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip(f"No PostgreSQL server reachable at {TEST_POSTGRES_HOST}:{TEST_POSTGRES_PORT}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
 
     engine = create_engine(MIGRATION_URL)
     _run_alembic("upgrade", PREVIOUS_HEAD)

@@ -2,40 +2,35 @@
 psycopg 3 driver end-to-end, for both the Railway-standard postgresql://
 scheme and the already-normalized postgresql+psycopg:// scheme.
 
-Points at TEST_POSTGRES_HOST/TEST_POSTGRES_PORT (defaulting to the same
-disposable instance used by test_canonical_cards_postgres.py, localhost:5544)
-and skips outright if no server answers, so the rest of the suite is
-unaffected."""
+Points at TEST_POSTGRES_URL's server via tests/pg_url.py (creating
+opcg_test_a / opcg_test_b there if absent); skips when no server answers,
+fails instead under REQUIRE_POSTGRES=1."""
 
 import os
 
 import pytest
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.engine import make_url
+
+from tests.pg_url import ensure_database, postgres_url
 
 from app.settings import Settings
 
-TEST_POSTGRES_HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-TEST_POSTGRES_PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
 
-FORM_A = f"postgresql://opcg:opcg@{TEST_POSTGRES_HOST}:{TEST_POSTGRES_PORT}/opcg_test_a"
-FORM_B = f"postgresql+psycopg://opcg:opcg@{TEST_POSTGRES_HOST}:{TEST_POSTGRES_PORT}/opcg_test_b"
+FORM_A = postgres_url("opcg_test_a", drivername="postgresql")
+FORM_B = postgres_url("opcg_test_b")
 
 
-def _skip_if_unreachable(url: str) -> None:
-    try:
-        engine = create_engine(url)
-        with engine.connect():
-            pass
-        engine.dispose()
-    except OperationalError:
-        pytest.skip(f"No PostgreSQL server reachable at {url}")
+def _ensure_database(url: str) -> None:
+    # The CI service only creates TEST_POSTGRES_URL's own database; these
+    # per-form databases are created on demand rather than assumed.
+    ensure_database(make_url(url).database)
 
 
 @pytest.mark.parametrize("raw_url", [FORM_A, FORM_B], ids=["postgresql", "postgresql+psycopg"])
 def test_api_settings_connect_with_installed_psycopg_driver(raw_url, monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    _skip_if_unreachable(raw_url.replace("postgresql://", "postgresql+psycopg://", 1))
+    _ensure_database(raw_url)
 
     settings = Settings(_env_file=None, DATABASE_URL=raw_url)
     assert settings.DATABASE_URL.startswith("postgresql+psycopg://")

@@ -119,6 +119,40 @@ waive RED boundaries. Explicit human authorization must identify the decision
 and scope; an invariant change must be recorded in [DECISIONS.md](DECISIONS.md)
 and reconciled with the contract before implementation.
 
+## Delivery lanes (owner decision 2026-10-15)
+
+Staging work runs in one of two lanes. CI decides the lane
+(`scripts/product_lane.py`); any doubt is DATA.
+
+**DATA lane** (rules unchanged): collectors and anything in the collector
+import graph (`scripts/collector_runtime_inputs.py`); identity, mappings,
+proposals; price observations, raw evidence, Market Value, Card Pirate Index;
+migrations touching those tables; Railway services, infrastructure and secrets;
+CI, delivery and policy tooling; production. Everything above in this contract
+applies as written, including the mission manifest.
+
+**PRODUCT lane**: `apps/web`; API code outside the collector import graph that
+does not touch price, identity, Market Value or Index (for example `app/accounts`);
+tests; docs outside `docs/agent/`. The exact allowlists live in
+[STAGING_DELIVERY.md](STAGING_DELIVERY.md#delivery-lanes-2026-10-15).
+
+- No mission manifest and no separate handoff PR. Do not hand-edit
+  `STAGING_MISSION.json` or diff hashes; editing it puts the PR in the DATA lane.
+  The PR description carries the summary, tests and screenshots; CI artifacts
+  are the delivery receipt. Each product PR appends a few lines to
+  [PRODUCT_LOG.md](PRODUCT_LOG.md).
+- Merge any time except 19:30-20:30 UTC (CI disarms auto-merge for the window) and not
+  while a DATA-lane collector release or migration is delivering (the shared
+  `card-pirate-staging-delivery` group serializes this).
+- Disk minimum 3 GB.
+- Still mandatory: 0 collector runtime inputs (import-graph check), relevant
+  suites green, no secret values printed, additive migrations only with a staging
+  Postgres backup under 24 h (checked automatically before arming), and one
+  independent review pass for anything touching auth or security, recorded as an
+  `Independent security review: ...` line in the PR description.
+- RED still overrides: a product PR never changes production, pricing,
+  identity, Market Value/Index meaning, or auth/security/secrets policy.
+
 ## Fix-forward rule
 
 **An isolated operational defect is NOT a mission stop condition.** For a bounded

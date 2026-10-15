@@ -13,11 +13,34 @@ permissions:
 # jobs use only the dedicated staging-delivery Environment secrets. See
 # scripts/prod_verify.sh and docs/deployment.md for the mock compose checks.
 jobs:
+  staging-pr-live:
+    # A push and ready_for_review in the same second (PR #123, 2026-10-14
+    # 11:16:07Z) gave one run a stale head and the other a stale draft flag, so
+    # neither armed. Decide from the live PR, before joining the delivery group.
+    needs: policy-gate
+    if: github.event_name == 'pull_request' && github.repository == 'Insomniac79ac/optcg-price-tracker' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      current: ${{ steps.live.outputs.current }}
+    steps:
+      - id: live
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api "repos/$REPO/pulls/$PR" \
+            --jq '"current=\(.draft == false and .head.sha == env.HEAD)"' >> "$GITHUB_OUTPUT"
+
   staging-credential-presence:
     # An independent normal Environment job distinguishes unavailable staging
     # credentials from a reusable-workflow boundary without logging values.
-    needs: policy-gate
-    if: github.event_name == 'pull_request' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    needs: [policy-gate, staging-pr-live]
+    if: github.event_name == 'pull_request' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && needs.staging-pr-live.outputs.current == 'true' && vars.STAGING_AUTONOMY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: staging-delivery
@@ -54,20 +77,30 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
         run: python scripts/probe_staging_credentials.py
+      - name: Require a staging Postgres backup under 24 h for a product-lane migration
+        if: needs.policy-gate.outputs.lane == 'product' && needs.policy-gate.outputs.migrations == 'true'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+        run: |
+          pip install -q -r scripts/agent-state-requirements.txt
+          python scripts/staging_backup_age.py --max-hours 24 --output docs/agent/evidence/latest-backup-age.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: staging-credential-probe-${{ github.event.pull_request.head.sha }}
-          path: docs/agent/evidence/latest-staging-credential-probe.json
+          path: |
+            docs/agent/evidence/latest-staging-credential-probe.json
+            docs/agent/evidence/latest-backup-age.json
 
   staging-automerge:
     # Resolve dedicated staging Environment secrets in this normal job.
     # Retain ownership from native arming through verification and state generation.
-    needs: [policy-gate, staging-credential-presence]
-    if: github.event_name == 'pull_request' && github.repository == 'Insomniac79ac/optcg-price-tracker' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    needs: [policy-gate, staging-credential-presence, staging-pr-live]
+    if: github.event_name == 'pull_request' && github.repository == 'Insomniac79ac/optcg-price-tracker' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && needs.staging-pr-live.outputs.current == 'true' && vars.STAGING_AUTONOMY_ENABLED == 'true'
     runs-on: ubuntu-latest
-    # Collectors roll out one at a time, each in its own safe slot (~10 x 3-16 min).
-    timeout-minutes: 180
+    # Collectors roll out one at a time, each in its own safe slot (~10 x 3-16 min),
+    # plus at most one hour held out of the 19:30-20:30 UTC merge window.
+    timeout-minutes: 240
     environment: staging-delivery
     concurrency:
       group: card-pirate-staging-delivery
@@ -131,13 +164,16 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          for attempt in $(seq 1 120); do
+          # 30-minute merge budget (formerly 120 polls x 15 s), extended only by
+          # time spent held out of the market-index window below.
+          deadline=$(( $(date -u +%s) + 1800 ))
+          while [ "$(date -u +%s)" -lt "$deadline" ]; do
             # A transient API error (PR #97: HTTP 504 at 11:42:38Z) is one failed
             # poll, not a failed delivery: native auto-merge stays armed and would
             # land the merge with no rollout. Retry within the same bounded budget;
             # every successful read is still checked as before.
             if ! gh api "repos/$REPO/pulls/$PR" > /tmp/merged.json || ! jq -e .number /tmp/merged.json > /dev/null; then
-              echo "::warning::PR read failed (attempt $attempt); retrying"
+              echo "::warning::PR read failed; retrying"
               sleep 15
               continue
             fi
@@ -148,6 +184,20 @@ jobs:
               exit 0
             fi
             test "$(jq -r '.state' /tmp/merged.json)" = open
+            # Never merge 19:30-20:30 UTC (market-index-snapshot runs at 20:00):
+            # disarm, wait for the window to close, re-arm the same head.
+            now=$(date -u +%s); day=$(date -u +%F)
+            start=$(date -u -d "$day 19:30" +%s); end=$(date -u -d "$day 20:30" +%s)
+            if [ "$now" -ge "$start" ] && [ "$now" -lt "$end" ]; then
+              echo "::notice::19:30-20:30 UTC window: auto-merge disarmed until 20:30 UTC"
+              gh pr merge "$PR" --repo "$REPO" --disable-auto
+              sleep $((end - now))
+              node=$(jq -r '.node_id' /tmp/merged.json)
+              gh api graphql -f query='mutation($pr:ID!,$head:GitObjectID!){enablePullRequestAutoMerge(input:{pullRequestId:$pr,expectedHeadOid:$head,mergeMethod:MERGE}){pullRequest{number}}}' \
+                -f pr="$node" -f head="$HEAD" > /dev/null
+              deadline=$((deadline + end - now))
+              continue
+            fi
             sleep 15
           done
           exit 1
@@ -166,7 +216,7 @@ jobs:
           pip install -r scripts/agent-state-requirements.txt playwright==1.58.0
           python -m playwright install --with-deps chromium
           npm install -g @railway/cli@5.62.1 vercel@60.1.3
-      - name: Decide documentation-only delivery scope
+      - name: Decide documentation-only or product-lane delivery scope
         id: scope
         env:
           MERGED_SHA: ${{ steps.merge.outputs.sha }}
@@ -174,10 +224,16 @@ jobs:
           # Local Git only. Fails closed to the full delivery on any doubt.
           python scripts/staging_delivery_scope.py --merge "$MERGED_SHA" --output docs/agent/evidence/latest-delivery-scope.json || true
           decision=$(jq -r '.decision // "full"' docs/agent/evidence/latest-delivery-scope.json 2>/dev/null || echo full)
-          if [ "$decision" != skip ]; then decision=full; fi
+          if [ "$decision" != skip ] && [ "$decision" != product ]; then decision=full; fi
+          # Every DATA-lane PR changes the manifest. A full delivery with an
+          # unchanged manifest would replay an earlier mission's rollout/DDL.
+          if [ "$decision" = full ] && git diff --quiet "$MERGED_SHA^1" "$MERGED_SHA" -- docs/agent/STAGING_MISSION.json; then
+            echo "::error::Manifest unchanged but not a documentation or PRODUCT-lane merge; refusing rollout and DDL"
+            exit 1
+          fi
           echo "decision=$decision" >> "$GITHUB_OUTPUT"
       - name: Apply reviewed additive RAW dependency migration
-        if: steps.scope.outputs.decision != 'skip'
+        if: steps.scope.outputs.decision == 'full'
         env:
           GH_TOKEN: ${{ github.token }}
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
@@ -187,7 +243,7 @@ jobs:
           pip install -r scripts/staging-migration-requirements.txt
           python scripts/apply_staging_raw_dependency.py --manifest docs/agent/STAGING_MISSION.json --expected "$MERGED_SHA" --output docs/agent/evidence/latest-raw-dependency-migration.json
       - name: Deploy mission-scoped staging collectors
-        if: steps.scope.outputs.decision != 'skip'
+        if: steps.scope.outputs.decision == 'full'
         env:
           GH_TOKEN: ${{ github.token }}
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
@@ -204,7 +260,12 @@ jobs:
           python - <<'PY'
           import json, os, subprocess
           m = json.load(open('docs/agent/STAGING_MISSION.json'))
-          v = m['deployment_verification']
+          v = dict(m['deployment_verification'])
+          scope = json.load(open('docs/agent/evidence/latest-delivery-scope.json'))
+          if scope.get('decision') == 'product':
+              # PRODUCT lane: the manifest is an earlier mission's; expect the
+              # merged API and the repository's single Alembic head instead.
+              v.update(api_sha=scope['api_sha'], revision=scope['revision'])
           extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
           subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', os.environ['EXPECTED'],
                           '--api-sha', v['api_sha'], '--revision', v['revision'],
@@ -236,6 +297,9 @@ jobs:
   policy-gate:
     if: github.event_name == 'pull_request' && github.base_ref == 'staging'
     runs-on: ubuntu-latest
+    outputs:
+      lane: ${{ steps.policy.outputs.lane }}
+      migrations: ${{ steps.policy.outputs.migrations }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -244,20 +308,33 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Evaluate mission against exact PR diff
+      - name: Evaluate lane and mission against exact PR diff
+        id: policy
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          # Candidate code is secret-free. After bootstrap, run the base policy
-          # so a PR cannot relax the evaluator used to assess itself.
-          if git cat-file -e "$BASE:scripts/staging_policy.py" 2>/dev/null; then
-            git show "$BASE:scripts/staging_policy.py" > /tmp/staging_policy.py
-          else
-            cp scripts/staging_policy.py /tmp/staging_policy.py
-          fi
+          # Candidate code is secret-free. Run the base policy and the base
+          # product-lane classifier (with the base import-graph tooling) so a PR
+          # cannot relax the evaluator used to assess itself.
+          git worktree add --detach /tmp/base "$BASE"
+          pip install -q -r /tmp/base/scripts/agent-state-requirements.txt
           git show "$HEAD:docs/agent/STAGING_MISSION.json" > /tmp/mission.json
-          python /tmp/staging_policy.py --base "$BASE" --head "$HEAD" --manifest /tmp/mission.json
+          printf '%s' "$PR_BODY" > /tmp/pr-body.txt
+          body_arg=()
+          # Bootstrap: a base policy without lanes evaluates the mission only.
+          if grep -q -- '--pr-body-file' /tmp/base/scripts/staging_policy.py; then
+            body_arg=(--pr-body-file /tmp/pr-body.txt)
+          fi
+          status=0
+          python /tmp/base/scripts/staging_policy.py --base "$BASE" --head "$HEAD" --manifest /tmp/mission.json \
+            "${body_arg[@]}" --output /tmp/policy.json || status=$?
+          if [ -f /tmp/policy.json ]; then
+            echo "lane=$(jq -r 'if .classification == "PRODUCT" then "product" else "data" end' /tmp/policy.json)" >> "$GITHUB_OUTPUT"
+            echo "migrations=$(jq -r '(.lane.migrations // []) | length > 0' /tmp/policy.json)" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$status"
 
   engineering-gate:
     if: always()
@@ -292,6 +369,7 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p test_staging_policy.py -v
       - run: python -m unittest discover -s scripts/tests -p test_verify_staging_delivery.py -v
       - run: python -m unittest discover -s scripts/tests -p test_staging_delivery_scope.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_product_lane.py -v
       - run: python -m unittest discover -s scripts/tests -p test_collector_variables.py -v
       - run: python -m unittest discover -s scripts/tests -p test_operational_health.py -v
       - run: python -m unittest discover -s scripts/tests -p test_probe_staging_credentials.py -v
@@ -346,6 +424,8 @@ jobs:
           --health-timeout 5s --health-retries 10
     env:
       TEST_POSTGRES_URL: postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test
+      # A missing database fails instead of silently skipping (tests/pg_url.py).
+      REQUIRE_POSTGRES: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -358,6 +438,20 @@ jobs:
 
   worker-tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: opcg
+          POSTGRES_PASSWORD: opcg
+          POSTGRES_DB: opcg_test
+        ports: ["5544:5432"]
+        options: >-
+          --health-cmd "pg_isready -U opcg -d opcg_test" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      TEST_POSTGRES_URL: postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test
+      REQUIRE_POSTGRES: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

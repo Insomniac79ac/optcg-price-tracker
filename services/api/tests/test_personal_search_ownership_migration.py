@@ -10,6 +10,8 @@ import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 
+from tests.pg_url import postgres_url, require_reachable
+
 
 def migration():
     path=Path(__file__).resolve().parents[1]/'alembic/versions/a8b2c4d6e901_personal_search_ownership.py'
@@ -22,12 +24,11 @@ def migration():
 def legacy(request):
     url='sqlite:///:memory:'
     if request.param=='postgresql':
-        url=os.environ.get('SEC8B_TEST_POSTGRES_URL')
-        if not url:
-            pytest.skip('Set SEC8B_TEST_POSTGRES_URL to a disposable local PostgreSQL database')
+        url=postgres_url()
         host=sa.engine.make_url(url).query.get('host') or sa.engine.make_url(url).host
         if host not in ('localhost', '127.0.0.1') and not str(host).startswith('/tmp/'):
             pytest.fail('Migration tests require an explicitly local PostgreSQL server')
+        require_reachable(url)
     engine=sa.create_engine(url)
     with engine.connect() as conn:
         transaction=conn.begin()

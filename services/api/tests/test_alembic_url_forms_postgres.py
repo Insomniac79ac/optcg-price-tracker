@@ -11,9 +11,9 @@ set when app.settings was first imported in this test session, not the one
 each parametrized case actually sets. A fresh subprocess re-reads the env var
 correctly every time.
 
-Points at TEST_POSTGRES_HOST/TEST_POSTGRES_PORT (defaulting to the same
-disposable instance used elsewhere, localhost:5544) against opcg_test_a /
-opcg_test_b, and skips outright if no server answers."""
+Points at TEST_POSTGRES_URL's server via tests/pg_url.py (creating
+opcg_test_a / opcg_test_b there if absent); skips when no server answers,
+fails instead under REQUIRE_POSTGRES=1."""
 
 import os
 import subprocess
@@ -22,25 +22,21 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.engine import make_url
+
+from tests.pg_url import ensure_database, postgres_url
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-TEST_POSTGRES_HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-TEST_POSTGRES_PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
 
-FORM_A = f"postgresql://opcg:opcg@{TEST_POSTGRES_HOST}:{TEST_POSTGRES_PORT}/opcg_test_a"
-FORM_B = f"postgresql+psycopg://opcg:opcg@{TEST_POSTGRES_HOST}:{TEST_POSTGRES_PORT}/opcg_test_b"
+FORM_A = postgres_url("opcg_test_a", drivername="postgresql")
+FORM_B = postgres_url("opcg_test_b")
 
 
-def _skip_if_unreachable(url: str) -> None:
-    try:
-        engine = create_engine(url)
-        with engine.connect():
-            pass
-        engine.dispose()
-    except OperationalError:
-        pytest.skip(f"No PostgreSQL server reachable at {url}")
+def _ensure_database(url: str) -> None:
+    # The CI service only creates TEST_POSTGRES_URL's own database; these
+    # per-form databases are created on demand rather than assumed.
+    ensure_database(make_url(url).database)
 
 
 def _run_alembic(*args: str, database_url: str) -> str:
@@ -63,7 +59,7 @@ def _run_alembic(*args: str, database_url: str) -> str:
 @pytest.mark.parametrize("raw_url", [FORM_A, FORM_B], ids=["postgresql", "postgresql+psycopg"])
 def test_alembic_current_and_heads_agree_for_both_url_forms(raw_url):
     psycopg_url = raw_url.replace("postgresql://", "postgresql+psycopg://", 1)
-    _skip_if_unreachable(psycopg_url)
+    _ensure_database(psycopg_url)
 
     _run_alembic("upgrade", "head", database_url=raw_url)
 

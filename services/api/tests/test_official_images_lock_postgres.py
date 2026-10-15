@@ -12,15 +12,12 @@ import os
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, server_label
 
 from app import mirror_official_images as cli
 from app.official_images.lock import LOCK_KEY, mirror_run_lock
 
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
+URL = admin_url()
 
 
 @pytest.fixture
@@ -31,7 +28,7 @@ def engine():
             pass
     except OperationalError:
         engine.dispose()
-        pytest.skip(f"No PostgreSQL server reachable at {HOST}:{PORT}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
     yield engine
     engine.dispose()
 

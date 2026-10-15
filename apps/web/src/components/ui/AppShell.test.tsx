@@ -66,8 +66,8 @@ describe("AppShell navigation rail", () => {
       await act(async () => { root = hydrateRoot(container, element, { onRecoverableError: recoverable }); });
       expect(recoverable).not.toHaveBeenCalled();
       expect(container.innerHTML).toBe(html);
-      expect(within(container).getAllByRole("link", { name: "Home", exact: true })).toHaveLength(2);
-      for (const link of within(container).getAllByRole("link", { name: "Home", exact: true })) {
+      expect(within(container).getAllByRole("link", { name: "Home" })).toHaveLength(2);
+      for (const link of within(container).getAllByRole("link", { name: "Home" })) {
         expect(link).toHaveAttribute("aria-current", "page");
       }
     } finally {

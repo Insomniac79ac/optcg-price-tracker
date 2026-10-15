@@ -96,7 +96,16 @@ def main():
     parser.add_argument("--head", default="HEAD")
     parser.add_argument("--manifest", default=MANIFEST)
     parser.add_argument("--output")
+    parser.add_argument("--pr-body-file", help="PR description, for the security-review line")
     args = parser.parse_args()
+    lane = product_lane_result(args)
+    if lane.get("lane") == "product":
+        # PRODUCT lane: classified from paths and the import graph; no manifest.
+        result = {"classification": "PRODUCT", "eligible": True, "errors": [], "lane": lane}
+        print(json.dumps(result, indent=2))
+        if args.output:
+            Path(args.output).write_text(json.dumps(result) + "\n")
+        return 0
     files, digest = change_evidence(args.base, args.head)
     try:
         mission = json.loads(Path(args.manifest).read_text())
@@ -116,10 +125,22 @@ def main():
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as exc:
         result = {"classification": "RED", "eligible": False,
                   "errors": [f"Missing or invalid policy/recovery evidence ({type(exc).__name__})"]}
+    # DATA lane: today's mission checks, unchanged. The lane reasons only explain why.
+    result["lane"] = lane
     print(json.dumps(result, indent=2))
     if args.output:
         Path(args.output).write_text(json.dumps(result) + "\n")
     return 0 if result["eligible"] else 1
+
+
+def product_lane_result(args):
+    """PRODUCT-lane classification, or DATA on any doubt (never raises)."""
+    try:
+        import product_lane
+        body = Path(args.pr_body_file).read_text() if args.pr_body_file else ""
+        return product_lane.classify(args.base, args.head, body)
+    except Exception as exc:  # Fail closed to the data-lane checks.
+        return {"lane": "data", "reasons": [f"classification undetermined ({type(exc).__name__})"]}
 
 
 if __name__ == "__main__":

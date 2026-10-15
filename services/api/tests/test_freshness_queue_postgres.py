@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from freshness_offline import offline_only
+from tests.pg_url import postgres_unavailable, postgres_url, server_label
 
 from app.db import Base
 from app.models import (
@@ -37,9 +38,7 @@ from app.services.freshness_queue import (
 )
 
 T0 = datetime(2026, 9, 30, tzinfo=timezone.utc)
-URL = os.environ.get(
-    "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
-)
+URL = postgres_url()
 
 
 def test_yuyu_active_claim_cap_is_atomic_and_releases_on_completion_and_expiry(db):
@@ -102,14 +101,14 @@ def test_yuyu_active_claim_cap_is_atomic_and_releases_on_completion_and_expiry(d
 def db():
     parsed = make_url(URL)
     if parsed.host not in {"localhost", "127.0.0.1"} or parsed.database != "opcg_test":
-        pytest.skip("freshness tests require local disposable opcg_test")
+        postgres_unavailable(f"freshness tests require local disposable opcg_test, not {server_label()}")
     engine = create_engine(URL)
     try:
         with engine.connect():
             pass
     except OperationalError:
         engine.dispose()
-        pytest.skip("disposable local PostgreSQL is unavailable")
+        postgres_unavailable(f"disposable local PostgreSQL is unavailable at {server_label()}")
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     factory = sessionmaker(engine, expire_on_commit=False, autoflush=False)

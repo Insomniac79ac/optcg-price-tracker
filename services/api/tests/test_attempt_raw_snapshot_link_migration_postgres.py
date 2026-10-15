@@ -8,14 +8,11 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import DBAPIError, OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 
 
 API_ROOT = Path(__file__).resolve().parents[1]
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
+ADMIN_URL = admin_url()
 PREVIOUS_REVISION = "a8b2c4d6e901"
 THIS_REVISION = "e3a7c5d9b102"
 DATABASE_NAME = "atlas_attempt_raw_link_test"
@@ -43,9 +40,9 @@ def database():
             conn.execute(text(f'CREATE DATABASE "{DATABASE_NAME}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip(f"No PostgreSQL server reachable at {HOST}:{PORT}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
 
-    url = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE_NAME}"
+    url = postgres_url(DATABASE_NAME)
     engine = create_engine(url)
     try:
         yield url, engine

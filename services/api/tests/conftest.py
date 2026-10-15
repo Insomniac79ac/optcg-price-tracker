@@ -1,5 +1,14 @@
+from pathlib import Path
+
 import pytest
-from fastapi.testclient import TestClient
+
+from tests._source_identity_guard import check_source_identity_package
+
+# Before anything imports app.* (which imports opcg_source_identity): a stale
+# copy from another worktree must stop the session, not fail tests randomly.
+check_source_identity_package(Path(__file__).parent)
+
+from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool

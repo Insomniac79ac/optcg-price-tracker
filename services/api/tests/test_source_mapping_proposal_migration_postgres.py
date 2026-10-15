@@ -15,6 +15,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, event, inspect, select, text
 from sqlalchemy.exc import OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -35,13 +36,9 @@ from app.services.source_mapping_proposals import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
 DATABASE = "opcg_test_source_mapping_proposals"
-ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
-DATABASE_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
+ADMIN_URL = admin_url()
+DATABASE_URL = postgres_url(DATABASE)
 PREVIOUS = "e3a7c5d9b102"
 REVISION = "f4c8a2d91b60"
 _config = Config()
@@ -67,7 +64,7 @@ def migration_engine():
             conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip(f"No disposable PostgreSQL at {HOST}:{PORT}")
+        postgres_unavailable(f"No disposable PostgreSQL at {server_label()}")
     engine = create_engine(DATABASE_URL)
     try:
         yield engine
