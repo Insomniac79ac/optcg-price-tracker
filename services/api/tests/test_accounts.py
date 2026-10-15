@@ -416,6 +416,10 @@ def test_movers_count_only_units_held_at_both_ends(client, db_session, enabled, 
     assert (down["units"], down["delta_jpy"], down["change_pct"], down["contribution_pct_points"]) == (2, -800, "-20.00", "-19.51")
     # Reconciled: the per-card impacts sum to Q - P.
     assert up["delta_jpy"] + down["delta_jpy"] == movers["change_jpy"]
+    # Every comparable version, not only the top movers; the entrant b has none.
+    cards = {card["card_print_id"]: card for card in value["cards"]}
+    assert set(cards) == {a, c}
+    assert cards[a] == up and cards[c] == down
 
 
 def test_a_missing_day_makes_the_window_unavailable_never_zero(client, db_session, enabled, prints):
@@ -426,6 +430,12 @@ def test_a_missing_day_makes_the_window_unavailable_never_zero(client, db_sessio
     assert movers["missing_dates"] == [gap.isoformat()]
     assert movers["change_pct"] is None and movers["change_jpy"] is None
     assert movers["up"] == movers["down"] == []
+
+
+def test_unavailable_window_has_no_per_card_change(client, db_session, enabled, prints):
+    _window_world(db_session, prints, skip={D - timedelta(days=3)})
+    assert client.get("/me/collection/value?window=7d").json()["cards"] == []
+    assert client.get("/me/collection/value?window=30d").json()["cards"] == []
 
 
 def test_not_enough_history_for_thirty_days(client, db_session, enabled, prints):

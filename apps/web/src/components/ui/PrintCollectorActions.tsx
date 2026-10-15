@@ -169,14 +169,18 @@ function failureMessage(error: unknown): ReactNode {
   return "That didn’t save. Please try again in a moment.";
 }
 
-function CollectionForm({
+/** Add, edit or remove one collection entry. Shared by the print page's
+ * panel and the /collection edit sheet; an existing entry (`held`) is edited
+ * by its own id, so a "needs a version" entry with no print can still be
+ * edited or removed. */
+export function CollectionForm({
   cardPrintId,
   versionLabel,
   held,
   onCancel,
   onDone,
 }: {
-  cardPrintId: number;
+  cardPrintId: number | null;
   versionLabel: string;
   held: { entryId: number; quantity: number; paidJpyPerCard: number | null; acquiredOn: string | null } | null;
   onCancel: () => void;
@@ -211,7 +215,8 @@ function CollectionForm({
     try {
       const fields = { quantity: count, paid_jpy_per_card: paidValue, acquired_on: acquiredOn || null };
       if (held) await meRequest("PATCH", `collection/${held.entryId}`, fields);
-      else await meRequest("POST", "collection", { card_print_id: cardPrintId, ...fields });
+      else if (cardPrintId !== null) await meRequest("POST", "collection", { card_print_id: cardPrintId, ...fields });
+      else return;
       onDone();
     } catch (error) {
       setProblem(failureMessage(error));

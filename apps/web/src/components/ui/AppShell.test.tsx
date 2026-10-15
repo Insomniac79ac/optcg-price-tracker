@@ -248,15 +248,16 @@ describe("shared public shell", () => {
     expect(screen.getByRole("button", { name: "Search cards" })).toBeInTheDocument();
   });
 
-  // Collector v1 S6: sign-in and the account page match the homepage's chrome.
-  it.each(["/sign-in", "/account"])("uses the homepage's public shell on %s", (pathname) => {
+  // Collector v1 S6/S7: sign-in, the account page and the collection match
+  // the homepage's chrome.
+  it.each(["/sign-in", "/account", "/collection"])("uses the homepage's public shell on %s", (pathname) => {
     currentPathname = pathname;
     const { container } = render(<AppShell />);
     expect(container.querySelectorAll("[data-public-shell]")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Card Pirate — Home" }).querySelector("svg")).not.toBeNull();
   });
 
-  it.each(["/collection", "/analytics/collection", "/wishlist"])("preserves private presentation on %s", (pathname) => {
+  it.each(["/collection/vault", "/analytics/collection", "/wishlist"])("preserves private presentation on %s", (pathname) => {
     currentPathname = pathname;
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-public-shell]")).toBeNull();
@@ -273,7 +274,7 @@ describe("shared public shell", () => {
       expect(container.querySelectorAll("[data-public-shell]")).toHaveLength(1);
       expect(screen.getByRole("navigation", { name: "Mobile public sections" }).querySelectorAll("[aria-current]")).toHaveLength(1);
     }
-    currentPathname = "/collection";
+    currentPathname = "/wishlist";
     rerender(<AppShell />);
     expect(container.querySelector("[data-public-shell]")).toBeNull();
   });

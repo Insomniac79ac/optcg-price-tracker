@@ -1,1360 +1,467 @@
-"use client";
-
-import dynamic from "next/dynamic";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { CollectionImportExport } from "@/components/CollectionImportExport";
-import { CollectionItemGroupsCell } from "@/components/CollectionItemGroupsCell";
-import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
-import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
-import { CollectionValuationSummary } from "@/components/CollectionValuationSummary";
-import { CollectorTagsGroupsManager } from "@/components/CollectorTagsGroupsManager";
-import { FormField } from "@/components/FormField";
-import { GradingStatusBadge } from "@/components/GradingStatusBadge";
-import { PaginationControls } from "@/components/PaginationControls";
-import type { HistoryTimeframe } from "@/components/PortfolioValuationHistoryChart";
-import { RarityBadge } from "@/components/RarityBadge";
-import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
-import { ActionButton } from "@/components/ui/ActionButton";
-import { Badge } from "@/components/ui/Badge";
-import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
-import { DataTableShell } from "@/components/ui/DataTableShell";
-import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS } from "@/components/ui/FilterBar";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { PriceCell } from "@/components/ui/PriceCell";
-import { QuickActionBar } from "@/components/ui/QuickActionBar";
-import { SavedViewBar } from "@/components/ui/SavedViewBar";
-import { VariantBadge } from "@/components/ui/VariantBadge";
+import { CollectionEditSheet } from "@/components/collection/CollectionEditSheet";
+import { CollectionHistoryChart } from "@/components/collection/CollectionHistoryChart";
+import styles from "@/components/collection/Collection.module.css";
+import { AccountChapter, AccountHero, accountSurfaceStyles as surface } from "@/components/ui/AccountSurface";
+import { CardImageFrame } from "@/components/ui/CardImageFrame";
+import { auth } from "@/lib/auth";
 import {
-  COLLECTION_STATUS_OPTIONS,
-  type Card,
-  type CollectionItem,
-  type CollectionItemInput,
-  type CollectionSummary,
-  type CollectorGroup,
-  type CollectorTag,
-  type GradedAdjustedValuation,
-  type PortfolioValuation,
-  type PortfolioValuationItem,
-  type PortfolioValuationSnapshot,
-  type SnkrdunkFloorSnapshot,
-  type ValuationMode,
-  type YuyuteiPriceSnapshot,
-  assignCollectionItemGroup,
-  assignCollectionItemTag,
-  createCollectionItem,
-  deleteCollectionItem,
-  fetchCards,
-  fetchCollectionItems,
-  fetchCollectionSummary,
-  fetchCollectionValuation,
-  fetchCollectionValuationHistory,
-  fetchCollectorGroups,
-  fetchCollectorTags,
-  unassignCollectionItemGroup,
-  unassignCollectionItemTag,
-  updateCollectionItem,
-} from "@/lib/api";
-import { cardDisplayName } from "@/lib/format";
+  COLLECTION_WINDOWS,
+  WINDOW_LABEL,
+  cardName,
+  coverageLine,
+  direction,
+  parseCollectionWindow,
+  shortDate,
+  signedPct,
+  signedYen,
+  tileChange,
+  unavailableReason,
+  yen,
+  type CollectionEntry,
+  type CollectionValue,
+  type CollectionWindow,
+  type Mover,
+  type ReleaseShare,
+} from "@/lib/collection";
+import { loadCollectionPage } from "@/lib/collectionServer";
+import { collectorIdentity } from "@/lib/collectorApi";
+import { toPrintUiModel, type PrintUiModel } from "@/lib/prints";
+import { readPrint } from "@/lib/publicServer";
 
-// Dynamically imported (recharts is a sizeable chunk) so pages that never
-// render this chart don't pay for it. ssr: false sidesteps recharts'
-// well-known SSR/hydration mismatch (it measures its container via
-// ResizeObserver, which needs a real browser).
-const PortfolioValuationHistoryChart = dynamic(
-  () =>
-    import("@/components/PortfolioValuationHistoryChart").then(
-      (mod) => mod.PortfolioValuationHistoryChart,
-    ),
-  { ssr: false, loading: () => <LoadingState>Loading chart…</LoadingState> },
-);
+export const dynamic = "force-dynamic";
 
-const STATUS_OPTIONS: readonly string[] = COLLECTION_STATUS_OPTIONS;
+export const metadata: Metadata = { title: "Your collection" };
 
-const STATUS_FILTERS = [
-  { value: "", label: "All" },
-  ...STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
-];
+const LINK = "inline-flex min-h-11 items-center rounded-control border border-[#3e696a] px-4 text-sm font-medium text-[#8dc9c4] transition-colors hover:border-accent-teal hover:text-text-primary";
 
-const ALL_OPTION = { value: "", label: "All" };
-const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
-
-interface FormState {
-  card_id: string;
-  quantity: string;
-  condition_label: string;
-  purchase_price_jpy: string;
-  purchase_date: string;
-  purchase_source: string;
-  target_sell_price_jpy: string;
-  status: string;
-  notes: string;
-}
-
-const EMPTY_FORM: FormState = {
-  card_id: "",
-  quantity: "1",
-  condition_label: "",
-  purchase_price_jpy: "",
-  purchase_date: "",
-  purchase_source: "",
-  target_sell_price_jpy: "",
-  status: "hold",
-  notes: "",
-};
-
-function itemToForm(item: CollectionItem): FormState {
-  return {
-    card_id: String(item.card_id),
-    quantity: String(item.quantity),
-    condition_label: item.condition_label ?? "",
-    purchase_price_jpy:
-      item.purchase_price_jpy === null ? "" : String(item.purchase_price_jpy),
-    purchase_date: item.purchase_date ?? "",
-    purchase_source: item.purchase_source ?? "",
-    target_sell_price_jpy:
-      item.target_sell_price_jpy === null
-        ? ""
-        : String(item.target_sell_price_jpy),
-    status: item.status,
-    notes: item.notes ?? "",
-  };
-}
-
-export default function CollectionPage() {
-  const [items, setItems] = useState<CollectionItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [listStatus, setListStatus] = useState<"loading" | "error" | "ready">(
-    "loading",
-  );
-
-  const [summary, setSummary] = useState<CollectionSummary | null>(null);
-
-  const [valuation, setValuation] = useState<PortfolioValuation | null>(null);
-  const [valuationStatus, setValuationStatus] = useState<
-    "loading" | "error" | "ready"
-  >("loading");
-  const [valuationMode, setValuationMode] = useState<ValuationMode>("raw_market");
-
-  const [historyTimeframe, setHistoryTimeframe] =
-    useState<HistoryTimeframe>("30");
-  const [history, setHistory] = useState<PortfolioValuationSnapshot[]>([]);
-  const [historyStatus, setHistoryStatus] = useState<
-    "loading" | "error" | "ready"
-  >("loading");
-
-  const [allCards, setAllCards] = useState<Card[]>([]);
-  const [cardSearch, setCardSearch] = useState("");
-
-  const [statusFilter, setStatusFilter] = useState("");
-  const [cardCodeFilter, setCardCodeFilter] = useState("");
-  const [cardCodeInput, setCardCodeInput] = useState("");
-
-  const [conditionFilter, setConditionFilter] = useState("");
-  const [setCodeFilter, setSetCodeFilter] = useState("");
-  const [rarityFilter, setRarityFilter] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [groupFilter, setGroupFilter] = useState("");
-  const [missingPricesOnly, setMissingPricesOnly] = useState(false);
-  const [missingCostBasisOnly, setMissingCostBasisOnly] = useState(false);
-  const [aboveTargetOnly, setAboveTargetOnly] = useState(false);
-
-  // filteredItems is derived client-side from a single (up to 500-item)
-  // server fetch - see refreshList() below - so pagination here paginates
-  // that already-filtered client-side array rather than re-fetching pages
-  // from the backend.
-  const [pageLimit, setPageLimit] = useState(100);
-  const [pageOffset, setPageOffset] = useState(0);
-
-  const [allTags, setAllTags] = useState<CollectorTag[]>([]);
-  const [allGroups, setAllGroups] = useState<CollectorGroup[]>([]);
-
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<CollectionItem | null>(null);
-
-  const formSectionRef = useRef<HTMLElement>(null);
-  const importExportRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetchCards()
-      .then(setAllCards)
-      .catch(() => setAllCards([]));
-  }, []);
-
-  function refreshTagsAndGroups() {
-    fetchCollectorTags()
-      .then(setAllTags)
-      .catch(() => setAllTags([]));
-    fetchCollectorGroups()
-      .then(setAllGroups)
-      .catch(() => setAllGroups([]));
-  }
-
-  useEffect(() => {
-    refreshTagsAndGroups();
-  }, []);
-
-  useEffect(() => {
-    const handle = setTimeout(() => setCardCodeFilter(cardCodeInput.trim()), 300);
-    return () => clearTimeout(handle);
-  }, [cardCodeInput]);
-
-  function refreshSummary() {
-    fetchCollectionSummary()
-      .then(setSummary)
-      .catch(() => setSummary(null));
-  }
-
-  function refreshValuation(mode: ValuationMode = valuationMode) {
-    fetchCollectionValuation(mode)
-      .then((data) => {
-        setValuation(data);
-        setValuationStatus("ready");
-      })
-      .catch(() => setValuationStatus("error"));
-  }
-
-  function handleValuationModeChange(mode: ValuationMode) {
-    setValuationMode(mode);
-    refreshValuation(mode);
-  }
-
-  function refreshHistory(days: HistoryTimeframe) {
-    setHistoryStatus("loading");
-    fetchCollectionValuationHistory(days)
-      .then((data) => {
-        setHistory(data);
-        setHistoryStatus("ready");
-      })
-      .catch(() => setHistoryStatus("error"));
-  }
-
-  function refreshList() {
-    fetchCollectionItems({
-      status: statusFilter || undefined,
-      card_code: cardCodeFilter || undefined,
-      limit: 500,
-    })
-      .then((data) => {
-        setItems(data.items);
-        setTotal(data.total);
-        setListStatus("ready");
-      })
-      .catch(() => setListStatus("error"));
-  }
-
-  useEffect(() => {
-    refreshList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, cardCodeFilter]);
-
-  useEffect(() => {
-    refreshSummary();
-    refreshValuation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    refreshHistory(historyTimeframe);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyTimeframe]);
-
-  const valuationByItemId = useMemo(() => {
-    const map = new Map<number, PortfolioValuationItem>();
-    for (const v of valuation?.items ?? []) {
-      map.set(v.collection_item_id, v);
-    }
-    return map;
-  }, [valuation]);
-
-  const conditionOptions = useMemo(() => {
-    const values = Array.from(
-      new Set(items.map((i) => i.condition_label).filter((v): v is string => !!v)),
-    ).sort();
-    return [ALL_OPTION, ...values.map((v) => ({ value: v, label: v }))];
-  }, [items]);
-
-  const setCodeOptions = useMemo(() => {
-    const values = Array.from(new Set(items.map((i) => i.set_code))).sort();
-    return [ALL_OPTION, ...values.map((v) => ({ value: v, label: v }))];
-  }, [items]);
-
-  const rarityOptions = useMemo(() => {
-    const values = Array.from(new Set(items.map((i) => i.rarity))).sort();
-    return [ALL_OPTION, ...values.map((v) => ({ value: v, label: v }))];
-  }, [items]);
-
-  const tagOptions = useMemo(
-    () => [ALL_OPTION, ...allTags.map((t) => ({ value: String(t.id), label: t.name }))],
-    [allTags],
-  );
-
-  const groupOptions = useMemo(
-    () => [ALL_OPTION, ...allGroups.map((g) => ({ value: String(g.id), label: g.name }))],
-    [allGroups],
-  );
-
-  const filteredItems = useMemo(() => {
-    return items.filter((item) => {
-      if (conditionFilter && (item.condition_label ?? "") !== conditionFilter) {
-        return false;
-      }
-      if (setCodeFilter && item.set_code !== setCodeFilter) return false;
-      if (rarityFilter && item.rarity !== rarityFilter) return false;
-      if (tagFilter && !item.tags.some((t) => String(t.id) === tagFilter)) return false;
-      if (groupFilter && !item.groups.some((g) => String(g.id) === groupFilter)) return false;
-
-      const v = valuationByItemId.get(item.id);
-
-      if (missingPricesOnly) {
-        const missingAny = v
-          ? v.flags.missing_yuyutei_sell ||
-            v.flags.missing_yuyutei_buy ||
-            v.flags.missing_snkrdunk_floor
-          : true;
-        if (!missingAny) return false;
-      }
-
-      if (missingCostBasisOnly) {
-        const missingCostBasis = v
-          ? v.flags.missing_cost_basis
-          : item.purchase_price_jpy === null;
-        if (!missingCostBasis) return false;
-      }
-
-      if (aboveTargetOnly) {
-        const above = v ? v.flags.above_target_sell : false;
-        if (!above) return false;
-      }
-
-      return true;
-    });
-  }, [
-    items,
-    conditionFilter,
-    setCodeFilter,
-    rarityFilter,
-    tagFilter,
-    groupFilter,
-    missingPricesOnly,
-    missingCostBasisOnly,
-    aboveTargetOnly,
-    valuationByItemId,
-  ]);
-
-  // Any filter/page-size change re-pages to the start - an offset from the
-  // old filtered set is otherwise almost certainly out of range for the new
-  // one.
-  useEffect(() => {
-    setPageOffset(0);
-  }, [filteredItems, pageLimit]);
-
-  const pagedItems = useMemo(
-    () => filteredItems.slice(pageOffset, pageOffset + pageLimit),
-    [filteredItems, pageOffset, pageLimit],
-  );
-
-  const cardsMissingPrices = useMemo(() => {
-    if (!valuation) return 0;
-    return valuation.items.filter(
-      (v) =>
-        v.flags.missing_yuyutei_sell ||
-        v.flags.missing_yuyutei_buy ||
-        v.flags.missing_snkrdunk_floor,
-    ).length;
-  }, [valuation]);
-
-  const filteredCardOptions = useMemo(() => {
-    const q = cardSearch.trim().toLowerCase();
-    const sorted = [...allCards].sort((a, b) =>
-      a.card_code.localeCompare(b.card_code),
+/** The signed-in collector's collection (Collector v1 S7, PLAN §E2), read
+ * server-side from the v1 accounts API. Order: value with its date and
+ * coverage, 7D/30D/ALL, history, what moved it, by set, the cards, what you
+ * paid, then the cards that still need a version.
+ *
+ * Every number is the API's: unpriced cards read "No price yet" and stay out
+ * of the total, and a window without a publishable change shows "—" with the
+ * reason, never 0%. src/proxy.ts already sends anyone who is not a collector
+ * to /sign-in; the session is checked again here. */
+export default async function CollectionPage({ searchParams }: { searchParams: Promise<{ window?: string | string[] }> }) {
+  const identity = collectorIdentity(await auth());
+  const window = parseCollectionWindow((await searchParams).window);
+  if (!identity) {
+    return (
+      <Frame>
+        <AccountHero>
+          <p className={surface.kicker}>Your collection</p>
+          <h1 className={surface.title}>Sign in to see your collection</h1>
+          <div className={surface.links}>
+            <Link href="/sign-in?callbackUrl=%2Fcollection" className={LINK}>Sign in</Link>
+          </div>
+        </AccountHero>
+      </Frame>
     );
-    if (!q) return sorted;
-    return sorted.filter(
-      (c) =>
-        c.card_code.toLowerCase().includes(q) ||
-        cardDisplayName(c).toLowerCase().includes(q),
+  }
+
+  const data = await loadCollectionPage(identity);
+  if (data.state !== "ok") {
+    return (
+      <Frame>
+        <AccountHero>
+          <p className={surface.kicker}>Your collection</p>
+          <h1 className={surface.title}>{data.state === "disabled" ? "Collections aren’t switched on yet" : "We couldn’t load your collection"}</h1>
+          <p className={surface.supporting}>
+            {data.state === "disabled"
+              ? "Card prices and the market are still open to browse."
+              : "Nothing has changed in it. Please reload the page in a moment."}
+          </p>
+          <div className={surface.links}>
+            {data.state === "error" && <Link href="/collection" className={LINK}>Reload</Link>}
+            <Link href="/cards" className={LINK}>Browse cards</Link>
+          </div>
+        </AccountHero>
+      </Frame>
     );
-  }, [allCards, cardSearch]);
-
-  function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function startEdit(item: CollectionItem) {
-    setEditingId(item.id);
-    setForm(itemToForm(item));
-    setFormError(null);
-  }
+  const { collection, values } = data;
+  const value = values[window];
+  if (collection.entries.length === 0) return <EmptyCollection />;
 
-  function cancelEdit() {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setFormError(null);
-  }
-
-  function validateForm(): CollectionItemInput | null {
-    const cardId = Number(form.card_id);
-    if (!form.card_id || Number.isNaN(cardId)) {
-      setFormError("Select a card.");
-      return null;
-    }
-
-    const quantity = form.quantity === "" ? 1 : Number(form.quantity);
-    if (Number.isNaN(quantity) || quantity < 1) {
-      setFormError("Quantity must be at least 1.");
-      return null;
-    }
-
-    let purchasePrice: number | null = null;
-    if (form.purchase_price_jpy !== "") {
-      purchasePrice = Number(form.purchase_price_jpy);
-      if (Number.isNaN(purchasePrice) || purchasePrice < 0) {
-        setFormError("Purchase price must be 0 or greater.");
-        return null;
-      }
-    }
-
-    let targetSell: number | null = null;
-    if (form.target_sell_price_jpy !== "") {
-      targetSell = Number(form.target_sell_price_jpy);
-      if (Number.isNaN(targetSell) || targetSell < 0) {
-        setFormError("Target sell price must be 0 or greater.");
-        return null;
-      }
-    }
-
-    if (!STATUS_OPTIONS.includes(form.status)) {
-      setFormError("Invalid status.");
-      return null;
-    }
-
-    return {
-      card_id: cardId,
-      quantity,
-      condition_label: form.condition_label || null,
-      purchase_price_jpy: purchasePrice,
-      purchase_date: form.purchase_date || null,
-      purchase_source: form.purchase_source || null,
-      target_sell_price_jpy: targetSell,
-      notes: form.notes || null,
-      status: form.status,
-    };
-  }
-
-  async function submitForm(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-
-    const body = validateForm();
-    if (!body) return;
-
-    setSaving(true);
-    try {
-      if (editingId !== null) {
-        await updateCollectionItem(editingId, body);
-      } else {
-        await createCollectionItem(body);
-      }
-      setForm(EMPTY_FORM);
-      setEditingId(null);
-      refreshList();
-      refreshSummary();
-      refreshValuation();
-    } catch {
-      setFormError(
-        editingId !== null
-          ? "Failed to update collection item."
-          : "Failed to add collection item.",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete(item: CollectionItem) {
-    setActionError(null);
-    setPendingDeleteId(item.id);
-    try {
-      await deleteCollectionItem(item.id);
-      if (editingId === item.id) cancelEdit();
-      setDeleteTarget(null);
-      refreshList();
-      refreshSummary();
-      refreshValuation();
-    } catch {
-      setActionError("Failed to delete collection item.");
-    } finally {
-      setPendingDeleteId(null);
-    }
-  }
-
-  async function handleAssignTag(itemId: number, tagId: number) {
-    try {
-      await assignCollectionItemTag(itemId, tagId);
-      refreshList();
-      refreshValuation();
-    } catch {
-      setActionError("Failed to assign tag.");
-    }
-  }
-
-  async function handleUnassignTag(itemId: number, tagId: number) {
-    try {
-      await unassignCollectionItemTag(itemId, tagId);
-      refreshList();
-      refreshValuation();
-    } catch {
-      setActionError("Failed to remove tag.");
-    }
-  }
-
-  async function handleAssignGroup(itemId: number, groupId: number) {
-    try {
-      await assignCollectionItemGroup(itemId, groupId);
-      refreshList();
-      refreshValuation();
-    } catch {
-      setActionError("Failed to assign group.");
-    }
-  }
-
-  async function handleUnassignGroup(itemId: number, groupId: number) {
-    try {
-      await unassignCollectionItemGroup(itemId, groupId);
-      refreshList();
-      refreshValuation();
-    } catch {
-      setActionError("Failed to remove group.");
-    }
-  }
+  const exact = collection.entries.filter((entry) => entry.resolution === "exact" && entry.card_print_id !== null);
+  const unresolved = collection.entries.filter((entry) => entry.resolution !== "exact" || entry.card_print_id === null);
+  const prints = await loadPrints(exact.map((entry) => entry.card_print_id as number));
+  const summary = collection.summary;
+  const asOf = shortDate(collection.as_of);
+  const entryByPrint = new Map(exact.map((entry) => [entry.card_print_id as number, entry]));
+  const sorted = [...exact].sort((a, b) => (b.value_jpy ?? -1) - (a.value_jpy ?? -1) || a.id - b.id);
+  const hasPaid = (value?.paid.cards_with_paid ?? 0) > 0;
+  let chapter = 0;
+  const next = () => String(++chapter).padStart(2, "0");
 
   return (
-    <div className="min-h-screen">
-      <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <PageHeader
-          title="What is your collection worth today?"
-          description={
-            <span className="flex flex-wrap gap-3">
-              <span className="w-full text-text-secondary">See the cards you own, their estimated value and what you paid.</span>
-              <Link href="/analytics/collection" className="text-sky-400 hover:text-sky-300">
-                Analytics →
-              </Link>
-              <Link href="/wishlist" className="text-sky-400 hover:text-sky-300">
-                Wishlist →
-              </Link>
-            </span>
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              {listStatus === "ready" && (
-                <span className="mono tabular text-sm text-text-muted">
-                  {total} item{total === 1 ? "" : "s"}
-                </span>
-              )}
-              <div className="flex gap-1">
-                <span className="rounded-control bg-accent-gold px-2.5 py-1 text-xs font-medium text-black/80 ring-1 ring-inset ring-accent-gold">
-                  Table View
-                </span>
-                <Link
-                  href="/collection/vault"
-                  className="rounded-control bg-bg-surface px-2.5 py-1 text-xs font-medium text-text-secondary ring-1 ring-inset ring-border-default hover:text-text-primary"
-                >
-                  Vault View →
-                </Link>
-              </div>
-            </div>
-          }
-        />
-
-        <QuickActionBar
-          actions={[
-            { label: "Vault View", href: "/collection/vault" },
-            { label: "Collection Analytics", href: "/analytics/collection" },
-            {
-              label: "Add Item",
-              onClick: () => formSectionRef.current?.scrollIntoView({ behavior: "smooth" }),
-            },
-            {
-              label: "Import / Export",
-              onClick: () => importExportRef.current?.scrollIntoView({ behavior: "smooth" }),
-            },
-          ]}
-        />
-
-        <div ref={importExportRef}>
-          <CollectionImportExport
-            onImported={() => {
-              refreshList();
-              refreshSummary();
-              refreshValuation();
-            }}
-          />
-        </div>
-
-        <div className="mb-6">
-          <CollectorTagsGroupsManager
-            tags={allTags}
-            groups={allGroups}
-            onChanged={refreshTagsAndGroups}
-          />
-        </div>
-
-        <CollectionValuationSummary
-          valuation={valuation}
-          valuationStatus={valuationStatus}
-          valuationMode={valuationMode}
-          onValuationModeChange={handleValuationModeChange}
-          cardsMissingPrices={cardsMissingPrices}
-        />
-
-        <PortfolioValuationHistoryChart
-          snapshots={history}
-          status={historyStatus}
-          timeframe={historyTimeframe}
-          onTimeframeChange={setHistoryTimeframe}
-        />
-
-        {summary && (
-          <div className="panel mb-6 flex flex-wrap items-center gap-2 px-4 py-3">
-            <span className="text-xs uppercase tracking-wide text-text-muted">
-              By status
-            </span>
-            {STATUS_OPTIONS.map((s) => (
-              <span
-                key={s}
-                className="flex items-center gap-1.5 rounded border border-border-default bg-bg-page px-2 py-1"
-              >
-                <CollectionStatusBadge status={s} />
-                <span className="text-xs text-text-secondary">
-                  {summary.items_by_status[s] ?? 0}
-                </span>
-              </span>
-            ))}
-          </div>
+    <Frame>
+      <AccountHero aside={<WindowChips window={window} values={values} />}>
+        <p className={surface.kicker}>Your collection</p>
+        <h1 className={`${surface.title} ${styles.value}`} data-testid="collection-value">
+          {summary.value_jpy !== null ? yen(summary.value_jpy) : "No prices yet"}
+        </h1>
+        <p className={styles.asOf}>
+          {asOf ? `Prices as of ${asOf}` : "No daily price check yet"}
+          <span aria-hidden="true"> · </span>
+          <span data-testid="collection-coverage">{coverageLine(summary)}</span>
+        </p>
+        {summary.priced_cards < summary.total_cards && (
+          <p className={styles.coverageNote}>
+            Cards without a price yet are left out of the total, never counted as ¥0.
+          </p>
         )}
+      </AccountHero>
 
-        <section ref={formSectionRef} className="panel mb-6 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            {editingId !== null ? "Edit collection item" : "Add collection item"}
-          </h2>
+      <section aria-labelledby="history" className={styles.section}>
+        <AccountChapter id="history" number={next()} title="Value over time" />
+        <div className={styles.panel}>
+          <CollectionHistoryChart
+            recorded={value?.history.points ?? []}
+            preview={value?.preview.points ?? []}
+            previewLabel={value?.preview.label ?? "Preview"}
+          />
+        </div>
+      </section>
 
-          {formError && (
-            <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
-              {formError}
+      {value && (value.movers.up.length > 0 || value.movers.down.length > 0 || !value.movers.available) && (
+        <section aria-labelledby="moved" className={styles.section}>
+          <AccountChapter id="moved" number={next()} title="What moved your collection">
+            {value.movers.available && value.movers.from_date && value.movers.to_date
+              ? `${shortDate(value.movers.from_date)} to ${shortDate(value.movers.to_date)}, by yen impact`
+              : undefined}
+          </AccountChapter>
+          {value.movers.available ? (
+            <div className={styles.moverColumns}>
+              <MoverList title="Up" movers={value.movers.up} entries={entryByPrint} prints={prints} />
+              <MoverList title="Down" movers={value.movers.down} entries={entryByPrint} prints={prints} />
             </div>
+          ) : (
+            <p className={styles.unavailable}>— {unavailableReason(value.movers)}</p>
           )}
-
-          <form onSubmit={submitForm} className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <FormField label="Card">
-                <input
-                  type="text"
-                  value={cardSearch}
-                  onChange={(e) => setCardSearch(e.target.value)}
-                  placeholder="Search card code or name…"
-                  className="mb-1 w-full rounded border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
-                />
-                <select
-                  value={form.card_id}
-                  onChange={(e) => updateField("card_id", e.target.value)}
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
-                >
-                  <option value="">Select a card…</option>
-                  {filteredCardOptions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.card_code} — {cardDisplayName(c)}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-
-              <FormField label="Quantity">
-                <input
-                  type="number"
-                  min={1}
-                  value={form.quantity}
-                  onChange={(e) => updateField("quantity", e.target.value)}
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
-                />
-              </FormField>
-
-              <FormField label="Condition">
-                <input
-                  type="text"
-                  value={form.condition_label}
-                  onChange={(e) =>
-                    updateField("condition_label", e.target.value)
-                  }
-                  placeholder="raw, PSA 10, …"
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
-                />
-              </FormField>
-
-              <FormField label="Purchase price (JPY)">
-                <input
-                  type="number"
-                  min={0}
-                  value={form.purchase_price_jpy}
-                  onChange={(e) =>
-                    updateField("purchase_price_jpy", e.target.value)
-                  }
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
-                />
-              </FormField>
-
-              <FormField label="Purchase date">
-                <input
-                  type="date"
-                  value={form.purchase_date}
-                  onChange={(e) => updateField("purchase_date", e.target.value)}
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
-                />
-              </FormField>
-
-              <FormField label="Purchase source">
-                <input
-                  type="text"
-                  value={form.purchase_source}
-                  onChange={(e) =>
-                    updateField("purchase_source", e.target.value)
-                  }
-                  placeholder="Yuyu-Tei, SNKRDUNK, …"
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
-                />
-              </FormField>
-
-              <FormField label="Target sell price (JPY)">
-                <input
-                  type="number"
-                  min={0}
-                  value={form.target_sell_price_jpy}
-                  onChange={(e) =>
-                    updateField("target_sell_price_jpy", e.target.value)
-                  }
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
-                />
-              </FormField>
-
-              <FormField label="Status">
-                <select
-                  value={form.status}
-                  onChange={(e) => updateField("status", e.target.value)}
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-
-              <FormField label="Notes">
-                <input
-                  type="text"
-                  value={form.notes}
-                  onChange={(e) => updateField("notes", e.target.value)}
-                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
-                />
-              </FormField>
-            </div>
-
-            <div className="flex gap-2">
-              <ActionButton variant="primary" type="submit" disabled={saving}>
-                {saving
-                  ? "Saving…"
-                  : editingId !== null
-                    ? "Update item"
-                    : "Add item"}
-              </ActionButton>
-              {editingId !== null && (
-                <ActionButton type="button" onClick={cancelEdit} disabled={saving}>
-                  Cancel
-                </ActionButton>
-              )}
-            </div>
-          </form>
         </section>
+      )}
 
-        <div className="mb-4 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1">
-              {STATUS_FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setStatusFilter(f.value)}
-                  className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                    statusFilter === f.value
-                      ? "bg-accent-gold/15 text-accent-gold ring-accent-gold/40"
-                      : "bg-bg-surface text-text-secondary ring-border-default hover:text-text-primary"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            <input
-              type="text"
-              value={cardCodeInput}
-              onChange={(e) => setCardCodeInput(e.target.value)}
-              placeholder="Filter by card code…"
-              className={FILTER_INPUT_CLASS}
-            />
-          </div>
+      {value && value.by_release.length > 0 && (
+        <section aria-labelledby="by-set" className={styles.section}>
+          <AccountChapter id="by-set" number={next()} title="By set" />
+          <ul className={styles.sets}>
+            {value.by_release.map((share) => (
+              <SetRow key={share.release_product_id ?? "none"} share={share} window={window} />
+            ))}
+          </ul>
+        </section>
+      )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterSelect
-              label="Condition"
-              value={conditionFilter}
-              onChange={setConditionFilter}
-              options={conditionOptions}
-            />
-            <FilterSelect
-              label="Set"
-              value={setCodeFilter}
-              onChange={setSetCodeFilter}
-              options={setCodeOptions}
-            />
-            <FilterSelect
-              label="Rarity"
-              value={rarityFilter}
-              onChange={setRarityFilter}
-              options={rarityOptions}
-            />
-            <FilterSelect
-              label="Tag"
-              value={tagFilter}
-              onChange={setTagFilter}
-              options={tagOptions}
-            />
-            <FilterSelect
-              label="Group"
-              value={groupFilter}
-              onChange={setGroupFilter}
-              options={groupOptions}
-            />
-            <label className={`${FILTER_LABEL_CLASS} rounded-control border border-border-default bg-bg-surface px-2 py-1`}>
-              <input
-                type="checkbox"
-                checked={missingPricesOnly}
-                onChange={(e) => setMissingPricesOnly(e.target.checked)}
-                className="rounded border-border-default bg-bg-page"
-              />
-              Missing prices
-            </label>
-            <label className={`${FILTER_LABEL_CLASS} rounded-control border border-border-default bg-bg-surface px-2 py-1`}>
-              <input
-                type="checkbox"
-                checked={missingCostBasisOnly}
-                onChange={(e) => setMissingCostBasisOnly(e.target.checked)}
-                className="rounded border-border-default bg-bg-page"
-              />
-              Missing cost basis
-            </label>
-            <label className={`${FILTER_LABEL_CLASS} rounded-control border border-border-default bg-bg-surface px-2 py-1`}>
-              <input
-                type="checkbox"
-                checked={aboveTargetOnly}
-                onChange={(e) => setAboveTargetOnly(e.target.checked)}
-                className="rounded border-border-default bg-bg-page"
-              />
-              Above target sell
-            </label>
-            {items.length > 0 && (
-              <span className="text-xs text-text-faint">
-                {filteredItems.length} of {items.length} shown
-              </span>
-            )}
-          </div>
+      <section aria-labelledby="cards" className={styles.section}>
+        <AccountChapter id="cards" number={next()} title="Your cards">
+          {`${summary.total_cards} ${summary.total_cards === 1 ? "card" : "cards"}, ${summary.total_entries} ${summary.total_entries === 1 ? "version" : "versions"}`}
+        </AccountChapter>
+        <ul className={styles.grid} data-testid="collection-grid">
+          {sorted.map((entry) => (
+            <CardTile key={entry.id} entry={entry} print={prints.get(entry.card_print_id as number) ?? null} value={value} window={window} />
+          ))}
+        </ul>
+      </section>
+
+      {value && hasPaid && (
+        <section aria-labelledby="paid" className={styles.section}>
+          <AccountChapter id="paid" number={next()} title="What you paid" />
+          <PaidPanel value={value} />
+        </section>
+      )}
+
+      {unresolved.length > 0 && (
+        <section aria-labelledby="needs-version" className={styles.section}>
+          <AccountChapter id="needs-version" number={next()} title="Needs a version">
+            These came from your old collection and match more than one version, so they have no price yet.
+          </AccountChapter>
+          <ul className={styles.needs}>
+            {unresolved.map((entry) => (
+              <NeedsVersionRow key={entry.id} entry={entry} />
+            ))}
+          </ul>
+        </section>
+      )}
+    </Frame>
+  );
+}
+
+function Frame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={surface.root}>
+      <AppHeader />
+      <main className={`${surface.main} ${styles.main}`}>{children}</main>
+    </div>
+  );
+}
+
+async function loadPrints(ids: number[]): Promise<Map<number, PrintUiModel>> {
+  const unique = [...new Set(ids)];
+  const details = await Promise.all(unique.map((id) => readPrint(String(id)).catch(() => null)));
+  const map = new Map<number, PrintUiModel>();
+  details.forEach((detail, index) => {
+    if (detail) map.set(unique[index], toPrintUiModel(detail));
+  });
+  return map;
+}
+
+function versionLabel(entry: CollectionEntry, print: PrintUiModel | null): string {
+  const code = print?.cardCode ?? entry.print?.card_code;
+  const release = print?.releaseCode ?? entry.print?.release_code;
+  return [code, print?.printingType?.label, release].filter(Boolean).join(" · ");
+}
+
+function EmptyCollection() {
+  return (
+    <Frame>
+      <AccountHero>
+        <p className={surface.kicker}>Your collection</p>
+        <h1 className={surface.title}>Your collection is empty</h1>
+        <p className={surface.supporting}>
+          Find a card, open the exact version you have, and choose “Add to collection”. Its price,
+          what you paid and how it moves will show up here.
+        </p>
+        <div className={surface.links}>
+          <Link href="/cards" className={styles.primaryLink}>Find a card</Link>
         </div>
+      </AccountHero>
+    </Frame>
+  );
+}
 
-        <SavedViewBar
-          routePath="/collection"
-          viewType="collection"
-          scope="collector"
-          currentFilters={{
-            statusFilter,
-            cardCodeFilter,
-            conditionFilter,
-            setCodeFilter,
-            rarityFilter,
-            tagFilter,
-            groupFilter,
-            missingPricesOnly,
-            missingCostBasisOnly,
-            aboveTargetOnly,
-          }}
-          onApply={(filters) => {
-            if (typeof filters.statusFilter === "string") setStatusFilter(filters.statusFilter);
-            if (typeof filters.cardCodeFilter === "string") {
-              setCardCodeFilter(filters.cardCodeFilter);
-              setCardCodeInput(filters.cardCodeFilter);
-            }
-            if (typeof filters.conditionFilter === "string") setConditionFilter(filters.conditionFilter);
-            if (typeof filters.setCodeFilter === "string") setSetCodeFilter(filters.setCodeFilter);
-            if (typeof filters.rarityFilter === "string") setRarityFilter(filters.rarityFilter);
-            if (typeof filters.tagFilter === "string") setTagFilter(filters.tagFilter);
-            if (typeof filters.groupFilter === "string") setGroupFilter(filters.groupFilter);
-            if (typeof filters.missingPricesOnly === "boolean") setMissingPricesOnly(filters.missingPricesOnly);
-            if (typeof filters.missingCostBasisOnly === "boolean") setMissingCostBasisOnly(filters.missingCostBasisOnly);
-            if (typeof filters.aboveTargetOnly === "boolean") setAboveTargetOnly(filters.aboveTargetOnly);
-            setPageOffset(0);
-          }}
-        />
-
-        {actionError && (
-          <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
-            {actionError}
-          </div>
-        )}
-
-        {listStatus === "loading" && <LoadingState>Loading collection…</LoadingState>}
-
-        {listStatus === "error" && (
-          <ErrorState>Failed to load collection from the API. Is the backend running?</ErrorState>
-        )}
-
-        {listStatus === "ready" && items.length === 0 && (
-          <EmptyState>Your collection starts here. Add the first card that matters to you.</EmptyState>
-        )}
-
-        {listStatus === "ready" && items.length > 0 && filteredItems.length === 0 && (
-          <EmptyState>No items match the selected filters.</EmptyState>
-        )}
-
-        {listStatus === "ready" && filteredItems.length > 0 && (
-          <DataTableShell>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th className="px-2 py-1.5 font-medium">Code</th>
-                  <th className="px-2 py-1.5 font-medium">Name</th>
-                  <th className="px-2 py-1.5 font-medium">Set</th>
-                  <th className="px-2 py-1.5 font-medium">Rarity</th>
-                  <th className="px-2 py-1.5 font-medium">Variant</th>
-                  <th className="px-2 py-1.5 font-medium">Qty</th>
-                  <th className="px-2 py-1.5 font-medium">Condition</th>
-                  <th className="px-2 py-1.5 font-medium">Purchase price</th>
-                  <th className="px-2 py-1.5 font-medium">Cost basis</th>
-                  <th className="px-2 py-1.5 font-medium">Yuyu-Tei sell</th>
-                  <th className="px-2 py-1.5 font-medium">Yuyu-Tei buy</th>
-                  <th className="px-2 py-1.5 font-medium">SNKRDUNK floor</th>
-                  <th className="px-2 py-1.5 font-medium">P/L vs retail</th>
-                  <th className="px-2 py-1.5 font-medium">P/L vs liquidation</th>
-                  <th className="px-2 py-1.5 font-medium">P/L vs floor</th>
-                  <th className="px-2 py-1.5 font-medium">Target sell</th>
-                  <th className="px-2 py-1.5 font-medium">Flags</th>
-                  {valuationMode === "graded_adjusted" && (
-                    <>
-                      <th className="px-2 py-1.5 font-medium">Graded-adj. value</th>
-                      <th className="px-2 py-1.5 font-medium">Graded-adj. basis</th>
-                      <th className="px-2 py-1.5 font-medium">Final grade</th>
-                      <th className="px-2 py-1.5 font-medium">Grading company</th>
-                      <th className="px-2 py-1.5 font-medium">P/L vs graded-adj.</th>
-                    </>
-                  )}
-                  <th className="px-2 py-1.5 font-medium">Tags</th>
-                  <th className="px-2 py-1.5 font-medium">Groups</th>
-                  <th className="px-2 py-1.5 font-medium">Grading</th>
-                  <th className="px-2 py-1.5 font-medium">Status</th>
-                  <th className="px-2 py-1.5 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedItems.map((item) => {
-                  const v = valuationByItemId.get(item.id);
-                  return (
-                    <tr key={item.id}>
-                      <td className="px-2 py-1.5 font-mono text-text-secondary">
-                        {item.card_code}
-                      </td>
-                      <td className="px-2 py-1.5 font-medium text-text-primary">
-                        {cardDisplayName(item)}
-                      </td>
-                      <td className="px-2 py-1.5 text-text-secondary">
-                        {item.set_code}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <RarityBadge rarity={item.rarity} />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <VariantBadge variant={item.variant} />
-                      </td>
-                      <td className="mono tabular px-2 py-1.5 text-text-primary">
-                        {item.quantity}
-                      </td>
-                      <td className="px-2 py-1.5 text-text-secondary">
-                        {item.condition_label ?? "—"}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PriceCell valueJpy={item.purchase_price_jpy} size="sm" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <CostBasisCell costBasisJpy={v?.cost_basis_jpy ?? null} />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PriceSnapshotCell
-                          snapshot={v?.latest_prices.yuyutei_sell ?? null}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PriceSnapshotCell
-                          snapshot={v?.latest_prices.yuyutei_buy ?? null}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PriceSnapshotCell
-                          snapshot={v?.latest_prices.snkrdunk_floor ?? null}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PnlCell
-                          pnlJpy={v?.valuations.pnl_vs_retail_jpy ?? null}
-                          pnlPct={v?.valuations.pnl_vs_retail_pct ?? null}
-                          missingPrice={v?.flags.missing_yuyutei_sell ?? true}
-                          missingCostBasis={v?.flags.missing_cost_basis ?? true}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PnlCell
-                          pnlJpy={v?.valuations.pnl_vs_liquidation_jpy ?? null}
-                          pnlPct={v?.valuations.pnl_vs_liquidation_pct ?? null}
-                          missingPrice={v?.flags.missing_yuyutei_buy ?? true}
-                          missingCostBasis={v?.flags.missing_cost_basis ?? true}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PnlCell
-                          pnlJpy={v?.valuations.pnl_vs_market_floor_jpy ?? null}
-                          pnlPct={v?.valuations.pnl_vs_market_floor_pct ?? null}
-                          missingPrice={v?.flags.missing_snkrdunk_floor ?? true}
-                          missingCostBasis={v?.flags.missing_cost_basis ?? true}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <PriceCell valueJpy={item.target_sell_price_jpy} size="sm" />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        {v ? (
-                          <FlagsCell flags={v.flags} />
-                        ) : (
-                          <span className="text-text-faint">—</span>
-                        )}
-                      </td>
-                      {valuationMode === "graded_adjusted" && (
-                        <GradedAdjustedCells
-                          gradedAdjusted={v?.graded_adjusted ?? null}
-                          latestGradingStatus={item.latest_grading_status}
-                        />
-                      )}
-                      <td className="px-2 py-1.5">
-                        <CollectionItemTagsCell
-                          assigned={item.tags}
-                          available={allTags}
-                          onAssign={(tagId) => handleAssignTag(item.id, tagId)}
-                          onUnassign={(tagId) => handleUnassignTag(item.id, tagId)}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <CollectionItemGroupsCell
-                          assigned={item.groups}
-                          available={allGroups}
-                          onAssign={(groupId) => handleAssignGroup(item.id, groupId)}
-                          onUnassign={(groupId) => handleUnassignGroup(item.id, groupId)}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        {item.latest_grading_status ? (
-                          <GradingStatusBadge status={item.latest_grading_status} />
-                        ) : (
-                          <span className="text-text-faint">—</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <CollectionStatusBadge status={item.status} />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => startEdit(item)}
-                            className="text-xs font-medium text-sky-400 hover:text-sky-300"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(item)}
-                            disabled={pendingDeleteId === item.id}
-                            className="text-xs font-medium text-signal-red hover:text-signal-red disabled:opacity-50"
-                          >
-                            {pendingDeleteId === item.id
-                              ? "Deleting…"
-                              : "Delete"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </DataTableShell>
-        )}
-
-        {listStatus === "ready" && filteredItems.length > 0 && (
-          <div className="mt-3">
-            <PaginationControls
-              offset={pageOffset}
-              limit={pageLimit}
-              total={filteredItems.length}
-              onOffsetChange={setPageOffset}
-              limitOptions={LIMIT_OPTIONS}
-              onLimitChange={setPageLimit}
-            />
-          </div>
-        )}
-      </main>
-
-      <ConfirmActionModal
-        open={deleteTarget !== null}
-        title="Remove from collection"
-        description={
-          deleteTarget
-            ? `Delete ${deleteTarget.quantity}x ${deleteTarget.card_code} — ${cardDisplayName(deleteTarget)} from your collection? This cannot be undone.`
-            : undefined
+function WindowChips({ window, values }: { window: CollectionWindow; values: Record<CollectionWindow, CollectionValue | null> }) {
+  const selected = values[window];
+  return (
+    <div className={styles.chipsBlock}>
+      <nav aria-label="Change over time" className={styles.chips}>
+        {COLLECTION_WINDOWS.map((w) => {
+          const change = values[w]?.history.change ?? null;
+          const pct = change?.available ? signedPct(change.change_pct) : null;
+          const reason = pct === null ? unavailableReason(change) : undefined;
+          return (
+            <Link
+              key={w}
+              href={w === "7d" ? "/collection" : `/collection?window=${w}`}
+              scroll={false}
+              aria-current={w === window ? "page" : undefined}
+              className={styles.chip}
+              title={reason}
+              data-window={w}
+            >
+              <span className={styles.chipLabel}>{WINDOW_LABEL[w]}</span>
+              <span className={styles.chipValue} data-direction={pct ? direction(change?.change_pct) : undefined}>
+                {pct ?? "—"}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+      {(() => {
+        const change = selected?.history.change ?? null;
+        if (change?.available && signedPct(change.change_pct) !== null) {
+          return (
+            <p className={styles.chipNote}>
+              {WINDOW_LABEL[window]} change in your recorded collection, {shortDate(change.from_date)} to {shortDate(change.to_date)}.
+            </p>
+          );
         }
-        confirmLabel={pendingDeleteId !== null ? "Deleting…" : "Delete"}
-        pending={pendingDeleteId !== null}
-        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
-        onCancel={() => setDeleteTarget(null)}
-      />
+        return <p className={styles.chipNote} data-testid="window-reason">{WINDOW_LABEL[window]}: — {unavailableReason(change)}.</p>;
+      })()}
     </div>
   );
 }
 
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
+function MoverList({
+  title,
+  movers,
+  entries,
+  prints,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
+  title: "Up" | "Down";
+  movers: Mover[];
+  entries: Map<number, CollectionEntry>;
+  prints: Map<number, PrintUiModel>;
 }) {
   return (
-    <label className={FILTER_LABEL_CLASS}>
-      {label}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={FILTER_INPUT_CLASS}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className={styles.panel}>
+      <h3 className={styles.panelHeading}>{title}</h3>
+      {movers.length === 0 ? (
+        <p className={styles.quiet}>{title === "Up" ? "Nothing rose in this window." : "Nothing fell in this window."}</p>
+      ) : (
+        <ol className={styles.movers}>
+          {movers.map((mover) => {
+            const entry = entries.get(mover.card_print_id) ?? null;
+            const print = prints.get(mover.card_print_id) ?? null;
+            const name = print?.displayName ?? cardName(entry?.print ?? null);
+            return (
+              <li key={mover.card_print_id} className={styles.mover}>
+                <span className={styles.moverName}>
+                  <Link href={`/prints/${mover.card_print_id}`}>
+                    {name}
+                    {print?.printingType && <span className={styles.moverVersion}> · {print.printingType.label}</span>}
+                  </Link>
+                  <span className={styles.meta}>
+                    {entry ? versionLabel(entry, print) : print?.cardCode}
+                    {mover.units > 1 ? ` · ×${mover.units}` : ""}
+                  </span>
+                </span>
+                <span className={styles.moverFigures} data-direction={direction(mover.delta_jpy)}>
+                  <span>{signedYen(mover.delta_jpy)}</span>
+                  <span className={styles.meta}>{signedPct(mover.change_pct) ?? "—"}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
   );
 }
 
-function CostBasisCell({ costBasisJpy }: { costBasisJpy: number | null }) {
-  if (costBasisJpy === null) {
-    return (
-      <span className="italic text-text-faint">missing cost basis</span>
-    );
-  }
-  return <PriceCell valueJpy={costBasisJpy} size="sm" />;
-}
-
-function PriceSnapshotCell({
-  snapshot,
-}: {
-  snapshot: YuyuteiPriceSnapshot | SnkrdunkFloorSnapshot | null;
-}) {
-  if (!snapshot) {
-    return <span className="italic text-text-faint">missing price</span>;
-  }
-  // No source/priceType passed here - the column header already names the
-  // basis (Yuyu-Tei sell/buy, SNKRDUNK floor), so repeating it as a chip on
-  // every row would be redundant noise in an already-dense table. Still
-  // gets PriceCell's mono/tabular formatting and stale badge.
-  return <PriceCell valueJpy={snapshot.price_jpy} observedAt={snapshot.observed_at} size="sm" />;
-}
-
-function PnlCell({
-  pnlJpy,
-  pnlPct,
-  missingPrice,
-  missingCostBasis,
-}: {
-  pnlJpy: number | null;
-  pnlPct: number | null;
-  missingPrice: boolean;
-  missingCostBasis: boolean;
-}) {
-  if (missingPrice) {
-    return <span className="italic text-text-faint">missing price</span>;
-  }
-  if (missingCostBasis) {
-    return (
-      <span className="italic text-text-faint">missing cost basis</span>
-    );
-  }
-  return <PriceCell valueJpy={pnlJpy} percent={pnlPct} signed size="sm" />;
-}
-
-function FlagsCell({
-  flags,
-}: {
-  flags: PortfolioValuationItem["flags"];
-}) {
-  const activeFlags: { key: string; label: string; positive?: boolean }[] = [];
-  if (flags.missing_yuyutei_sell) {
-    activeFlags.push({ key: "sell", label: "No sell price" });
-  }
-  if (flags.missing_yuyutei_buy) {
-    activeFlags.push({ key: "buy", label: "No buy price" });
-  }
-  if (flags.missing_snkrdunk_floor) {
-    activeFlags.push({ key: "floor", label: "No floor price" });
-  }
-  if (flags.missing_cost_basis) {
-    activeFlags.push({ key: "cost", label: "No cost basis" });
-  }
-  if (flags.above_target_sell) {
-    activeFlags.push({ key: "target", label: "Above target", positive: true });
-  }
-
-  if (activeFlags.length === 0) {
-    return <span className="text-text-faint">—</span>;
-  }
-
+function SetRow({ share, window }: { share: ReleaseShare; window: CollectionWindow }) {
+  const pct = share.change.available ? signedPct(share.change.change_pct) : null;
+  const sharePct = share.share_pct !== null ? Number(share.share_pct) : null;
   return (
-    <div className="flex flex-wrap gap-1">
-      {activeFlags.map((f) => (
-        <Badge
-          key={f.key}
-          label={f.label}
-          className={
-            f.positive
-              ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
-              : "bg-neutral-500/15 text-text-secondary ring-1 ring-inset ring-neutral-500/30"
-          }
+    <li className={styles.setRow}>
+      <div className={styles.setHead}>
+        <div className={styles.setName}>
+          <span>{share.release_name ?? (share.release_product_id === null ? "Needs a version" : "Unknown set")}</span>
+          {share.release_code && <span className={styles.code}>{share.release_code}</span>}
+        </div>
+        <span className={styles.setValue}>{share.value_jpy !== null ? yen(share.value_jpy) : "No price yet"}</span>
+      </div>
+      <div className={styles.shareBar} aria-hidden="true">
+        <span style={{ width: `${sharePct !== null && Number.isFinite(sharePct) ? Math.max(0, Math.min(100, sharePct)) : 0}%` }} />
+      </div>
+      <div className={styles.setFoot}>
+        <span className={styles.meta}>
+          Priced: {share.priced_cards} of {share.total_cards}
+          {sharePct !== null && Number.isFinite(sharePct) ? ` · ${Math.round(sharePct)}% of your collection` : ""}
+        </span>
+        <span className={styles.setChange} data-direction={pct ? direction(share.change.change_pct) : undefined} title={pct ? undefined : unavailableReason(share.change)}>
+          {pct ? `${pct} ${WINDOW_LABEL[window]}` : `— ${WINDOW_LABEL[window]}: ${share.value_jpy === null ? "No price yet" : unavailableReason(share.change)}`}
+        </span>
+      </div>
+    </li>
+  );
+}
+
+function CardTile({ entry, print, value, window }: { entry: CollectionEntry; print: PrintUiModel | null; value: CollectionValue | null; window: CollectionWindow }) {
+  const name = print?.displayName ?? cardName(entry.print);
+  const code = print?.cardCode ?? entry.print?.card_code ?? "";
+  const label = versionLabel(entry, print);
+  const change = tileChange(value, entry);
+  const href = `/prints/${entry.card_print_id}`;
+  return (
+    <li className={styles.tile} data-testid="collection-card">
+      <Link href={href} className={styles.tileArt} tabIndex={-1} aria-hidden="true">
+        <CardImageFrame
+          imageUrl={print?.imageUrl ?? null}
+          alt={`${name} (${code})`}
+          cardCode={code}
+          rarity={print?.rarity ?? null}
+          setCode={print?.releaseCode ?? null}
+          size="full"
+          padded
+          geometry={print?.imageGeometry ?? null}
         />
-      ))}
+        {entry.quantity > 1 && <span className={styles.quantity}>×{entry.quantity}</span>}
+      </Link>
+      <div className={styles.tileBody}>
+        <h3 className={styles.tileName}>
+          <Link href={href}>{name}</Link>
+        </h3>
+        <p className={styles.meta}>{label}</p>
+        <p className={styles.tileValue}>
+          {entry.value_jpy !== null ? (
+            <>
+              <span>{yen(entry.value_jpy)}</span>
+              {entry.quantity > 1 && entry.value_per_card_jpy !== null && <span className={styles.meta}> · {yen(entry.value_per_card_jpy)} each</span>}
+            </>
+          ) : (
+            <span className={styles.noPrice}>No price yet</span>
+          )}
+        </p>
+        {change.kind === "change" ? (
+          <p className={styles.tileChange} data-direction={change.direction}>
+            {change.pct} <span className={styles.meta}>{WINDOW_LABEL[window]}</span>
+          </p>
+        ) : (
+          entry.value_status === "priced" && (
+            <p className={styles.tileChange} title={change.reason}>
+              — <span className={styles.meta}>{WINDOW_LABEL[window]}: {change.reason}</span>
+            </p>
+          )
+        )}
+        <div className={styles.tileActions}>
+          <CollectionEditSheet
+            entryId={entry.id}
+            cardPrintId={entry.card_print_id}
+            versionLabel={`${name}${label ? ` · ${label}` : ""}`}
+            quantity={entry.quantity}
+            paidJpyPerCard={entry.paid_jpy_per_card}
+            acquiredOn={entry.acquired_on}
+            buttonDescription={`Edit ${name}${label ? `, ${label}` : ""}`}
+          />
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function PaidPanel({ value }: { value: CollectionValue }) {
+  const { paid } = value;
+  const pct = signedPct(paid.change_pct);
+  const left = paid.cards_with_paid - paid.cards_compared;
+  return (
+    <div className={`${styles.panel} ${styles.paid}`}>
+      {paid.paid_jpy !== null && paid.priced_today_jpy !== null ? (
+        <p className={styles.paidLine}>
+          You paid <strong>{yen(paid.paid_jpy)}</strong> for {paid.cards_compared} {paid.cards_compared === 1 ? "card" : "cards"}. Priced today:{" "}
+          <strong>{yen(paid.priced_today_jpy)}</strong>
+          {pct && <span className={styles.paidPct} data-direction={direction(paid.change_pct)}> ({pct})</span>}.
+        </p>
+      ) : (
+        <p className={styles.paidLine}>None of the cards you entered a price for has a price today yet.</p>
+      )}
+      <p className={styles.meta}>
+        {paid.cards_with_paid} of {paid.total_cards} cards have what you paid.
+        {left > 0 ? ` ${left} of them ${left === 1 ? "has" : "have"} no price today and ${left === 1 ? "is" : "are"} left out.` : ""}
+      </p>
     </div>
   );
 }
 
-function GradedAdjustedBasisLabel({
-  gradedAdjusted,
-}: {
-  gradedAdjusted: GradedAdjustedValuation;
-}) {
-  if (gradedAdjusted.basis === "graded_value") {
-    return (
-      <Badge
-        label="Graded value"
-        className="bg-violet-500/15 text-violet-300 ring-1 ring-inset ring-violet-500/30"
-      />
-    );
-  }
-  if (gradedAdjusted.raw_fallback_basis) {
-    const label =
-      gradedAdjusted.raw_fallback_basis === "snkrdunk_floor"
-        ? "SNKRDUNK floor"
-        : "Yuyu-Tei sell";
-    return (
-      <Badge
-        label={`Raw fallback (${label})`}
-        className="bg-amber-500/15 text-signal-warning ring-1 ring-inset ring-amber-500/30"
-      />
-    );
-  }
-  return <span className="italic text-text-faint">no graded value</span>;
-}
-
-/** Five <td>s covering the graded-adjusted breakdown for one row - only
- * rendered when the graded_adjusted valuation mode is selected, and never
- * substitutes for the raw retail/liquidation/floor cells (which stay put
- * regardless of mode). `gradedAdjusted` is null when the item is missing
- * from the currently loaded valuation response entirely (e.g. mid-refresh),
- * distinct from a loaded-but-empty graded_adjusted breakdown. */
-function GradedAdjustedCells({
-  gradedAdjusted,
-  latestGradingStatus,
-}: {
-  gradedAdjusted: GradedAdjustedValuation | null;
-  latestGradingStatus: string | null;
-}) {
-  if (!gradedAdjusted) {
-    return (
-      <>
-        <td className="px-2 py-1.5 text-text-faint">—</td>
-        <td className="px-2 py-1.5 text-text-faint">—</td>
-        <td className="px-2 py-1.5 text-text-faint">—</td>
-        <td className="px-2 py-1.5 text-text-faint">—</td>
-        <td className="px-2 py-1.5 text-text-faint">—</td>
-      </>
-    );
-  }
-
-  const notReceivedYet =
-    gradedAdjusted.basis !== "graded_value" &&
-    latestGradingStatus !== null &&
-    latestGradingStatus !== "received";
-
+function NeedsVersionRow({ entry }: { entry: CollectionEntry }) {
   return (
-    <>
-      <td className="px-2 py-1.5">
-        {gradedAdjusted.value_jpy === null ? (
-          <span className="italic text-text-faint">no graded value</span>
-        ) : (
-          // No `mode` prop here - the adjacent "Graded-adj. basis" column
-          // (GradedAdjustedBasisLabel below) already names the basis, so a
-          // second badge in this cell would just repeat it.
-          <PriceCell valueJpy={gradedAdjusted.value_jpy} size="sm" />
-        )}
-      </td>
-      <td className="px-2 py-1.5">
-        <GradedAdjustedBasisLabel gradedAdjusted={gradedAdjusted} />
-        {notReceivedYet && (
-          <div className="mt-0.5 text-[11px] italic text-text-faint">not received</div>
-        )}
-      </td>
-      <td className="px-2 py-1.5 text-text-secondary">
-        {gradedAdjusted.final_grade ?? "—"}
-      </td>
-      <td className="px-2 py-1.5 text-text-secondary">
-        {gradedAdjusted.grading_company ?? "—"}
-      </td>
-      <td className="px-2 py-1.5">
-        {gradedAdjusted.value_jpy === null ? (
-          <span className="italic text-text-faint">no graded value</span>
-        ) : gradedAdjusted.pnl_jpy === null ? (
-          <span className="italic text-text-faint">missing cost basis</span>
-        ) : (
-          <PnlCell
-            pnlJpy={gradedAdjusted.pnl_jpy}
-            pnlPct={gradedAdjusted.pnl_pct}
-            missingPrice={false}
-            missingCostBasis={false}
-          />
-        )}
-      </td>
-    </>
+    <li className={styles.needsRow}>
+      <div className="min-w-0">
+        <p className={styles.needsName}>{entry.print ? cardName(entry.print) : "A card from your old collection"}</p>
+        <p className={styles.meta}>
+          ×{entry.quantity}
+          {entry.paid_jpy_per_card !== null ? ` · you paid ${yen(entry.paid_jpy_per_card)} each` : ""}
+          {entry.note ? ` · ${entry.note}` : ""}
+        </p>
+      </div>
+      <div className={styles.needsActions}>
+        <Link href="/cards" className={LINK}>Find the version</Link>
+        <CollectionEditSheet
+          entryId={entry.id}
+          cardPrintId={null}
+          versionLabel={entry.note ?? "A card from your old collection"}
+          quantity={entry.quantity}
+          paidJpyPerCard={entry.paid_jpy_per_card}
+          acquiredOn={entry.acquired_on}
+          buttonDescription="Edit this card from your old collection"
+        />
+      </div>
+    </li>
   );
 }
