@@ -1,0 +1,1232 @@
+{
+ "read_only": true,
+ "source_requests": 0,
+ "work_ids": [
+  3678,
+  3727
+ ],
+ "enqueued_at": "2026-10-13 16:06:12+00",
+ "observed_at": "2026-10-15 04:00:56.915476",
+ "snapshot_refs_outside_new50": 0,
+ "yuyu_attempt_outcomes_since_enqueue": [
+  {
+   "kind": "discovery",
+   "outcome": "completed",
+   "n": 127
+  },
+  {
+   "kind": "refresh",
+   "outcome": "captured",
+   "n": 4643
+  }
+ ],
+ "yuyu_raw_http_status_since_enqueue": [
+  {
+   "http_status": 200,
+   "n": 5049
+  }
+ ],
+ "yuyu_denial_failures_since_enqueue": 0,
+ "decisions_since_enqueue": {
+  "proposal_reviews": 0,
+  "approved_groups_created": 0,
+  "mappings_created": 0,
+  "mappings_updated": 0
+ },
+ "summary": {
+  "work_rows": 50,
+  "attempts": 50,
+  "outcomes": {
+   "completed": 50
+  },
+  "work_state": {
+   "pending/completed": 50
+  },
+  "first_start": "2026-10-13 16:11:42.811114+00:00",
+  "last_finish": "2026-10-13 16:23:28.314973+00:00",
+  "shards": {
+   "yuyutei-due-3": 16,
+   "yuyutei-due-4": 16,
+   "yuyutei-due-5": 14,
+   "yuyutei-due-6": 4
+  },
+  "request_cost": {
+   "total": 2946,
+   "avg": 58.92,
+   "min": 58,
+   "max": 60,
+   "over_reservation": 0
+  },
+  "identity_status": {
+   "unresolved; retained artwork evidence only": 50
+  },
+  "parked_after_capture": 50,
+  "snapshots": 202,
+  "snapshots_found": 202,
+  "http_status": {
+   "200": 202
+  },
+  "yuyu_images": 50,
+  "official_images": 102,
+  "stored_bytes": {
+   "product_html": 1865902,
+   "yuyu_image": 29017408,
+   "official_image": 29561452,
+   "total": 60444762
+  },
+  "stored_mb": 60.44,
+  "stored_bytes_per_capture": 1208895
+ },
+ "records": [
+  {
+   "work_id": 3678,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:11:42.811114+00:00",
+     "finished_at": "2026-10-13 16:11:56.292117+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37313,
+    "yuyu_image": 591556,
+    "official_image": 505516
+   },
+   "bytes_total": 1134385,
+   "next_due_at": "2126-09-19 16:11:56.187849+00:00"
+  },
+  {
+   "work_id": 3679,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:11:58.233688+00:00",
+     "finished_at": "2026-10-13 16:12:10.998426+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37404,
+    "yuyu_image": 595632,
+    "official_image": 471996
+   },
+   "bytes_total": 1105032,
+   "next_due_at": "2126-09-19 16:12:10.897392+00:00"
+  },
+  {
+   "work_id": 3680,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:12:12.881175+00:00",
+     "finished_at": "2026-10-13 16:12:25.557132+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37290,
+    "yuyu_image": 615824,
+    "official_image": 450028
+   },
+   "bytes_total": 1103142,
+   "next_due_at": "2126-09-19 16:12:25.467292+00:00"
+  },
+  {
+   "work_id": 3681,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 60,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:12:27.586345+00:00",
+     "finished_at": "2026-10-13 16:12:40.776487+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 3,
+   "bytes": {
+    "product": 37394,
+    "yuyu_image": 660796,
+    "official_image": 962916
+   },
+   "bytes_total": 1661106,
+   "next_due_at": "2126-09-19 16:12:40.692070+00:00"
+  },
+  {
+   "work_id": 3682,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 58,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:12:42.729539+00:00",
+     "finished_at": "2026-10-13 16:12:56.923516+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37290,
+    "yuyu_image": 675732,
+    "official_image": 671244
+   },
+   "bytes_total": 1384266,
+   "next_due_at": "2126-09-19 16:12:56.856975+00:00"
+  },
+  {
+   "work_id": 3683,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 58,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:12:58.862694+00:00",
+     "finished_at": "2026-10-13 16:13:10.987915+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37390,
+    "yuyu_image": 685932,
+    "official_image": 590408
+   },
+   "bytes_total": 1313730,
+   "next_due_at": "2126-09-19 16:13:10.899324+00:00"
+  },
+  {
+   "work_id": 3684,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:13:12.866302+00:00",
+     "finished_at": "2026-10-13 16:13:24.930336+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37308,
+    "yuyu_image": 652064,
+    "official_image": 567496
+   },
+   "bytes_total": 1256868,
+   "next_due_at": "2126-09-19 16:13:24.867853+00:00"
+  },
+  {
+   "work_id": 3685,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:13:26.962352+00:00",
+     "finished_at": "2026-10-13 16:13:39.733808+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37211,
+    "yuyu_image": 587384,
+    "official_image": 657948
+   },
+   "bytes_total": 1282543,
+   "next_due_at": "2126-09-19 16:13:39.632687+00:00"
+  },
+  {
+   "work_id": 3686,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:13:46.262480+00:00",
+     "finished_at": "2026-10-13 16:14:04.201049+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37424,
+    "yuyu_image": 604636,
+    "official_image": 597808
+   },
+   "bytes_total": 1239868,
+   "next_due_at": "2126-09-19 16:14:04.119513+00:00"
+  },
+  {
+   "work_id": 3687,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:14:06.188237+00:00",
+     "finished_at": "2026-10-13 16:14:18.333256+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37358,
+    "yuyu_image": 704276,
+    "official_image": 601140
+   },
+   "bytes_total": 1342774,
+   "next_due_at": "2126-09-19 16:14:18.278968+00:00"
+  },
+  {
+   "work_id": 3688,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:14:20.250856+00:00",
+     "finished_at": "2026-10-13 16:14:32.121847+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37205,
+    "yuyu_image": 601400,
+    "official_image": 594712
+   },
+   "bytes_total": 1233317,
+   "next_due_at": "2126-09-19 16:14:32.049218+00:00"
+  },
+  {
+   "work_id": 3689,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:14:34.012152+00:00",
+     "finished_at": "2026-10-13 16:14:46.469930+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37569,
+    "yuyu_image": 595544,
+    "official_image": 552096
+   },
+   "bytes_total": 1185209,
+   "next_due_at": "2126-09-19 16:14:46.389984+00:00"
+  },
+  {
+   "work_id": 3690,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:14:48.468740+00:00",
+     "finished_at": "2026-10-13 16:15:12.860871+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37326,
+    "yuyu_image": 578404,
+    "official_image": 593608
+   },
+   "bytes_total": 1209338,
+   "next_due_at": "2126-09-19 16:15:12.757860+00:00"
+  },
+  {
+   "work_id": 3691,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:15:14.876327+00:00",
+     "finished_at": "2026-10-13 16:15:29.398872+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37579,
+    "yuyu_image": 626504,
+    "official_image": 660768
+   },
+   "bytes_total": 1324851,
+   "next_due_at": "2126-09-19 16:15:29.280785+00:00"
+  },
+  {
+   "work_id": 3692,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:15:31.382613+00:00",
+     "finished_at": "2026-10-13 16:15:43.537666+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37431,
+    "yuyu_image": 592708,
+    "official_image": 549976
+   },
+   "bytes_total": 1180115,
+   "next_due_at": "2126-09-19 16:15:43.423177+00:00"
+  },
+  {
+   "work_id": 3693,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-3",
+     "started_at": "2026-10-13 16:15:45.520176+00:00",
+     "finished_at": "2026-10-13 16:15:59.788357+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37085,
+    "yuyu_image": 536740,
+    "official_image": 456796
+   },
+   "bytes_total": 1030621,
+   "next_due_at": "2126-09-19 16:15:59.700429+00:00"
+  },
+  {
+   "work_id": 3694,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:15:59.498820+00:00",
+     "finished_at": "2026-10-13 16:16:14.373602+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37013,
+    "yuyu_image": 680808,
+    "official_image": 556024
+   },
+   "bytes_total": 1273845,
+   "next_due_at": "2126-09-19 16:16:14.249598+00:00"
+  },
+  {
+   "work_id": 3695,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:16:17.085953+00:00",
+     "finished_at": "2026-10-13 16:16:31.584421+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37275,
+    "yuyu_image": 583664,
+    "official_image": 568052
+   },
+   "bytes_total": 1188991,
+   "next_due_at": "2126-09-19 16:16:31.346686+00:00"
+  },
+  {
+   "work_id": 3696,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:16:34.471469+00:00",
+     "finished_at": "2026-10-13 16:17:01.793274+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37310,
+    "yuyu_image": 635668,
+    "official_image": 566944
+   },
+   "bytes_total": 1239922,
+   "next_due_at": "2126-09-19 16:17:01.612413+00:00"
+  },
+  {
+   "work_id": 3697,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:17:04.514626+00:00",
+     "finished_at": "2026-10-13 16:17:19.055322+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37172,
+    "yuyu_image": 646856,
+    "official_image": 546868
+   },
+   "bytes_total": 1230896,
+   "next_due_at": "2126-09-19 16:17:18.909570+00:00"
+  },
+  {
+   "work_id": 3698,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:17:21.773500+00:00",
+     "finished_at": "2026-10-13 16:17:35.591577+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37057,
+    "yuyu_image": 570556,
+    "official_image": 483608
+   },
+   "bytes_total": 1091221,
+   "next_due_at": "2126-09-19 16:17:35.440525+00:00"
+  },
+  {
+   "work_id": 3699,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:17:38.178245+00:00",
+     "finished_at": "2026-10-13 16:17:52.481041+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37224,
+    "yuyu_image": 577656,
+    "official_image": 578300
+   },
+   "bytes_total": 1193180,
+   "next_due_at": "2126-09-19 16:17:52.298196+00:00"
+  },
+  {
+   "work_id": 3700,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:17:54.885441+00:00",
+     "finished_at": "2026-10-13 16:18:09.429359+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 36904,
+    "yuyu_image": 582216,
+    "official_image": 499724
+   },
+   "bytes_total": 1118844,
+   "next_due_at": "2126-09-19 16:18:09.232895+00:00"
+  },
+  {
+   "work_id": 3701,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 58,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:18:12.333736+00:00",
+     "finished_at": "2026-10-13 16:18:28.397588+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37151,
+    "yuyu_image": 665680,
+    "official_image": 592892
+   },
+   "bytes_total": 1295723,
+   "next_due_at": "2126-09-19 16:18:28.187993+00:00"
+  },
+  {
+   "work_id": 3702,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:18:31.377077+00:00",
+     "finished_at": "2026-10-13 16:18:45.684142+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37258,
+    "yuyu_image": 622836,
+    "official_image": 497296
+   },
+   "bytes_total": 1157390,
+   "next_due_at": "2126-09-19 16:18:45.548154+00:00"
+  },
+  {
+   "work_id": 3703,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:18:48.343018+00:00",
+     "finished_at": "2026-10-13 16:19:16.599671+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37237,
+    "yuyu_image": 615600,
+    "official_image": 455132
+   },
+   "bytes_total": 1107969,
+   "next_due_at": "2126-09-19 16:19:16.418810+00:00"
+  },
+  {
+   "work_id": 3704,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:19:19.133711+00:00",
+     "finished_at": "2026-10-13 16:19:33.476728+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37347,
+    "yuyu_image": 632356,
+    "official_image": 560224
+   },
+   "bytes_total": 1229927,
+   "next_due_at": "2126-09-19 16:19:33.331898+00:00"
+  },
+  {
+   "work_id": 3705,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:19:32.459379+00:00",
+     "finished_at": "2026-10-13 16:19:44.895294+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37558,
+    "yuyu_image": 580060,
+    "official_image": 502164
+   },
+   "bytes_total": 1119782,
+   "next_due_at": "2126-09-19 16:19:44.815851+00:00"
+  },
+  {
+   "work_id": 3706,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:19:36.043919+00:00",
+     "finished_at": "2026-10-13 16:19:49.273251+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37171,
+    "yuyu_image": 683444,
+    "official_image": 481944
+   },
+   "bytes_total": 1202559,
+   "next_due_at": "2126-09-19 16:19:49.136300+00:00"
+  },
+  {
+   "work_id": 3707,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:19:46.684339+00:00",
+     "finished_at": "2026-10-13 16:20:13.889544+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37199,
+    "yuyu_image": 607084,
+    "official_image": 534520
+   },
+   "bytes_total": 1178803,
+   "next_due_at": "2126-09-19 16:20:13.828272+00:00"
+  },
+  {
+   "work_id": 3708,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:19:51.899821+00:00",
+     "finished_at": "2026-10-13 16:20:07.950935+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37251,
+    "yuyu_image": 895648,
+    "official_image": 661696
+   },
+   "bytes_total": 1594595,
+   "next_due_at": "2126-09-19 16:20:07.769378+00:00"
+  },
+  {
+   "work_id": 3709,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 60,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:20:10.666329+00:00",
+     "finished_at": "2026-10-13 16:20:27.001040+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 3,
+   "bytes": {
+    "product": 37524,
+    "yuyu_image": 616608,
+    "official_image": 1025088
+   },
+   "bytes_total": 1679220,
+   "next_due_at": "2126-09-19 16:20:26.857353+00:00"
+  },
+  {
+   "work_id": 3710,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:20:15.514953+00:00",
+     "finished_at": "2026-10-13 16:20:27.290493+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37562,
+    "yuyu_image": 568452,
+    "official_image": 658480
+   },
+   "bytes_total": 1264494,
+   "next_due_at": "2126-09-19 16:20:27.217998+00:00"
+  },
+  {
+   "work_id": 3711,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 58,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:20:29.676979+00:00",
+     "finished_at": "2026-10-13 16:20:44.657753+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37493,
+    "yuyu_image": 500140,
+    "official_image": 566248
+   },
+   "bytes_total": 1103881,
+   "next_due_at": "2126-09-19 16:20:44.457688+00:00"
+  },
+  {
+   "work_id": 3712,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 58,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:20:28.990329+00:00",
+     "finished_at": "2026-10-13 16:20:40.347874+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37391,
+    "yuyu_image": 530732,
+    "official_image": 624076
+   },
+   "bytes_total": 1192199,
+   "next_due_at": "2126-09-19 16:20:40.285068+00:00"
+  },
+  {
+   "work_id": 3713,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:20:42.088376+00:00",
+     "finished_at": "2026-10-13 16:20:57.145611+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37484,
+    "yuyu_image": 510640,
+    "official_image": 570888
+   },
+   "bytes_total": 1119012,
+   "next_due_at": "2126-09-19 16:20:57.083783+00:00"
+  },
+  {
+   "work_id": 3714,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-4",
+     "started_at": "2026-10-13 16:20:47.461557+00:00",
+     "finished_at": "2026-10-13 16:21:08.465495+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37297,
+    "yuyu_image": 498308,
+    "official_image": 588740
+   },
+   "bytes_total": 1124345,
+   "next_due_at": "2126-09-19 16:21:08.312091+00:00"
+  },
+  {
+   "work_id": 3715,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:21:05.675601+00:00",
+     "finished_at": "2026-10-13 16:21:20.603641+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37194,
+    "yuyu_image": 457272,
+    "official_image": 604428
+   },
+   "bytes_total": 1098894,
+   "next_due_at": "2126-09-19 16:21:20.540819+00:00"
+  },
+  {
+   "work_id": 3716,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 58,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:21:22.241212+00:00",
+     "finished_at": "2026-10-13 16:21:35.293204+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37460,
+    "yuyu_image": 505564,
+    "official_image": 619576
+   },
+   "bytes_total": 1162600,
+   "next_due_at": "2126-09-19 16:21:35.244107+00:00"
+  },
+  {
+   "work_id": 3717,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:21:36.985157+00:00",
+     "finished_at": "2026-10-13 16:21:48.377796+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37436,
+    "yuyu_image": 491352,
+    "official_image": 626200
+   },
+   "bytes_total": 1154988,
+   "next_due_at": "2126-09-19 16:21:48.319410+00:00"
+  },
+  {
+   "work_id": 3718,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:21:50.104075+00:00",
+     "finished_at": "2026-10-13 16:22:01.431850+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37536,
+    "yuyu_image": 501956,
+    "official_image": 655976
+   },
+   "bytes_total": 1195468,
+   "next_due_at": "2126-09-19 16:22:01.392452+00:00"
+  },
+  {
+   "work_id": 3719,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:22:03.079231+00:00",
+     "finished_at": "2026-10-13 16:22:15.020207+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37546,
+    "yuyu_image": 442088,
+    "official_image": 665712
+   },
+   "bytes_total": 1145346,
+   "next_due_at": "2126-09-19 16:22:14.956068+00:00"
+  },
+  {
+   "work_id": 3720,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:22:16.723684+00:00",
+     "finished_at": "2026-10-13 16:22:33.178282+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37462,
+    "yuyu_image": 524116,
+    "official_image": 609516
+   },
+   "bytes_total": 1171094,
+   "next_due_at": "2126-09-19 16:22:33.119995+00:00"
+  },
+  {
+   "work_id": 3721,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-6",
+     "started_at": "2026-10-13 16:22:27.824112+00:00",
+     "finished_at": "2026-10-13 16:22:41.744107+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37195,
+    "yuyu_image": 449808,
+    "official_image": 545712
+   },
+   "bytes_total": 1032715,
+   "next_due_at": "2126-09-19 16:22:41.622896+00:00"
+  },
+  {
+   "work_id": 3722,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:22:34.934808+00:00",
+     "finished_at": "2026-10-13 16:22:56.802568+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37197,
+    "yuyu_image": 415192,
+    "official_image": 654816
+   },
+   "bytes_total": 1107205,
+   "next_due_at": "2126-09-19 16:22:56.733618+00:00"
+  },
+  {
+   "work_id": 3723,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-6",
+     "started_at": "2026-10-13 16:22:44.408348+00:00",
+     "finished_at": "2026-10-13 16:22:57.585966+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37250,
+    "yuyu_image": 461680,
+    "official_image": 546620
+   },
+   "bytes_total": 1045550,
+   "next_due_at": "2126-09-19 16:22:57.462135+00:00"
+  },
+  {
+   "work_id": 3724,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:22:58.560637+00:00",
+     "finished_at": "2026-10-13 16:23:10.151898+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37328,
+    "yuyu_image": 569156,
+    "official_image": 691208
+   },
+   "bytes_total": 1297692,
+   "next_due_at": "2126-09-19 16:23:10.103743+00:00"
+  },
+  {
+   "work_id": 3725,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-6",
+     "started_at": "2026-10-13 16:22:59.860168+00:00",
+     "finished_at": "2026-10-13 16:23:12.705951+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37147,
+    "yuyu_image": 497612,
+    "official_image": 516152
+   },
+   "bytes_total": 1050911,
+   "next_due_at": "2126-09-19 16:23:12.618397+00:00"
+  },
+  {
+   "work_id": 3726,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-5",
+     "started_at": "2026-10-13 16:23:11.897423+00:00",
+     "finished_at": "2026-10-13 16:23:23.077528+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37422,
+    "yuyu_image": 497044,
+    "official_image": 595968
+   },
+   "bytes_total": 1130434,
+   "next_due_at": "2126-09-19 16:23:23.011485+00:00"
+  },
+  {
+   "work_id": 3727,
+   "state": "pending",
+   "last_outcome": "completed",
+   "attempts": [
+    {
+     "outcome": "completed",
+     "cost": 59,
+     "shard": "yuyutei-due-6",
+     "started_at": "2026-10-13 16:23:15.207566+00:00",
+     "finished_at": "2026-10-13 16:23:28.314973+00:00"
+    }
+   ],
+   "identity_status": "unresolved; retained artwork evidence only",
+   "official_images": 2,
+   "bytes": {
+    "product": 37274,
+    "yuyu_image": 494424,
+    "official_image": 626204
+   },
+   "bytes_total": 1157902,
+   "next_due_at": "2126-09-19 16:23:28.163505+00:00"
+  }
+ ]
+}

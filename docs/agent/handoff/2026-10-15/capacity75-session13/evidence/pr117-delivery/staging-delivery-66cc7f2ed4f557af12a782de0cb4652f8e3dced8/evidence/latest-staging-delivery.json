@@ -1,0 +1,81 @@
+{
+  "verified_at": "2026-10-13T17:11:45.584305+00:00",
+  "expected_commit": "66cc7f2ed4f557af12a782de0cb4652f8e3dced8",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_2v8N28saEjcq1u6jn68GDaHHLs4d",
+    "status": "READY",
+    "sha": "66cc7f2ed4f557af12a782de0cb4652f8e3dced8"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "3b7d9c1a5e20",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "ad86b61823c412e6123891ce3c26f88c5168eb473112a3e6977a2b0eb340caaa",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "36ff37c3d615fdbc5284fe73214ae9450a5d7d4d",
+    "merge": "66cc7f2ed4f557af12a782de0cb4652f8e3dced8",
+    "decision": "full",
+    "files": [
+      ".claude/skills/cardpirate-collector-ui/SKILL.md",
+      "apps/web/src/app/fonts/Fraunces-OFL.txt",
+      "apps/web/src/app/fonts/Fraunces-latin.woff2",
+      "apps/web/src/app/fonts/IBMPlexMono-Medium-latin.woff2",
+      "apps/web/src/app/fonts/IBMPlexMono-OFL.txt",
+      "apps/web/src/app/fonts/IBMPlexMono-Regular-latin.woff2",
+      "apps/web/src/app/fonts/IBMPlexMono-SemiBold-latin.woff2",
+      "apps/web/src/app/fonts/README.md",
+      "apps/web/src/app/globals.css",
+      "apps/web/src/app/layout.metadata.test.ts",
+      "apps/web/src/app/layout.tsx",
+      "apps/web/src/lib/chartExport.ts",
+      "docs/agent/STAGING_MISSION.json",
+      "docs/brand.md",
+      "docs/interface_design_system.md"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      ".claude/skills/cardpirate-collector-ui/SKILL.md",
+      "apps/web/src/app/fonts/Fraunces-OFL.txt",
+      "apps/web/src/app/fonts/Fraunces-latin.woff2",
+      "apps/web/src/app/fonts/IBMPlexMono-Medium-latin.woff2",
+      "apps/web/src/app/fonts/IBMPlexMono-OFL.txt",
+      "apps/web/src/app/fonts/IBMPlexMono-Regular-latin.woff2",
+      "apps/web/src/app/fonts/IBMPlexMono-SemiBold-latin.woff2",
+      "apps/web/src/app/fonts/README.md",
+      "apps/web/src/app/globals.css",
+      "apps/web/src/app/layout.metadata.test.ts",
+      "apps/web/src/app/layout.tsx",
+      "apps/web/src/lib/chartExport.ts"
+    ]
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "6e4079a6b1c0e7a73d89ffa190bda6903e5be04c",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}

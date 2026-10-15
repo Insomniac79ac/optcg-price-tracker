@@ -1,0 +1,233 @@
+{
+ "status": "session13_complete",
+ "written_at": "2026-10-15T06:35:00Z",
+ "objective_complete": false,
+ "staging_only": true,
+ "production_accessed": false,
+ "psa10": "OFF (NOT READY)",
+ "database_writes": 0,
+ "source_requests_by_session": 0,
+ "collector_deployments": 0,
+ "collectors": {
+  "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "state": "all 10 on PR #103 receipt deployments/digests, marker, SUCCESS; 0 deployment records since 2026-10-11T16:31:08Z; daily-v1/cron/start unchanged; no GitHub triggers, auto-deploy off",
+  "evidence": [
+   "evidence/live-state-start.json",
+   "evidence/fleet-vs-receipt-start.json",
+   "evidence/trigger-status-start.json",
+   "evidence/fleet-vs-receipt-end.json"
+  ]
+ },
+ "new50": {
+  "work_ids": [
+   3678,
+   3727
+  ],
+  "outcomes": {
+   "completed": 50
+  },
+  "window": [
+   "2026-10-13T16:11:42Z",
+   "2026-10-13T16:23:28Z"
+  ],
+  "requests_per_capture": {
+   "avg": 58.92,
+   "min": 58,
+   "max": 60,
+   "total": 2946
+  },
+  "stored_bytes": {
+   "product_html": 1865902,
+   "yuyu_image": 29017408,
+   "official_image": 29561452,
+   "total": 60444762
+  },
+  "volume_step_mb_s9": 66.5,
+  "estimate_mb": 65.2,
+  "hard_bound_mb": 429.1,
+  "denials": 0,
+  "decisions_since_enqueue": {
+   "reviews": 0,
+   "approved_created": 0,
+   "mappings_created": 0,
+   "mappings_updated": 0
+  },
+  "identity_status": "50/50 unresolved; retained artwork evidence only (no auto-approval)",
+  "parked_after_capture": 50,
+  "rollback_triggers_fired": 0,
+  "evidence": "evidence/new50-evidence.json"
+ },
+ "remaining50": {
+  "verdict": "HELD: fits at planning and stress B; owner (a) requires confirmation before any enqueue",
+  "replan": "50/50 eligible, all guards PASS (2026-10-15T04:03:27Z); candidate 196 OP13-083 digest moved, siblings unchanged",
+  "one_off_mb_s9": 70.6,
+  "recurring_mb_day_allowance": 0.45,
+  "room_mb_s9": 2970.3,
+  "rates_mb_day_ex_new50": {
+   "planning": 23.1,
+   "stress_A_as_observed": 42.79,
+   "stress_B_transient_excluded": 26.41
+  },
+  "margins_mb": {
+   "planning": 780.2,
+   "stress_A": -991.9,
+   "stress_B": 482.3
+  },
+  "transient": "2026-10-14 04:05-05:15Z +17.7/-16.9 MB; stress A fails 90 days even with no batch (-880.8 MB)",
+  "evidence": [
+   "evidence/new100-replan.json",
+   "evidence/remaining50-fit.json",
+   "evidence/storage-rates-ex-new50.json",
+   "evidence/storage-rates-current-code.json",
+   "evidence/volume-series-5min.json"
+  ],
+  "spike_cause": {
+   "not_collection": true,
+   "positive_cause": "unidentified (likely Postgres-internal temp/WAL/vacuum)",
+   "evidence": "evidence/spike-2026-10-14-04z-cause.json"
+  }
+ },
+ "quarantine_fix": {
+  "pr": 125,
+  "classification": "GREEN",
+  "tooling_only": true,
+  "collector_runtime_inputs_changed": 0,
+  "tests": "16 new passed; scripts/tests 232 passed before",
+  "delivery": {
+   "merge": "eae22a7ba25fcbb715ed03d9e80055831ab23173",
+   "merged_at": "2026-10-15T06:14:56Z",
+   "run": 38689997328,
+   "scope": "full",
+   "api": "skip on e80ce63",
+   "verified_at": "2026-10-15T06:26:25Z",
+   "collector_deployments": 0,
+   "flaky_web_test": "cards/[id]/page.test.tsx F. an admin still gets the admin panel (first draft run only)"
+  }
+ },
+ "yuyu_duplicates": {
+  "work_ids": [
+   2628,
+   2629,
+   2630
+  ],
+  "all_qualify": true,
+  "active_exact_mappings": {
+   "2628": 1944,
+   "2629": 1945,
+   "2630": 1437
+  },
+  "applied": false,
+  "reason": "no closed state (ck_freshness_work_state pending/claimed/blocked); close = delete cascading to 2 attempts + 3 price states; owner approved close, not deletion",
+  "evidence": "evidence/yuyu-duplicates-evidence.json",
+  "owner_answer": "leave them; no delete; closed-state proposal PROPOSAL-freshness-work-closed-state.md (not built)"
+ },
+ "storage": {
+  "volume_mb_s9": 3808.4,
+  "room_mb_s9": 2970.3,
+  "db_bytes": 2950895295,
+  "raw_snapshots_bytes": 2718629888,
+  "runway_days_no_batch": {
+   "planning": 128.6,
+   "stress_A": 69.4,
+   "stress_B": 112.5
+  }
+ },
+ "lossless": {
+  "ledger_ids": [
+   53968,
+   59328
+  ],
+  "rows": 4944,
+  "failures": 0,
+  "expanded": 0,
+  "next_floor_exclusive": 59328,
+  "evidence": "evidence/verify-lossless-from-53968.json"
+ },
+ "coverage": {
+  "operational": 2630,
+  "change_from_2630": 0,
+  "mapped": 2635,
+  "fresh_usable": 2398,
+  "both": 334,
+  "zero": 1681,
+  "evidence": "evidence/coverage-start.json"
+ },
+ "official_images_mirror": {
+  "service": "official-images-mirror",
+  "deployment": "bd651b0c-5004-4320-a39d-a94f95cd188d",
+  "status": "FAILED at build (railpack, no Dockerfile/builder)",
+  "created_at": "2026-10-15T02:15:00Z",
+  "first_run": "not happened at 06:30Z; session 14",
+  "lane": "owner/product",
+  "evidence": "evidence/official-images-mirror-build-bd651b0c.log",
+  "cause": "dockerfilePath null -> Railpack auto-detect fails; market-index-snapshot uses deploy/railway/api.Dockerfile, root /",
+  "fix": "Railway setting (owner/product lane): Dockerfile path deploy/railway/api.Dockerfile, root /, restart policy NEVER (now ON_FAILURE), optional APP_ENV=staging; no repo PR"
+ },
+ "receipts": {
+  "downloaded": {
+   "pr117": {
+    "run": 38432821718,
+    "scope": "full",
+    "api": "skip",
+    "collector_deployments": 0
+   },
+   "pr118": {
+    "run": 38428539757,
+    "scope": "skip",
+    "collector_deployments": 0
+   },
+   "pr122": {
+    "run": 38551545019,
+    "scope": "skip",
+    "collector_deployments": 0
+   },
+   "pr123": {
+    "run": 38564068937,
+    "scope": "skip",
+    "collector_deployments": 0
+   },
+   "pr124": {
+    "run": 38580931280,
+    "scope": "full",
+    "api": "build e80ce63",
+    "collector_deployments": 0
+   },
+   "pr125": {
+    "run": 38689997328,
+    "scope": "full",
+    "api": "skip",
+    "collector_deployments": 0
+   }
+  },
+  "pending": "this handoff PR (session 14)"
+ },
+ "blockers_end": [
+  "snkrdunk-identity-quarantine (23)",
+  "quarantined-refresh-work (69, oldest 2026-10-02T15:54Z)",
+  "official-images-check-failed (bd651b0c)"
+ ],
+ "never_replay": [
+  "SNKR 3676/3677",
+  "RAW recovery 35175",
+  "Yuyu canary evidence",
+  "NEW50 work ids 3678-3727 / list 906482e8...",
+  "deliveries PR77 onward incl. #125",
+  "session-13 handoff PR"
+ ],
+ "quiet_windows": {
+  "collector_changes_forbidden": "02:00-06:00Z",
+  "collector_releases_allowed": "06:00-23:00Z",
+  "merges": "06:00-23:00Z, never 19:30-20:30Z",
+  "draft_rule": "non-draft PRs to staging auto-merge on green CI; open as draft outside the window"
+ },
+ "session14_first": [
+  "download this handoff PR's receipt",
+  "official-images-mirror first run / setting fix",
+  "owner confirmation for remaining 50 (spike exclusion)",
+  "quarantine reporting live (blocker quarantined-refresh-work; deficit only for actionable)",
+  "lossless from 59329",
+  "storage rates with/without the transient",
+  "data-lane follow-up: closed-state proposal"
+ ],
+ "provenance": "no divergence after #125 (non-collector merge): verified"
+}

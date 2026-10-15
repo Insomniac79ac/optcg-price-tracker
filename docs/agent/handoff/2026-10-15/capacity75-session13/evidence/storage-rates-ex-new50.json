@@ -1,0 +1,35 @@
+{
+ "window": {
+  "first_sample": "2026-10-10T14:35:00+00:00",
+  "last_sample": "2026-10-15T04:00:00+00:00",
+  "hours": 109.42,
+  "samples": 1314
+ },
+ "volume_mb_s9": 3808.4,
+ "room_to_reserve_mb_s9": 2970.3,
+ "new50_step": {
+  "from": "2026-10-13T16:05:00+00:00",
+  "to": "2026-10-13T16:30:00+00:00",
+  "mb_s9": 66.5
+ },
+ "transient_2026_10_14_04z": {
+  "samples": 13,
+  "peak_above_settled_mb": 17.4,
+  "peak_at": "2026-10-14T04:15:00+00:00"
+ },
+ "planning_mb_day_s9": 23.1,
+ "stress_A_as_observed": {
+  "start": "2026-10-13T04:50:00+00:00",
+  "mb_day_s9": 42.79,
+  "windows_compared": 1026
+ },
+ "stress_B_settled": {
+  "start": "2026-10-14T03:50:00+00:00",
+  "mb_day_s9": 26.41,
+  "windows_compared": 1013
+ },
+ "last_24h_mb_s9": 26.32,
+ "runway_days_no_batch_planning": 128.6,
+ "runway_days_no_batch_stress_A": 69.4,
+ "runway_days_no_batch_stress_B": 112.5
+}

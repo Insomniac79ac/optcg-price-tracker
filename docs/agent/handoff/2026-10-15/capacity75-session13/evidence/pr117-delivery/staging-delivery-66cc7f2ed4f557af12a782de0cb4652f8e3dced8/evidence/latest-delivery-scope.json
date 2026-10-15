@@ -1,0 +1,37 @@
+{
+  "base": "36ff37c3d615fdbc5284fe73214ae9450a5d7d4d",
+  "merge": "66cc7f2ed4f557af12a782de0cb4652f8e3dced8",
+  "decision": "full",
+  "files": [
+    ".claude/skills/cardpirate-collector-ui/SKILL.md",
+    "apps/web/src/app/fonts/Fraunces-OFL.txt",
+    "apps/web/src/app/fonts/Fraunces-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-Medium-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-OFL.txt",
+    "apps/web/src/app/fonts/IBMPlexMono-Regular-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-SemiBold-latin.woff2",
+    "apps/web/src/app/fonts/README.md",
+    "apps/web/src/app/globals.css",
+    "apps/web/src/app/layout.metadata.test.ts",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/lib/chartExport.ts",
+    "docs/agent/STAGING_MISSION.json",
+    "docs/brand.md",
+    "docs/interface_design_system.md"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    ".claude/skills/cardpirate-collector-ui/SKILL.md",
+    "apps/web/src/app/fonts/Fraunces-OFL.txt",
+    "apps/web/src/app/fonts/Fraunces-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-Medium-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-OFL.txt",
+    "apps/web/src/app/fonts/IBMPlexMono-Regular-latin.woff2",
+    "apps/web/src/app/fonts/IBMPlexMono-SemiBold-latin.woff2",
+    "apps/web/src/app/fonts/README.md",
+    "apps/web/src/app/globals.css",
+    "apps/web/src/app/layout.metadata.test.ts",
+    "apps/web/src/app/layout.tsx",
+    "apps/web/src/lib/chartExport.ts"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+ "question": "owner (a): was the 2026-10-14 04:05-05:15Z disk spike caused by collection?",
+ "read_only": true, "database_writes": 0, "source_requests": 0,
+ "spike": {"rise_mb_s9": 17.7, "rise_at": "2026-10-14T04:10-04:15Z", "fall_mb_s9": -16.9, "fall_at": "2026-10-14T05:10-05:15Z", "net_over_window_mb": "about 2.7 (normal 1.0-1.5/h growth)"},
+ "not_collection": {
+  "raw_written_2026_10_14_by_hour_mb": {"00": 0.53, "01": 0.93, "02": 0.71, "03": 0.89, "04": 0.79, "05": 0.46, "06": 0.27},
+  "collector_executions_03:50-05:20Z": "3 per service, every service (snkrdunk + 9 Yuyu shards), the same hourly cadence as every other hour and day",
+  "recurrence": "the only volume fall in 1,314 five-minute samples since the 10-10 release and the only rise above 3.3 MB outside the NEW50 captures; collectors run identically every hour, so a collection cause would recur",
+  "conclusion": "collection wrote under 1 MB of RAW in that hour; it cannot account for +17.7 MB that reversed an hour later"
+ },
+ "other_causes_checked": {
+  "backup": "excluded: no backup near 04Z (dailies 09:22Z; last manual 2026-10-11 15:20Z)",
+  "deployments": "excluded: 0 deployments on any of 20 services 03:30-05:30Z",
+  "image_mirror": "excluded: official-images-mirror created 2026-10-15 02:15Z (cron 07:15Z); no official-images table writes",
+  "agent_sessions": "excluded: no Claude session tool calls 03:50-05:20Z on 10-14",
+  "raw_snapshots_vacuum": "excluded: last autovacuum 2026-10-13 19:24Z",
+  "other_vacuum_temp_wal": "not determinable: pg_stat last_* keep only the latest run; temp_files (15, 288 MB cumulative, never reset) has no timestamps; WAL/checkpoint not exposed"
+ },
+ "verdict": "NOT collection (shown). Positive cause unidentified; most likely Postgres-internal (temporary files, WAL or a vacuum of another table)",
+ "recomputed": {"stress_B_mb_day": 26.41, "remaining50_margin_mb": 482.3, "planning_margin_mb": 780.2, "evidence": "storage-rates-ex-new50.json, remaining50-fit.json"},
+ "action": "nothing enqueued; awaiting owner confirmation"
+}

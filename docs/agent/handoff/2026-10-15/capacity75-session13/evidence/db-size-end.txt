@@ -1,0 +1,4 @@
+## select now() at time zone 'utc' t, pg_database_size(current_database()) db_bytes, pg_total_relation_size('raw_snapshots'
+{"t": "2026-10-15 04:23:26.312601", "db_bytes": 2950895295, "raw": 2718629888, "groups": 64053248, "alts": 16408576, "attempts": 23797760, "mis": 41811968, "logs": 20570112, "obs": 18006016}
+## select coalesce(sum(pg_total_relation_size(c.oid)),0) b from pg_class c where c.relkind='r' and c.relname in ('official_
+{"b": "0"}
