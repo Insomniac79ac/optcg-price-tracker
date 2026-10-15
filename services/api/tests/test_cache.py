@@ -1,6 +1,5 @@
 import pytest
 
-from app.models import Card, CollectionItem, GradingSubmission
 from app.services import cache as cache_module
 from app.settings import settings
 
@@ -15,34 +14,6 @@ def _cache_memory_backend(monkeypatch):
     cache_module.reset_state_for_tests()
     yield
     cache_module.reset_state_for_tests()
-
-
-def make_card(db_session, **overrides) -> Card:
-    fields = dict(
-        card_code="OP01-001",
-        name_en="Monkey D. Luffy",
-        name_jp="モンキー・D・ルフィ",
-        set_code="OP01",
-        rarity="L",
-        variant="leader",
-        language="en",
-    )
-    fields.update(overrides)
-    card = Card(**fields)
-    db_session.add(card)
-    db_session.commit()
-    db_session.refresh(card)
-    return card
-
-
-def make_item(db_session, card: Card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1, user_id=1)
-    fields.update(overrides)
-    item = CollectionItem(**fields)
-    db_session.add(item)
-    db_session.commit()
-    db_session.refresh(item)
-    return item
 
 
 # --- cache service unit tests ----------------------------------------------
@@ -138,83 +109,9 @@ def test_serialization_failure_does_not_crash():
     assert cache_module.get_cache("k6") is None
 
 
-# --- endpoint caching (HIT/MISS headers) -----------------------------------
-
-
-def test_collection_valuation_cache_key_includes_valuation_mode(client, db_session):
-    raw = client.get("/collection/valuation", params={"valuation_mode": "raw_market"})
-    assert raw.headers["X-Cache"] == "MISS"
-
-    graded = client.get("/collection/valuation", params={"valuation_mode": "graded_adjusted"})
-    assert graded.headers["X-Cache"] == "MISS"
-
-    raw_again = client.get("/collection/valuation", params={"valuation_mode": "raw_market"})
-    assert raw_again.headers["X-Cache"] == "HIT"
-
-    graded_again = client.get("/collection/valuation", params={"valuation_mode": "graded_adjusted"})
-    assert graded_again.headers["X-Cache"] == "HIT"
-
-
 # --- invalidation ------------------------------------------------------
-
-
-def test_collection_write_invalidates_valuation_cache(client, db_session):
-    card = make_card(db_session)
-
-    first = client.get("/collection/valuation")
-    assert first.headers["X-Cache"] == "MISS"
-    second = client.get("/collection/valuation")
-    assert second.headers["X-Cache"] == "HIT"
-
-    response = client.post(
-        "/collection",
-        json={"card_id": card.id, "quantity": 1, "status": "hold"},
-    )
-    assert response.status_code == 201
-
-    third = client.get("/collection/valuation")
-    assert third.headers["X-Cache"] == "MISS"
-
-
-def test_wishlist_write_invalidates_wishlist_cache(client, db_session):
-    card = make_card(db_session)
-
-    first = client.get("/wishlist/summary")
-    assert first.headers["X-Cache"] == "MISS"
-    second = client.get("/wishlist/summary")
-    assert second.headers["X-Cache"] == "HIT"
-
-    response = client.post(
-        "/wishlist",
-        json={"card_id": card.id, "priority": "medium", "status": "active"},
-    )
-    assert response.status_code == 201
-
-    third = client.get("/wishlist/summary")
-    assert third.headers["X-Cache"] == "MISS"
-
-
-def test_grading_write_invalidates_valuation_cache(client, db_session):
-    card = make_card(db_session)
-    item = make_item(db_session, card)
-
-    first = client.get("/collection/valuation")
-    assert first.headers["X-Cache"] == "MISS"
-    second = client.get("/collection/valuation")
-    assert second.headers["X-Cache"] == "HIT"
-
-    response = client.post(
-        "/grading/submissions",
-        json={
-            "collection_item_id": item.id,
-            "grading_company": "PSA",
-            "submission_status": "submitted",
-        },
-    )
-    assert response.status_code == 201
-
-    third = client.get("/collection/valuation")
-    assert third.headers["X-Cache"] == "MISS"
+# The legacy collection, wishlist and grading endpoints (and their HIT/MISS
+# tests) were removed in Collector v1 S8.
 
 
 def test_price_refresh_invalidates_collection_cache(monkeypatch):

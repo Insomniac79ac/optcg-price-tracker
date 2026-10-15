@@ -8,12 +8,10 @@ from app.schemas import (
     AdminFullMarketRefreshResponse,
     AdminRefreshPricesRequest,
     AdminRefreshPricesResponse,
-    AdminSnapshotPortfolioResponse,
 )
 from app.services.activity_timeline import record_activity_event
 from app.services.job_locks import LockHeldError, with_job_lock
 from app.services.refresh_trigger import trigger_price_refresh
-from app.snapshot_portfolio_valuation import snapshot_portfolio_valuation
 
 router = APIRouter(
     prefix="/admin/actions", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -59,24 +57,18 @@ def refresh_prices_action(body: AdminRefreshPricesRequest):
     )
 
 
-@router.post("/snapshot-portfolio", response_model=AdminSnapshotPortfolioResponse)
-def snapshot_portfolio_action(db: Session = Depends(get_db)):
-    snapshot = snapshot_portfolio_valuation(db)
-    return AdminSnapshotPortfolioResponse(snapshot_id=snapshot.id)
-
-
 @router.post("/full-market-refresh", response_model=AdminFullMarketRefreshResponse)
 def full_market_refresh_action(
     body: AdminFullMarketRefreshRequest, db: Session = Depends(get_db)
 ):
-    """Triggers a price refresh and, unless dry-run, a portfolio valuation
-    snapshot, synchronously. Holds the 'market_workflow' lock for the whole
-    request so two full refreshes never overlap; the price refresh and the
-    snapshot each also take their own distinct-named lock (see
+    """Triggers a price refresh, synchronously. Holds the 'market_workflow'
+    lock for the whole request so two full refreshes never overlap; the price
+    refresh also takes its own distinct-named lock (see
     app.services.job_locks's module docstring for why that nesting is
     deadlock-free). The market signal, market report and digest steps that
     used to follow were removed with the legacy market workflow (Collector
-    v1 S1)."""
+    v1 S1), and the legacy portfolio valuation snapshot with the legacy
+    collection (S8): portfolio_snapshot_id is always null."""
     _validate_source(body.source)
     limit = body.limit if body.limit is not None else DEFAULT_REFRESH_LIMIT
 
@@ -104,17 +96,6 @@ def _full_market_refresh_locked(
     if result.get("status") == "failed":
         warnings.append(f"Price refresh failed: {result.get('error_message')}")
 
-    portfolio_snapshot_id: int | None = None
-
-    # Best-effort follow-up to the price refresh: a snapshot failure must
-    # never fail this endpoint outright, since the refresh itself succeeded.
-    if not body.dry_run:
-        try:
-            portfolio_snapshot_id = snapshot_portfolio_valuation(db).id
-        except Exception as exc:
-            db.rollback()
-            warnings.append(f"Portfolio snapshot failed: {exc}")
-
     if not body.dry_run:
         record_activity_event(
             db,
@@ -124,13 +105,12 @@ def _full_market_refresh_locked(
             message="; ".join(warnings) if warnings else None,
             payload={
                 "price_refresh_run_id": result.get("id"),
-                "portfolio_snapshot_id": portfolio_snapshot_id,
             },
         )
 
     return AdminFullMarketRefreshResponse(
         price_refresh_run_id=result.get("id"),
-        portfolio_snapshot_id=portfolio_snapshot_id,
+        portfolio_snapshot_id=None,
         dry_run=body.dry_run,
         warnings=warnings,
     )

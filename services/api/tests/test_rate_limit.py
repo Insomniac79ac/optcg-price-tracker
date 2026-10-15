@@ -70,24 +70,14 @@ def test_import_export_rate_limit_returns_429(client, db_session, monkeypatch):
 
 
 def test_collection_write_rate_limit_returns_429(client, db_session, monkeypatch):
+    # The legacy /collection routes are gone (Collector v1 S8) but the limiter
+    # classifies by path ahead of routing, so the group still answers 429.
     monkeypatch.setattr(settings, "RATE_LIMIT_COLLECTION_WRITE_PER_5M", 1)
-    from app.models import Card
 
-    card = Card(
-        card_code="OP01-001",
-        name_en="Monkey D. Luffy",
-        set_code="OP01",
-        rarity="L",
-        variant="leader",
-        language="en",
-    )
-    db_session.add(card)
-    db_session.commit()
+    response = client.post("/collection", json={})
+    assert response.status_code == 404
 
-    response = client.post("/collection", json={"card_id": card.id, "quantity": 1})
-    assert response.status_code == 201
-
-    response = client.post("/collection", json={"card_id": card.id, "quantity": 1})
+    response = client.post("/collection", json={})
     assert response.status_code == 429
 
 

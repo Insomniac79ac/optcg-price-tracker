@@ -1,181 +1,18 @@
-"""Confirms that record_activity_event actually gets called from the action
-endpoints it was wired into (app/services/activity_timeline.py), by hitting
-those endpoints and checking /collector/activity afterwards. Endpoint-level
-correctness for collection/wishlist/grading/backup/admin-actions has its own
-dedicated test file - this only checks the activity side effect.
+"""Confirms that record_activity_event actually gets called from the admin
+endpoints it is still wired into (app/services/activity_timeline.py). The
+legacy collection, wishlist and grading endpoints and the /collector/activity
+reader were removed in Collector v1 S8, so the rows are read directly.
 """
 
 import json
 from datetime import datetime, timezone
 
-from app.models import Card, CollectionItem
+from app.models import CollectorActivityEvent
 from app.services.backup import BACKUP_VERSION, REQUIRED_TABLES
 
 
-def make_card(db_session, **overrides) -> Card:
-    fields = dict(
-        card_code="OP01-001",
-        name_en="Monkey D. Luffy",
-        name_jp="モンキー・D・ルフィ",
-        set_code="OP01",
-        rarity="L",
-        variant="leader",
-        language="en",
-    )
-    fields.update(overrides)
-    card = Card(**fields)
-    db_session.add(card)
-    db_session.commit()
-    db_session.refresh(card)
-    return card
-
-
-def make_item(db_session, card: Card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1, user_id=1)
-    fields.update(overrides)
-    item = CollectionItem(**fields)
-    db_session.add(item)
-    db_session.commit()
-    db_session.refresh(item)
-    return item
-
-
-def event_types(client) -> list[str]:
-    response = client.get("/collector/activity", params={"limit": 500})
-    assert response.status_code == 200
-    return [e["event_type"] for e in response.json()["events"]]
-
-
-# --- collection --------------------------------------------------------
-
-
-def test_creating_collection_item_records_activity(client, db_session):
-    card = make_card(db_session)
-
-    response = client.post(
-        "/collection", json={"card_id": card.id, "quantity": 1, "status": "hold"}
-    )
-    assert response.status_code == 201
-
-    assert "collection_item_added" in event_types(client)
-
-
-def test_changing_collection_item_status_records_activity(client, db_session):
-    card = make_card(db_session)
-    item = make_item(db_session, card, status="hold")
-
-    response = client.patch(f"/collection/{item.id}", json={"status": "sold"})
-    assert response.status_code == 200
-
-    assert "collection_item_status_changed" in event_types(client)
-
-
-def test_updating_collection_item_without_status_change_records_nothing(client, db_session):
-    card = make_card(db_session)
-    item = make_item(db_session, card, status="hold", quantity=1)
-
-    response = client.patch(f"/collection/{item.id}", json={"quantity": 2})
-    assert response.status_code == 200
-
-    assert event_types(client) == []
-
-
-def test_deleting_collection_item_records_activity(client, db_session):
-    card = make_card(db_session)
-    item = make_item(db_session, card)
-
-    response = client.delete(f"/collection/{item.id}")
-    assert response.status_code == 204
-
-    assert "collection_item_removed" in event_types(client)
-
-
-# --- wishlist ------------------------------------------------------------
-
-
-def test_creating_wishlist_item_records_activity(client, db_session):
-    card = make_card(db_session)
-
-    response = client.post("/wishlist", json={"card_id": card.id})
-    assert response.status_code == 201
-
-    assert "wishlist_item_added" in event_types(client)
-
-
-def test_deleting_wishlist_item_records_activity(client, db_session):
-    card = make_card(db_session)
-    created = client.post("/wishlist", json={"card_id": card.id}).json()
-
-    response = client.delete(f"/wishlist/{created['id']}")
-    assert response.status_code == 200
-
-    assert "wishlist_item_removed" in event_types(client)
-
-
-def test_marking_wishlist_item_purchased_records_activity(client, db_session):
-    card = make_card(db_session)
-    collection_item = make_item(db_session, card)
-    created = client.post("/wishlist", json={"card_id": card.id}).json()
-
-    response = client.post(
-        f"/wishlist/{created['id']}/mark-purchased",
-        json={"collection_item_id": collection_item.id, "acquired_quantity": 1},
-    )
-    assert response.status_code == 200
-
-    assert "wishlist_item_purchased" in event_types(client)
-
-
-def test_converting_wishlist_item_records_activity(client, db_session):
-    card = make_card(db_session)
-    created = client.post("/wishlist", json={"card_id": card.id}).json()
-
-    response = client.post(
-        f"/wishlist/{created['id']}/convert-to-collection",
-        json={"quantity": 1, "status": "hold"},
-    )
-    assert response.status_code == 200
-
-    assert "wishlist_item_converted" in event_types(client)
-
-
-# --- grading ---------------------------------------------------------------
-
-
-def test_creating_grading_submission_records_activity(client, db_session):
-    card = make_card(db_session)
-    item = make_item(db_session, card)
-
-    response = client.post(
-        "/grading/submissions",
-        json={"collection_item_id": item.id, "grading_company": "PSA"},
-    )
-    assert response.status_code == 201
-
-    assert "grading_submission_created" in event_types(client)
-
-
-def test_changing_grading_submission_status_records_activity(client, db_session):
-    card = make_card(db_session)
-    item = make_item(db_session, card)
-    created = client.post(
-        "/grading/submissions",
-        json={
-            "collection_item_id": item.id,
-            "grading_company": "PSA",
-            "submission_status": "planned",
-        },
-    ).json()
-
-    response = client.patch(
-        f"/grading/submissions/{created['id']}", json={"submission_status": "submitted"}
-    )
-    assert response.status_code == 200
-
-    assert "grading_submission_status_changed" in event_types(client)
-
-
-# --- backup restore ------------------------------------------------------
+def event_types(db_session) -> list[str]:
+    return [e.event_type for e in db_session.query(CollectorActivityEvent).all()]
 
 
 def empty_backup(**table_overrides) -> dict:
@@ -231,7 +68,7 @@ def test_restore_records_activity_when_not_dry_run(client, db_session):
     assert response.status_code == 200, response.text
     assert response.json()["valid"] is True
 
-    assert "backup_restored" in event_types(client)
+    assert "backup_restored" in event_types(db_session)
 
 
 def test_restore_dry_run_records_no_activity(client, db_session):
@@ -240,4 +77,4 @@ def test_restore_dry_run_records_no_activity(client, db_session):
     response = upload_restore(client, backup, dry_run="true", mode="merge")
     assert response.status_code == 200, response.text
 
-    assert event_types(client) == []
+    assert event_types(db_session) == []

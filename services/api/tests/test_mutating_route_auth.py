@@ -59,9 +59,9 @@ def test_inventory_walker_sees_every_router():
     paths = {route.path for route in _iter_api_routes(app.routes)}
     # One representative per kind of router, so a walker that silently stops
     # descending cannot make the guard below vacuous.
-    assert "/collector/notes/{note_id}" in paths
+    assert "/me/watchlist/{entry_id}" in paths
     assert "/admin/cache/clear" in paths
-    assert "/collection" in paths
+    assert "/saved-views" in paths
     assert "/auth/admin/verify" in paths
 
 

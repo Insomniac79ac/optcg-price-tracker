@@ -42,15 +42,6 @@ def test_admin_logs_allows_limit_at_new_max(client, db_session):
     assert response.status_code == 200
 
 
-def test_collector_activity_returns_pagination_metadata(client, db_session):
-    response = client.get("/collector/activity")
-    assert response.status_code == 200
-    data = response.json()
-    assert "pagination" in data
-    assert set(data["pagination"].keys()) == PAGINATION_KEYS
-    assert data["pagination"]["total"] == data["summary"]["total_events"]
-
-
 def test_admin_db_backups_returns_pagination_metadata(client, db_session):
     response = client.get("/admin/db-backups")
     assert response.status_code == 200
@@ -71,20 +62,6 @@ def test_admin_performance_summary_includes_response_size_fields(client, db_sess
 # --- export endpoints are NOT paginated -------------------------------------
 
 
-def test_collection_export_csv_is_not_paginated(client, db_session):
-    response = client.get("/collection/export.csv")
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/csv")
-    # A CSV export response body is not JSON at all, so it can't carry a
-    # `pagination` key - this just confirms the endpoint still works.
-
-
-def test_wishlist_export_csv_is_not_paginated(client, db_session):
-    response = client.get("/wishlist/export.csv")
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/csv")
-
-
 # --- response size header ----------------------------------------------------
 
 
@@ -100,18 +77,6 @@ def test_cards_response_has_size_header(client, db_session):
     assert response.status_code == 200
     assert "x-response-size-bytes" in response.headers
     assert int(response.headers["x-response-size-bytes"]) >= 0
-
-
-def test_streamed_export_csv_response_has_no_size_header(client, db_session):
-    """/collection/export.csv is a genuine StreamingResponse (see 'Large
-    import/export jobs' in docs/operations.md) - it has no Content-Length,
-    so ResponseSizeMiddleware silently skips the header/warning rather than
-    buffering the whole body just to measure it (see its own docstring).
-    This documents that trade-off rather than assuming every response gets
-    the header."""
-    response = client.get("/collection/export.csv")
-    assert response.status_code == 200
-    assert "x-response-size-bytes" not in response.headers
 
 
 # --- response size warning logging -------------------------------------------

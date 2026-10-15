@@ -22,14 +22,15 @@ from worker.models import (
     AlertRule,
     Card,
     CollectionItem,
-    PortfolioValuationSnapshot,
     PriceObservation,
     PriceRefreshRun,
     Source,
 )
-from worker.portfolio_valuation import SNKRDUNK_FLOOR, YUYUTEI_SELL
 
 logger = logging.getLogger(__name__)
+
+YUYUTEI_SELL = ("yuyutei", "sell")
+SNKRDUNK_FLOOR = ("snkrdunk", "floor")
 
 DEDUPE_WINDOW = timedelta(hours=24)
 
@@ -406,8 +407,7 @@ def _latest_prices_by_card(
     db: Session, card_ids: set[int], sources_by_id: dict[int, str]
 ) -> dict[int, dict[tuple[str, str], PriceObservation]]:
     """Latest PriceObservation per (source_name, price_type) for each card,
-    among the given card_ids - mirrors the lookup in
-    worker/portfolio_valuation.py, scoped to just the owned cards."""
+    among the given card_ids, scoped to just the owned cards."""
     if not card_ids:
         return {}
 
@@ -435,8 +435,7 @@ def _resolve_current_value(
 ) -> tuple[int, str] | None:
     """Prefers the SNKRDUNK market floor price, falling back to the Yuyu-Tei
     sell price when the floor is missing. Returns None if neither is
-    available. Basis strings ("market_floor" / "retail") match the ones used
-    by the portfolio valuation insights on the api service."""
+    available."""
     floor_obs = card_latest.get(SNKRDUNK_FLOOR)
     if floor_obs is not None:
         return floor_obs.price_jpy, "market_floor"
@@ -582,77 +581,6 @@ def check_owned_card_below_cost_basis_rules(
     return events
 
 
-def check_portfolio_value_change_rules(
-    db: Session, rules: list[AlertRule], dry_run: bool, now: datetime
-) -> list[AlertEvent]:
-    """portfolio_value_change_pct: compares the two most recent
-    portfolio_valuation_snapshots rows by SNKRDUNK market floor value. Skips
-    entirely if fewer than 2 snapshots exist, or if either snapshot is
-    missing a market floor value."""
-    events: list[AlertEvent] = []
-    applicable_rules = [
-        r
-        for r in rules
-        if r.rule_type == "portfolio_value_change_pct" and r.threshold_pct is not None
-    ]
-    if not applicable_rules:
-        return events
-
-    snapshots = (
-        db.query(PortfolioValuationSnapshot)
-        .order_by(PortfolioValuationSnapshot.created_at.desc(), PortfolioValuationSnapshot.id.desc())
-        .limit(2)
-        .all()
-    )
-    if len(snapshots) < 2:
-        logger.info(
-            "Skipping portfolio_value_change_pct check: fewer than 2 portfolio "
-            "valuation snapshots exist."
-        )
-        return events
-
-    latest, previous = snapshots[0], snapshots[1]
-    if latest.market_floor_value_jpy is None or previous.market_floor_value_jpy is None:
-        logger.info(
-            "Skipping portfolio_value_change_pct check: snapshot %s or %s is missing "
-            "a market floor value.",
-            latest.id,
-            previous.id,
-        )
-        return events
-
-    pct = _pct_change(previous.market_floor_value_jpy, latest.market_floor_value_jpy)
-
-    for rule in applicable_rules:
-        if abs(pct) < rule.threshold_pct:
-            continue
-
-        direction = "up" if pct >= 0 else "down"
-        event_type = f"portfolio_value_{direction}"
-        title = f"Portfolio market floor value {direction} {abs(pct):.1f}%"
-        message = (
-            f"{previous.market_floor_value_jpy} JPY (snapshot {previous.id}, "
-            f"{previous.created_at.isoformat()}) -> {latest.market_floor_value_jpy} JPY "
-            f"(snapshot {latest.id}, {latest.created_at.isoformat()}) ({pct:+.1f}%) "
-            f"[rule: {rule.name}]"
-        )
-        dedupe_key = f"rule:{rule.id}:snapshot:{latest.id}:{previous.id}"
-
-        events.append(
-            _record_event(
-                db,
-                event_type=event_type,
-                title=title,
-                message=message,
-                dedupe_key=dedupe_key,
-                dry_run=dry_run,
-                now=now,
-            )
-        )
-
-    return events
-
-
 def check_alerts(db: Session, dry_run: bool = False) -> list[AlertEventSummary]:
     now = datetime.now(timezone.utc)
     rules = db.query(AlertRule).filter(AlertRule.is_active.is_(True)).all()
@@ -664,14 +592,6 @@ def check_alerts(db: Session, dry_run: bool = False) -> list[AlertEventSummary]:
     events += check_refresh_failed_rules(db, rules, dry_run, now)
     events += check_owned_card_target_sell_rules(db, rules, dry_run, now)
     events += check_owned_card_below_cost_basis_rules(db, rules, dry_run, now)
-
-    try:
-        events += check_portfolio_value_change_rules(db, rules, dry_run, now)
-    except Exception:
-        # Portfolio valuation data (snapshots) is a separate, newer subsystem
-        # from the price-observation-based checks above - an unexpected gap
-        # or inconsistency there must never take down the whole alert run.
-        logger.exception("portfolio_value_change_pct check failed; skipping.")
 
     # Captured as plain data before commit/rollback, since either operation
     # expires (dry-run: expunges) the ORM rows above - see AlertEventSummary.

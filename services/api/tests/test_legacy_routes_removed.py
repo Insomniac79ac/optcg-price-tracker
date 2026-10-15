@@ -68,12 +68,69 @@ def test_kept_neighbours_remain():
     paths = app.openapi()["paths"]
     for path in (
         "/market/movers",
-        "/analytics/collection",
-        "/analytics/wishlist",
         "/analytics/market-value",
-        "/collector/activity",
         "/admin/actions/refresh-prices",
-        "/admin/actions/snapshot-portfolio",
         "/admin/actions/full-market-refresh",
     ):
         assert path in paths, path
+
+
+# Collector v1 S8 removed the legacy collection, wishlist, grading, tags,
+# groups, notes and activity routers, the per-user collection and wishlist
+# analytics and the admin collection snapshot. The v1 accounts API (/me/...)
+# replaces them.
+S8_REMOVED = [
+    ("GET", "/collection"),
+    ("POST", "/collection"),
+    ("GET", "/collection/summary"),
+    ("GET", "/collection/valuation"),
+    ("GET", "/collection/valuation/history"),
+    ("GET", "/collection/export.csv"),
+    ("POST", "/collection/export.csv/job"),
+    ("POST", "/collection/import.csv"),
+    ("GET", "/collection/1"),
+    ("PATCH", "/collection/1"),
+    ("DELETE", "/collection/1"),
+    ("POST", "/collection/1/tags/1"),
+    ("POST", "/collection/1/groups/1"),
+    ("GET", "/wishlist"),
+    ("POST", "/wishlist"),
+    ("GET", "/wishlist/summary"),
+    ("GET", "/wishlist/export.csv"),
+    ("POST", "/wishlist/import.csv"),
+    ("PATCH", "/wishlist/1"),
+    ("POST", "/wishlist/1/mark-purchased"),
+    ("POST", "/wishlist/1/convert-to-collection"),
+    ("GET", "/grading/submissions"),
+    ("POST", "/grading/submissions"),
+    ("GET", "/grading/summary"),
+    ("GET", "/collector/tags"),
+    ("POST", "/collector/groups"),
+    ("GET", "/collector/notes"),
+    ("GET", "/collector/activity"),
+    ("POST", "/cards/1/tags/1"),
+    ("DELETE", "/cards/1/tags/1"),
+    ("GET", "/analytics/collection"),
+    ("GET", "/analytics/wishlist"),
+    ("POST", "/admin/actions/snapshot-portfolio"),
+]
+
+S8_PREFIXES = ("/collection", "/wishlist", "/grading", "/collector", "/analytics/collection", "/analytics/wishlist")
+
+
+@pytest.mark.parametrize("method,path", S8_REMOVED)
+def test_s8_removed_route_is_not_found(client, method, path):
+    response = client.request(method, path, json={})
+
+    assert response.status_code == 404
+    assert not any(
+        getattr(route, "path", "") == path and method in getattr(route, "methods", ())
+        for route in app.routes
+    )
+
+
+def test_s8_removed_routes_are_absent_from_openapi():
+    paths = app.openapi()["paths"]
+    assert not [p for p in paths if p.startswith(S8_PREFIXES)]
+    assert not [p for p in paths if p.startswith("/cards/") and "/tags/" in p]
+    assert "/admin/actions/snapshot-portfolio" not in paths

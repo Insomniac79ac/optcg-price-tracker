@@ -32,13 +32,8 @@ from app.api.alerts import router as alerts_router
 from app.api.analytics import router as analytics_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
-from app.api.collection import router as collection_router
-from app.api.collector import router as collector_router
-from app.api.collector_activity import router as collector_activity_router
-from app.api.collector_notes import router as collector_notes_router
 from app.api.env_check import router as env_check_router
 from app.api.file_jobs import router as file_jobs_router
-from app.api.grading import router as grading_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
 from app.api.market_value import router as market_value_router
@@ -51,7 +46,6 @@ from app.api.yuyutei_candidates import router as yuyutei_candidates_router
 from app.api.source_mappings import router as source_mappings_router
 from app.api.system_check import router as system_check_router
 from app.api.version import router as version_router
-from app.api.wishlist import router as wishlist_router
 from app.config_check import validate_config
 from app.core.env_validation import validate_environment
 from app.core.rate_limit import RateLimitMiddleware
@@ -182,13 +176,7 @@ app.include_router(card_audit_router)
 app.include_router(admin_source_mapping_quality_router)
 app.include_router(admin_source_mapping_proposals_router)
 app.include_router(source_mappings_router)
-app.include_router(collection_router)
-app.include_router(collector_router)
-app.include_router(collector_notes_router)
-app.include_router(collector_activity_router)
-app.include_router(grading_router)
 app.include_router(file_jobs_router)
-app.include_router(wishlist_router)
 app.include_router(saved_views_router)
 app.include_router(analytics_router)
 app.include_router(market_value_router)

@@ -214,7 +214,8 @@ def test_failed_mapping_increments_mappings_failed_and_marks_completed_with_warn
     assert observations[0].card_id == card_ok.id
 
 
-def test_successful_non_dry_run_creates_portfolio_snapshot(db_session):
+def test_refresh_no_longer_writes_a_portfolio_snapshot(db_session):
+    # Collector v1 S8 removed the legacy collection snapshot; the table stays.
     source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
     make_source_card_mapping(db_session, source, card, "OP01-001")
     adapters = {"yuyutei": StubAdapter("yuyutei")}
@@ -222,46 +223,8 @@ def test_successful_non_dry_run_creates_portfolio_snapshot(db_session):
     summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
 
     assert summary.status == "completed"
-    assert summary.portfolio_snapshot_id is not None
-    snapshot = (
-        db_session.query(PortfolioValuationSnapshot)
-        .filter_by(id=summary.portfolio_snapshot_id)
-        .one()
-    )
-    assert snapshot.total_items == 0
-    assert f"portfolio_snapshot_id={summary.portfolio_snapshot_id}" in summary.report_lines()
-
-
-def test_dry_run_does_not_create_portfolio_snapshot(db_session):
-    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
-    make_source_card_mapping(db_session, source, card, "OP01-001")
-    adapters = {"yuyutei": StubAdapter("yuyutei")}
-
-    summary = refresh_prices(limit=10, db=db_session, adapters=adapters, dry_run=True)
-
-    assert summary.portfolio_snapshot_id is None
     assert db_session.query(PortfolioValuationSnapshot).count() == 0
-
-
-def test_portfolio_snapshot_failure_does_not_crash_refresh_job(db_session, monkeypatch):
-    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
-    make_source_card_mapping(db_session, source, card, "OP01-001")
-    adapters = {"yuyutei": StubAdapter("yuyutei")}
-
-    def boom(db):
-        raise RuntimeError("snapshot exploded")
-
-    monkeypatch.setattr(refresh_prices_module, "create_portfolio_valuation_snapshot", boom)
-
-    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
-
-    assert summary.status == "completed"
-    assert summary.mappings_processed == 1
-    assert summary.portfolio_snapshot_id is None
-    assert db_session.query(PortfolioValuationSnapshot).count() == 0
-    # Session must still be usable afterward - a leftover failed transaction
-    # would break any caller that keeps using db after refresh_prices returns.
-    assert db_session.query(PriceRefreshRun).filter_by(id=summary.id).one().status == "completed"
+    assert not any("portfolio" in line for line in summary.report_lines())
 
 
 def test_refresh_no_longer_writes_market_signals_or_reports(db_session):

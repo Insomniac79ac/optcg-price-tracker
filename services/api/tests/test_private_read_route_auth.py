@@ -22,8 +22,8 @@ from tests.test_mutating_route_auth import _dependency_names, _iter_api_routes
 # Private reads that carry user-derived fields, as FastAPI declares them.
 # They anchor the inventory guard and keep the field check honest.
 PRIVATE_READ_TEMPLATES = {
-    "/analytics/collection",
-    "/analytics/wishlist",
+    "/me/collection",
+    "/me/watchlist",
 }
 
 
