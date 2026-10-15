@@ -63,6 +63,7 @@ def test_dsn_initialises_without_pii_tracing_bodies_or_locals(fake_sdk):
             "send_default_pii": False,
             "include_local_variables": False,
             "max_request_body_size": "never",
+            "max_value_length": 8192,
             "traces_sample_rate": 0.0,
             "auto_session_tracking": False,
             "before_send": scrub_event,
@@ -231,3 +232,26 @@ def test_redact_text_leaves_ordinary_messages_alone():
 
     assert redact_text("Rate limit exceeded for group 'admin'") == "Rate limit exceeded for group 'admin'"
     assert redact_text(None) is None
+
+
+def test_redact_text_cannot_be_ended_early_by_a_stored_value():
+    from app.error_tracking import redact_text
+
+    text = ("(psycopg.errors.UniqueViolation) duplicate key\n[SQL: INSERT INTO users ...]\n"
+            "[parameters: {'note': '] (Background on this error', 'email': 'a@example.com', 'name': 'Secret Name'}]\n"
+            "(Background on this error at: https://sqlalche.me/e/20/gkpj)")
+    out = redact_text(text)
+    assert "Secret Name" not in out and "a@example.com" not in out
+    assert out.endswith("(Background on this error at: https://sqlalche.me/e/20/gkpj)")
+
+
+def test_redact_text_is_fast_and_bounded_on_hostile_input():
+    import time
+
+    from app.error_tracking import redact_text
+
+    for text in ("x" * 200_000, "[parameters: " * 20_000, "a@" * 100_000, ("a" * 70 + "@") * 3000):
+        started = time.perf_counter()
+        out = redact_text(text)
+        assert time.perf_counter() - started < 0.5
+        assert len(out) <= 8192 + len(" [truncated]") + len("[parameters: redacted]")

@@ -35,16 +35,28 @@ _SENSITIVE_HEADER = re.compile(
 )
 
 
-_SQL_PARAMETERS = re.compile(r"\[parameters: .*?\](?=\s*(?:\(Background on this error|$))", re.DOTALL)
-_PG_DETAIL = re.compile(r"^DETAIL:.*$", re.MULTILINE)
-_EMAIL = re.compile(r"[^\s@'\"(),;:<>\[\]]+@[^\s@'\"(),;:<>\[\]]+\.[A-Za-z]{2,}")
+# Redaction runs inside before_send on the request's thread, so input is cut
+# first and every pattern is linear: no unbounded quantifier can backtrack.
+MAX_REDACTED_LENGTH = 8192
+_SQL_PARAMETERS = "[parameters:"
+_SQL_BACKGROUND = "(Background on this error"
+_PG_DETAIL = re.compile(r"^DETAIL:[^\n]*", re.MULTILINE)
+_EMAIL = re.compile(r"[^\s@'\"(),;:<>\[\]]{1,64}@[^\s@'\"(),;:<>\[\]]{1,253}\.[A-Za-z]{2,24}")
 
 
 def redact_text(value: Any) -> Any:
     """Drop SQL bound parameters and Postgres key details; mask emails."""
     if not isinstance(value, str):
         return value
-    value = _SQL_PARAMETERS.sub("[parameters: redacted]", value)
+    if len(value) > MAX_REDACTED_LENGTH:
+        value = value[:MAX_REDACTED_LENGTH] + " [truncated]"
+    start = value.find(_SQL_PARAMETERS)
+    if start != -1:
+        # Everything from the first parameter block to SQLAlchemy's trailing
+        # "(Background on this error ...)" goes, whatever the values contain.
+        end = value.rfind(_SQL_BACKGROUND)
+        tail = value[end:] if end > start else ""
+        value = value[:start] + "[parameters: redacted]" + (" " + tail if tail else "")
     value = _PG_DETAIL.sub("DETAIL: redacted", value)
     return _EMAIL.sub("[email redacted]", value)
 
@@ -116,6 +128,7 @@ def init_options(dsn: str, environ: Mapping[str, str]) -> dict[str, Any]:
         "send_default_pii": False,
         "include_local_variables": False,
         "max_request_body_size": "never",
+        "max_value_length": MAX_REDACTED_LENGTH,
         "traces_sample_rate": 0.0,
         # Errors only: no release-health session per request.
         "auto_session_tracking": False,
