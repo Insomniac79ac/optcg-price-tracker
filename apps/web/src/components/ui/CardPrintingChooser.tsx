@@ -42,6 +42,7 @@ export function CardPrintingChooser({
   prints,
   cardCode,
   canonicalName,
+  ownedByPrint,
 }: {
   status: PrintingChooserStatus;
   prints: PrintUiModel[];
@@ -50,6 +51,10 @@ export function CardPrintingChooser({
   /** The canonical name, when every record agreed on one. Null otherwise, and
    * the header then carries the code alone. Never the legacy card's name. */
   canonicalName: string | null;
+  /** The signed-in collector's quantity per card_print_id, for ownership
+   * badges. Absent for a visitor. There is deliberately no add button here:
+   * the collector picks the exact version first (PLAN E1). */
+  ownedByPrint?: ReadonlyMap<number, { quantity: number }>;
 }) {
   // Scoped to the prints shown together, exactly as the catalogue grid scopes
   // it: an ordinal earns its place only when two tiles on THIS page would
@@ -97,6 +102,7 @@ export function CardPrintingChooser({
                 key={print.cardPrintId}
                 print={print}
                 showArtOrdinal={ordinalNeeded.has(print.cardPrintId)}
+                ownedQuantity={ownedByPrint?.get(print.cardPrintId)?.quantity ?? null}
               />
             ))}
           </CardGrid>

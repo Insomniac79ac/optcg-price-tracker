@@ -98,6 +98,21 @@ describe("SignInPage (neutral sign-in-required route)", () => {
     expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
   });
 
+  it("offers an expired admin session plain Google sign-in, with no admin note", async () => {
+    authMock.mockResolvedValueOnce({
+      user: { email: "admin@example.com" },
+      sessionKind: "admin",
+      adminSessionExpired: true,
+    });
+    process.env.AUTH_GOOGLE_ID = "real-client-id";
+    process.env.AUTH_GOOGLE_SECRET = "real-client-secret";
+    const ui = await SignInPage({ searchParams: Promise.resolve({ callbackUrl: "/collection" }) });
+    const { container } = render(ui);
+    expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(container.querySelector("[data-admin-note]")).toBeNull();
+    expect(screen.queryByText(/admin/i)).not.toBeInTheDocument();
+  });
+
   it("links on to the public pages", async () => {
     const ui = await SignInPage({ searchParams: Promise.resolve({}) });
     render(ui);

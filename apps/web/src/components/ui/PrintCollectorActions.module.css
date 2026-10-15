@@ -1,0 +1,218 @@
+/* The collector's relationship to this exact version: under the identity,
+   above the money (collector UI hierarchy). Quiet chart-blue panel, teal for
+   actions, gold only for the one primary button. */
+.panel {
+  margin-top: 18px;
+  padding: 14px 16px 16px;
+  border: 1px solid #293b42;
+  border-left: 3px solid #4f8d86;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(79, 141, 134, 0.1), transparent 55%), #111c21;
+}
+
+.heading {
+  font: 12px/1.4 var(--font-mono) !important;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #80b7b5 !important;
+  font-style: normal !important;
+}
+
+.placeholder {
+  height: 58px;
+}
+
+.line {
+  margin-top: 8px;
+  color: #b5c6cd;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.status {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.owned,
+.watching {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  color: #e6eeee;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.count {
+  color: #a5dad5;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.meta {
+  color: #8fa6ae;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.primary,
+.secondary,
+.danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 120ms, border-color 120ms, color 120ms;
+}
+
+.primary {
+  background: var(--accent-gold);
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.primary:hover {
+  background: var(--accent-gold-hover);
+}
+
+.secondary {
+  border: 1px solid #3e696a;
+  color: #a5dad5;
+}
+
+.secondary:hover {
+  border-color: #78c4bf;
+  color: #e6eeee;
+}
+
+.danger {
+  border: 1px solid rgba(200, 98, 77, 0.6);
+  color: #e3a08f;
+}
+
+.danger:hover {
+  background: rgba(200, 98, 77, 0.12);
+}
+
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.textButton {
+  min-height: 44px;
+  color: #8dc9c4;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.textButton:hover {
+  color: #e6eeee;
+}
+
+.form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #25363c;
+}
+
+.formFor {
+  color: #8fa6ae;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.label {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  color: #b5c6cd;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.optional {
+  color: #8c9fa7;
+}
+
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #32464d;
+  border-radius: 8px;
+  background: #0c1115;
+  color: #e6eeee;
+  font-size: 15px;
+  color-scheme: dark;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #78c4bf;
+  box-shadow: 0 0 0 1px #78c4bf;
+}
+
+.hint {
+  margin-top: 10px;
+  color: #8c9fa7;
+  font-size: 12px;
+}
+
+.problem {
+  margin-top: 10px;
+  color: #e3a08f;
+  font-size: 13px;
+}
+
+.confirm {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(200, 98, 77, 0.45);
+  border-radius: 8px;
+  color: #e6eeee;
+  font-size: 14px;
+}
+
+@media (max-width: 639px) {
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .buttons > .primary,
+  .buttons > .secondary {
+    flex: 1 1 8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary,
+  .secondary,
+  .danger {
+    transition: none;
+  }
+}

@@ -8,8 +8,9 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+let sessionValue: { data: unknown; status: string } = { data: null, status: "unauthenticated" };
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: null, status: "unauthenticated" }),
+  useSession: () => sessionValue,
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
@@ -284,5 +285,27 @@ describe("L. the public family route is public", () => {
     }
     // The two options must not read identically.
     expect(new Set(printLinks().map((l) => l.getAttribute("aria-label"))).size).toBe(2);
+  });
+
+  it("badges the versions a signed-in collector owns, with no add button", async () => {
+    sessionValue = { data: { user: { email: "c@example.test" }, sessionKind: "collector" }, status: "authenticated" };
+    const fetchMock = vi.fn(async (url: string) =>
+      new Response(JSON.stringify({ entries: url === "/api/me/collection"
+        ? [{ id: 1, card_print_id: BASE.card_print_id, resolution: "exact", quantity: 3, paid_jpy_per_card: null, acquired_on: null }]
+        : [] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      mockCatalogue([BASE, ALT]);
+      render(<CardFamilyPage />);
+      await waitFor(() => expect(screen.getAllByTestId("owned-badge")).toHaveLength(1));
+      const owned = printLinks().find((link) => link.getAttribute("href") === `/prints/${BASE.card_print_id}`)!;
+      expect(within(owned).getByTestId("owned-badge")).toHaveTextContent("In your collection ×3");
+      expect(owned.getAttribute("aria-label")).toMatch(/in your collection ×3/);
+      expect(screen.queryByRole("button", { name: /add to collection/i })).not.toBeInTheDocument();
+      expect(fetchMock.mock.calls.map(([url]) => url).sort()).toEqual(["/api/me/collection", "/api/me/watchlist"]);
+    } finally {
+      vi.unstubAllGlobals();
+      sessionValue = { data: null, status: "unauthenticated" };
+    }
   });
 });

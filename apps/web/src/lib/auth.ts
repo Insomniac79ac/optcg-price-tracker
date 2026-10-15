@@ -4,12 +4,12 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { JWT } from "next-auth/jwt";
 
-// Temporary staging-only admin login (collector-blueprint.pdf, admin-login
-// task) - a Credentials provider alongside the existing Google provider,
-// verified server-side against the backend's POST /auth/admin/verify (see
-// services/api/app/api/admin_login.py). This is a prototype meant to be
-// removed once Google OAuth plus an admin-email allowlist replaces it - see
-// docs/staging_deployment.md for the full architecture and removal plan.
+// Two providers. Google is collector sign-in (Collector v1 S5). The second is
+// the staging-only admin login (collector-blueprint.pdf, admin-login task): a
+// Credentials provider verified server-side against the backend's POST
+// /auth/admin/verify (see services/api/app/api/admin_login.py), meant to be
+// replaced by Google plus an admin-email allowlist - see
+// docs/staging_deployment.md for the removal plan.
 //
 // The callback/authorize bodies below are extracted into named exported
 // functions (rather than inlined in the NextAuth() config, as the
@@ -102,14 +102,10 @@ export async function adminAuthorize(
   return { id: verified.id, email: verified.email, role: "admin" };
 }
 
-// A genuinely short admin session, independent of whatever session.maxAge
-// ends up being appropriate for collector Google sign-in once that's live
-// (Google OAuth has no credentials configured yet - see docs/
-// staging_deployment.md - so there is no current collector session for a
-// shorter global maxAge to prematurely affect; this will need revisiting,
-// not necessarily widening, once that changes). Enforced as a claim inside
-// the JWT itself (roleExpiresAt) rather than session.maxAge, so it stays
-// admin-specific even after Google sign-in is enabled.
+// A genuinely short admin session, independent of the collector (Google)
+// session's lifetime. Enforced as a claim inside the JWT itself
+// (roleExpiresAt) rather than session.maxAge, so it stays admin-specific and
+// a shorter admin lifetime never shortens a collector's session.
 export const ADMIN_SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000;
 
 interface JwtCallbackParams {
@@ -205,9 +201,16 @@ export async function applySessionCallback({
   return session;
 }
 
+/** Google's authorization request parameters. `select_account` makes Google
+ * show its account chooser on every sign-in, so a browser already signed in
+ * to one Google account can still pick (or add) another rather than being
+ * signed straight back in as the last account used. */
+export const GOOGLE_AUTHORIZATION_PARAMS = { prompt: "select_account" } as const;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    Google,
+    // Client id and secret come from AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET.
+    Google({ authorization: { params: GOOGLE_AUTHORIZATION_PARAMS } }),
     Credentials({
       id: ADMIN_CREDENTIALS_PROVIDER_ID,
       name: "Admin",

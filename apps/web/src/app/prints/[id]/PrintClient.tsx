@@ -17,6 +17,7 @@ import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
 import { PrintAnalyticsSection, PrintMarketIndexHeadline } from "@/components/ui/PrintAnalyticsSection";
+import { PrintCollectorActions } from "@/components/ui/PrintCollectorActions";
 import { PrintWindowPerformance } from "@/components/ui/PrintWindowPerformance";
 import {
   PrintPriceSeriesRows,
@@ -59,6 +60,7 @@ import {
   toPrintUiModel,
 } from "@/lib/prints";
 import { describeSourceEvidence } from "@/lib/sourceEvidence";
+import { useCollectorShelf, type CollectorShelf } from "@/lib/collectorShelf";
 import { getTerm, specialPrintTerm, versionPrintingLabel, type Term } from "@/lib/terminology";
 import { releaseLabelEnglish } from "@/lib/releaseNames";
 
@@ -138,6 +140,8 @@ export default function PrintDetailPage({ initialDetail = null }: { initialDetai
   const printId = params?.id;
 
   const [print, setPrint] = useState<PrintUiModel | null>(initialDetail ? toPrintUiModel(initialDetail) : null);
+  // Signed-in collectors only; a visitor makes no request (src/lib/collectorShelf.ts).
+  const shelf = useCollectorShelf();
   const [detail, setDetail] = useState<PrintDetail | null>(initialDetail);
   const [history, setHistory] = useState<PriceHistoryView | null>(null);
   const [historyStatus, setHistoryStatus] = useState<PriceHistoryStatus>("loading");
@@ -304,10 +308,17 @@ export default function PrintDetailPage({ initialDetail = null }: { initialDetai
         {status === "ready" && print && detail && (
           <article className={styles.layout}>
             <div className={styles.artwork}><CardStage print={print} /></div>
-            <Identity print={print} />
+            <div className={styles.identity}>
+              <Identity print={print} />
+              <PrintCollectorActions
+                cardPrintId={print.cardPrintId}
+                versionLabel={[`${print.displayName} (${print.cardCode})`, print.printingType?.label, print.releaseCode && `Found in ${print.releaseCode}`].filter(Boolean).join(" · ")}
+                shelf={shelf}
+              />
+            </div>
             <LiveMarket print={print} history={history} historyStatus={historyStatus} />
             <PrintMarketIndexHeadline analytics={analyticsForPrint} />
-            <OtherVersions detail={detail} />
+            <OtherVersions detail={detail} shelf={shelf} />
             <PrintAnalyticsSection
               analytics={analyticsForPrint}
               identity={{
@@ -374,7 +385,7 @@ function CardStage({ print }: { print: PrintUiModel }) {
  */
 function Identity({ print }: { print: PrintUiModel }) {
   return (
-    <header className={styles.identity}>
+    <header>
       <div className={styles.codes}>
         <span className="mono">{print.cardCode}</span>
         {print.rarityTerm && <RarityTermBadge term={print.rarityTerm} />}
@@ -666,7 +677,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
 }
 
 /** Exact-print identity only: no sibling prices or follow-up requests. */
-function OtherVersions({ detail }: { detail: PrintDetail }) {
+function OtherVersions({ detail, shelf }: { detail: PrintDetail; shelf: CollectorShelf }) {
   const siblings = detail.siblings.filter((sibling) => sibling.card_print_id !== detail.card_print_id);
   if (siblings.length === 0) return null;
   return (
@@ -674,12 +685,12 @@ function OtherVersions({ detail }: { detail: PrintDetail }) {
       <h2 id="other-versions-heading">Other versions</h2>
       <ul className={styles.printingStrip} aria-label="Card versions" tabIndex={0}>
         <li className={styles.currentPrinting}>
-          <VersionCard version={detail} current />
+          <VersionCard version={detail} current owned={shelf.held.get(detail.card_print_id)?.quantity ?? null} />
         </li>
         {siblings.map((sibling) => (
           <li key={sibling.card_print_id}>
             <Link href={`/prints/${sibling.card_print_id}`} className={styles.printingLink}>
-              <VersionCard version={sibling} />
+              <VersionCard version={sibling} owned={shelf.held.get(sibling.card_print_id)?.quantity ?? null} />
             </Link>
           </li>
         ))}
@@ -688,7 +699,7 @@ function OtherVersions({ detail }: { detail: PrintDetail }) {
   );
 }
 
-function VersionCard({ version, current = false }: { version: PrintSibling; current?: boolean }) {
+function VersionCard({ version, current = false, owned = null }: { version: PrintSibling; current?: boolean; owned?: number | null }) {
   const name = version.name_en || version.name_jp || version.card_code || "Card version";
   // Special category and printing type are independent facts. Ordinary
   // rarity stays in the detail metadata; raw treatment tokens add no label.
@@ -706,7 +717,12 @@ function VersionCard({ version, current = false }: { version: PrintSibling; curr
       <span className={`${styles.versionCode} mono`}>{version.card_code}</span>
       {descriptors && <span className={styles.versionDescriptor}>{descriptors}</span>}
       <span className={styles.versionRelease}>{release ? `Found in ${release}` : "Release not recorded"}</span>
-      {current && <span className={styles.currentBadge}>Current</span>}
+      {(current || owned) && (
+        <span className={styles.versionBadges}>
+          {current && <span className={styles.currentBadge}>Current</span>}
+          {owned ? <span className={styles.ownedBadge} data-testid="owned-badge">In your collection ×{owned}</span> : null}
+        </span>
+      )}
     </>
   );
 }

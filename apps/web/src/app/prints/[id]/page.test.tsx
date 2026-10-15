@@ -38,6 +38,7 @@ import type {
 } from "@/lib/prints";
 
 import PrintDetailPage from "./PrintClient";
+import { useSession } from "next-auth/react";
 
 function sourceValue(
   overrides: Partial<PrintMarketIndexSourceValue> & { source: string },
@@ -115,6 +116,53 @@ function makeDetail(overrides: Partial<PrintDetail> = {}): PrintDetail {
 }
 
 afterEach(() => vi.clearAllMocks());
+
+describe("Collector actions (Collector v1 S6)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("invites a signed-out visitor to sign in, right under the card's identity", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    render(<PrintDetailPage />);
+    const panel = await screen.findByTestId("print-collector-actions");
+    expect(within(panel).getByRole("link", { name: "Sign in to add it" })).toHaveAttribute(
+      "href",
+      "/sign-in?callbackUrl=%2Fprints%2F1",
+    );
+    // Hierarchy: identity, then the collector relationship, then the money.
+    const heading = screen.getByRole("heading", { level: 1 });
+    const prices = screen.getByTestId("live-market");
+    expect(heading.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel.compareDocumentPosition(prices) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows a collector what they own here and on the other versions", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { email: "c@example.test" }, sessionKind: "collector", expires: "2099-01-01" },
+      status: "authenticated",
+      update: vi.fn(),
+    } as never);
+    const sibling = makeDetail({ card_print_id: 2, official_asset_variant: "p1", siblings: [] });
+    fetchPrint.mockResolvedValue(makeDetail({ siblings: [sibling] }));
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "/api/me/collection") {
+        return new Response(JSON.stringify({ entries: [
+          { id: 10, card_print_id: 1, resolution: "exact", quantity: 1, paid_jpy_per_card: null, acquired_on: null },
+          { id: 11, card_print_id: 2, resolution: "exact", quantity: 2, paid_jpy_per_card: null, acquired_on: null },
+          { id: 12, card_print_id: null, resolution: "unresolved", quantity: 5, paid_jpy_per_card: null, acquired_on: null },
+        ] }), { status: 200 });
+      }
+      if (url === "/api/me/watchlist") return new Response(JSON.stringify({ entries: [] }), { status: 200 });
+      return new Response("{}", { status: 404 });
+    }));
+    render(<PrintDetailPage />);
+    expect(await screen.findByTestId("in-collection")).toHaveTextContent("In your collection ×1");
+    const section = screen.getByRole("region", { name: "Other versions" });
+    const badges = within(section).getAllByTestId("owned-badge").map((badge) => badge.textContent);
+    expect(badges).toEqual(["In your collection ×1", "In your collection ×2"]);
+    expect(screen.getByRole("button", { name: "Watch" })).toBeInTheDocument();
+    vi.mocked(useSession).mockReturnValue({ data: null, status: "unauthenticated", update: vi.fn() } as never);
+  });
+});
 
 describe("Other versions", () => {
   const anniversary = "プレミアムカードコレクション 25周年エディション";
