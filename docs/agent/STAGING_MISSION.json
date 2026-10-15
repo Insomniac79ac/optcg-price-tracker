@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Collector v1 S5 (PLAN \u00a7D1, \u00a7D4, \u00a7D5, \u00a7H row S5; owner decision Q2 approved 2026-10-11): browser holds no API token (server-side 5-minute token via /api/me), CORS restricted, collector-only guard on collector routes, /account, sign-in invite, /health and Sentry carry the API commit. Staging only; no collector release. COLLECTOR_ACCOUNTS_ENABLED is switched on separately on the staging API after this delivery is verified (owner finished PLAN \u00a7D2 2026-10-14).",
+ "mission": "Capacity75 session 13 step 3 (owner decision 2026-10-14): quarantined/blocked refresh work reported as its own category with count and oldest age always visible, excluded from overdue and freshness deadline compliance; real overdue work still fails (state tooling only)",
  "target": "staging",
- "classification": "AMBER",
+ "classification": "GREEN",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,116 +20,32 @@
  "impacts": [
   {
    "files": [
-    "apps/web/src/lib/collectorApi.ts",
-    "apps/web/src/lib/meProxy.ts",
-    "apps/web/src/app/api/me/[[...path]]/route.ts",
-    "apps/web/src/lib/auth.ts",
-    "apps/web/src/types/next-auth.d.ts",
-    "apps/web/src/lib/api.ts",
-    "apps/web/src/lib/savedViewsProxy.ts",
-    "apps/web/src/app/api/analytics/collection/route.ts",
-    "apps/web/src/app/api/analytics/wishlist/route.ts",
-    "apps/web/src/app/api/collection/export/job/route.ts",
-    "apps/web/src/app/api/collection/export/route.ts",
-    "apps/web/src/app/api/collection/import/route.ts",
-    "apps/web/src/app/api/file-jobs/[id]/cancel/route.ts",
-    "apps/web/src/app/api/file-jobs/[id]/download/route.ts",
-    "apps/web/src/app/api/file-jobs/[id]/route.ts",
-    "apps/web/src/app/api/file-jobs/route.ts",
-    "apps/web/src/app/api/wishlist/export/job/route.ts",
-    "apps/web/src/app/api/wishlist/export/route.ts",
-    "apps/web/src/app/api/wishlist/import/route.ts"
+    "scripts/quarantine_reporting.py",
+    "scripts/generate_staging_state.py",
+    "docs/agent/evidence/staging-state-read.sql"
    ],
    "effects": [
-    "application"
+    "state_observation"
    ],
-   "reason": "PLAN \u00a7D1 items 1 and 3 (owner decision Q2 approved 2026-10-11, which clears the auth-policy RED gate for this session): the Auth.js session object no longer carries apiToken. Collector requests go through same-origin route handlers (/api/me/**, /api/me/legacy/** for the pre-v1 pages until S8) that require a collector (Google) session, refuse cross-site mutating requests (Origin and Sec-Fetch-Site), mint a 5-minute HS256 API JWT server-side and call API_INTERNAL_URL. Admin sessions never get a user token. Legacy collector route handlers use the same helper. No secret value, variable or Auth.js cookie setting changes."
+   "reason": "State generator and check_raw_health only. A read-only query lists blocked items of the same ELIGIBLE population as DUE_SQL in the same read-only transaction; they are removed from due/overdue/never_checked/over_24h/deadline_misses and from run-summary misses only when blocked since before the run started and already overdue then (a real miss is never hidden). Quarantine count, overdue/never-checked counts and oldest blocked-since/age are always shown per source, in raw_due_work and in freshness; the freshness-deadline-deficit blocker follows actionable work; a quarantined-refresh-work blocker carries count and oldest time. Fails closed on older evidence or an inconsistent list. No threshold, target, budget or guard change; no database, Railway or Vercel write. The shared aggregate and its SQL (collector runtime inputs) are unchanged: scripts/collector_runtime_inputs.py reports 0 changed runtime inputs for both collectors, so no collector release."
   },
   {
    "files": [
-    "apps/web/src/lib/proxyGuard.ts",
-    "apps/web/src/proxy.ts",
-    "apps/web/src/lib/publicRoutes.ts"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "Collector routes (/collection, /wishlist, /account, legacy /analytics/*) require sessionKind collector; an admin session gets the sign-in invite. /admin/* unchanged (any session, expired-admin redirect, server-side admin boundary unchanged). /account added to the matcher and the crawler disallow list."
-  },
-  {
-   "files": [
-    "apps/web/src/app/account/page.tsx",
-    "apps/web/src/app/account/layout.tsx",
-    "apps/web/src/app/account/AccountActions.tsx",
-    "apps/web/src/lib/accountServer.ts",
-    "apps/web/src/app/sign-in/page.tsx",
-    "apps/web/src/app/sign-in/GoogleSignInButton.tsx",
-    "apps/web/src/components/ui/TopBar.tsx"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "PLAN \u00a7D4/\u00a7D5 UI tranche (ATLAS loop, fresh visual reviewer PASS 4/4/4/4/4): /account (noindex, collector only) with profile, JPY currency, JSON/CSV export, typed-confirmation delete (S3 DELETE /me) and sign out; /sign-in invite with a next step in every state and an invite-only note while Google is in Testing mode; header Account link."
-  },
-  {
-   "files": [
-    "services/api/app/web_cors.py",
-    "services/api/app/main.py"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "PLAN \u00a7D1 item 2: CORS options come from app/web_cors.py: CORS_ALLOWED_ORIGINS if set (staging sets it to the alias today, so live behaviour is unchanged), else '*' only in development, the staging alias on staging, nothing otherwise; never credentials. app/settings.py is only read, not edited. Not a collector runtime input (scripts/collector_runtime_inputs.py: 0 changed inputs for SNKRDUNK 62 and Yuyu-Tei 73)."
-  },
-  {
-   "files": [
-    "services/api/app/accounts/router.py",
-    "services/api/app/accounts/schemas.py"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "GET /me/profile (email, name, member since) for /account; behind COLLECTOR_ACCOUNTS_ENABLED like every /me route. app/accounts is outside the collector import graph."
-  },
-  {
-   "files": [
-    "deploy/railway/api.Dockerfile"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "Declares ARG RAILWAY_GIT_COMMIT_SHA (Railway passes build-time variables to a Dockerfile only when declared, docs.railway.com/guides/dockerfiles, checked 2026-10-14) and sets GIT_COMMIT from it, falling back to the GIT_COMMIT build arg, so /health and the Sentry release carry the deployed commit instead of 'unknown'. Not a collector Dockerfile or collector path (full_paths)."
-  },
-  {
-   "files": [
-    "apps/web/src/lib/collectorApi.test.ts",
-    "apps/web/src/lib/meProxy.test.ts",
-    "apps/web/src/lib/noBrowserBearerToken.test.ts",
-    "apps/web/src/lib/auth.test.ts",
-    "apps/web/src/lib/proxyGuard.test.ts",
-    "apps/web/src/proxyFailClosed.test.ts",
-    "apps/web/src/app/api/mutatingRouteAuth.test.ts",
-    "apps/web/src/app/account/page.test.tsx",
-    "apps/web/src/app/sign-in/page.test.tsx",
-    "services/api/tests/test_collector_v1_s5.py",
-    "services/api/tests/test_accounts.py"
+    "scripts/tests/test_quarantine_reporting.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Collector vs admin session; expired admin; no bearer token in the session JSON or client modules; 5-minute token; CSRF on every mutating collector route; BFF path allowlist; account page states and typed delete; CORS refuses other origins; /me/profile; import graph."
+   "reason": "Quarantined items do not count as overdue; real overdue work still fails (DEGRADED, due_work_deficit, not_met, deficit blocker); count and oldest age shown, also when zero; runs keep items blocked after they started or not yet overdue; inconsistent or absent lists exclude nothing; inputs not mutated; sanitize keeps only item fields."
   },
   {
    "files": [
-    "docs/deployment.md",
-    "docs/staging_deployment.md",
-    "docs/collector_accounts.md",
-    "docs/ui/evidence/2026-10-14-collector-v1-s5-account/CONTRACT.md"
+    "docs/agent/RAW_OPERATIONAL_HEALTH.md"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "Token flow, CORS default and /api/me documented; ATLAS tranche contract."
+   "reason": "Records the reporting rule and its fail-closed conditions."
   }
  ],
  "deployment_verification": {
@@ -143,65 +59,5 @@
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
  },
- "safeguards": {
-  "impact": {
-   "resources": [
-    {
-     "name": "Staging API (watched services/api and api.Dockerfile change: rebuild on merge)",
-     "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
-     "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
-     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
-    },
-    {
-     "name": "market-index-snapshot (same watch patterns: rebuild on merge; schedule and command unchanged)",
-     "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2"
-    },
-    {
-     "name": "Vercel staging frontend prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr (auth flow, /account, /sign-in)"
-    }
-   ],
-   "routes": [
-    "/api/me/** (new, same-origin)",
-    "/account (new, noindex)",
-    "/sign-in",
-    "/collection, /wishlist, /analytics/* guard: collector sessions only",
-    "API CORS policy",
-    "GET /me/profile (404 while the flag is off)"
-   ],
-   "dependencies": [
-    "API_JWT_SECRET on Vercel and the API (unchanged)",
-    "AUTH_SECRET",
-    "API_INTERNAL_URL",
-    "CORS_ALLOWED_ORIGINS on the API (unchanged)",
-    "S3 /me API and tables (3b7d9c1a5e20)"
-   ],
-   "deployment_impact": "API and market-index-snapshot rebuild on merge through their GitHub triggers; web redeploys through Vercel Git. Signed-in admins re-authenticate only if AUTH_SECRET is rotated (done with the stale-variable cleanup). No collector watch path or collector-imported module changes; collector_services is empty. No migration.",
-   "database_writes": 0,
-   "source_requests": 0,
-   "estimated_runtime_minutes": 20
-  },
-  "recovery": {
-   "artifact": "98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6",
-   "procedure": "Native revert of this PR restores the previous session/token flow, CORS code default and pages; unset COLLECTOR_ACCOUNTS_ENABLED on the staging API to make every /me route 404 again; the owner can disable the Google client. No data migration to undo.",
-   "trigger": "Admin login broken; any bearer token visible in the browser or session JSON; public pages failing CORS; verifier failure; /me answering for a non-collector session.",
-   "backup": "No schema or row change in this PR. Railway Postgres daily backup 4654fa96-c582-4dfb-a3fc-74c0759263be created 2026-10-14T09:22:01Z (under 24 h at merge) covers the later flag enablement.",
-   "validation": [
-    "apps/web/src/lib/meProxy.test.ts",
-    "apps/web/src/lib/noBrowserBearerToken.test.ts",
-    "services/api/tests/test_collector_v1_s5.py",
-    "services/api/tests/test_accounts_postgres.py"
-   ]
-  },
-  "verification": {
-   "required_checks": [
-    "engineering-gate"
-   ],
-   "post_change": [
-    "scripts/verify_staging_delivery.py",
-    "scripts/generate_staging_state.py"
-   ],
-   "observation_window": "Delivery receipt with 0 collector rollouts; on the staging alias: admin login works, /api/auth/session and page requests carry no bearer token, the API refuses another origin, /health reports the merge commit; after the flag is on, the owner's test account signs in, /account, export and delete work, and a read-only count confirms the user is gone."
-  }
- },
- "diff_sha256": "1ff99373927b12113885c6854fc72277b653e9cdfc58481f553de1010231f79d"
+ "diff_sha256": "d87ff9226d4f602c323b907323cdcb9073c07a665d7d77f513576cc0c48ffa55"
 }
