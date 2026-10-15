@@ -1,0 +1,20 @@
+{
+  "base": "e80ce63edb6687358e7c69a1963cec80ae994d6b",
+  "merge": "eae22a7ba25fcbb715ed03d9e80055831ab23173",
+  "decision": "full",
+  "files": [
+    "docs/agent/RAW_OPERATIONAL_HEALTH.md",
+    "docs/agent/STAGING_MISSION.json",
+    "docs/agent/evidence/staging-state-read.sql",
+    "scripts/generate_staging_state.py",
+    "scripts/quarantine_reporting.py",
+    "scripts/tests/test_quarantine_reporting.py"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    "docs/agent/evidence/staging-state-read.sql",
+    "scripts/generate_staging_state.py",
+    "scripts/quarantine_reporting.py",
+    "scripts/tests/test_quarantine_reporting.py"
+  ]
+}

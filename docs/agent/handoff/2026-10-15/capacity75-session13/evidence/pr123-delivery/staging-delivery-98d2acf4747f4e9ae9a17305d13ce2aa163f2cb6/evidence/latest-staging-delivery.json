@@ -1,0 +1,105 @@
+{
+  "verified_at": "2026-10-14T12:53:10.764350+00:00",
+  "expected_commit": "98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_Hvnn24aNVvcX2hVhNr1z4CLGJPPo",
+    "status": "READY",
+    "sha": "98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "3b7d9c1a5e20",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "d2a4acb940c9ee1d71c0ed69d1562ca7477986f95fd3c210926db89f12379a98",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "a1966489631116f6b05f9e90c896653a86d0da86",
+    "merge": "98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6",
+    "decision": "skip",
+    "files": [
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/deploy-records-after-pr119.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-credential-probe-658ecd5c5103173fa483bbcdb430badfb27e7742/latest-staging-credential-probe.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/CURRENT_STATE.yaml",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/latest-delivery-scope.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/latest-staging-delivery.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-25c54499ae7392a9.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-283aa82e7283f0d3.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-3391abad5c997c5a.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-62809ffe916fe79b.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-8dcfbf959cb15f6a.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-a05c36274c28de29.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-c09334b69a28b1a7.json",
+      "docs/agent/handoff/2026-10-13/collector-v1-s2/evidence/pr119-delivery/staging-delivery-99806ef9d114ac310a4b6b9bc241e44966cf139e/evidence/staging-state-f69c53e59cde0165.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/CONTINUATION.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/HANDOFF.md",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/backups-preflight-1.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/backups-preflight-2.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/backups-preflight-3.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/deploy-records-after-pr121.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/full-api-suite-d3f5159-pg18.txt",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/full-api-suite-d3f5159-pg18.xml",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/full-api-suite-staging-99806ef-pg18.txt",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/full-api-suite-staging-99806ef-pg18.xml",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/import-graph-check-d3f5159.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/me-probe-after-deploy.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/openapi-collection-value-after-deploy.txt",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pipeline-reports-before-s4.txt",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-credential-probe-1ac5a287153d04db745cd385d3a112c9b96714f1/latest-staging-credential-probe.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/CURRENT_STATE.yaml",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/latest-delivery-scope.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/latest-staging-delivery.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-25c54499ae7392a9.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-283aa82e7283f0d3.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-3391abad5c997c5a.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-54b5ac3ecda3cded.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-62809ffe916fe79b.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-8dcfbf959cb15f6a.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-a05c36274c28de29.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/pr121-delivery/staging-delivery-20f167e6383a6329513882d64c7f427911f4b51b/evidence/staging-state-c09334b69a28b1a7.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/skip-comparison-d3f5159-vs-99806ef.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/staging-state-after-deploy.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/staging-state-before-merge.json",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/evidence/targeted-suite-f53f13d.txt",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/backups.py",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/compare_skips.py",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/db.py",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/deploy_records.py",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/import_graph_check.py",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/make_manifest.py",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/me_probe.py",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/run_suite.sh",
+      "docs/agent/handoff/2026-10-14/collector-v1-s4/tools/staging_readonly.py"
+    ],
+    "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "20f167e6383a6329513882d64c7f427911f4b51b",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}

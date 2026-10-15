@@ -1,0 +1,84 @@
+{
+  "verified_at": "2026-10-14T11:14:02.355868+00:00",
+  "expected_commit": "a1966489631116f6b05f9e90c896653a86d0da86",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_HWq5Rr8TfjtCF1ssSffb6ypmDYaa",
+    "status": "READY",
+    "sha": "a1966489631116f6b05f9e90c896653a86d0da86"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "3b7d9c1a5e20",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "c00f442dd83865f13066f14a64eea5e0255ea1bab1899d29e499c251b8fd50a5",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "20f167e6383a6329513882d64c7f427911f4b51b",
+    "merge": "a1966489631116f6b05f9e90c896653a86d0da86",
+    "decision": "skip",
+    "files": [
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/CONTINUATION.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/HANDOFF.md",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/RAILWAY-STEPS.md",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/api-official-tests.txt",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/deploy-records-after-pr120.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/import-graph-check.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-artifacts.txt",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-credential-probe-52ed2a32c286d585fc6d6cd9b5e71a7c671866e0/latest-staging-credential-probe.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/CURRENT_STATE.yaml",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/latest-delivery-scope.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/latest-staging-delivery.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-25c54499ae7392a9.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-283aa82e7283f0d3.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-3391abad5c997c5a.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-62809ffe916fe79b.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-8dcfbf959cb15f6a.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-a05c36274c28de29.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-a234419b38ac2529.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/pr120-delivery/staging-delivery-4c53dfa2f7d8b7ba99c86c575ed5232e6fd47fe8/evidence/staging-state-c09334b69a28b1a7.json",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/scripts-tests.txt",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/before-share-home-site.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/before-share-market-overall.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/before-share-print-5661.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/local-after-share-home-site.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/local-after-share-market-overall.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/local-after-share-print-5661.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/staging-after-share-home-site.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/staging-after-share-market-overall.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/staging-after-share-print-5661.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/share-images/staging-after-share-release-1.png",
+      "docs/agent/handoff/2026-10-14/r2-official-images-followup/evidence/web-vitest-summary.txt"
+    ],
+    "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "20f167e6383a6329513882d64c7f427911f4b51b",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}

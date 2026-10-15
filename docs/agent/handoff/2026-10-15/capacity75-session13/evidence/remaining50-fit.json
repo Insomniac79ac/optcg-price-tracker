@@ -1,0 +1,46 @@
+{
+ "unit_stored_bytes": {
+  "product_html": 37318,
+  "yuyu_image": 580348,
+  "official_image": 289818
+ },
+ "remaining50_counts": {
+  "product_html": 50,
+  "yuyu_image": 50,
+  "official_image": 115
+ },
+ "one_off_stored_mb": 64.21,
+ "physical_per_stored_ratio": 1.1,
+ "one_off_mb_s9": 70.6,
+ "recurring_mb_day_allowance": 0.45,
+ "room_to_reserve_mb_s9": 2970.3,
+ "horizon_days": 90,
+ "rates": {
+  "planning": {
+   "mb_day": 23.1,
+   "need_mb": 2190.1,
+   "margin_mb": 780.2,
+   "fits": true,
+   "margin_no_batch_mb": 891.3,
+   "runway_days_with_batch": 123.1
+  },
+  "stress_A_as_observed": {
+   "mb_day": 42.79,
+   "need_mb": 3962.2,
+   "margin_mb": -991.9,
+   "fits": false,
+   "margin_no_batch_mb": -880.8,
+   "runway_days_with_batch": 67.1
+  },
+  "stress_B_settled": {
+   "mb_day": 26.41,
+   "need_mb": 2488.0,
+   "margin_mb": 482.3,
+   "fits": true,
+   "margin_no_batch_mb": 593.4,
+   "runway_days_with_batch": 108.0
+  }
+ },
+ "fits_planning_and_stress_A": false,
+ "fits_planning_and_stress_B": true
+}

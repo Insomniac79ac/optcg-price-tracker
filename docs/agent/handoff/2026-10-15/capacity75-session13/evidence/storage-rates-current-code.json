@@ -1,0 +1,28 @@
+{
+ "window": {
+  "rollout_completed_at": "2026-10-10T14:31:00.430268+00:00",
+  "first_sample": "2026-10-10T14:35:00+00:00",
+  "last_sample": "2026-10-15T04:00:00+00:00",
+  "hours": 109.42,
+  "samples": 1314,
+  "meets_72h": true
+ },
+ "volume_mb_s9": 3808.4,
+ "room_to_reserve_mb_s9": 2970.3,
+ "planning_mb_day_s9": 37.68,
+ "stress_worst_rolling_24h": {
+  "start": "2026-10-13T04:50:00+00:00",
+  "mb_day_s9": 109.26,
+  "windows_compared": 1026
+ },
+ "context_min_rolling_24h_mb_s9": 18.82,
+ "last_24h_mb_s9": 26.32,
+ "daily_from_rollout_mb_s9": {
+  "2026-10-10T14:35:00+00:00": 18.9,
+  "2026-10-11T14:35:00+00:00": 22.4,
+  "2026-10-12T14:35:00+00:00": 24.2,
+  "2026-10-13T14:35:00+00:00": 91.9
+ },
+ "runway_days_no_batch_planning": 78.8,
+ "runway_days_no_batch_stress": 27.2
+}
