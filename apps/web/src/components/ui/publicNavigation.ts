@@ -4,9 +4,10 @@ export function isPublicShellRoute(pathname: string): boolean {
   return pathname === "/" || pathname === "/analytics" ||
     pathname === "/cards" || pathname.startsWith("/cards/") ||
     pathname.startsWith("/prints/") ||
-    // Sign-in and the collector's account share the homepage's chrome
-    // (Collector v1 S6): same compact mark, header and bottom navigation.
-    pathname === "/sign-in" || pathname === "/account";
+    // Sign-in, the collector's account (Collector v1 S6) and collection (S7)
+    // share the homepage's chrome: same compact mark, header and bottom
+    // navigation.
+    pathname === "/sign-in" || pathname === "/account" || pathname === "/collection";
 }
 
 /** An exact print belongs to Cards in both public navigation surfaces. */

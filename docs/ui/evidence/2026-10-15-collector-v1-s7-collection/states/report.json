@@ -1,0 +1,167 @@
+[
+ {
+  "width": 1440,
+  "name": "01-collection",
+  "horizontalOverflowPx": 0,
+  "under44": [
+   "A:Shanks 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Shanks 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Sanji 44px"
+  ],
+  "gridColumns": 5,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 1440,
+  "name": "02-edit-sheet",
+  "horizontalOverflowPx": 0,
+  "under44": [],
+  "gridColumns": 5,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 1440,
+  "name": "04-after-save",
+  "cardText": "×2Monkey.D.LuffyOP05-119 · OP-05￥36,800 · ￥18,400 each+2.4% 7DEdit"
+ },
+ {
+  "width": 1440,
+  "name": "05-window-30d",
+  "horizontalOverflowPx": 0,
+  "under44": [
+   "A:Monkey.D.Luffy 44px",
+   "A:Shanks 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Shanks 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Sanji 44px"
+  ],
+  "gridColumns": 5,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 390,
+  "name": "01-collection",
+  "horizontalOverflowPx": 0,
+  "under44": [
+   "A:Shanks 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Shanks 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Sanji 44px"
+  ],
+  "gridColumns": 2,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 390,
+  "name": "02-edit-sheet",
+  "horizontalOverflowPx": 0,
+  "under44": [],
+  "gridColumns": 2,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 390,
+  "name": "04-after-save",
+  "cardText": "×2Monkey.D.LuffyOP05-119 · OP-05￥36,800 · ￥18,400 each+2.4% 7DEdit"
+ },
+ {
+  "width": 390,
+  "name": "05-window-30d",
+  "horizontalOverflowPx": 0,
+  "under44": [
+   "A:Monkey.D.Luffy 44px",
+   "A:Shanks 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Shanks 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Sanji 44px"
+  ],
+  "gridColumns": 2,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 320,
+  "name": "01-collection",
+  "horizontalOverflowPx": 0,
+  "under44": [
+   "A:Shanks 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Shanks 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Sanji 44px"
+  ],
+  "gridColumns": 1,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 320,
+  "name": "02-edit-sheet",
+  "horizontalOverflowPx": 0,
+  "under44": [],
+  "gridColumns": 1,
+  "imageObjectFit": [
+   "contain"
+  ]
+ },
+ {
+  "width": 320,
+  "name": "04-after-save",
+  "cardText": "×3Monkey.D.LuffyOP05-119 · OP-05￥55,200 · ￥18,400 each+2.4% 7DEdit"
+ },
+ {
+  "width": 320,
+  "name": "05-window-30d",
+  "horizontalOverflowPx": 0,
+  "under44": [
+   "A:Monkey.D.Luffy 44px",
+   "A:Shanks 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Roronoa Zoro 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Shanks 44px",
+   "A:Portgas.D.Ace 44px",
+   "A:Monkey.D.Luffy 44px",
+   "A:Sanji 44px"
+  ],
+  "gridColumns": 1,
+  "imageObjectFit": [
+   "contain"
+  ]
+ }
+]

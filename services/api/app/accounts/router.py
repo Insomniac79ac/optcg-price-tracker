@@ -275,6 +275,7 @@ def get_collection_value(
             up=[_mover(m) for m in step.movers if m.delta_jpy > 0][:MOVERS_PER_DIRECTION],
             down=[_mover(m) for m in step.movers if m.delta_jpy < 0][:MOVERS_PER_DIRECTION],
         ),
+        cards=[_mover(m) for m in step.movers],
         by_release=[
             ReleaseShareOut(
                 release_product_id=share.release_product_id,

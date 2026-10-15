@@ -197,6 +197,11 @@ class CollectionValueOut(BaseModel):
     window: Literal["7d", "30d", "all"]
     summary: CoverageOut
     movers: MoversOut
+    # Every comparable version's change over the window (the full list the
+    # top-five movers are cut from), for the per-card change on /collection.
+    # Empty when the window is unavailable; a version missing from it was not
+    # comparable at both ends (new, sold, or its price inputs changed).
+    cards: list[MoverOut] = []
     by_release: list[ReleaseShareOut]
     paid: PaidOut
     history: HistoryOut
