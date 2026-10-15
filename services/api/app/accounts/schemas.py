@@ -236,12 +236,26 @@ class WatchlistEntryOut(BaseModel):
     value_status: Literal["priced", "no_price", "unresolved"]
     value_jpy: int | None
     target_gap_jpy: int | None
+    # When the freshest source behind ``value_jpy`` was last read, from the
+    # archived row the value comes from. Null when unknown or unpriced.
+    checked_at: datetime | None = None
+    # This version's change over the 7 days ending ``as_of``, by the same
+    # comparability rules as the collection's movers. Null with a reason
+    # (``change_7d_reason``) when the two ends are not comparable; never 0%.
+    change_7d_pct: str | None = None
+    change_7d_reason: str | None = None
 
 
 class WatchlistOut(BaseModel):
     currency: Currency = "JPY"
     as_of: date | None
     entries: list[WatchlistEntryOut]
+    # The 7-day window every entry's change is read over. ``change_7d_from``
+    # is null when there is no priced day yet; ``change_7d_missing_dates``
+    # names the days without verified prices when that is why it is
+    # unavailable.
+    change_7d_from: date | None = None
+    change_7d_missing_dates: list[date] = []
 
 
 class ProfileOut(BaseModel):

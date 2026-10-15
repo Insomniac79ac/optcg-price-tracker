@@ -25,8 +25,8 @@ import {
 // auth logic, just a response header, never appeared on any response) while
 // diagnosing why staging's /collection etc. weren't redirecting.
 //
-// /collection, /wishlist, /account and /analytics/* require a signed-in
-// collector - they expose the caller's own collection/wishlist/account data.
+// /collection, /watchlist, /account and /analytics/* require a signed-in
+// collector - they expose the caller's own collection/watchlist/account data.
 // Since Collector v1 S5 that means a collector (Google) session specifically:
 // an admin session gets the same sign-in invite as a signed-out visitor. The
 // /grading, /dashboard, /activity, /search and internal market-analytics
@@ -149,7 +149,7 @@ export default async function proxy(
 export const config = {
   matcher: [
     "/collection/:path*",
-    "/wishlist/:path*",
+    "/watchlist/:path*",
     "/account/:path*",
     // `:path+` - one or more segments, so the bare /analytics (the public
     // market landscape) is NOT matched while every legacy /analytics/* leaf

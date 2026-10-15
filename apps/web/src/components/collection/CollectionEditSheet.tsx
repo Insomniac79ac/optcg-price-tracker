@@ -1,35 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-import { CollectionForm } from "@/components/ui/PrintCollectorActions";
+import { CollectionForm, WatchForm } from "@/components/ui/PrintCollectorActions";
 
 import styles from "./Collection.module.css";
 
-/** "Edit" on a /collection card: the shared collection form in a sheet that
- * rises from the bottom on a phone and sits centred on a desktop. Saving or
- * removing refreshes the page from the API, so every number shown afterwards
- * is the server's again. */
-export function CollectionEditSheet({
-  entryId,
-  cardPrintId,
-  versionLabel,
-  quantity,
-  paidJpyPerCard,
-  acquiredOn,
+/** An "Edit" button that opens its form in a sheet: it rises from the bottom
+ * on a phone and sits centred on a desktop. Escape, the backdrop and the
+ * form's own Cancel close it; focus stays inside while it is open and returns
+ * to the button afterwards. Shared by /collection and /watchlist. */
+export function EditSheet({
+  title,
   buttonLabel = "Edit",
   buttonDescription,
+  children,
 }: {
-  entryId: number;
-  cardPrintId: number | null;
-  versionLabel: string;
-  quantity: number;
-  paidJpyPerCard: number | null;
-  acquiredOn: string | null;
+  title: string;
   buttonLabel?: string;
-  /** Accessible name for the opener, e.g. "Edit Monkey.D.Luffy OP05-119". */
+  /** Accessible name for the opener, e.g. "Edit Monkey.D.Luffy, OP05-119". */
   buttonDescription: string;
+  /** The form; `close` dismisses the sheet, `done` dismisses it and refreshes
+   * the page from the API so every number shown is the server's again. */
+  children: (actions: { close: () => void; done: () => void }) => ReactNode;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -76,20 +70,83 @@ export function CollectionEditSheet({
         <div className={styles.sheetBackdrop} onClick={(event) => event.target === event.currentTarget && setOpen(false)}>
           <div ref={sheetRef} className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby={titleId}>
             <div className={styles.sheetHandle} aria-hidden="true" />
-            <h2 id={titleId} className={styles.sheetTitle}>Edit in your collection</h2>
-            <CollectionForm
-              cardPrintId={cardPrintId}
-              versionLabel={versionLabel}
-              held={{ entryId, quantity, paidJpyPerCard, acquiredOn }}
-              onCancel={() => setOpen(false)}
-              onDone={() => {
+            <h2 id={titleId} className={styles.sheetTitle}>{title}</h2>
+            {children({
+              close: () => setOpen(false),
+              done: () => {
                 setOpen(false);
                 router.refresh();
-              }}
-            />
+              },
+            })}
           </div>
         </div>
       )}
     </>
+  );
+}
+
+/** "Edit" on a /collection card: the shared collection form in an EditSheet. */
+export function CollectionEditSheet({
+  entryId,
+  cardPrintId,
+  versionLabel,
+  quantity,
+  paidJpyPerCard,
+  acquiredOn,
+  buttonLabel = "Edit",
+  buttonDescription,
+}: {
+  entryId: number;
+  cardPrintId: number | null;
+  versionLabel: string;
+  quantity: number;
+  paidJpyPerCard: number | null;
+  acquiredOn: string | null;
+  buttonLabel?: string;
+  /** Accessible name for the opener, e.g. "Edit Monkey.D.Luffy OP05-119". */
+  buttonDescription: string;
+}) {
+  return (
+    <EditSheet title="Edit in your collection" buttonLabel={buttonLabel} buttonDescription={buttonDescription}>
+      {({ close, done }) => (
+        <CollectionForm
+          cardPrintId={cardPrintId}
+          versionLabel={versionLabel}
+          held={{ entryId, quantity, paidJpyPerCard, acquiredOn }}
+          onCancel={close}
+          onDone={done}
+        />
+      )}
+    </EditSheet>
+  );
+}
+
+/** "Edit" on a /watchlist row: the print page's watch form (target price,
+ * stop watching) in an EditSheet. */
+export function WatchEditSheet({
+  entryId,
+  cardPrintId,
+  versionLabel,
+  targetJpy,
+  buttonDescription,
+}: {
+  entryId: number;
+  cardPrintId: number | null;
+  versionLabel: string;
+  targetJpy: number | null;
+  buttonDescription: string;
+}) {
+  return (
+    <EditSheet title="Edit your watch" buttonDescription={buttonDescription}>
+      {({ close, done }) => (
+        <WatchForm
+          cardPrintId={cardPrintId}
+          versionLabel={versionLabel}
+          watched={{ entryId, targetJpy }}
+          onCancel={close}
+          onDone={done}
+        />
+      )}
+    </EditSheet>
   );
 }

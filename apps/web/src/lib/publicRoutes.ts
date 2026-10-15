@@ -36,6 +36,7 @@ export const CRAWLER_DISALLOWED_PREFIXES = [
   "/admin",
   "/api/",
   "/collection",
+  "/watchlist",
   "/wishlist",
   "/account",
   "/grading",

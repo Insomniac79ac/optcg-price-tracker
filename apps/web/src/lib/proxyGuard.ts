@@ -3,8 +3,8 @@
 // internals or next-auth's `auth()` wrapper - see proxy.ts for how these are
 // actually wired into the request pipeline.
 
-// Routes that expose the signed-in caller's own data (portfolio, wishlist,
-// personal analytics).
+// Routes that expose the signed-in caller's own data (collection, watchlist,
+// account).
 //
 // The public collector product is exactly / and /cards, plus /prints/:id -
 // those are deliberately absent here and must stay reachable while signed
@@ -17,19 +17,25 @@
 // /market/opportunities, /market/signal-events, /market/report), so their
 // entries are gone. Those paths now answer the permanent redirects in
 // next.config.ts (which run before this proxy) or 404 (/grading).
+//
+// Collector v1 S8 (2026-10-15) replaced /wishlist with /watchlist and deleted
+// /collection/vault, /analytics/collection and /analytics/wishlist; those old
+// paths are permanent redirects in next.config.ts too, so /wishlist needs no
+// entry here.
 export const PROTECTED_MATCHER = [
   "/collection/:path*",
-  "/wishlist/:path*",
+  "/watchlist/:path*",
   // Collector v1 S5 (PLAN §D4): the account section (profile, preferences,
   // export, delete). Signed-in collectors only; the page checks again.
   "/account/:path*",
   // `:path+`, NOT `:path*`, and the difference is the whole point: `*` is zero
   // or more segments and DOES match the bare parent, which was verified at
   // request time on 2026-09-06 (a signed-out GET /analytics answered 307 to
-  // /sign-in). `+` requires at least one segment, so the remaining legacy leaf
-  // pages - /analytics/collection and /analytics/wishlist (deleted in S8) -
-  // stay gated exactly as before, while /analytics itself is public. The
-  // other former leaves are permanent redirects in next.config.ts.
+  // /sign-in). `+` requires at least one segment, so /analytics itself is
+  // public while any path under it stays gated. Every former leaf page is now
+  // a permanent redirect in next.config.ts (the last two, /analytics/collection
+  // and /analytics/wishlist, since S8), and the gate is kept so no new page
+  // under /analytics can become public by accident.
   //
   // /analytics is the current market landscape (Analytics 1A-B): catalogue
   // pricing coverage, price distribution and Market Index composition. It
@@ -39,7 +45,7 @@ export const PROTECTED_MATCHER = [
   // is already public per-print through /prints.
   //
   // The neighbouring entries deliberately KEEP `:path*`, because for them the
-  // bare parent must be protected too: /collection and /wishlist are real
+  // bare parent must be protected too: /collection and /watchlist are real
   // pages showing the caller's own data.
   "/analytics/:path+",
 ];
@@ -181,7 +187,7 @@ export function hasSession(auth: unknown): boolean {
 }
 
 /** Whether `auth` is a signed-in *collector* (Google) session - the check for
- * collector routes (/collection, /wishlist, /account, legacy /analytics/*).
+ * collector routes (/collection, /watchlist, /account, /analytics/*).
  *
  * Collector v1 S5 (PLAN §D1 item 3): a session alone is not enough. An admin
  * session (active or expired) has no collector account behind it, so on a

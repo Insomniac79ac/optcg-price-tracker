@@ -7,29 +7,18 @@ import { API_INTERNAL_URL, collectorAuthHeaders, crossSiteRejection, signInRequi
 const BACKEND_TIMEOUT_MS = 30_000;
 const SEGMENT = /^[A-Za-z0-9._-]+$/;
 
-// Legacy per-user API routes still used by the pre-v1 collection and
-// wishlist pages until S8 deletes them. Reached as /api/me/legacy/<path>.
-const LEGACY_PATHS = [
-  /^\/collection(\/.*)?$/,
-  /^\/wishlist(\/.*)?$/,
-  /^\/collector\/(tags|groups|activity|notes)(\/.*)?$/,
-  /^\/cards\/\d+\/tags\/\d+$/,
-];
-
 /** Maps /api/me/** to the API path it may reach, or null (404).
  *
  * - /api/me and /api/me/<rest> → /me and /me/<rest> (the v1 accounts API)
- * - /api/me/legacy/<rest> → /<rest>, only for the legacy per-user routes
  *
  * This is not a general proxy: every segment is a plain path token (no
- * "..", no encoded slashes), and legacy paths are an explicit allowlist. */
+ * "..", no encoded slashes), and everything lands under /me. The legacy
+ * /api/me/legacy/<rest> branch went with the pre-v1 collection and wishlist
+ * pages in Collector v1 S8: it answers 404 without reaching the API. */
 export function upstreamPath(segments: readonly string[] | undefined): string | null {
   const parts = segments ?? [];
   if (parts.some((part) => !SEGMENT.test(part) || part === "." || part === "..")) return null;
-  if (parts[0] === "legacy") {
-    const legacy = `/${parts.slice(1).join("/")}`;
-    return LEGACY_PATHS.some((pattern) => pattern.test(legacy)) ? legacy : null;
-  }
+  if (parts[0] === "legacy") return null;
   return parts.length ? `/me/${parts.join("/")}` : "/me";
 }
 

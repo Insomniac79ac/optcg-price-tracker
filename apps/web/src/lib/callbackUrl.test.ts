@@ -8,7 +8,7 @@ describe("sanitizeCallbackUrl", () => {
   });
 
   it("preserves the query string", () => {
-    expect(sanitizeCallbackUrl("/wishlist?status=graded")).toBe("/wishlist?status=graded");
+    expect(sanitizeCallbackUrl("/watchlist?view=all")).toBe("/watchlist?view=all");
   });
 
   it("defaults to / when missing", () => {

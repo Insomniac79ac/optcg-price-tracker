@@ -28,7 +28,7 @@ describe("brand", () => {
       cards: "Card Prices",
       marketIndex: "Market Index",
       myCollection: "My Collection",
-      wishlist: "Wishlist",
+      watchlist: "Watchlist",
       grading: "Grading",
       activity: "Activity",
       admin: "Admin",

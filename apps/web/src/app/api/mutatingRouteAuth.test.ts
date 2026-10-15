@@ -96,7 +96,7 @@ describe("read API routes require authentication unless explicitly public", () =
 
   it("finds the read handlers it is meant to guard", () => {
     const reads = readFiles.map(relative);
-    expect(reads).toContain("analytics/collection/route.ts");
+    expect(reads).toContain("file-jobs/route.ts");
     expect(reads).toContain("auth/[...nextauth]/route.ts");
   });
 

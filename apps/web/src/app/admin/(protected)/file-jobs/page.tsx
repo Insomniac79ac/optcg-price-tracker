@@ -277,12 +277,6 @@ export default function FileJobsPage() {
               >
                 Collection
               </Link>
-              <Link
-                href="/wishlist"
-                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-              >
-                Wishlist
-              </Link>
             </div>
           </div>
         )}

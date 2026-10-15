@@ -35,16 +35,18 @@ describe("upstreamPath", () => {
     [["profile"], "/me/profile"],
     [["export", "collection.csv"], "/me/export/collection.csv"],
     [["collection", "value"], "/me/collection/value"],
-    [["legacy", "collection"], "/collection"],
-    [["legacy", "collection", "12", "tags", "3"], "/collection/12/tags/3"],
-    [["legacy", "wishlist", "4", "mark-purchased"], "/wishlist/4/mark-purchased"],
-    [["legacy", "collector", "tags"], "/collector/tags"],
-    [["legacy", "cards", "7", "tags", "2"], "/cards/7/tags/2"],
+    [["watchlist", "4"], "/me/watchlist/4"],
   ])("maps %j to %s", (segments, expected) => {
     expect(upstreamPath(segments as string[] | undefined)).toBe(expected);
   });
 
   it.each([
+    // The legacy per-user routes went with the pre-v1 pages (Collector v1 S8).
+    [["legacy", "collection"]],
+    [["legacy", "collection", "12", "tags", "3"]],
+    [["legacy", "wishlist", "4", "mark-purchased"]],
+    [["legacy", "collector", "tags"]],
+    [["legacy", "cards", "7", "tags", "2"]],
     [["legacy", "admin", "logs"]],
     [["legacy", "cards"]],
     [["legacy", "cards", "7"]],
@@ -60,7 +62,7 @@ describe("upstreamPath", () => {
 });
 
 describe("proxyMe", () => {
-  it("refuses an unknown legacy path with 404 before touching the session or API", async () => {
+  it("refuses a legacy path with 404 before touching the session or API", async () => {
     const res = await proxyMe(req("/api/me/legacy/admin/logs"), ["legacy", "admin", "logs"]);
     expect(res.status).toBe(404);
     expect(authMock).not.toHaveBeenCalled();

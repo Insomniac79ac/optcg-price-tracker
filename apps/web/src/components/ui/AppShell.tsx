@@ -22,8 +22,7 @@ import adminStyles from "@/components/admin/AdminShell.module.css";
 // still exist, just no longer surfaced from this shell.
 const GOTO_ROUTES: Record<string, string> = {
   c: "/collection",
-  v: "/collection/vault",
-  w: "/wishlist",
+  w: "/watchlist",
 };
 
 const GOTO_RESET_MS = 600;

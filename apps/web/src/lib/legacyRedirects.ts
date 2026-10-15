@@ -1,5 +1,6 @@
 // Permanent (308) redirects for the pages deleted in Collector v1 S1
-// (2026-10-13; docs/agent/plans/collector-v1/PLAN.md §F). Wired into
+// (2026-10-13; docs/agent/plans/collector-v1/PLAN.md §F) and S8 (2026-10-15:
+// the legacy collection and wishlist pages, PLAN §E3 and Q6). Wired into
 // next.config.ts `redirects()`, which Next.js evaluates before the proxy, so
 // a signed-out visitor is redirected rather than bounced through /sign-in.
 //
@@ -23,6 +24,12 @@ export const LEGACY_REDIRECT_TARGETS: Readonly<Record<string, string>> = {
   "/market/opportunities": "/analytics",
   "/market/report": "/analytics",
   "/search": "/cards",
+  // S8: the legacy collection and wishlist pages. The wishlist is now the
+  // watchlist; the old vault and collection analytics fold into /collection.
+  "/collection/vault": "/collection",
+  "/analytics/collection": "/collection",
+  "/wishlist": "/watchlist",
+  "/analytics/wishlist": "/watchlist",
 };
 
 export function legacyRedirects() {

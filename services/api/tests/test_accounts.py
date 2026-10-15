@@ -557,6 +557,50 @@ def test_watchlist_value_and_target_gap(client, db_session, enabled, prints):
     assert len(client.get("/me/watchlist").json()["entries"]) == 1
 
 
+def test_watchlist_freshness_and_7d_change(client, db_session, enabled, prints):
+    a, b, c = ids(prints, "OP01-001", "OP01-002", "OP02-003")
+    checked = datetime(2026, 9, 10, 6, 30, tzinfo=timezone.utc)
+    archive_range(db_session, D - timedelta(days=7), D - timedelta(days=1), lambda day: {a: 1000, b: None, c: 500})
+    db_session.add_all([
+        snapshot_row(a, D, 1100, checked_at=checked),
+        snapshot_row(b, D, 900, checked_at=checked),
+        snapshot_row(c, D, 500, contributors=(SNKR_FLOOR, YUYU_SELL)),
+    ])
+    db_session.commit()
+    receipt(db_session, D)
+    for print_id in (a, b, c):
+        client.post("/me/watchlist", json={"card_print_id": print_id})
+    body = client.get("/me/watchlist").json()
+    assert body["change_7d_from"] == (D - timedelta(days=7)).isoformat()
+    assert body["change_7d_missing_dates"] == []
+    rows = {e["card_print_id"]: e for e in body["entries"]}
+    assert rows[a]["change_7d_pct"] == "10.00" and rows[a]["change_7d_reason"] is None
+    assert rows[a]["checked_at"].startswith("2026-09-10T06:30")
+    # Not priced a week ago: no change, a reason, never 0%.
+    assert rows[b]["change_7d_pct"] is None and rows[b]["change_7d_reason"] == "entrant"
+    # Price sources changed inside the window: not comparable.
+    assert rows[c]["change_7d_pct"] is None and rows[c]["change_7d_reason"] == "contributor_set_changed"
+    assert rows[c]["checked_at"] is None
+
+
+def test_watchlist_7d_change_unavailable_without_a_full_week(client, db_session, enabled, prints):
+    a = prints["OP01-001"].id
+    client.post("/me/watchlist", json={"card_print_id": a})
+    body = client.get("/me/watchlist").json()
+    assert body["change_7d_from"] is None
+    assert body["entries"][0]["change_7d_reason"] == "no_prices_yet"
+
+    archive(db_session, D - timedelta(days=1), {a: 1000})
+    archive(db_session, D, {a: 1000})
+    entry = client.get("/me/watchlist").json()["entries"][0]
+    assert entry["change_7d_pct"] is None and entry["change_7d_reason"] == "not_enough_price_history"
+
+    archive_range(db_session, D - timedelta(days=7), D - timedelta(days=2), lambda day: {a: 1000}, skip=(D - timedelta(days=4),))
+    body = client.get("/me/watchlist").json()
+    assert body["entries"][0]["change_7d_reason"] == "prices_missing"
+    assert body["change_7d_missing_dates"] == [(D - timedelta(days=4)).isoformat()]
+
+
 def test_preferences_default_and_only_jpy_private(client, db_session, enabled):
     assert client.get("/me/preferences").json() == {"currency": "JPY", "collection_visibility": "private"}
     assert db_session.get(UserPreferences, 1) is None  # no row means defaults

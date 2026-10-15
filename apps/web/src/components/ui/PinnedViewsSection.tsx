@@ -10,8 +10,6 @@ import { formatDateTime } from "@/lib/format";
 // sync with SidebarNav's nav list, not auto-derived from it (that list is
 // nav-structure-shaped, not a flat route->label map).
 const ROUTE_LABELS: Record<string, string> = {
-  "/analytics/wishlist": "Wishlist Analytics",
-  "/analytics/collection": "Collection Analytics",
   "/admin/source-mapping-quality": "Source Mapping Quality",
   "/admin/catalog-coverage": "Catalog Coverage",
   "/admin/price-source-health": "Price Source Health",
@@ -19,7 +17,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/admin/cards": "Cards",
   "/admin/snkrdunk-candidates": "SNKRDUNK Candidates",
   "/collection": "Collection",
-  "/wishlist": "Wishlist",
+  "/watchlist": "Watchlist",
 };
 
 /** Pinned saved views across every scope, for /admin/catalog-ops. Links go to the plain route_path only - none of this
