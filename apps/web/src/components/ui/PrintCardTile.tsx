@@ -48,6 +48,7 @@ import styles from "./PrintCardTile.module.css";
 export function PrintCardTile({
   print,
   showArtOrdinal = false,
+  ownedQuantity = null,
 }: {
   print: PrintUiModel;
   /** Last-resort disambiguator. The grid sets it only for prints whose
@@ -56,6 +57,9 @@ export function PrintCardTile({
    * alt art would be noise, and the printing badge alone separates most
    * tiles. */
   showArtOrdinal?: boolean;
+  /** How many of this exact version the signed-in collector has, when known
+   * and above zero. Drawn as a small "In your collection ×2" badge. */
+  ownedQuantity?: number | null;
 }) {
   // The printing type is derived from Bandai's own asset address, never from
   // artwork, rarity or product - and a base printing gets nothing, which is
@@ -74,6 +78,7 @@ export function PrintCardTile({
     printingType?.label,
     artOrdinal,
     print.releaseCode || print.releaseProductId ? `found in ${releaseLabelEnglish(print.releaseCode)}` : null,
+    ownedQuantity ? `in your collection ×${ownedQuantity}` : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -173,6 +178,12 @@ export function PrintCardTile({
             </span>
           )}
         </div>
+
+        {ownedQuantity ? (
+          <span className="inline-flex self-start rounded bg-[#1d3a3a] px-1.5 py-0.5 text-[11px] font-medium text-[#cdeae6]" data-testid="owned-badge">
+            In your collection ×{ownedQuantity}
+          </span>
+        ) : null}
 
         {/* Caption stacked over the value, not inline beside it: inline made
             the two compete for one 20px line and the index read as another

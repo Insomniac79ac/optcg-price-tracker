@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ErrorState, LoadingState } from "@/components/StateBlocks";
 import { CardPrintingChooser } from "@/components/ui/CardPrintingChooser";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
+import { useCollectorShelf } from "@/lib/collectorShelf";
 import {
   fetchPrintCatalogue,
   resolveCanonicalPrintIdentity,
@@ -24,12 +25,13 @@ import {
  * disagree with the catalogue about which card a code names. A card family is
  * identified by its CARD CODE, which both sides agree on and which the public
  * catalogue can address directly. This is the forward-looking family route;
- * `/cards/{id}` stays as a compatibility surface.
+ * `/cards/{id}` now only redirects here or to one exact version.
  *
- * PUBLIC BY DESIGN. This is catalogue, not collection: it carries no
- * ownership, wishlist, grading, tags or notes panels and makes no request that
- * needs a session. A signed-in collector's own tools stay on `/cards/{id}`
- * until they are given a canonical key of their own.
+ * PUBLIC BY DESIGN. This is catalogue, not collection. For a signed-in
+ * collector each version tile carries a small "In your collection ×2" badge
+ * (Collector v1 S6, PLAN E1), read through the same-origin /api/me route; a
+ * visitor makes no request that needs a session. There is no add button: the
+ * collector opens the exact version first and adds it there.
  *
  * WHAT IT REFUSES TO DO. It computes no family-level price, states no
  * representative rarity or variant, merges no observations across printings,
@@ -49,6 +51,7 @@ export default function CardFamilyPage() {
   const [prints, setPrints] = useState<PrintUiModel[]>([]);
   const [identity, setIdentity] = useState<CanonicalPrintIdentity | null>(null);
   const [status, setStatus] = useState<Status>("loading");
+  const shelf = useCollectorShelf();
 
   useEffect(() => {
     if (!cardCode) return;
@@ -162,6 +165,7 @@ export default function CardFamilyPage() {
               prints={prints}
               cardCode={cardCode ?? ""}
               canonicalName={identity.name}
+              ownedByPrint={shelf.status === "ready" ? shelf.held : undefined}
             />
           </article>
         )}

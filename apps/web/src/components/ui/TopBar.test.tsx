@@ -6,7 +6,10 @@ vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
 }));
 let currentPathname = "/";
-let clientSession: { data: { user: { role?: string; email?: string } } | null; status: string };
+let clientSession: {
+  data: { user: { role?: string; email?: string }; sessionKind?: string; adminSessionExpired?: boolean } | null;
+  status: string;
+};
 beforeEach(() => {
   currentPathname = "/";
   clientSession = { data: null, status: "unauthenticated" };
@@ -39,6 +42,33 @@ describe("TopBar", () => {
       expect(Array.from(nav.querySelectorAll("a")).map(a => a.textContent)).toEqual(["Home", "Card Prices", "Market"]);
       expect(screen.queryByRole("link", { name: "My Collection" })).not.toBeInTheDocument();
     });
+  });
+
+  // Regression: an expired admin cookie used to replace the public "Sign in"
+  // with only the admin re-authentication link, so that browser had no way to
+  // reach Google sign-in (a private window, with no cookie, did).
+  it.each(["/", "/cards", "/prints/1", "/sign-in"])("offers collector sign-in to an expired admin session on %s", (pathname) => {
+    currentPathname = pathname;
+    clientSession = {
+      data: { user: { email: "admin@example.com" }, sessionKind: "admin", adminSessionExpired: true },
+      status: "authenticated",
+    };
+    render(<TopBar />);
+    const signIn = screen.getByRole("link", { name: "Sign in" });
+    expect(new URL(signIn.getAttribute("href")!, "https://atlas.example").pathname).toBe("/sign-in");
+    expect(screen.queryByRole("link", { name: "Sign in again" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Admin session expired")).not.toBeInTheDocument();
+  });
+
+  it("keeps admin re-authentication for an expired admin session on admin pages", () => {
+    currentPathname = "/admin/login";
+    clientSession = {
+      data: { user: { email: "admin@example.com" }, sessionKind: "admin", adminSessionExpired: true },
+      status: "authenticated",
+    };
+    render(<TopBar />);
+    expect(screen.getByText("Admin session expired")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Sign in" })).not.toBeInTheDocument();
   });
 
   it("uses the canonical public compass wordmark while retaining navigation and search", () => {

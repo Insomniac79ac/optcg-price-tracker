@@ -4,6 +4,7 @@ import { signOut } from "next-auth/react";
 import { useState } from "react";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { accountSurfaceStyles as styles } from "@/components/ui/AccountSurface";
 
 export const DELETE_CONFIRMATION = "delete my account";
 
@@ -51,9 +52,9 @@ export function DeleteAccount() {
           onChange={(event) => setTyped(event.target.value)}
           className="min-h-11 w-full rounded-control border border-border-default bg-transparent px-3 text-sm text-text-primary placeholder:text-text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 sm:max-w-xs md:min-h-9"
         />
-        <ActionButton variant="danger" className={BUTTON_SIZE} disabled={!confirmed || state === "deleting"} onClick={deleteAccount}>
+        <button type="button" className={styles.deleteButton} disabled={!confirmed || state === "deleting"} onClick={deleteAccount}>
           {state === "deleting" ? "Deleting…" : "Delete my account"}
-        </ActionButton>
+        </button>
       </div>
       {state === "failed" && (
         <p role="alert" className="text-sm text-signal-red">

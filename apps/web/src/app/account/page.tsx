@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { AppHeader } from "@/components/AppHeader";
-import { AtlasMapSurface, AtlasSectionIntro, AtlasVisualSystem } from "@/components/ui/AtlasPrimitives";
+import { AccountChapter, AccountHero, accountSurfaceStyles as styles } from "@/components/ui/AccountSurface";
 import { loadAccountOverview, type AccountOverview } from "@/lib/accountServer";
 import { auth } from "@/lib/auth";
 import { collectorIdentity, type CollectorIdentity } from "@/lib/collectorApi";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 const OTHER_CURRENCIES = ["USD", "EUR", "GBP"] as const;
 
-const LINK = "inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:min-h-9";
+const LINK = "inline-flex min-h-11 items-center rounded-control border border-[#3e696a] px-4 text-sm font-medium text-[#8dc9c4] transition-colors hover:border-accent-teal hover:text-text-primary md:min-h-10";
 
 /** The signed-in collector's account (PLAN §D4): profile, preferences,
  * export, delete, sign out. src/proxy.ts already sends anyone who is not a
@@ -26,26 +26,22 @@ export default async function AccountPage() {
   const overview = await loadAccountOverview(identity);
 
   return (
-    <div className="min-h-screen">
+    <div className={styles.root}>
       <AppHeader />
-      <AtlasVisualSystem>
-        <main className="mx-auto max-w-3xl px-4 pb-12 pt-6 sm:pt-10">
-          <AtlasMapSurface>
-            <header className="flex items-center gap-4 px-5 py-7 sm:gap-5 sm:px-8 sm:py-9">
-              <Monogram identity={identity} />
-              <div className="min-w-0">
-                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent-gold">Your account</p>
-                <h1 className="mt-1 truncate font-display text-[28px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[34px]">
-                  {identity.name ?? identity.email}
-                </h1>
-                <p className="mt-1 truncate text-sm text-text-muted">{identity.email}</p>
-              </div>
-            </header>
-          </AtlasMapSurface>
+      <main className={styles.main}>
+        <AccountHero>
+          <p className={styles.kicker}>Your account</p>
+          <div className={`${styles.identity} mt-3`}>
+            <Monogram identity={identity} />
+            <div className="min-w-0">
+              <h1 className={`${styles.title} !mt-0`}>{identity.name ?? identity.email}</h1>
+              <p className={styles.email}>{identity.email}</p>
+            </div>
+          </div>
+        </AccountHero>
 
-          {overview.state === "ok" ? <AccountSections identity={identity} overview={overview} /> : <Unavailable state={overview.state} />}
-        </main>
-      </AtlasVisualSystem>
+        {overview.state === "ok" ? <AccountSections identity={identity} overview={overview} /> : <Unavailable state={overview.state} />}
+      </main>
     </div>
   );
 }
@@ -53,10 +49,7 @@ export default async function AccountPage() {
 function Monogram({ identity }: { identity: CollectorIdentity }) {
   const initial = (identity.name ?? identity.email).trim().charAt(0).toUpperCase() || "?";
   return (
-    <span
-      aria-hidden="true"
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-accent-gold/60 font-display text-2xl font-semibold text-accent-gold sm:h-16 sm:w-16"
-    >
+    <span aria-hidden="true" className={styles.monogram}>
       {initial}
     </span>
   );
@@ -65,28 +58,28 @@ function Monogram({ identity }: { identity: CollectorIdentity }) {
 function AccountSections({ identity, overview }: { identity: CollectorIdentity; overview: Extract<AccountOverview, { state: "ok" }> }) {
   const { profile, preferences } = overview;
   return (
-    <div className="mt-8 space-y-10">
+    <div className={styles.sections}>
       <section aria-labelledby="profile">
-        <AtlasSectionIntro id="profile" number="01" title="Profile" description="Managed by Google. Change your name or email in your Google account." />
-        <dl className="panel mt-4 grid gap-x-6 gap-y-3 px-5 py-4 text-sm sm:grid-cols-[10rem_1fr]">
-          <dt className="text-text-muted">Name</dt>
-          <dd className="min-w-0 break-words text-text-primary">{profile.name ?? identity.name ?? "—"}</dd>
-          <dt className="text-text-muted">Email</dt>
-          <dd className="min-w-0 break-words text-text-primary">{profile.email}</dd>
-          <dt className="text-text-muted">Member since</dt>
-          <dd className="text-text-primary">{formatDate(profile.member_since)}</dd>
+        <AccountChapter id="profile" number="01" title="Profile">Managed by Google. Change your name or email in your Google account.</AccountChapter>
+        <dl className={`${styles.panel} ${styles.facts}`}>
+          <dt>Name</dt>
+          <dd>{profile.name ?? identity.name ?? "—"}</dd>
+          <dt>Email</dt>
+          <dd>{profile.email}</dd>
+          <dt>Member since</dt>
+          <dd>{formatDate(profile.member_since)}</dd>
         </dl>
       </section>
 
       <section aria-labelledby="preferences">
-        <AtlasSectionIntro id="preferences" number="02" title="Preferences" description="Your collection is private. Only you can see it." />
-        <div className="panel mt-4 px-5 py-4">
-          <label htmlFor="currency" className="block text-sm text-text-muted">Currency</label>
+        <AccountChapter id="preferences" number="02" title="Preferences">Your collection is private. Only you can see it.</AccountChapter>
+        <div className={styles.panel}>
+          <label htmlFor="currency" className="block text-sm text-[#a0b2b6]">Currency</label>
           <select
             id="currency"
             name="currency"
             defaultValue={preferences.currency}
-            className="mt-2 min-h-11 w-full max-w-xs rounded-control border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:min-h-9"
+            className="mt-2 min-h-11 w-full max-w-xs rounded-control border border-[#32464d] bg-[#0c1115] px-3 text-sm text-text-primary focus:outline-none md:min-h-10"
           >
             <option value="JPY">JPY (¥)</option>
             {OTHER_CURRENCIES.map((code) => (
@@ -95,13 +88,13 @@ function AccountSections({ identity, overview }: { identity: CollectorIdentity; 
               </option>
             ))}
           </select>
-          <p className="mt-2 text-xs leading-5 text-text-muted">Prices are recorded in yen. Other currencies are coming later.</p>
+          <p className="mt-2 text-xs leading-5 text-[#a0b2b6]">Prices are recorded in yen. Other currencies are coming later.</p>
         </div>
       </section>
 
       <section aria-labelledby="export">
-        <AtlasSectionIntro id="export" number="03" title="Export my data" description="Everything we store about you, made when you ask. Nothing is kept on our side." />
-        <div className="mt-4 flex flex-wrap gap-3">
+        <AccountChapter id="export" number="03" title="Export my data">Everything we store about you, made when you ask. Nothing is kept on our side.</AccountChapter>
+        <div className="flex flex-wrap gap-3">
           <a href="/api/me/export" download className={LINK}>All data (JSON)</a>
           <a href="/api/me/export/collection.csv" download className={LINK}>Collection (CSV)</a>
           <a href="/api/me/export/watchlist.csv" download className={LINK}>Watchlist (CSV)</a>
@@ -109,18 +102,16 @@ function AccountSections({ identity, overview }: { identity: CollectorIdentity; 
       </section>
 
       <section aria-labelledby="delete">
-        <AtlasSectionIntro
-          id="delete"
-          number="04"
-          title="Delete my account"
-          description="Removes your account, collection, watchlist, preferences and value history for good. This cannot be undone. Your Google account is not affected."
-        />
-        <div className="panel mt-4 px-5 py-4">
+        <AccountChapter id="delete" number="04" title="Delete my account">
+          Removes your account, collection, watchlist, preferences and value history for good. This cannot be undone.
+          Your Google account is not affected.
+        </AccountChapter>
+        <div className={`${styles.panel} ${styles.danger}`}>
           <DeleteAccount />
         </div>
       </section>
 
-      <section aria-labelledby="sign-out" className="border-t border-border-muted pt-6">
+      <section aria-labelledby="sign-out" className={`${styles.wide} border-t border-[#2b3d43] pt-6`}>
         <h2 id="sign-out" className="sr-only">Sign out</h2>
         <SignOutButton />
       </section>
@@ -130,7 +121,7 @@ function AccountSections({ identity, overview }: { identity: CollectorIdentity; 
 
 function Unavailable({ state }: { state: "disabled" | "error" }) {
   return (
-    <div className="panel mt-8 space-y-4 px-5 py-5 text-sm leading-6 text-text-secondary">
+    <div className={`${styles.panel} mt-8 max-w-3xl space-y-4 text-sm leading-6 text-[#b5c6cd]`}>
       {state === "disabled" ? (
         <p data-accounts-disabled>Collector accounts are not switched on yet, so there is nothing stored for you.</p>
       ) : (
@@ -143,12 +134,12 @@ function Unavailable({ state }: { state: "disabled" | "error" }) {
 
 function NotSignedIn() {
   return (
-    <div className="min-h-screen">
+    <div className={styles.root}>
       <AppHeader />
-      <main className="mx-auto max-w-2xl px-4 py-12 text-sm text-text-secondary">
+      <main className={`${styles.main} pt-12 text-sm text-[#b5c6cd]`}>
         <p>
           Your account page needs a collector sign-in.{" "}
-          <Link href="/sign-in?callbackUrl=%2Faccount" className="font-medium text-accent-teal hover:text-accent-teal-hover">
+          <Link href="/sign-in?callbackUrl=%2Faccount" className="font-medium text-[#8dc9c4] hover:text-text-primary">
             Sign in
           </Link>
         </p>

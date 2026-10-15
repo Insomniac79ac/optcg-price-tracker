@@ -57,7 +57,9 @@
 .versionCode { display: block; margin-top: 2px; }
 .versionDescriptor { display: block; margin-top: 8px; color: #a5dad5; }
 .versionRelease { display: block; margin-top: 6px; overflow-wrap: anywhere; }
-.currentBadge { display: inline-block; margin-top: 10px; padding: 2px 8px; border: 1px solid #527f7c; border-radius: 4px; font-size: 12px; color: #a5dad5; }
+.versionBadges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.currentBadge { display: inline-block; padding: 2px 8px; border: 1px solid #527f7c; border-radius: 4px; font-size: 12px; color: #a5dad5; }
+.ownedBadge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #1d3a3a; font-size: 12px; color: #cdeae6; }
 .performance { grid-column: 2; grid-row: 7; min-width: 0; }
 .performance > section { margin-top: 0; }
 @media (max-width: 1023px) {

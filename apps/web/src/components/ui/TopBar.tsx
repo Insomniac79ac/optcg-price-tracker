@@ -214,7 +214,14 @@ function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: b
     return <span className="text-xs text-text-faint">…</span>;
   }
 
-  if (session?.sessionKind === "admin" && session.adminSessionExpired) {
+  // An expired admin session only matters on admin pages, where it is the
+  // way back in. Everywhere else it grants nothing, so the visitor gets the
+  // ordinary collector "Sign in" below: offering only the admin
+  // re-authentication here left a browser holding an expired admin cookie
+  // with no path to Google sign-in (a fresh private window, with no cookie,
+  // showed "Sign in" and worked).
+  const expiredAdmin = session?.sessionKind === "admin" && session.adminSessionExpired === true;
+  if (expiredAdmin && (adminShell || pathname === "/admin" || pathname.startsWith("/admin/"))) {
     if (pathname === "/admin/login") {
       return <span className="max-w-28 text-xs text-text-muted">Admin session expired</span>;
     }
@@ -224,14 +231,14 @@ function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: b
     </div>;
   }
 
-  if (!session) {
+  if (!session || expiredAdmin) {
     if (adminShell) return <span className="text-xs text-text-muted">Admin sign-in</span>;
     // Routes to /sign-in rather than calling next-auth's signIn() directly -
     // that page is the single place that checks whether Google OAuth is
-    // actually configured (it isn't, in this staging build) before showing
-    // a working sign-in action, so this button never promises an auth flow
-    // that doesn't work yet. callbackUrl is validated there too (see
-    // src/lib/callbackUrl.ts) before ever being used.
+    // configured before showing a working sign-in action, so this button
+    // never promises an auth flow that doesn't work. callbackUrl is
+    // validated there too (see src/lib/callbackUrl.ts) before ever being
+    // used.
     const signInHref = `/sign-in?callbackUrl=${encodeURIComponent(currentPath)}`;
     return (
       <Link

@@ -1,8 +1,9 @@
+import type { Session } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/AppHeader";
-import { AtlasMapSurface, AtlasVisualSystem } from "@/components/ui/AtlasPrimitives";
+import { AccountHero, accountSurfaceStyles as styles } from "@/components/ui/AccountSurface";
 import { auth } from "@/lib/auth";
 import { sanitizeCallbackUrl } from "@/lib/callbackUrl";
 
@@ -43,88 +44,74 @@ export default async function SignInPage({
   const params = await searchParams;
   const callbackUrl = sanitizeCallbackUrl(params.callbackUrl);
   const googleConfigured = isGoogleOAuthConfigured();
-  let sessionKind: string | undefined;
+  let session: Session | null = null;
   try {
-    sessionKind = (await auth())?.sessionKind;
+    session = await auth();
   } catch {
     // An unreadable session is treated as signed out; the invite is the same.
   }
   // Already a collector: nothing to invite to, go where they were heading.
-  if (sessionKind === "collector") redirect(callbackUrl);
-  const adminSignedIn = sessionKind === "admin";
+  if (session?.sessionKind === "collector") redirect(callbackUrl);
+  // Only a live admin session is worth a word. An expired one grants nothing
+  // and Google sign-in simply replaces it, exactly as for a signed-out visitor.
+  const adminSignedIn = session?.sessionKind === "admin" && session.adminSessionExpired !== true;
 
   return (
-    <div className="min-h-screen">
+    <div className={styles.root}>
       <AppHeader />
-      <AtlasVisualSystem>
-        <main className="mx-auto max-w-2xl px-4 pb-12 pt-6 sm:pt-12">
-          <AtlasMapSurface>
-            <header className="px-5 py-7 sm:px-8 sm:py-9">
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent-gold">Collector account</p>
-              <h1 className="mt-2 font-display text-[30px] font-semibold leading-[1.1] tracking-tight text-text-primary sm:text-[38px]">
-                Track what your cards are worth
-              </h1>
-              <p className="mt-3 max-w-[34rem] text-[15px] leading-7 text-text-secondary">
-                Sign in with Google to start a collection. Card prices and the market stay open to everyone,
-                with or without an account.
-              </p>
-            </header>
-          </AtlasMapSurface>
-
-          <section aria-labelledby="sign-in-heading" className="panel mt-6 px-5 py-6 sm:px-8">
+      <main className={styles.main}>
+        <AccountHero
+          aside={
+            <ol className={styles.route} aria-label="What an account does">
+              {ACCOUNT_USES.map((use, index) => (
+                <li key={use}>
+                  <span className={styles.stop} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                  <span>{use}</span>
+                </li>
+              ))}
+            </ol>
+          }
+        >
+          <p className={styles.kicker}>Collector account</p>
+          <h1 className={styles.title}>Track what your cards are worth</h1>
+          <p className={styles.supporting}>
+            Sign in with Google to start a collection. Card prices and the market stay open to everyone, with or
+            without an account.
+          </p>
+          <section aria-labelledby="sign-in-heading" className={styles.actions}>
             <h2 id="sign-in-heading" className="sr-only">Sign in</h2>
             {adminSignedIn && (
-              <p className="mb-4 rounded-control border border-border-muted px-3 py-2 text-sm leading-6 text-text-secondary" data-admin-note>
+              <p className={styles.notice} data-admin-note>
                 You are signed in as the site admin. Collection pages need a collector account, which uses Google
                 sign-in. Signing in with Google ends the admin session.
               </p>
             )}
             {googleConfigured ? (
-              <div className="space-y-3">
+              <>
                 <GoogleSignInButton callbackUrl={callbackUrl} />
-                <p className="text-sm leading-6 text-text-muted" data-invite-only>
+                <p className={styles.note} data-invite-only>
                   Sign-in is invite-only while accounts are being tested. If your Google account has not been
                   invited yet, Google will not let it sign in.
                 </p>
-              </div>
+              </>
             ) : (
-              <p className="text-sm leading-6 text-text-secondary" data-sign-in-closed>
+              <p className={styles.notice} data-sign-in-closed>
                 Collector sign-in is not open yet. You can still look up any card and follow the market without
                 an account.
               </p>
             )}
-
-            <ul className="mt-6 space-y-3 border-t border-border-muted pt-5">
-              {ACCOUNT_USES.map((use, index) => (
-                <li key={use} className="flex gap-3 text-sm leading-6 text-text-secondary">
-                  <span className="mt-0.5 font-mono text-[12px] text-accent-gold" aria-hidden="true">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span>{use}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-5 text-xs leading-5 text-text-muted">
-              We keep your Google name and email and the cards you add, nothing else from Google.{" "}
-              <Link href="/privacy" className="text-accent-teal hover:text-accent-teal-hover">
-                Privacy (draft)
-              </Link>
-            </p>
           </section>
-
-          <nav aria-label="Keep browsing" className="mt-6 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            <Link href="/cards" className="inline-flex min-h-11 items-center font-medium text-accent-teal hover:text-accent-teal-hover md:min-h-0">
-              Look up card prices
-            </Link>
-            <Link href="/analytics" className="inline-flex min-h-11 items-center font-medium text-accent-teal hover:text-accent-teal-hover md:min-h-0">
-              Follow the market
-            </Link>
-            <Link href="/" className="inline-flex min-h-11 items-center font-medium text-accent-teal hover:text-accent-teal-hover md:min-h-0">
-              Home
-            </Link>
+          <p className={styles.privacy}>
+            We keep your Google name and email and the cards you add, nothing else from Google.{" "}
+            <Link href="/privacy">Privacy (draft)</Link>
+          </p>
+          <nav aria-label="Keep browsing" className={styles.links}>
+            <Link href="/cards">Look up card prices</Link>
+            <Link href="/analytics">Follow the market</Link>
+            <Link href="/">Home</Link>
           </nav>
-        </main>
-      </AtlasVisualSystem>
+        </AccountHero>
+      </main>
     </div>
   );
 }

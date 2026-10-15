@@ -31,6 +31,7 @@ vi.mock("next-auth", () => ({
 import {
   ADMIN_CREDENTIALS_PROVIDER_ID,
   ADMIN_SESSION_MAX_AGE_MS,
+  GOOGLE_AUTHORIZATION_PARAMS,
   adminAuthorize,
   applyJwtCallback,
   applySessionCallback,
@@ -83,9 +84,22 @@ describe("NextAuth config", () => {
     // passed in, so that's what proves the real id/authorize made it
     // through - see @auth/core/providers/credentials.js if this ever needs
     // re-verifying against a next-auth upgrade.
+    const googleProvider = providers[0] as { id?: string };
+    expect(googleProvider.id).toBe("google");
+
     const credentialsProvider = providers[1] as { options?: { id?: string; authorize?: unknown } };
     expect(credentialsProvider.options?.id).toBe(ADMIN_CREDENTIALS_PROVIDER_ID);
     expect(typeof credentialsProvider.options?.authorize).toBe("function");
+  });
+
+  it("always asks Google to show its account chooser", () => {
+    const providers = capturedNextAuthConfig.current?.providers ?? [];
+    const google = providers[0] as { options?: { authorization?: { params?: Record<string, string> } } };
+    expect(GOOGLE_AUTHORIZATION_PARAMS).toEqual({ prompt: "select_account" });
+    expect(google.options?.authorization?.params).toEqual({ prompt: "select_account" });
+    // No client id or secret is passed in code; they come from the environment.
+    expect(google.options).not.toHaveProperty("clientId");
+    expect(google.options).not.toHaveProperty("clientSecret");
   });
 });
 
