@@ -1,8 +1,10 @@
 """Opt-in nine-shard consumer of the shared service; no second queue/policy."""
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 
 from app.services.freshness_integration import CaptureResult, drain
+from app.services.freshness_policy import utc_now
+from app.models import FreshnessWork
 from yuyutei_collector.config import settings
 from yuyutei_collector.db import SessionLocal
 from yuyutei_collector.models import Source
@@ -45,6 +47,23 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
         source_id = session.scalar(select(Source.id).where(Source.name == "yuyutei"))
         activate_ready_scopes(session, source_id)
         session.commit()
+        now = utc_now()
+        repeat_checks_due = session.scalar(
+            select(func.count()).select_from(FreshnessWork).where(
+                FreshnessWork.source_id == source_id,
+                FreshnessWork.kind == "refresh",
+                FreshnessWork.state == "pending",
+                FreshnessWork.source_card_mapping_id % 9 == shard_index,
+                FreshnessWork.last_successfully_checked_at.is_not(None),
+                FreshnessWork.next_due_at <= now,
+                or_(FreshnessWork.retry_not_before_at.is_(None),
+                    FreshnessWork.retry_not_before_at <= now),
+            )
+        )
+        # This is an invocation ceiling, not a reservation or an instruction
+        # to fetch. The shared queue still admits only actually due work and
+        # applies source budgets, lane fairness, leases and the runtime bound.
+        turn_limit = min(70, settings.DUE_COVERAGE_ALLOWANCE + repeat_checks_due)
         return drain(
             session,
             source_id,
@@ -53,7 +72,7 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
             runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
             mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
             chunk_size=chunk_size,
-            max_products=settings.DUE_MAX_PRODUCTS_PER_RUN,
+            max_products=turn_limit,
             discovery_runner=run_discovery,
             after_capture=lambda db: activate_ready_scopes(db, source_id),
             shard_index=shard_index,

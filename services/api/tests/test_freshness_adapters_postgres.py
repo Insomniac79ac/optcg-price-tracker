@@ -1368,7 +1368,7 @@ def test_yuyu_small_turns_leave_budget_for_all_nine_shards(db, monkeypatch):
             session.flush()
             plan_refresh(session, mapping_id, {"raw": PriceCategory("sell")},
                          high_interest=False, estimated_request_cost=300, clock=lambda: T0)
-    monkeypatch.setattr(yuyu_settings, "DUE_MAX_PRODUCTS_PER_RUN", 2)
+    monkeypatch.setattr(yuyu_settings, "DUE_COVERAGE_ALLOWANCE", 2)
     monkeypatch.setattr(yuyu_settings, "YUYUTEI_REQUEST_DELAY_MS", 0)
     visited = []
 
@@ -1391,3 +1391,46 @@ def test_yuyu_small_turns_leave_budget_for_all_nine_shards(db, monkeypatch):
         pending = list(session.scalars(select(FreshnessWork).where(FreshnessWork.state == "pending")))
         assert len(pending) == 9
         assert all(w.attempt_count == 0 and w.claim_token is None for w in pending)
+
+
+def test_yuyu_repeat_cohort_exceeds_onboarding_allowance_without_fetching_early(db, monkeypatch):
+    from opcg_source_identity import canonical_source_listing_identity
+    from app.services.freshness_queue import PriceCategory
+    from app.services.freshness_policy import utc_now
+    from yuyutei_collector.due import run_due
+    from yuyutei_collector.config import settings as yuyu_settings
+
+    factory, source, mid, print_id = db
+    mids = [mid] + [mapping(factory, source, print_id, n) for n in range(124, 151)]
+    same_shard = [m for m in mids if m % 9 == mid % 9]
+    assert len(same_shard) == 4
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        for index, mapping_id in enumerate(same_shard):
+            row = session.get(SourceCardMapping, mapping_id)
+            row.source_url = f"https://yuyu-tei.jp/sell/opc/card/op01/{10000 + mapping_id}"
+            row.canonical_source_listing_identity = canonical_source_listing_identity("yuyutei", row.source_url)
+            session.flush()
+            work = plan_refresh(session, mapping_id, {"raw": PriceCategory("sell")},
+                                high_interest=False, estimated_request_cost=30, clock=lambda: T0)
+            if index != 2:
+                work.last_successfully_checked_at = T0 - timedelta(hours=24)
+                work.lane = "ordinary"
+            if index == 3:
+                work.next_due_at = utc_now() + timedelta(hours=1)
+    monkeypatch.setattr(yuyu_settings, "DUE_COVERAGE_ALLOWANCE", 1)
+    monkeypatch.setattr(yuyu_settings, "YUYUTEI_REQUEST_DELAY_MS", 0)
+    visited = []
+
+    def runner(session, mapping_id, *, freshness):
+        visited.append(mapping_id)
+        freshness.result = CaptureResult("identity_refusal", failure="fixture refusal")
+        return SimpleNamespace(source_denied=False, stage="validation_failed", reasons=[])
+
+    run_due(shard_index=mid % 9, chunk_size=1, session_factory=factory, runner=runner)
+    assert set(visited) == set(same_shard[:3])
+    with factory() as session:
+        future = session.scalar(select(FreshnessWork).where(
+            FreshnessWork.source_card_mapping_id == same_shard[3]))
+        assert future.state == "pending" and future.attempt_count == 0
+        assert session.scalar(select(SourceDispatchBudget)).reserved_requests == 0
