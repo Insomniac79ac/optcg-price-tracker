@@ -94,9 +94,9 @@ export default async function WatchlistPage() {
       {exact.length > 0 && (
         <section aria-labelledby="watching" className={styles.section}>
           <AccountChapter id="watching" number="01" title="Watching">
-            Value, your target and the last week for each version
+            Today’s value, your target and the last 7 days for each version
           </AccountChapter>
-          <ul className={watch.rows} data-testid="watchlist-rows">
+          <ul className={watch.grid} data-testid="watchlist-rows">
             {exact.map((entry) => (
               <WatchRow key={entry.id} entry={entry} print={prints.get(entry.card_print_id as number) ?? null} list={watchlist} asOf={asOf} now={now} />
             ))}
@@ -196,8 +196,8 @@ function WatchRow({
   const change = watchChange(entry, list);
   const priced = entry.value_jpy !== null;
   return (
-    <li className={watch.row} data-testid="watchlist-row">
-      <Link href={href} className={watch.art} tabIndex={-1} aria-hidden="true">
+    <li className={watch.tile} data-testid="watchlist-row">
+      <Link href={href} className={styles.tileArt} tabIndex={-1} aria-hidden="true">
         <CardImageFrame
           imageUrl={print?.imageUrl ?? null}
           alt={`${name} (${code})`}
@@ -209,7 +209,7 @@ function WatchRow({
           geometry={print?.imageGeometry ?? null}
         />
       </Link>
-      <div className={watch.body}>
+      <div className={`${styles.tileBody} ${watch.body}`}>
         <h3 className={styles.tileName}>
           <Link href={href}>
             {name}
@@ -218,55 +218,50 @@ function WatchRow({
         </h3>
         <p className={styles.meta}>{label}</p>
 
-        <dl className={watch.facts}>
-          <div className={watch.fact}>
-            <dt>Value</dt>
-            <dd>
-              {priced ? (
-                <>
-                  <span className={styles.tileValue}>{yen(entry.value_jpy as number)}</span>
-                  {asOf && <span className={styles.meta}> as of {asOf}</span>}
-                </>
-              ) : (
-                <span className={styles.noPrice}>No price yet</span>
-              )}
-            </dd>
-          </div>
-          <div className={watch.fact}>
-            <dt>Target</dt>
-            <dd>
-              {entry.target_jpy !== null ? <span className={watch.target}>{yen(entry.target_jpy)}</span> : <span className={styles.meta}>No target set</span>}
-              {distance && (
-                <span className={watch.distance} data-testid="target-distance" data-side={(entry.target_gap_jpy ?? 0) > 0 ? "above" : "below"}>
-                  {distance}
-                </span>
-              )}
-            </dd>
-          </div>
-          <div className={watch.fact}>
-            <dt>7D</dt>
-            <dd>
-              {change.kind === "change" ? (
-                <span className={styles.tileChange} data-direction={change.direction}>{change.pct}</span>
-              ) : (
-                <span className={styles.tileChange} title={change.reason}>
-                  — <span className={styles.meta}>{change.reason}</span>
-                </span>
-              )}
-            </dd>
-          </div>
-        </dl>
+        <p className={styles.tileValue}>
+          {priced ? (
+            <>
+              <span>{yen(entry.value_jpy as number)}</span>
+              {asOf && <span className={styles.meta}> · as of {asOf}</span>}
+            </>
+          ) : (
+            <span className={styles.noPrice}>No price yet</span>
+          )}
+        </p>
 
-        <div className={watch.foot}>
-          <p className={styles.meta} data-testid="checked">
-            {entry.checked_at ? <time dateTime={entry.checked_at}>{checkedAgo(entry.checked_at, now)}</time> : checkedAgo(null, now)}
+        <div className={watch.target}>
+          <p>
+            <span className={watch.label}>Target</span>{" "}
+            {entry.target_jpy !== null ? <span className={watch.targetValue}>{yen(entry.target_jpy)}</span> : <span className={styles.meta}>Not set</span>}
           </p>
+          {distance && (
+            <p className={watch.distance} data-testid="target-distance" data-side={(entry.target_gap_jpy ?? 0) > 0 ? "above" : "below"}>
+              {distance}
+            </p>
+          )}
+        </div>
+
+        {change.kind === "change" ? (
+          <p className={styles.tileChange} data-direction={change.direction}>
+            {change.pct} <span className={styles.meta}>7D</span>
+          </p>
+        ) : (
+          <p className={styles.tileChange} title={change.reason}>
+            — <span className={styles.meta}>7D: {change.reason}</span>
+          </p>
+        )}
+
+        <p className={styles.meta} data-testid="checked">
+          {entry.checked_at ? <time dateTime={entry.checked_at}>{checkedAgo(entry.checked_at, now)}</time> : checkedAgo(null, now)}
+        </p>
+
+        <div className={`${styles.tileActions} ${watch.actions}`}>
           <WatchEditSheet
             entryId={entry.id}
             cardPrintId={entry.card_print_id}
             versionLabel={`${name}${label ? ` · ${label}` : ""}`}
             targetJpy={entry.target_jpy}
-            buttonDescription={`Edit ${name}${label ? `, ${label}` : ""}`}
+            buttonDescription={`Edit target for ${name}${label ? `, ${label}` : ""}`}
           />
         </div>
       </div>

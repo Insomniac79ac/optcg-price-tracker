@@ -27,13 +27,7 @@
   "width": 1440,
   "name": "01-watchlist",
   "horizontalOverflowPx": 0,
-  "under44": [
-   "A:Shanks · Alt Art 44px",
-   "A:Roronoa Zoro · Alt Art 44px",
-   "A:Portgas.D.Ace · Alt Art 44px",
-   "A:Sogeking 44px",
-   "A:Sanji 44px"
-  ],
+  "under44": [],
   "imageObjectFit": [
    "contain"
   ]
@@ -50,7 +44,7 @@
  {
   "width": 1440,
   "name": "03-after-save",
-  "rowText": "Shanks · Alt ArtOP01-120 · Alt Art · OP-01Value￥38,150 as of 14 OctTarget￥36,000￥2,150 above your target7D+4.2%Checked 3 h agoEdit"
+  "rowText": "Shanks · Alt ArtOP01-120 · Alt Art · OP-01￥38,150 · as of 14 OctTarget ￥36,000￥2,150 above your target+4.2% 7DChecked 3 h agoEdit"
  },
  {
   "width": 390,
@@ -80,13 +74,7 @@
   "width": 390,
   "name": "01-watchlist",
   "horizontalOverflowPx": 0,
-  "under44": [
-   "A:Shanks · Alt Art 44px",
-   "A:Roronoa Zoro · Alt Art 44px",
-   "A:Portgas.D.Ace · Alt Art 44px",
-   "A:Sogeking 44px",
-   "A:Sanji 44px"
-  ],
+  "under44": [],
   "imageObjectFit": [
    "contain"
   ]
@@ -103,7 +91,7 @@
  {
   "width": 390,
   "name": "03-after-save",
-  "rowText": "Shanks · Alt ArtOP01-120 · Alt Art · OP-01Value￥38,150 as of 14 OctTarget￥36,000￥2,150 above your target7D+4.2%Checked 3 h agoEdit"
+  "rowText": "Shanks · Alt ArtOP01-120 · Alt Art · OP-01￥38,150 · as of 14 OctTarget ￥36,000￥2,150 above your target+4.2% 7DChecked 3 h agoEdit"
  },
  {
   "width": 320,
@@ -133,12 +121,7 @@
   "width": 320,
   "name": "01-watchlist",
   "horizontalOverflowPx": 0,
-  "under44": [
-   "A:Shanks · Alt Art 44px",
-   "A:Roronoa Zoro · Alt Art 44px",
-   "A:Sogeking 44px",
-   "A:Sanji 44px"
-  ],
+  "under44": [],
   "imageObjectFit": [
    "contain"
   ]
@@ -155,6 +138,6 @@
  {
   "width": 320,
   "name": "03-after-save",
-  "rowText": "Shanks · Alt ArtOP01-120 · Alt Art · OP-01Value￥38,150 as of 14 OctTarget￥36,000￥2,150 above your target7D+4.2%Checked 3 h agoEdit"
+  "rowText": "Shanks · Alt ArtOP01-120 · Alt Art · OP-01￥38,150 · as of 14 OctTarget ￥36,000￥2,150 above your target+4.2% 7DChecked 3 h agoEdit"
  }
 ]

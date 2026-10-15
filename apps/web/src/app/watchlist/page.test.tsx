@@ -97,10 +97,10 @@ describe("/watchlist (Collector v1 S8)", () => {
     readPrint.mockResolvedValue(null);
     await renderPage();
     const shanks = rowFor("Shanks");
-    expect(shanks).toHaveTextContent("￥31,200 as of 14 Oct");
+    expect(shanks).toHaveTextContent("￥31,200 · as of 14 Oct");
     expect(within(shanks).getByTestId("target-distance")).toHaveTextContent("￥1,200 above your target");
     expect(within(rowFor("Roronoa Zoro")).getByTestId("target-distance")).toHaveTextContent("￥3,200 below your target");
-    expect(rowFor("Sogeking")).toHaveTextContent("No target set");
+    expect(rowFor("Sogeking")).toHaveTextContent("Target Not set");
   });
 
   it("shows an unpriced version as unpriced, never ¥0, with no distance", async () => {
@@ -122,9 +122,9 @@ describe("/watchlist (Collector v1 S8)", () => {
     expect(rowFor("Shanks")).toHaveTextContent("+4.2%");
     expect(rowFor("Roronoa Zoro")).toHaveTextContent("−6.8%");
     const sogeking = rowFor("Sogeking");
-    expect(sogeking).toHaveTextContent("— Price sources changed this week");
+    expect(sogeking).toHaveTextContent("— 7D: Price sources changed this week");
     expect(sogeking).not.toHaveTextContent("0%");
-    expect(rowFor("Sanji")).toHaveTextContent("— No price today");
+    expect(rowFor("Sanji")).toHaveTextContent("— 7D: No price today");
   });
 
   it("says when a source was last checked, and unknown when the API does not know", async () => {
@@ -158,7 +158,7 @@ describe("/watchlist (Collector v1 S8)", () => {
     );
     readPrint.mockResolvedValue(null);
     await renderPage();
-    expect(rowFor("Shanks")).toHaveTextContent("— Prices missing on 9 Oct");
+    expect(rowFor("Shanks")).toHaveTextContent("— 7D: Prices missing on 9 Oct");
   });
 
   it("edits the target in a sheet and refreshes from the API", async () => {
@@ -168,7 +168,7 @@ describe("/watchlist (Collector v1 S8)", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 1 }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
     await renderPage();
-    fireEvent.click(screen.getByRole("button", { name: /^Edit Shanks/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Edit target for Shanks/ }));
     const dialog = screen.getByRole("dialog", { name: "Edit your watch" });
     const target = within(dialog).getByLabelText(/Target price/) as HTMLInputElement;
     expect(target.value).toBe("30000");
