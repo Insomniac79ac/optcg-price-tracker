@@ -41,6 +41,7 @@ const GET_EXPORT = /export\s+(?:async\s+)?(?:function|const)\s+GET\b|export\s+co
 const PUBLIC_READ_ALLOWLIST = new Set([
   "auth/[...nextauth]/route.ts", // Auth.js session/CSRF/provider endpoints
   "backend-health/route.ts", // backend /health passthrough
+  "collector-token-check/route.ts", // one-word API_JWT_SECRET agreement check; its probe pass opens no account
   "card-image/route.ts", // public card artwork proxy
   "health/route.ts", // web liveness
   "version/route.ts", // build identity
