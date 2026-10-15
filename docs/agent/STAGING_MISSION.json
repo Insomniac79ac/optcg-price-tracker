@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Delivery speed-up (owner decision 2026-10-15): two delivery lanes with an automatic product-lane classifier, live-state auto-merge arming, merge-window guard, and test hygiene root-cause fixes. Staging only; no collector release, no migration.",
+ "mission": "Capacity75 session 13 handoff (docs only): NEW50 natural evidence, remaining-50 hold, quarantine reporting delivery (#125), Yuyu duplicates evidence and closed-state proposal, official-images-mirror diagnosis, lossless and storage, receipts",
  "target": "staging",
- "classification": "AMBER",
+ "classification": "GREEN",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,117 +20,133 @@
  "impacts": [
   {
    "files": [
-    ".github/workflows/ci.yml",
-    ".github/workflows/staging-delivery.yml"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "CI policy only, staging PRs: policy-gate runs the base copy of staging_policy.py + product_lane.py (from a base worktree) and exposes the lane; staging-pr-live reads the live PR before joining card-pirate-staging-delivery (PR #123: same-second push and ready_for_review left one run with a stale head and one with a stale draft flag, nothing armed); staging-credential-presence checks a staging Postgres backup under 24 h for a product migration; staging-automerge disarms auto-merge 19:30-20:30 UTC and re-arms the same head, timeout 240 min; delivery skips collector rollout and RAW DDL for product merges and refuses a full delivery whose manifest did not change; backend/worker tests get REQUIRE_POSTGRES=1 and the worker job a Postgres service. No secret, variable, provider or production destination changes."
-  },
-  {
-   "files": [
-    "scripts/product_lane.py",
-    "scripts/staging_backup_age.py",
-    "scripts/staging_delivery_scope.py",
-    "scripts/staging_policy.py"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "Read-only delivery tooling: product_lane.py (path + import-graph + migration allowlist classifier, fail closed to DATA), staging_policy.py (PRODUCT result when classified so, otherwise today's mission evaluation unchanged), staging_delivery_scope.py ('product' decision), staging_backup_age.py (read-only Railway backup age, prints no credentials). Not collector runtime inputs (scripts/ is not installed in any image)."
-  },
-  {
-   "files": [
-    "scripts/tests/test_collector_runtime_inputs.py",
-    "scripts/tests/test_product_lane.py",
-    "scripts/tests/test_snkr_discovery_component.py",
-    "scripts/tests/test_staging_delivery_scope.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Classifier tests in both directions on real Git objects and the real import graph (web/tests/docs/allowlisted API -> PRODUCT; collector input, price/identity/MV/Index, wiring, scripts, workflows, manifest, destructive or disguised migrations -> DATA; fail-closed paths). Temp-dir cleanup race in #120 CI (run 38536722191): throwaway repos disable git auto-maintenance."
-  },
-  {
-   "files": [
-    "apps/web/src/app/cards/discovery.test.tsx",
-    "apps/web/src/components/ui/AppShell.test.tsx"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Test-only: discovery.test.tsx fired the previous test's dead IntersectionObserver (#120 run 38540558115, 24 vs 48 rows); now waits for the live sentinel observer. AppShell.test.tsx: removed invalid `exact` role option (TS2769)."
-  },
-  {
-   "files": [
-    "services/api/tests/_source_identity_guard.py",
-    "services/api/tests/conftest.py",
-    "services/api/tests/freshness_offline.py",
-    "services/api/tests/pg_url.py",
-    "services/api/tests/test_accounts_postgres.py",
-    "services/api/tests/test_alembic_url_forms_postgres.py",
-    "services/api/tests/test_attempt_raw_snapshot_link_migration_postgres.py",
-    "services/api/tests/test_backup_exact_lineage_postgres.py",
-    "services/api/tests/test_canonical_cards_postgres.py",
-    "services/api/tests/test_canonical_import_apply_postgres.py",
-    "services/api/tests/test_canonical_original_set_code_nullable_migration_postgres.py",
-    "services/api/tests/test_canonical_rarity_nullable_migration_postgres.py",
-    "services/api/tests/test_canonical_staging_import_gate.py",
-    "services/api/tests/test_card_pirate_index_points_postgres.py",
-    "services/api/tests/test_card_pirate_index_replay_postgres.py",
-    "services/api/tests/test_card_pirate_index_writer_postgres.py",
-    "services/api/tests/test_database_url_forms_postgres.py",
-    "services/api/tests/test_exact_print_identity_migration_postgres.py",
-    "services/api/tests/test_freshness_migration_postgres.py",
-    "services/api/tests/test_freshness_queue_postgres.py",
-    "services/api/tests/test_mapping_listing_foundation_postgres.py",
-    "services/api/tests/test_market_index_completion_postgres.py",
-    "services/api/tests/test_market_value_persistence_postgres.py",
-    "services/api/tests/test_market_value_writer_postgres.py",
-    "services/api/tests/test_official_artwork_variant_migration_postgres.py",
-    "services/api/tests/test_official_asset_variant_migration_postgres.py",
-    "services/api/tests/test_official_images_lock_postgres.py",
-    "services/api/tests/test_personal_search_ownership_migration.py",
-    "services/api/tests/test_pg_url_parity.py",
-    "services/api/tests/test_plan_canonical_print_import_cli.py",
-    "services/api/tests/test_print_authoritative_lineage_migration_postgres.py",
-    "services/api/tests/test_print_authoritative_lineage_postgres.py",
-    "services/api/tests/test_print_lineage_postgres.py",
-    "services/api/tests/test_print_official_metadata_migration_postgres.py",
-    "services/api/tests/test_promotion_state_migration_postgres.py",
-    "services/api/tests/test_proposal_decision_schema_migration_postgres.py",
-    "services/api/tests/test_raw_dictionary_storage_postgres.py",
-    "services/api/tests/test_release_chronology_postgres.py",
-    "services/api/tests/test_release_product_migration_postgres.py",
-    "services/api/tests/test_release_products_postgres.py",
-    "services/api/tests/test_snkrdunk_print_authoritative_e2e_postgres.py",
-    "services/api/tests/test_source_collection_attempts_postgres.py",
-    "services/api/tests/test_source_mapping_proposal_decision_postgres.py",
-    "services/api/tests/test_source_mapping_proposal_migration_postgres.py",
-    "services/api/tests/test_source_mapping_proposal_review_postgres.py",
-    "services/worker/tests/_source_identity_guard.py",
-    "services/worker/tests/conftest.py",
-    "services/worker/tests/pg_url.py",
-    "services/worker/tests/test_database_url_forms_postgres.py",
-    "services/worker/tests/test_refresh_prices_print_lineage_postgres.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Test-only (not installed in any image; 0 collector runtime inputs for SNKRDUNK and Yuyu-Tei by scripts/collector_runtime_inputs.py): conftest fails fast when the imported opcg_source_identity differs from the checkout's packages/opcg_source_identity; one pg_url helper builds every API/worker test DB URL from TEST_POSTGRES_URL and fails instead of skipping with REQUIRE_POSTGRES=1."
-  },
-  {
-   "files": [
-    "docs/agent/AUTONOMY_POLICY.md",
-    "docs/agent/PRODUCT_LOG.md",
-    "docs/agent/STAGING_DELIVERY.md",
-    "docs/operations.md"
+    "docs/agent/handoff/2026-10-15/capacity75-session13/CONTINUATION.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/CURRENT_STATE-end.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/CURRENT_STATE-start.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/HANDOFF.md",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/PROPOSAL-freshness-work-closed-state.md",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/backups-start.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/coverage-start.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/db-size-end.txt",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/degraded-signals.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/fleet-vs-receipt-end.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/fleet-vs-receipt-start.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/freshness-detail.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/live-state-end.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/live-state-start.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/new100-replan.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/new50-evidence.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-credential-probe-572d2cf447c035e521b77d666147575ddf88de99/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-ad86b61823c412e6.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr117-delivery/staging-delivery-66cc7f2ed4f557af12a782de0cb4652f8e3dced8/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-credential-probe-6672d2b34be5769665e5fded16bfa5dc31403d02/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-5db49b239dbd6506.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr118-delivery/staging-delivery-36ff37c3d615fdbc5284fe73214ae9450a5d7d4d/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-credential-probe-37a3d1ea69cd8f0d0f4836bd23e57c00827e7e79/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-c00f442dd83865f1.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr122-delivery/staging-delivery-a1966489631116f6b05f9e90c896653a86d0da86/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-credential-probe-f0ad87f45cb28434aa6d7366127abb9be3470cd3/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr123-delivery/staging-delivery-98d2acf4747f4e9ae9a17305d13ce2aa163f2cb6/evidence/staging-state-d2a4acb940c9ee1d.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-credential-probe-6fbaf421654199f9922d9ae21256594eddf33b39/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-4fd3ee4757b6dc5b.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr124-delivery/staging-delivery-e80ce63edb6687358e7c69a1963cec80ae994d6b/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-credential-probe-3d29d6aefed5316f2620628f65ff1efc9f9d7cf2/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-64fddb129876960d.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/pr125-delivery/staging-delivery-eae22a7ba25fcbb715ed03d9e80055831ab23173/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/remaining50-fit.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/spike-2026-10-14-04z-cause.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/staging-state-137d6f4f28b9f9a3.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/staging-state-d95753e633842f3d.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/storage-rates-current-code.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/storage-rates-ex-new50.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/trigger-status-start.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/verify-lossless-from-53968.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/volume-series-5min.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/yuyu-duplicates-evidence.json",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/backups.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/coverage.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/db.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/degraded_signals.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/fleet_vs_receipt.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/freshness_detail.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/live_a504e47.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/make_approved_list.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/new100_replan.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/new100_storage.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/new50_evidence.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/proposal_digest_verify.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/remaining50_fit.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/requests_window.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/snkr24h.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/storage_rates.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/storage_rates_current.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/storage_rates_ex_batch.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/trigger_decision.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/trigger_status.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/trigger_window.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/verify_all.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/volume_series.py",
+    "docs/agent/handoff/2026-10-15/capacity75-session13/tools/yuyu_duplicates.py"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "Two delivery lanes in AUTONOMY_POLICY.md and STAGING_DELIVERY.md (data-lane text unchanged), PRODUCT_LOG.md, and the live market-index-snapshot start command (python -m app.market_index_daily_pipeline, checked read-only 2026-10-15) in operations.md."
+   "reason": "Handoff record only under docs/agent/handoff/2026-10-15/capacity75-session13: HANDOFF.md, CONTINUATION.json, the closed-state proposal, start/end CURRENT_STATE observations, read-only evidence and the read-only tools that produced it, and downloaded CI receipts for PRs #117, #118, #122-#125. No code, configuration, collector, API, web or database change."
   }
  ],
  "deployment_verification": {
@@ -144,52 +160,5 @@
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
  },
- "safeguards": {
-  "impact": {
-   "resources": [
-    {
-     "name": "GitHub Actions CI and staging-delivery workflow (policy-gate, staging-pr-live, staging-credential-presence, staging-automerge)"
-    },
-    {
-     "name": "Staging API (services/api/tests change may trigger a watched rebuild; no runtime code change)",
-     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
-    }
-   ],
-   "routes": [
-    "None (no application route changes)"
-   ],
-   "dependencies": [
-    "Base-branch policy evaluation",
-    "collector import graph (scripts/collector_runtime_inputs.py)",
-    "STAGING_RAILWAY_TOKEN read-only backup listing (product migrations only)"
-   ],
-   "deployment_impact": "Workflow and test-only change. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. API may rebuild with identical runtime code; web redeploys through Vercel Git with test-only changes.",
-   "database_writes": 0,
-   "source_requests": 0,
-   "estimated_runtime_minutes": 25
-  },
-  "recovery": {
-   "artifact": "eae22a7ba25fcbb715ed03d9e80055831ab23173",
-   "procedure": "Native revert of this PR restores the previous CI policy (mission manifest required for every PR), arming conditions and tests. No data, schema or service configuration to undo.",
-   "trigger": "Any product-lane classification of a collector input, price/identity/MV/Index path, workflow, script or manifest; a product merge that rolls out a collector or runs DDL; arming failures on valid PRs; red CI from the new REQUIRE_POSTGRES or identity guard.",
-   "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
-   "validation": [
-    "scripts/tests/test_product_lane.py",
-    "scripts/tests/test_staging_policy.py",
-    "scripts/tests/test_staging_delivery_scope.py",
-    "services/api/tests/test_pg_url_parity.py"
-   ]
-  },
-  "verification": {
-   "required_checks": [
-    "engineering-gate"
-   ],
-   "post_change": [
-    "scripts/verify_staging_delivery.py",
-    "scripts/generate_staging_state.py"
-   ],
-   "observation_window": "Delivery receipt for this merge with 0 collector rollouts and no RAW DDL; next product-lane PR classified PRODUCT by policy-gate without a manifest and delivered with decision 'product'."
-  }
- },
- "diff_sha256": "5edbe5edd3ac249ddc57536b6c96892d7a60205056c53139048d39302e7432b4"
+ "diff_sha256": "537c1756484816a29628f366944def73e834b24e54a6379f575005fd09142a6b"
 }
