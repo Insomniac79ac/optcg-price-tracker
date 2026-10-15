@@ -5,7 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 
-import { checkCollectorToken } from "./collectorTokenCheck";
+import {
+  TOKEN_CHECK_CACHE_MS,
+  TOKEN_CHECK_LIMIT,
+  TOKEN_CHECK_WINDOW_MS,
+  cachedCollectorTokenCheck,
+  checkCollectorToken,
+  resetTokenCheckState,
+  tokenCheckClientKey,
+  tokenCheckRetryAfter,
+} from "./collectorTokenCheck";
+import { GET } from "@/app/api/collector-token-check/route";
 
 const WEB_SECRET = "website-copy-of-api-jwt-secret";
 const fetchMock = vi.fn();
@@ -32,6 +42,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 afterEach(() => {
+  resetTokenCheckState();
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   fetchMock.mockReset();
@@ -77,5 +89,67 @@ describe("checkCollectorToken", () => {
     vi.stubEnv("API_JWT_SECRET", "");
     expect(await checkCollectorToken()).toBe("unconfigured");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("cachedCollectorTokenCheck", () => {
+  it("calls the API at most once per 60 s, and concurrent callers share the call", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(apiVerifying(WEB_SECRET));
+    const answers = await Promise.all([cachedCollectorTokenCheck(), cachedCollectorTokenCheck(), cachedCollectorTokenCheck()]);
+    expect(answers).toEqual(["ok", "ok", "ok"]);
+    expect(await cachedCollectorTokenCheck()).toBe("ok");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(TOKEN_CHECK_CACHE_MS - 1);
+    await cachedCollectorTokenCheck();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(2);
+    fetchMock.mockImplementation(apiVerifying("railway-copy-that-diverged"));
+    expect(await cachedCollectorTokenCheck()).toBe("mismatch");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("token check rate limit", () => {
+  it("allows TOKEN_CHECK_LIMIT requests per client per window, then gives a bounded Retry-After", () => {
+    const now = 5 * TOKEN_CHECK_WINDOW_MS + 1_000;
+    for (let i = 0; i < TOKEN_CHECK_LIMIT; i++) expect(tokenCheckRetryAfter("203.0.113.9", now)).toBeNull();
+    const retry = tokenCheckRetryAfter("203.0.113.9", now);
+    expect(retry).toBeGreaterThan(0);
+    expect(retry).toBeLessThanOrEqual(TOKEN_CHECK_WINDOW_MS / 1000);
+    // Another client, and the next window, start fresh.
+    expect(tokenCheckRetryAfter("198.51.100.4", now)).toBeNull();
+    expect(tokenCheckRetryAfter("203.0.113.9", now + TOKEN_CHECK_WINDOW_MS)).toBeNull();
+  });
+
+  it("keys by the first X-Forwarded-For hop", () => {
+    expect(tokenCheckClientKey(new Headers({ "x-forwarded-for": "203.0.113.9, 10.0.0.1" }))).toBe("203.0.113.9");
+    expect(tokenCheckClientKey(new Headers({ "x-real-ip": "198.51.100.4" }))).toBe("198.51.100.4");
+    expect(tokenCheckClientKey(new Headers())).toBe("unknown");
+  });
+});
+
+describe("GET /api/collector-token-check", () => {
+  const request = (ip: string) => new Request("http://web.test/api/collector-token-check", { headers: { "x-forwarded-for": ip } });
+
+  it("answers the verifier's one word, uncached by browsers, and reuses it", async () => {
+    fetchMock.mockImplementation(apiVerifying(WEB_SECRET));
+    const response = await GET(request("192.0.2.1"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ok" });
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await GET(request("192.0.2.2"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a flood from one client with 429 and Retry-After, without calling the API", async () => {
+    fetchMock.mockImplementation(apiVerifying(WEB_SECRET));
+    for (let i = 0; i < TOKEN_CHECK_LIMIT; i++) await GET(request("192.0.2.7"));
+    const response = await GET(request("192.0.2.7"));
+    expect(response.status).toBe(429);
+    expect(Number(response.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
