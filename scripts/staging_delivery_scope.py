@@ -9,6 +9,12 @@ as the policy declaration every staging PR must carry, and it must request no
 collector rollout and no RAW dependency migration. Anything else, or any change
 set that cannot be determined, runs the full delivery exactly as before.
 Verification and state regeneration always run.
+
+A PRODUCT-lane merge (scripts/product_lane.py; the policy gate already admitted
+it) also skips collector rollout and RAW DDL: the unchanged manifest may still
+carry an earlier data-lane mission's requests, which a product merge must never
+replay. Its verification expects the merged API and the repository's single
+Alembic head instead of the earlier mission's declarations.
 """
 import argparse
 import json
@@ -94,6 +100,24 @@ def decide(rows, head_manifest):
             "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"}
 
 
+def product_decision(base, merge):
+    """{} (stay full) unless the merge is PRODUCT lane with one Alembic head."""
+    try:
+        import product_lane
+        import staging_db_read_check as guard
+        lane = product_lane.classify(base, merge, require_security_review=False)
+        heads = sorted(guard.expected_revisions_from_repo(str(Path(__file__).resolve().parents[1])))
+    except Exception as exc:  # Fail closed to the full delivery.
+        return {"product_lane": f"undetermined ({type(exc).__name__})"}
+    if lane["lane"] != "product":
+        return {"product_lane": lane["reasons"]}
+    if len(heads) != 1:
+        return {"product_lane": f"expected one Alembic head, found {heads}"}
+    return {"decision": "product", "api_sha": "merge", "revision": heads[0],
+            "migrations": lane["migrations"],
+            "reason": "PRODUCT lane: no collector rollout or RAW DDL; verify merged API and repo head"}
+
+
 def git(*args):
     return subprocess.check_output(["git", *args], text=True)
 
@@ -111,6 +135,8 @@ def main(argv=None):
         except (subprocess.CalledProcessError, json.JSONDecodeError):
             head_manifest = None
         result = {"base": base, "merge": args.merge, **decide(rows, head_manifest)}
+        if result["decision"] == "full":
+            result = {**result, **product_decision(base, args.merge)}
     except (subprocess.CalledProcessError, ValueError, OSError) as exc:
         result = {"merge": args.merge, "decision": "full", "files": [],
                   "reason": f"Change set undetermined ({type(exc).__name__})"}

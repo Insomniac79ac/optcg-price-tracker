@@ -20,6 +20,7 @@ from alembic.migration import MigrationContext
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect, select, text
 from sqlalchemy.exc import IntegrityError, OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import sessionmaker
 
 from app.accounts import valuation
@@ -36,11 +37,6 @@ from tests.test_prints import make_canonical, make_print
 
 PARENT = "6c2242f6f439"
 REVISION = "3b7d9c1a5e20"
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-PREFIX = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/"
 D = date(2026, 9, 10)
 
 
@@ -59,18 +55,18 @@ def alembic(url, action, revision):
 @pytest.fixture(scope="module")
 def pg():
     name = "atlas_accounts_" + uuid.uuid4().hex[:10]
-    admin = create_engine(PREFIX + "postgres", isolation_level="AUTOCOMMIT")
+    admin = create_engine(admin_url(), isolation_level="AUTOCOMMIT")
     try:
         with admin.connect() as connection:
             connection.execute(text(f'CREATE DATABASE "{name}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip(f"Disposable PostgreSQL unavailable at {HOST}:{PORT}")
-    engine = create_engine(PREFIX + name)
+        postgres_unavailable(f"Disposable PostgreSQL unavailable at {server_label()}")
+    engine = create_engine(postgres_url(name))
     try:
-        result = alembic(PREFIX + name, "upgrade", "head")
+        result = alembic(postgres_url(name), "upgrade", "head")
         assert result.returncode == 0, result.stdout + result.stderr
-        yield engine, PREFIX + name
+        yield engine, postgres_url(name)
     finally:
         engine.dispose()
         with admin.connect() as connection:

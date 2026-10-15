@@ -71,6 +71,9 @@ class ScopeGitTests(unittest.TestCase):
         run("init", "-q")
         run("config", "user.email", "t@example.invalid")
         run("config", "user.name", "t")
+        # No detached auto-maintenance racing TemporaryDirectory cleanup.
+        run("config", "maintenance.auto", "false")
+        run("config", "gc.auto", "0")
         (root / "docs/agent").mkdir(parents=True)
         (root / MANIFEST).write_text(json.dumps(QUIET))
         (root / "app.py").write_text("x = 1\n")

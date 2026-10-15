@@ -3,11 +3,10 @@
 import socket
 import httpx
 import pytest
-import os
 
-URL = os.environ.get(
-    "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
-)
+from tests.pg_url import postgres_url
+
+URL = postgres_url()
 
 
 @pytest.fixture(autouse=True)

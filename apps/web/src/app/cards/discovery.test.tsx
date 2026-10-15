@@ -10,13 +10,34 @@ vi.mock('@/components/AppHeader',()=>({AppHeader:()=>null}));
 vi.mock('@/lib/prints',async()=>({...await vi.importActual<typeof import('@/lib/prints')>('@/lib/prints'),fetchPrintCatalogue:vi.fn()}));
 vi.mock('@/lib/releases',async()=>({...await vi.importActual<typeof import('@/lib/releases')>('@/lib/releases'),fetchReleases:vi.fn()}));
 const matchMedia=window.matchMedia;
-let intersect: IntersectionObserverCallback;
-const observe=vi.fn();
+// Model only live observers: React creates the sentinel observer in a passive
+// effect after the loaded rows commit, and disconnects it on every re-render
+// or unmount. A module-level "last callback" would leak across tests and could
+// be fired before this render's observer exists.
+type LiveObserver={callback:IntersectionObserverCallback;targets:Element[]};
+const liveObservers=new Set<LiveObserver>();
+async function intersectSentinel(){
+  const live=await waitFor(()=>{
+    const observing=[...liveObservers].find(o=>o.targets.some(t=>t.hasAttribute('data-catalogue-sentinel')));
+    expect(observing).toBeDefined();
+    return observing!;
+  });
+  const entries=live.targets.map(target=>({isIntersecting:true,target}) as unknown as IntersectionObserverEntry);
+  act(()=>live.callback(entries,{} as IntersectionObserver));
+}
 beforeEach(()=>{
   search='';sessionStorage.clear();window.history.replaceState(null,'','/cards');
   vi.mocked(fetchReleases).mockReset().mockResolvedValue(releaseFixture);
   vi.mocked(fetchPrintCatalogue).mockReset().mockImplementation(async p=>catalogueFixture(Array.from({length:24},(_,i)=>printFixture((p?.offset??0)+i+1)),72,p?.offset??0));
-  vi.stubGlobal('IntersectionObserver',class {constructor(cb:IntersectionObserverCallback){intersect=cb;}observe=observe;disconnect=vi.fn();});
+  liveObservers.clear();
+  vi.stubGlobal('IntersectionObserver',class {
+    private live:LiveObserver;
+    constructor(callback:IntersectionObserverCallback){this.live={callback,targets:[]};liveObservers.add(this.live);}
+    observe(target:Element){this.live.targets.push(target);}
+    unobserve(target:Element){this.live.targets=this.live.targets.filter(t=>t!==target);}
+    disconnect(){liveObservers.delete(this.live);}
+    takeRecords(){return [];}
+  });
   HTMLDialogElement.prototype.showModal=vi.fn(function(this:HTMLDialogElement){this.open=true;this.querySelector<HTMLElement>('button')?.focus();});
   HTMLDialogElement.prototype.close=vi.fn(function(this:HTMLDialogElement){this.open=false;});
   vi.spyOn(window,'scrollTo').mockImplementation(()=>{});
@@ -186,7 +207,7 @@ describe('release-first collector discovery',()=>{
   });
   it('intersection appends with no history entry; manual fallback remains and end is explicit',async()=>{
     await ready();const push=vi.spyOn(window.history,'pushState');expect(tiles()).toHaveLength(24);
-    act(()=>intersect([{isIntersecting:true}] as IntersectionObserverEntry[],{} as IntersectionObserver));
+    await intersectSentinel();
     await waitFor(()=>expect(tiles()).toHaveLength(48));expect(push).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button',{name:'Load more'}));await waitFor(()=>expect(tiles()).toHaveLength(72));
     expect(screen.getByText('All 72 card variants in this view loaded.')).toBeInTheDocument();expect(screen.queryByRole('button',{name:'Load more'})).toBeNull();

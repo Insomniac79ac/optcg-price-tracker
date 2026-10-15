@@ -24,6 +24,8 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.exc import IntegrityError, OperationalError
+
+from tests.pg_url import is_local, postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, aliased, mapped_column
 
 from opcg_source_identity.raw_payload import (
@@ -71,18 +73,21 @@ def migration(connection):
 
 @pytest.fixture
 def database(monkeypatch):
-    # This test intentionally cannot be redirected to an arbitrary DB URL.
-    engine = create_engine("postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test")
+    # This test intentionally cannot be redirected to a non-local server.
+    if not is_local():
+        postgres_unavailable(f"raw dictionary tests require a localhost server, not {server_label()}")
+    url = postgres_url()
+    engine = create_engine(url)
     schema = "raw_dictionary_test_" + uuid.uuid4().hex
     try:
         with engine.begin() as connection:
             connection.execute(text(f'CREATE SCHEMA "{schema}"'))
     except OperationalError:
         engine.dispose()
-        pytest.skip("disposable localhost PostgreSQL unavailable")
+        postgres_unavailable(f"disposable localhost PostgreSQL unavailable at {server_label()}")
     engine.dispose()
     engine = create_engine(
-        "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test",
+        url,
         connect_args={"options": f"-csearch_path={schema}"},
     )
     with engine.begin() as connection:
@@ -97,9 +102,7 @@ def database(monkeypatch):
         yield engine
     finally:
         engine.dispose()
-        cleanup = create_engine(
-            "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
-        )
+        cleanup = create_engine(url)
         with cleanup.begin() as connection:
             connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
         cleanup.dispose()

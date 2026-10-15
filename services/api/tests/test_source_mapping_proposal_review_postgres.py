@@ -12,6 +12,7 @@ import os
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
+from tests.pg_url import postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401
@@ -32,10 +33,7 @@ from tests.test_source_mapping_proposal_review import (
     _yuyu,
 )
 
-TEST_POSTGRES_URL = os.environ.get(
-    "TEST_POSTGRES_URL",
-    "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test",
-)
+TEST_POSTGRES_URL = postgres_url()
 
 
 @pytest.fixture()
@@ -45,7 +43,7 @@ def postgres_session():
         with engine.connect():
             pass
     except OperationalError:
-        pytest.skip(f"No PostgreSQL server reachable at {TEST_POSTGRES_URL}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, autoflush=False, autocommit=False)()

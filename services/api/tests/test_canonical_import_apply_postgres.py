@@ -21,6 +21,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import Session
 
 from app.services import canonical_import_apply as A
@@ -29,11 +30,7 @@ from app.services.official_cardlist import OfficialCardEntry, OfficialSeries, Ra
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
+ADMIN_URL = admin_url()
 
 # These tests execute the current ORM, so their disposable schema must include
 # every current model column. Historical migration tests pin revisions separately.
@@ -66,7 +63,7 @@ class _Database:
             conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
             conn.execute(text(f'CREATE DATABASE "{name}"'))
         admin.dispose()
-        self.url = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{name}"
+        self.url = postgres_url(name)
         self.engine = create_engine(self.url)
 
     def close(self) -> None:
@@ -81,7 +78,7 @@ def _new_database(name: str) -> _Database:
     try:
         return _Database(name)
     except OperationalError:
-        pytest.skip(f"No PostgreSQL server reachable at {HOST}:{PORT}")
+        postgres_unavailable(f"No PostgreSQL server reachable at {server_label()}")
 
 
 # --- the fixture corpus ---------------------------------------------------

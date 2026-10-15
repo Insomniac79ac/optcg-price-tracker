@@ -53,6 +53,11 @@ class FixtureRepo:
         self.git("init", "-q")
         self.git("config", "user.name", "Disposable test fixture")
         self.git("config", "user.email", "fixture@example.test")
+        # `git commit` otherwise spawns a detached `git maintenance run --auto`
+        # that can still be writing .git/objects when TemporaryDirectory.cleanup
+        # runs, failing rmtree with "Directory not empty".
+        self.git("config", "maintenance.auto", "false")
+        self.git("config", "gc.auto", "0")
         self.commit(FIXTURE)
         self.base = self.head()
 

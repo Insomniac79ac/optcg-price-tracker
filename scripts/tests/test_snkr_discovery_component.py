@@ -92,6 +92,9 @@ class ComponentVerificationTests(unittest.TestCase):
             git(origin, "init", "-q")
             git(origin, "config", "user.name", "Disposable test fixture")
             git(origin, "config", "user.email", "fixture@example.test")
+            # No detached auto-maintenance racing TemporaryDirectory cleanup.
+            git(origin, "config", "maintenance.auto", "false")
+            git(origin, "config", "gc.auto", "0")
             source = origin / "services/api/fixture.py"
             source.parent.mkdir(parents=True)
             source.write_text("unchanged API bytes\n")
@@ -102,7 +105,10 @@ class ComponentVerificationTests(unittest.TestCase):
             git(origin, "add", ".")
             git(origin, "commit", "-qm", "fixture delivery")
             shallow = root / "shallow"
-            git(root, "clone", "-q", "--depth=1", origin.as_uri(), str(shallow))
+            git(
+                root, "clone", "-q", "-c", "maintenance.auto=false", "-c", "gc.auto=0",
+                "--depth=1", origin.as_uri(), str(shallow),
+            )
             head = git(shallow, "rev-parse", "HEAD")
             with patch.object(check.state, "ROOT", shallow):
                 with self.assertRaises(subprocess.CalledProcessError):

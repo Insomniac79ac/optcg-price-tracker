@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, event, inspect, select, text
 from sqlalchemy.exc import IntegrityError, OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import snapshot_market_index as writer
@@ -23,11 +24,6 @@ from tests.test_snapshot_market_index import catalogue  # noqa: F401
 
 PARENT = "d5f7a9c2e4b6"
 REVISION = "e6a8b0c3d5f7"
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-PREFIX = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/"
 
 
 def alembic(url, action, revision):
@@ -45,16 +41,16 @@ def alembic(url, action, revision):
 @pytest.fixture(scope="module")
 def pg_engine():
     name = "atlas_snapshot_receipt_" + uuid.uuid4().hex[:10]
-    admin = create_engine(PREFIX + "postgres", isolation_level="AUTOCOMMIT")
+    admin = create_engine(admin_url(), isolation_level="AUTOCOMMIT")
     try:
         with admin.connect() as connection:
             connection.execute(text(f'CREATE DATABASE "{name}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip(f"Disposable PostgreSQL unavailable at {HOST}:{PORT}")
-    engine = create_engine(PREFIX + name)
+        postgres_unavailable(f"Disposable PostgreSQL unavailable at {server_label()}")
+    engine = create_engine(postgres_url(name))
     try:
-        alembic(PREFIX + name, "upgrade", "head")
+        alembic(postgres_url(name), "upgrade", "head")
         yield engine
     finally:
         engine.dispose()

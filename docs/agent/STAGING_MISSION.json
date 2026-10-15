@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "mission": "Capacity75 session 13 step 3 (owner decision 2026-10-14): quarantined/blocked refresh work reported as its own category with count and oldest age always visible, excluded from overdue and freshness deadline compliance; real overdue work still fails (state tooling only)",
+ "mission": "Delivery speed-up (owner decision 2026-10-15): two delivery lanes with an automatic product-lane classifier, live-state auto-merge arming, merge-window guard, and test hygiene root-cause fixes. Staging only; no collector release, no migration.",
  "target": "staging",
- "classification": "GREEN",
+ "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -20,32 +20,117 @@
  "impacts": [
   {
    "files": [
-    "scripts/quarantine_reporting.py",
-    "scripts/generate_staging_state.py",
-    "docs/agent/evidence/staging-state-read.sql"
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-delivery.yml"
    ],
    "effects": [
-    "state_observation"
+    "infrastructure"
    ],
-   "reason": "State generator and check_raw_health only. A read-only query lists blocked items of the same ELIGIBLE population as DUE_SQL in the same read-only transaction; they are removed from due/overdue/never_checked/over_24h/deadline_misses and from run-summary misses only when blocked since before the run started and already overdue then (a real miss is never hidden). Quarantine count, overdue/never-checked counts and oldest blocked-since/age are always shown per source, in raw_due_work and in freshness; the freshness-deadline-deficit blocker follows actionable work; a quarantined-refresh-work blocker carries count and oldest time. Fails closed on older evidence or an inconsistent list. No threshold, target, budget or guard change; no database, Railway or Vercel write. The shared aggregate and its SQL (collector runtime inputs) are unchanged: scripts/collector_runtime_inputs.py reports 0 changed runtime inputs for both collectors, so no collector release."
+   "reason": "CI policy only, staging PRs: policy-gate runs the base copy of staging_policy.py + product_lane.py (from a base worktree) and exposes the lane; staging-pr-live reads the live PR before joining card-pirate-staging-delivery (PR #123: same-second push and ready_for_review left one run with a stale head and one with a stale draft flag, nothing armed); staging-credential-presence checks a staging Postgres backup under 24 h for a product migration; staging-automerge disarms auto-merge 19:30-20:30 UTC and re-arms the same head, timeout 240 min; delivery skips collector rollout and RAW DDL for product merges and refuses a full delivery whose manifest did not change; backend/worker tests get REQUIRE_POSTGRES=1 and the worker job a Postgres service. No secret, variable, provider or production destination changes."
   },
   {
    "files": [
-    "scripts/tests/test_quarantine_reporting.py"
+    "scripts/product_lane.py",
+    "scripts/staging_backup_age.py",
+    "scripts/staging_delivery_scope.py",
+    "scripts/staging_policy.py"
+   ],
+   "effects": [
+    "application"
+   ],
+   "reason": "Read-only delivery tooling: product_lane.py (path + import-graph + migration allowlist classifier, fail closed to DATA), staging_policy.py (PRODUCT result when classified so, otherwise today's mission evaluation unchanged), staging_delivery_scope.py ('product' decision), staging_backup_age.py (read-only Railway backup age, prints no credentials). Not collector runtime inputs (scripts/ is not installed in any image)."
+  },
+  {
+   "files": [
+    "scripts/tests/test_collector_runtime_inputs.py",
+    "scripts/tests/test_product_lane.py",
+    "scripts/tests/test_snkr_discovery_component.py",
+    "scripts/tests/test_staging_delivery_scope.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Quarantined items do not count as overdue; real overdue work still fails (DEGRADED, due_work_deficit, not_met, deficit blocker); count and oldest age shown, also when zero; runs keep items blocked after they started or not yet overdue; inconsistent or absent lists exclude nothing; inputs not mutated; sanitize keeps only item fields."
+   "reason": "Classifier tests in both directions on real Git objects and the real import graph (web/tests/docs/allowlisted API -> PRODUCT; collector input, price/identity/MV/Index, wiring, scripts, workflows, manifest, destructive or disguised migrations -> DATA; fail-closed paths). Temp-dir cleanup race in #120 CI (run 38536722191): throwaway repos disable git auto-maintenance."
   },
   {
    "files": [
-    "docs/agent/RAW_OPERATIONAL_HEALTH.md"
+    "apps/web/src/app/cards/discovery.test.tsx",
+    "apps/web/src/components/ui/AppShell.test.tsx"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Test-only: discovery.test.tsx fired the previous test's dead IntersectionObserver (#120 run 38540558115, 24 vs 48 rows); now waits for the live sentinel observer. AppShell.test.tsx: removed invalid `exact` role option (TS2769)."
+  },
+  {
+   "files": [
+    "services/api/tests/_source_identity_guard.py",
+    "services/api/tests/conftest.py",
+    "services/api/tests/freshness_offline.py",
+    "services/api/tests/pg_url.py",
+    "services/api/tests/test_accounts_postgres.py",
+    "services/api/tests/test_alembic_url_forms_postgres.py",
+    "services/api/tests/test_attempt_raw_snapshot_link_migration_postgres.py",
+    "services/api/tests/test_backup_exact_lineage_postgres.py",
+    "services/api/tests/test_canonical_cards_postgres.py",
+    "services/api/tests/test_canonical_import_apply_postgres.py",
+    "services/api/tests/test_canonical_original_set_code_nullable_migration_postgres.py",
+    "services/api/tests/test_canonical_rarity_nullable_migration_postgres.py",
+    "services/api/tests/test_canonical_staging_import_gate.py",
+    "services/api/tests/test_card_pirate_index_points_postgres.py",
+    "services/api/tests/test_card_pirate_index_replay_postgres.py",
+    "services/api/tests/test_card_pirate_index_writer_postgres.py",
+    "services/api/tests/test_database_url_forms_postgres.py",
+    "services/api/tests/test_exact_print_identity_migration_postgres.py",
+    "services/api/tests/test_freshness_migration_postgres.py",
+    "services/api/tests/test_freshness_queue_postgres.py",
+    "services/api/tests/test_mapping_listing_foundation_postgres.py",
+    "services/api/tests/test_market_index_completion_postgres.py",
+    "services/api/tests/test_market_value_persistence_postgres.py",
+    "services/api/tests/test_market_value_writer_postgres.py",
+    "services/api/tests/test_official_artwork_variant_migration_postgres.py",
+    "services/api/tests/test_official_asset_variant_migration_postgres.py",
+    "services/api/tests/test_official_images_lock_postgres.py",
+    "services/api/tests/test_personal_search_ownership_migration.py",
+    "services/api/tests/test_pg_url_parity.py",
+    "services/api/tests/test_plan_canonical_print_import_cli.py",
+    "services/api/tests/test_print_authoritative_lineage_migration_postgres.py",
+    "services/api/tests/test_print_authoritative_lineage_postgres.py",
+    "services/api/tests/test_print_lineage_postgres.py",
+    "services/api/tests/test_print_official_metadata_migration_postgres.py",
+    "services/api/tests/test_promotion_state_migration_postgres.py",
+    "services/api/tests/test_proposal_decision_schema_migration_postgres.py",
+    "services/api/tests/test_raw_dictionary_storage_postgres.py",
+    "services/api/tests/test_release_chronology_postgres.py",
+    "services/api/tests/test_release_product_migration_postgres.py",
+    "services/api/tests/test_release_products_postgres.py",
+    "services/api/tests/test_snkrdunk_print_authoritative_e2e_postgres.py",
+    "services/api/tests/test_source_collection_attempts_postgres.py",
+    "services/api/tests/test_source_mapping_proposal_decision_postgres.py",
+    "services/api/tests/test_source_mapping_proposal_migration_postgres.py",
+    "services/api/tests/test_source_mapping_proposal_review_postgres.py",
+    "services/worker/tests/_source_identity_guard.py",
+    "services/worker/tests/conftest.py",
+    "services/worker/tests/pg_url.py",
+    "services/worker/tests/test_database_url_forms_postgres.py",
+    "services/worker/tests/test_refresh_prices_print_lineage_postgres.py"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Test-only (not installed in any image; 0 collector runtime inputs for SNKRDUNK and Yuyu-Tei by scripts/collector_runtime_inputs.py): conftest fails fast when the imported opcg_source_identity differs from the checkout's packages/opcg_source_identity; one pg_url helper builds every API/worker test DB URL from TEST_POSTGRES_URL and fails instead of skipping with REQUIRE_POSTGRES=1."
+  },
+  {
+   "files": [
+    "docs/agent/AUTONOMY_POLICY.md",
+    "docs/agent/PRODUCT_LOG.md",
+    "docs/agent/STAGING_DELIVERY.md",
+    "docs/operations.md"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "Records the reporting rule and its fail-closed conditions."
+   "reason": "Two delivery lanes in AUTONOMY_POLICY.md and STAGING_DELIVERY.md (data-lane text unchanged), PRODUCT_LOG.md, and the live market-index-snapshot start command (python -m app.market_index_daily_pipeline, checked read-only 2026-10-15) in operations.md."
   }
  ],
  "deployment_verification": {
@@ -59,5 +144,52 @@
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
  },
- "diff_sha256": "d87ff9226d4f602c323b907323cdcb9073c07a665d7d77f513576cc0c48ffa55"
+ "safeguards": {
+  "impact": {
+   "resources": [
+    {
+     "name": "GitHub Actions CI and staging-delivery workflow (policy-gate, staging-pr-live, staging-credential-presence, staging-automerge)"
+    },
+    {
+     "name": "Staging API (services/api/tests change may trigger a watched rebuild; no runtime code change)",
+     "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+    }
+   ],
+   "routes": [
+    "None (no application route changes)"
+   ],
+   "dependencies": [
+    "Base-branch policy evaluation",
+    "collector import graph (scripts/collector_runtime_inputs.py)",
+    "STAGING_RAILWAY_TOKEN read-only backup listing (product migrations only)"
+   ],
+   "deployment_impact": "Workflow and test-only change. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. API may rebuild with identical runtime code; web redeploys through Vercel Git with test-only changes.",
+   "database_writes": 0,
+   "source_requests": 0,
+   "estimated_runtime_minutes": 25
+  },
+  "recovery": {
+   "artifact": "eae22a7ba25fcbb715ed03d9e80055831ab23173",
+   "procedure": "Native revert of this PR restores the previous CI policy (mission manifest required for every PR), arming conditions and tests. No data, schema or service configuration to undo.",
+   "trigger": "Any product-lane classification of a collector input, price/identity/MV/Index path, workflow, script or manifest; a product merge that rolls out a collector or runs DDL; arming failures on valid PRs; red CI from the new REQUIRE_POSTGRES or identity guard.",
+   "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+   "validation": [
+    "scripts/tests/test_product_lane.py",
+    "scripts/tests/test_staging_policy.py",
+    "scripts/tests/test_staging_delivery_scope.py",
+    "services/api/tests/test_pg_url_parity.py"
+   ]
+  },
+  "verification": {
+   "required_checks": [
+    "engineering-gate"
+   ],
+   "post_change": [
+    "scripts/verify_staging_delivery.py",
+    "scripts/generate_staging_state.py"
+   ],
+   "observation_window": "Delivery receipt for this merge with 0 collector rollouts and no RAW DDL; next product-lane PR classified PRODUCT by policy-gate without a manifest and delivered with decision 'product'."
+  }
+ },
+ "diff_sha256": "5edbe5edd3ac249ddc57536b6c96892d7a60205056c53139048d39302e7432b4"
 }

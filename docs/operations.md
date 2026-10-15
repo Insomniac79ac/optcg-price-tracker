@@ -1288,17 +1288,19 @@ warning specifically if the `market_workflow` lock (the longest-running one) is 
 
 ## Scheduled index jobs (Railway cron)
 
-**2026-10-14:** the coordinator `python -m app.market_index_daily_pipeline` is
-the live staging start command of `market-index-snapshot` (checked read-only);
-the chained command below is the earlier baseline. The rest of this section
-predates activation.
+**Live start command (checked read-only 2026-10-15 03:5x UTC, Railway staging
+service `market-index-snapshot` `8d2ee55a-992f-42e0-99a1-99e17df44dd2`):**
 
-An opt-in coordinator is prepared at `python -m app.market_index_daily_pipeline`.
-It is not the configured Railway start command. See [the daily pipeline
-activation checklist](market_value_daily_pipeline.md) for its behavior,
-proposed replacement command, and rollback. The 20:00 UTC schedule described
-below is the expected baseline from this runbook; this code change does not
-verify or alter live Railway configuration.
+```
+python -m app.market_index_daily_pipeline
+```
+
+Schedule `0 20 * * *` UTC, restart policy `NEVER`, API image. The coordinator
+runs the snapshot, its receipt check, Market Value forward publication, the
+Card Pirate Index writer and the collection value stage, in that order; see [the daily pipeline runbook](market_value_daily_pipeline.md)
+for its behavior and rollback. The chained `/bin/sh -c "... && exec ..."`
+command described later in this section is the **pre-2026-10-14 baseline** and
+the rollback target, not the live command.
 
 Market Value forward publication is a separate, unscheduled operator command:
 `python -m app.market_value_publisher --write` (or `--dry-run` to plan only).
@@ -1327,8 +1329,9 @@ described below. Source collectors remain separate; no source fetching occurs in
 the snapshot or completion verifier.
 
 The Market Index snapshot and the Card Pirate Index writer are **one Railway cron service**, not
-two. `market-index-snapshot` runs on the API image at `0 20 * * *` UTC with restart policy `NEVER`,
-and its start command chains both jobs in a single container run:
+two. Before the coordinator went live, `market-index-snapshot` ran on the API image at `0 20 * * *`
+UTC with restart policy `NEVER`, and its start command chained both jobs in a single container run
+(baseline and rollback command):
 
 ```
 /bin/sh -c "python -m app.snapshot_market_index && exec python -m app.card_pirate_index_writer"

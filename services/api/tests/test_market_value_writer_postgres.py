@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.exc import OperationalError
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import market_value_writer as writer
@@ -22,12 +23,7 @@ from tests.test_market_value_persistence import replay_fixture
 
 
 API_ROOT = Path(__file__).resolve().parents[1]
-HOST = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-PORT = os.environ.get("TEST_POSTGRES_PORT", "5544")
-USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
-PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-PREFIX = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/"
-ADMIN_URL = PREFIX + "postgres"
+ADMIN_URL = admin_url()
 RELEASE_ID = 700001
 
 
@@ -52,11 +48,11 @@ def pg_engine():
             connection.execute(text(f'CREATE DATABASE "{name}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip(f"Disposable PostgreSQL unavailable at {HOST}:{PORT}")
+        postgres_unavailable(f"Disposable PostgreSQL unavailable at {server_label()}")
 
-    engine = create_engine(PREFIX + name)
+    engine = create_engine(postgres_url(name))
     try:
-        _alembic(PREFIX + name)
+        _alembic(postgres_url(name))
         with engine.begin() as connection:
             connection.execute(
                 text(

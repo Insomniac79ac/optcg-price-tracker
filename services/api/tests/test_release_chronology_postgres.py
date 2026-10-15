@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from test_release_chronology import accepted_mapping
+from tests.pg_url import admin_url, postgres_unavailable, postgres_url, server_label
 
 API = Path(__file__).resolve().parents[1]
 PARENT = "f2c7d91b6a40"
@@ -19,24 +20,19 @@ FIELDS = "id,source_catalogue,official_code,display_name,first_seen_name,source_
 
 
 def test_chronology_upgrade_downgrade_upgrade():
-    host = os.environ.get("TEST_POSTGRES_HOST", "localhost")
-    port = os.environ.get("TEST_POSTGRES_PORT", "5544")
-    user = os.environ.get("TEST_POSTGRES_USER", "opcg")
-    password = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
-    prefix = f"postgresql+psycopg://{user}:{password}@{host}:{port}/"
     name = "opcg_test_chronology_" + uuid.uuid4().hex[:12]
-    admin = create_engine(prefix + "postgres", isolation_level="AUTOCOMMIT")
+    admin = create_engine(admin_url(), isolation_level="AUTOCOMMIT")
     try:
         with admin.connect() as conn:
             conn.execute(text(f'CREATE DATABASE "{name}"'))
     except OperationalError:
         admin.dispose()
-        pytest.skip("Disposable PostgreSQL unavailable")
-    engine = create_engine(prefix + name)
+        postgres_unavailable(f"Disposable PostgreSQL unavailable at {server_label()}")
+    engine = create_engine(postgres_url(name))
 
     def migrate(action, revision):
         result = subprocess.run([sys.executable, "-m", "alembic", action, revision], cwd=API,
-                                env=dict(os.environ, DATABASE_URL=prefix + name), capture_output=True, text=True, timeout=300)
+                                env=dict(os.environ, DATABASE_URL=postgres_url(name)), capture_output=True, text=True, timeout=300)
         assert result.returncode == 0, result.stdout + result.stderr
 
     def protected_rows():
