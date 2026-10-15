@@ -179,7 +179,7 @@ else
   web_get "/analytics"
   web_get "/cards"
   web_get "/collection"
-  web_get "/collection/vault"
+  web_get "/watchlist"
   web_get "/admin/catalog-ops"
   echo
 fi

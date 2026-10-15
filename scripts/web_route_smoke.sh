@@ -23,16 +23,15 @@ WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:3000}"
 
 CURL_OPTS=(-sS -L --connect-timeout 5 --max-time 15)
 
-# /collection and /wishlist redirect an anonymous visitor (see
-# apps/web/src/proxy.ts) - -L above follows that, so this only verifies
+# /collection, /watchlist and /account redirect an anonymous visitor to
+# sign-in (see apps/web/src/proxy.ts) - -L above follows that, so this only verifies
 # "the app is up and routing works", not that the page itself rendered its
 # signed-in content. Same tradeoff scripts/prod_smoke_test.sh already makes
 # for the same pages.
 ROUTES=(
   /collection
-  /analytics/collection
-  /wishlist
-  /analytics/wishlist
+  /watchlist
+  /account
   /admin/actions
   /admin/backup
   /admin/logs
@@ -56,7 +55,8 @@ for route in "${ROUTES[@]}"; do
   fi
 done
 
-# Routes removed in Collector v1 S1 answer with a permanent (308) redirect.
+# Routes removed in Collector v1 S1 and S8 answer with a permanent (308)
+# redirect (apps/web/src/lib/legacyRedirects.ts).
 # Checked without -L so the redirect itself is verified.
 REDIRECTS=(
   "/dashboard /collection"
@@ -71,6 +71,10 @@ REDIRECTS=(
   "/market/opportunities /analytics"
   "/market/report /analytics"
   "/search /cards"
+  "/collection/vault /collection"
+  "/analytics/collection /collection"
+  "/wishlist /watchlist"
+  "/analytics/wishlist /watchlist"
 )
 for pair in "${REDIRECTS[@]}"; do
   read -r route target <<<"$pair"
