@@ -59,6 +59,18 @@ export async function mintApiToken(identity: CollectorIdentity): Promise<string>
     .sign(apiJwtSecretKey());
 }
 
+/** The pass /api/collector-token-check sends (src/lib/collectorTokenCheck.ts):
+ * signed like a collector's but with a fixed subject and no email, so the API
+ * refuses it after the signature check and before creating a user. */
+export async function mintProbeToken(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject("collector-token-check")
+    .setIssuedAt()
+    .setExpirationTime("60s")
+    .sign(apiJwtSecretKey());
+}
+
 /** Authorization header for the signed-in collector, or null when the caller
  * is not a collector (callers answer 401 without contacting the API). */
 export async function collectorAuthHeaders(): Promise<Record<string, string> | null> {

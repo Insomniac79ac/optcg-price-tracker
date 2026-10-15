@@ -139,3 +139,21 @@ def test_two_users_do_not_see_each_others_collection_items(client, db_session):
     other_response = other_client.get("/collection")
     assert other_response.status_code == 200
     assert other_response.json()["items"] == []
+
+
+def test_website_token_check_pass_is_told_apart_without_provisioning(db_session):
+    """The website's /api/collector-token-check (apps/web) signs a pass with no
+    email and reads these two exact details to tell "the website and the API
+    share API_JWT_SECRET" from "they do not". Rejecting the pass must happen
+    before JIT provisioning, so the check never creates a user."""
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    client = TestClient(app)
+    for secret, detail in ((TEST_API_JWT_SECRET, "Token missing required claims"), ("diverged-secret", "Invalid or expired token")):
+        token = jwt.encode({"sub": "collector-token-check"}, secret, algorithm="HS256")
+        response = client.get("/collection", headers={"Authorization": f"Bearer {token}"})
+        assert response.status_code == 401
+        assert response.json() == {"detail": detail}
+    assert db_session.query(User).filter_by(google_sub="collector-token-check").count() == 0
