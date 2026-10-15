@@ -22,6 +22,7 @@ import staging_db_read_check as guard
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services/api"))
 from app.services import operational_health as health
 from app.services.operational_health_sql import DUE_SQL, EVENT_SQL, BUDGET_SQL
+import quarantine_reporting as quarantine
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "Insomniac79ac/optcg-price-tracker"
@@ -137,6 +138,9 @@ def database_snapshot(expected_revisions=None):
             }
             result["budgets"] = connection.execute(BUDGET_SQL).fetchall()
             result["operational_due"] = connection.execute(DUE_SQL).fetchall()
+            result["quarantined_work"] = connection.execute(
+                quarantine.QUARANTINE_SQL
+            ).fetchall()
             result["operational_runs"] = [
                 row["context_json"] for row in connection.execute(EVENT_SQL).fetchall()
             ]
@@ -418,6 +422,10 @@ def sanitize(evidence):
             "check_older_than_24h",
             "price_older_than_24h",
             "no_listing",
+            "quarantined",
+            "quarantined_never_successfully_checked",
+            "quarantined_check_older_than_24h",
+            "quarantined_oldest_since",
         ],
         "attempts_24h": ["name", "kind", "outcome", "attempts", "latest"],
         "market_value": ["scope_kind", "latest_published_date", "intentional_gap_rows"],
@@ -469,6 +477,11 @@ def sanitize(evidence):
         "duplicate_active_exact_print_source_groups",
         sum(row["card_print_id"] is not None for row in db.get("duplicate_detail", [])),
     )
+    # Absent in evidence recorded before 2026-10-15: quarantine is then not excluded.
+    if "quarantined_work" in db:
+        clean_db["quarantined_work"] = [
+            {k: row.get(k) for k in quarantine.ITEM_FIELDS} for row in db["quarantined_work"]
+        ]
     clean_db["quarantined_identity"] = db.get(
         "quarantined_identity",
         sum(
@@ -563,13 +576,10 @@ def build_state(evidence):
     ]
     snkr = by_name.get("snkrdunk-collector", {})
     front = evidence["frontend"] if isinstance(evidence["frontend"], dict) else {}
-    freshness = {
-        r["name"]: {k: v for k, v in r.items() if k != "name"} for r in db["freshness"]
-    }
-    deficit = any(
-        r["never_successfully_checked"] or r["check_older_than_24h"]
-        for r in freshness.values()
-    )
+    # Quarantined (blocked) work is reported beside the deficit, never inside it.
+    freshness = quarantine.freshness(db["freshness"], db["as_of"][0]["at"])
+    deficit = quarantine.deficit(freshness)
+    quarantined = [r["quarantine"] for r in freshness.values() if "quarantine" in r]
     compliance = (
         "not_met" if deficit else UNKNOWN
     )  # One instant never proves sustained deadline compliance.
@@ -596,6 +606,17 @@ def build_state(evidence):
     if db["quarantined_identity"]:
         blockers.append(
             {"id": "snkrdunk-identity-quarantine", "count": db["quarantined_identity"]}
+        )
+    if sum(q["count"] for q in quarantined):
+        blockers.append(
+            {
+                "id": "quarantined-refresh-work",
+                "scope": "identity-quarantined or contained refresh work; excluded from deadline compliance",
+                "count": sum(q["count"] for q in quarantined),
+                "oldest_blocked_since": min(
+                    q["oldest_blocked_since"] for q in quarantined if q["oldest_blocked_since"]
+                ),
+            }
         )
     if db["duplicate_active_exact_print_source_groups"]:
         blockers.append(
@@ -641,11 +662,13 @@ def build_state(evidence):
     blockers.extend(
         {"id": err, "scope": "snapshot completeness"} for err in evidence["errors"]
     )
-    operational = health.aggregate(
+    operational = quarantine.aggregate(
+        health,
         db.get("operational_due", []),
         db.get("operational_runs", []),
         db["budgets"],
         db["as_of"][0]["at"],
+        db.get("quarantined_work"),
     )
     integrity_reasons = []
     if db["duplicate_active_exact_print_source_groups"]:
