@@ -7,6 +7,7 @@ vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 
 import {
   TOKEN_CHECK_CACHE_MS,
+  TOKEN_CHECK_FAILURE_CACHE_MS,
   TOKEN_CHECK_LIMIT,
   TOKEN_CHECK_WINDOW_MS,
   cachedCollectorTokenCheck,
@@ -109,6 +110,21 @@ describe("cachedCollectorTokenCheck", () => {
     fetchMock.mockImplementation(apiVerifying("railway-copy-that-diverged"));
     expect(await cachedCollectorTokenCheck()).toBe("mismatch");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("cachedCollectorTokenCheck failures", () => {
+  it("keeps a failed answer only for TOKEN_CHECK_FAILURE_CACHE_MS", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    expect(await cachedCollectorTokenCheck()).toBe("unreachable");
+    expect(await cachedCollectorTokenCheck()).toBe("unreachable");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(TOKEN_CHECK_FAILURE_CACHE_MS + 1);
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(apiVerifying(WEB_SECRET));
+    expect(await cachedCollectorTokenCheck()).toBe("ok");
   });
 });
 

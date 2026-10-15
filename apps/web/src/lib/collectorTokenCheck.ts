@@ -41,18 +41,23 @@ export async function checkCollectorToken(): Promise<TokenCheckStatus> {
  * request made the website call the API, and the API counts all website
  * traffic against one shared public-read bucket. */
 export const TOKEN_CHECK_CACHE_MS = 60_000;
+/** Any other answer is kept only briefly, so a failure seen while the API
+ * restarts cannot stick and fail the staging verifier's single read. */
+export const TOKEN_CHECK_FAILURE_CACHE_MS = 5_000;
 
 let cached: { status: TokenCheckStatus; expiresAt: number } | null = null;
 let inflight: Promise<TokenCheckStatus> | null = null;
 
-/** checkCollectorToken, at most once per TOKEN_CHECK_CACHE_MS per server
- * instance; concurrent callers share one API call. */
+/** checkCollectorToken, at most once per TOKEN_CHECK_CACHE_MS (an "ok") or
+ * TOKEN_CHECK_FAILURE_CACHE_MS (anything else) per server instance;
+ * concurrent callers share one API call. */
 export function cachedCollectorTokenCheck(): Promise<TokenCheckStatus> {
   if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.status);
   if (!inflight) {
     inflight = checkCollectorToken()
       .then((status) => {
-        cached = { status, expiresAt: Date.now() + TOKEN_CHECK_CACHE_MS };
+        const ttl = status === "ok" ? TOKEN_CHECK_CACHE_MS : TOKEN_CHECK_FAILURE_CACHE_MS;
+        cached = { status, expiresAt: Date.now() + ttl };
         if (status !== "ok") console.error(`[collector token check] ${status}`);
         return status;
       })
