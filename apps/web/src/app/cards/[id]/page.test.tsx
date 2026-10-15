@@ -805,11 +805,20 @@ describe("CardDetailPage anonymous access", () => {
   it("F. an admin still gets the admin panel", async () => {
     signIn("admin");
     withPrints([ZORO]);
+    fetchAdminSourceMappings.mockResolvedValue({
+      items: [{ id: 1, source_name: "snkrdunk", source_url: "https://example.test/m/1", is_active: true, manual_verified: true }],
+      total: 1,
+      limit: 100,
+      offset: 0,
+      pagination: {},
+    });
 
     render(<CardDetailPage />);
-    await waitFor(() =>
-      expect(screen.getByText("Source mappings (admin)")).toBeInTheDocument(),
-    );
-    expect(fetchAdminSourceMappings).toHaveBeenCalled();
+    // The heading renders with the card, before the passive effect that
+    // fetches the mappings has run, so waiting for it does not order the
+    // fetch. Wait for the fetched row instead: it exists only after the fetch.
+    await waitFor(() => expect(screen.getByText("source link")).toBeInTheDocument());
+    expect(screen.getByText("Source mappings (admin)")).toBeInTheDocument();
+    expect(fetchAdminSourceMappings).toHaveBeenCalledWith({ card_code: "OP01-001" });
   });
 });
