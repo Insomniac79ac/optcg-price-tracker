@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Collector v1 S5 follow-up (owner request 2026-10-15): the staging verifier requires the website's /api/collector-token-check (delivered in #126) to report 'ok', so a diverged API_JWT_SECRET fails delivery; plus the S5 owner steps document. Staging only; no secret, migration, workflow or collector change.",
+ "mission": "Collector v1 S6 (owner request 2026-10-15), API half: a public, read-only GET /cards/{card_id}/print-destination that names the one active print a legacy card reaches through active approved mappings (PLAN B2 rule), or none. The web /cards/{id} page becomes a 308 redirect on top of it in the following product PR. Staging only; no migration, data write, secret, workflow or collector change.",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,30 +20,30 @@
  "impacts": [
   {
    "files": [
-    "scripts/verify_staging_delivery.py"
+    "services/api/app/api/cards.py"
    ],
    "effects": [
-    "state_observation"
+    "application"
    ],
-   "reason": "Staging verifier requires collector-token-check status 'ok' and records it in the receipt. One extra GET to the website; no API fan-out, no write."
+   "reason": "New read-only endpoint on the public cards router; reuses accounts.migrate_legacy.resolve_legacy_cards (same exact-and-unique rule as the legacy copy). No write, no new table, not in either collector's import graph (checked with scripts/collector_runtime_inputs.py)."
   },
   {
    "files": [
-    "scripts/tests/test_verify_staging_delivery.py"
+    "services/api/tests/test_card_print_destination.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Verifier unit test: reads the staging alias route, accepts only 'ok'."
+   "reason": "Exact-unique print, two prints, unmapped and never-resolving mappings, unknown id 404, parity with the legacy copy rule."
   },
   {
    "files": [
-    "docs/agent/handoff/2026-10-15/collector-v1-s5/OWNER_STEPS.md"
+    "services/api/tests/test_private_read_route_auth.py"
    ],
    "effects": [
-    "documentation"
+    "tests"
    ],
-   "reason": "Owner click-by-click steps: S5 re-test, secret rotations in safe order with owner-visible or CI verification, test-account deletion. No secret values."
+   "reason": "Declares the new unauthenticated read as explicitly public."
   }
  ],
  "deployment_verification": {
@@ -57,5 +57,5 @@
   "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
   "yuyu_capacity_cadence": true
  },
- "diff_sha256": "948d91d1e85fea37f9c57832d84707502d1f90a17dd889603360bea2233d766e"
+ "diff_sha256": "06c8097925ae3186058583a173a64464d758cd092f2d306cbaa1b80ecd8ae1ad"
 }

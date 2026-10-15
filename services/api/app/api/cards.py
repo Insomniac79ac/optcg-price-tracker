@@ -1,6 +1,11 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.accounts.migrate_legacy import resolve_legacy_cards
 
 from app.auth import require_current_user, require_current_user_optional
 from app.core.pagination import pagination_response
@@ -124,6 +129,39 @@ def get_card(
     card = _get_card_or_404(db, card_id)
     tags_by_card = get_tags_for_cards(db, {card_id}, user_id=user.id) if user else {}
     return _to_card_out(card, tags_by_card.get(card_id, []))
+
+
+class CardPrintDestinationOut(BaseModel):
+    card_id: int
+    card_code: str
+    card_print_id: int | None
+    resolution: Literal["exact", "multiple_prints", "no_print"]
+
+
+@router.get("/{card_id}/print-destination", response_model=CardPrintDestinationOut)
+def get_card_print_destination(card_id: int, db: Session = Depends(get_db)):
+    """Where the retired web page ``/cards/{card_id}`` sends a visitor.
+
+    Collector v1 S6 (PLAN E1, B2): ``card_print_id`` is set only when the
+    legacy card reaches exactly one active card print through active, approved,
+    unsuperseded source mappings - the same rule the legacy collection copy
+    uses (``resolve_legacy_cards``). Card-code matching is never used to pick
+    a print; ``card_code`` is returned so the page can fall back to the
+    code's version chooser. Unknown id: 404. Read-only and public: it exposes
+    nothing the public print and catalogue pages do not already show.
+    """
+    card = _get_card_or_404(db, card_id)
+    prints = resolve_legacy_cards(db, {card_id}).get(card_id, set())
+    if len(prints) == 1:
+        return CardPrintDestinationOut(
+            card_id=card_id, card_code=card.card_code, card_print_id=next(iter(prints)), resolution="exact"
+        )
+    return CardPrintDestinationOut(
+        card_id=card_id,
+        card_code=card.card_code,
+        card_print_id=None,
+        resolution="multiple_prints" if prints else "no_print",
+    )
 
 
 @router.get("/{card_id}/market-index", response_model=MarketIndexOut)

@@ -46,6 +46,7 @@ PUBLIC_READ_ALLOWLIST = {
     "/cards/{card_id}",  # optional session: the caller's own tags only
     "/cards/{card_id}/market-index",
     "/cards/{card_id}/prices",
+    "/cards/{card_id}/print-destination",  # retired /cards/{id} redirect target (S6)
     "/prints",
     "/prints/{print_id}",
     "/prints/{print_id}/analytics",
