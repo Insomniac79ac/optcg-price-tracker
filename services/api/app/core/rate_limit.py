@@ -9,17 +9,21 @@ Requests are classified into one of four route groups (see classify_route)
 based on path + method, each with its own limit/window read live from
 Settings (so tests can monkeypatch settings.RATE_LIMIT_* and see the change
 immediately, and so RATE_LIMIT_ENABLED=false can be toggled without a
-restart). Within a group, requests are keyed by client IP using a fixed
-window counter: cheap, bounded memory, and precise enough for basic abuse
+restart). Within a group, requests are keyed by client IP (or, for /me,
+by the signed-in collector - see _rate_limit_key) using a fixed window
+counter: cheap, bounded memory, and precise enough for basic abuse
 hardening (as opposed to a sliding-log window, which would need unbounded
 per-IP timestamp lists).
 """
 
 from __future__ import annotations
 
+import hashlib
 import math
 import time
 from dataclasses import dataclass
+
+import jwt
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -47,16 +51,16 @@ IMPORT_EXPORT_PATHS = frozenset(
         "/admin/backup/validate",
         "/admin/backup/restore",
         "/admin/db-backups",
-        "/collection/import.csv",
-        "/collection/export.csv",
-        "/wishlist/import.csv",
-        "/wishlist/export.csv",
     }
 )
 
-# Non-admin write endpoints for collection/wishlist/grading/notes - see
-# app.api.collection, app.api.wishlist, app.api.grading, app.api.collector_notes.
-COLLECTION_WRITE_PREFIXES = ("/collection", "/wishlist", "/grading", "/collector/notes")
+# The signed-in collector's own data (app.accounts.router, prefix /me).
+# Writes go to "collection_write", reads to "public_read"; the account export
+# (JSON and per-section CSV) and account deletion go to the strictest
+# "import_export" group. Every /me request is keyed by the collector it is
+# for, not by IP: the website calls /me server-to-server, so every collector
+# arrives from the same few platform egress addresses.
+ME_PREFIX = "/me"
 
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
@@ -71,20 +75,35 @@ def is_admin_path(path: str) -> bool:
 
 def classify_route(path: str, method: str) -> str | None:
     """Maps a request to one of the four rate-limit groups, or None if it
-    isn't rate limited at all (health check, or a write endpoint outside the
-    groups the spec defines - deliberately left uncovered rather than
-    guessing at a group for them)."""
+    isn't rate limited at all (health check, or a non-/me write endpoint
+    outside the groups the spec defines - deliberately left uncovered rather
+    than guessing at a group for them)."""
     if path in EXEMPT_PATHS:
         return None
     if path in IMPORT_EXPORT_PATHS:
         return "import_export"
     if is_admin_path(path):
         return "admin"
+    if is_me_path(path):
+        if is_me_account_path(path, method):
+            return "import_export"
+        if method in WRITE_METHODS:
+            return "collection_write"
     if method == "GET":
         return "public_read"
-    if method in WRITE_METHODS and path.startswith(COLLECTION_WRITE_PREFIXES):
-        return "collection_write"
     return None
+
+
+def is_me_path(path: str) -> bool:
+    return path == ME_PREFIX or path.startswith(ME_PREFIX + "/")
+
+
+def is_me_account_path(path: str, method: str) -> bool:
+    """Account export (GET /me/export, /me/export/<section>.csv) and account
+    deletion (DELETE /me): the most expensive and most sensitive /me calls."""
+    if method == "DELETE" and path.rstrip("/") == ME_PREFIX:
+        return True
+    return method == "GET" and (path == "/me/export" or path.startswith("/me/export/"))
 
 
 @dataclass(frozen=True)
@@ -228,6 +247,36 @@ def rate_limit_status() -> dict:
     }
 
 
+def _collector_key(request: Request) -> str | None:
+    """Rate-limit key for a /me request: a digest of the collector subject in a
+    bearer token whose signature and expiry verify as in
+    app.auth.require_current_user (HS256, API_JWT_SECRET; the route also
+    requires an email claim). None when it does not verify; such a
+    request is keyed by IP and is refused with 401 by the route itself."""
+    secret = settings.API_JWT_SECRET
+    authorization = request.headers.get("authorization") or ""
+    if not secret or not authorization.startswith("Bearer "):
+        return None
+    try:
+        payload = jwt.decode(authorization.removeprefix("Bearer ").strip(), secret, algorithms=["HS256"])
+    except jwt.InvalidTokenError:
+        return None
+    sub = payload.get("sub")
+    if not isinstance(sub, str) or not sub:
+        return None
+    return "user:" + hashlib.sha256(sub.encode()).hexdigest()[:32]
+
+
+def _rate_limit_key(request: Request) -> str:
+    if is_me_path(request.url.path):
+        key = _collector_key(request)
+        if key:
+            return key
+    # Prefixed so a client-chosen X-Forwarded-For value can never name a
+    # collector's "user:" bucket.
+    return "ip:" + _client_ip(request)
+
+
 def _client_ip(request: Request) -> str:
     # Behind a reverse proxy, the real client IP arrives via
     # X-Forwarded-For (first hop = original client) - see 'Rate limiting'
@@ -250,16 +299,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if group is None:
             return await call_next(request)
 
-        client_ip = _client_ip(request)
-        result = _limiter.check(group, client_ip)
+        key = _rate_limit_key(request)
+        result = _limiter.check(group, key)
 
         if not result.allowed:
-            if _limiter.should_log_429(group, client_ip, result.window_index):
+            if _limiter.should_log_429(group, key, result.window_index):
                 record_app_log(
                     "warning",
                     "api",
                     "rate_limit",
-                    f"Rate limit exceeded for group '{group}' from {client_ip}.",
+                    f"Rate limit exceeded for group '{group}' from {key}.",
                     context={"group": group, "limit": result.limit},
                 )
             response: Response = JSONResponse(

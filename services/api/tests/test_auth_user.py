@@ -1,10 +1,16 @@
 import jwt
+from sqlalchemy import func, select
 
 from app.models import User
 
 # Any signed-in route will do; the legacy /collection router went in Collector v1 S8.
 AUTHED = "/saved-views"
-from tests._auth_helpers import TEST_API_JWT_SECRET, TEST_USER_EMAIL, TEST_USER_GOOGLE_SUB, make_bearer_token
+from tests._auth_helpers import (
+    TEST_API_JWT_SECRET,
+    TEST_USER_EMAIL,
+    TEST_USER_GOOGLE_SUB,
+    make_bearer_token,
+)
 
 
 def test_missing_bearer_token_returns_401(db_session):
@@ -149,3 +155,41 @@ def test_website_token_check_pass_is_told_apart_without_provisioning(db_session)
         assert response.status_code == 401
         assert response.json() == {"detail": detail}
     assert db_session.query(User).filter_by(google_sub="collector-token-check").count() == 0
+
+
+def test_concurrent_first_requests_share_one_new_user(db_session):
+    """A new collector's first page sends several /me requests at once; each
+    finds no row and inserts one. The losers must use the winner's row, not
+    fail with a 500 whose message carries the email (2026-10-16 audit F1)."""
+    from app.auth import _get_or_create_user
+
+    db_session.add(User(google_sub="race-sub", email="race@example.com", name="Race"))
+    db_session.commit()
+    winner_id = db_session.scalar(select(User.id).where(User.google_sub == "race-sub"))
+
+    real_scalar = db_session.scalar
+    calls = {"n": 0}
+
+    def miss_first_lookup(statement, *args, **kwargs):
+        # Simulates the lookup running before the other request committed.
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real_scalar(statement, *args, **kwargs)
+
+    db_session.scalar = miss_first_lookup
+    user = _get_or_create_user(db_session, google_sub="race-sub", email="race@example.com", name="Race")
+
+    assert user.id == winner_id
+    db_session.scalar = real_scalar
+    assert db_session.scalar(select(func.count()).select_from(User).where(User.google_sub == "race-sub")) == 1
+
+
+def test_an_email_held_by_another_account_is_a_409_without_details(client, db_session, monkeypatch):
+    monkeypatch.setenv("COLLECTOR_ACCOUNTS_ENABLED", "true")
+    db_session.add(User(google_sub="first-sub", email="shared@example.com", name="First"))
+    db_session.commit()
+    token = make_bearer_token(google_sub="second-sub", email="shared@example.com")
+
+    response = client.get("/me/profile", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 409
+    assert "shared@example.com" not in response.text

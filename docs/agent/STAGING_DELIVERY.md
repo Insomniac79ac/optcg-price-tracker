@@ -118,6 +118,18 @@ and re-arms the same head, so no merge lands in the market-index window; the
 30-minute merge budget is extended by the held time and the job timeout is
 240 minutes.
 
+**Owner hold (2026-10-15).** A PR labelled `hold-for-owner` is never armed: `staging-pr-live`
+reports it as not current, so `staging-credential-presence` and `staging-automerge` skip and the
+owner merges by hand. After a hand merge, `Verify staging merge` (push to `staging`) verifies the
+head and regenerates state as usual. Agents may add the label, never remove it
+(`.claude/hooks/guard.py`).
+
+**Web smoke (2026-10-15).** After the delivery verification, `staging-automerge`, the reusable
+delivery workflow and `Verify staging merge` run `scripts/staging_web_smoke.py`: signed out, `/`,
+`/cards`, `/prints/5661` and `/sign-in` render; `/account`, `/collection` and `/watchlist` land on
+`/sign-in?callbackUrl=<path>`; first-screen images on `/cards` and the print page load. The receipt
+is `latest-web-smoke.json` in the delivery artifact. It is also the `web-smoke` ops runbook.
+
 ## Activation boundary — currently blocked
 
 Observed GitHub facts: native auto-merge is false, staging is unprotected, and the
