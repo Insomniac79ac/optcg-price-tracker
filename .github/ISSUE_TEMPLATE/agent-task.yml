@@ -1,0 +1,47 @@
+name: Agent task
+description: A task for a Claude Code cloud session (staging only).
+title: "Agent task: "
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true when this is done, in plain words.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable statements (tests, a staging URL, a receipt, a runbook result).
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: dropdown
+    id: lane
+    attributes:
+      label: Lane
+      description: CI decides (scripts/product_lane.py); any doubt is DATA. See docs/agent/AUTONOMY_POLICY.md.
+      options:
+        - PRODUCT (apps/web, API outside the collector import graph, tests, docs outside docs/agent)
+        - DATA (collectors, identity, prices, Market Value/Index, migrations, CI/.github/.claude, scripts, docs/agent)
+        - Not sure (treat as DATA)
+    validations:
+      required: true
+  - type: textarea
+    id: owner_checks
+    attributes:
+      label: Owner checks
+      description: What the owner must do or decide (merge by hand, approve an ops-write run, a RED decision, a setting). "None" if nothing.
+      placeholder: None
+    validations:
+      required: true
+  - type: textarea
+    id: limits
+    attributes:
+      label: Out of scope / limits
+      description: Anything the agent must not touch. Staging only; production is RED; PSA10 stays OFF.
+    validations:
+      required: false

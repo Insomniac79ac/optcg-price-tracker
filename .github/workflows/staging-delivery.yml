@@ -185,11 +185,14 @@ jobs:
                           '--output', 'docs/agent/evidence/latest-staging-delivery.json',
                           '--scope', 'docs/agent/evidence/latest-delivery-scope.json', *extra], check=True)
           PY
+      - name: Signed-out website smoke (public pages, sign-in redirects, card images)
+        run: python scripts/staging_web_smoke.py --output docs/agent/evidence/latest-web-smoke.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: staging-delivery-${{ steps.merge.outputs.sha }}
           path: |
+            docs/agent/evidence/latest-web-smoke.json
             docs/agent/CURRENT_STATE.yaml
             docs/agent/evidence/latest-staging-delivery.json
             docs/agent/evidence/latest-collector-rollout.json
