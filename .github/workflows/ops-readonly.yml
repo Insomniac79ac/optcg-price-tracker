@@ -47,6 +47,12 @@ on:
         description: Free text shown in the run name, to find this run again
         type: string
         default: ""
+  # workflow_dispatch reaches only a workflow GitHub has registered, and the default branch
+  # (main) does not carry this file. A push to staging that changes it registers it; every
+  # job is skipped on that push.
+  push:
+    branches: [staging]
+    paths: [.github/workflows/ops-readonly.yml]
 
 permissions:
   contents: read
@@ -57,7 +63,9 @@ concurrency:
 
 jobs:
   runbook:
-    if: github.repository == 'Insomniac79ac/optcg-price-tracker' && github.ref == 'refs/heads/staging'
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.repository == 'Insomniac79ac/optcg-price-tracker'
+      && github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # The staging read credentials live in this Environment; it holds no production secret.

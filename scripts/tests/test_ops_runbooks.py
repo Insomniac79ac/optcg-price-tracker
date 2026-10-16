@@ -146,6 +146,14 @@ class WorkflowsMatchRegistry(unittest.TestCase):
         self.assertIn("environment: staging-ops", approval)
         self.assertNotIn("secrets.", approval)
         self.assertIn("needs: owner-approval", runbook)
+        # The push trigger only registers the workflow (dispatch needs it); no job runs on push.
+        import yaml
+        for name in ("ops-readonly.yml", "ops-write.yml"):
+            data = yaml.safe_load((ROOT / ".github/workflows" / name).read_text())
+            self.assertEqual(data[True]["push"], {"branches": ["staging"], "paths": [f".github/workflows/{name}"]})
+            for job_name, job in data["jobs"].items():
+                gate = job.get("if") or ("needs" in job and data["jobs"][job["needs"]]["if"])
+                self.assertTrue(gate.startswith("github.event_name == 'workflow_dispatch' && "), job_name)
         # Free-text inputs reach the shell only through env, never inline expressions.
         for text in (ro, rw):
             for line in text.splitlines():
