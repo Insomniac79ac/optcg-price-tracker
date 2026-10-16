@@ -148,19 +148,29 @@ retried one package at a time:
   never reaches network idle because a request for `/sign-in` (the header's Sign in link,
   `components/ui/TopBar.tsx`) never completes on staging.
 
-So the cause is Next.js 16.3.x together with the `/sign-in` route on Vercel. Locally
-(`next start`, stub API), clicking Sign in on 16.3.8 renders in 0.2 s. The one
-difference seen there: 16.3 answers the link's plain `/sign-in?callbackUrl=...` RSC
-request with a 307 to an `_rsc`-hashed URL, which 16.2.12 does not. That suggests the
-hang is in how Vercel handles that redirect or the hashed request; it is inferred, not
-confirmed. The Vercel request logs for `/sign-in` between 14:00 and 14:02Z on
-2026-10-16 would settle it.
+#140 and #151 failed identically: the same step ("Verify native Git deployment and
+regenerate state"), a `TimeoutError` (not wrong content) about 95-105 s into the
+verifier, which is where its first browser pass runs. #140's receipt predates the stage
+labels, so only #151 names the page (`/`) and the stuck request (`/sign-in`).
 
-Advisories still open on Next.js 16.2.12 (`npm audit --omit=dev`):
+So the trigger is Next.js 16.3.x together with the `/sign-in` request on Vercel. What
+16.3 changes that our site trips on is still unknown. The CI logs carry no Vercel build
+or function logs, and the receipt artifacts are out of reach from a cloud session.
+Locally (`next start`, stub API), clicking Sign in on 16.3.8 renders in 0.2 s, and a
+fresh first load of `/` reaches network idle on both versions. The one difference seen:
+16.3 answers the Sign in link's plain `/sign-in?callbackUrl=...` RSC request with a 307
+to an `_rsc`-hashed URL, and 16.2.12 does not. That is a lead, not a confirmed cause. The
+Vercel request log for `/sign-in` between 14:00 and 14:02Z on 2026-10-16 would settle
+it.
+
+Original high/critical Next.js advisories already fixed by 16.2.12 (live since #148):
+GHSA-6gpp-xcg3-4w24 (proxy bypass), GHSA-89xv-2m56-2m9x (Server Actions SSRF),
+GHSA-m99w-x7hq-7vfj (Server Actions DoS), GHSA-p9j2-gv94-2wf4 (rewrites SSRF), all high.
+Those that genuinely need 16.3.x, and the rest still open (`npm audit --omit=dev`):
 
 | Advisory | Severity | Fixed in | Reachable here? | Interim mitigation |
 |---|---|---|---|---|
-| GHSA-vcvr-r3jv-pc5j, RCE in `next/og` ImageResponse | critical | 16.3.6 | Yes: `/share/[kind]/[id]` renders share cards with `ImageResponse` | The route only accepts `print`/`release` with a numeric id or `market/overall`, and renders text and artwork from our own API. Turning share images off until the upgrade is the safe option if the advisory turns out to need no attacker input |
+| GHSA-vcvr-r3jv-pc5j, RCE in `next/og` ImageResponse (CWE-1395: a vulnerable bundled component) | critical | 16.3.6 | The path is reachable: `/share/[kind]/[id]` renders with `ImageResponse`. Attacker input is limited: the route accepts only `print`/`release` with a numeric id or `market/overall`, text comes from our API, fonts are local, and artwork is accepted only as PNG/JPEG/WebP and re-encoded to PNG by our patched sharp 0.35.5 (`lib/socialArtwork.ts`) | Smallest safe fix: serve share images from a static fallback until 16.3.6+ (owner decision) |
 | GHSA-2xp9-vwfh-vxw4, RCE in image optimisation with AVIF | critical | 16.3.3 | No on Vercel: `/_next/image` is served by Vercel's optimiser, and `next.config.ts` sets no `images` formats or remote patterns | Keep `images` unset; do not self-host the web app on 16.2.x |
 | GHSA-p293-qw3h-jr36, RCE on Windows-hosted servers | critical | 16.3.3 | No: Vercel runs Linux | None needed |
 | GHSA-cjq9-62q9-8jv4, SSRF in image optimisation | high | 16.3.8 | No on Vercel (as above); no `remotePatterns` | Keep `images.remotePatterns` unset |
@@ -170,9 +180,12 @@ Advisories still open on Next.js 16.2.12 (`npm audit --omit=dev`):
 | Next's nested sharp 0.34.5 (GHSA-f88m, -rgj7, -wq5f) and postcss | high/moderate | Next 16.3 | No on Vercel: used by Next's own image optimiser and build | Same as GHSA-2xp9 |
 | browserslist, source-map-js, baseline-browser-mapping, nanoid | high/moderate | lockfile refresh | No: build-time tooling, not served | Refresh the lockfile in a later dependency PR |
 
-Next step for the upgrade: find why `/sign-in` hangs on Vercel under 16.3 (the request
-log above), fix that route or its link (for example `prefetch={false}` if the prefetch is
-the request), then retry 16.3.8 alone.
+16.3.x is parked as a follow-up. Next step: find why `/sign-in` hangs on Vercel under
+16.3 (the request log above), fix that route or its link (for example `prefetch={false}`
+if the prefetch is the request), then retry 16.3.8 alone. The reachability for
+GHSA-2xp9, GHSA-cjq9 and Next's nested sharp assumes Vercel serves `/_next/image` with
+its own optimiser, which is how Vercel documents it; that was not checked against the
+staging project's settings.
 
 ## Fix PRs
 
