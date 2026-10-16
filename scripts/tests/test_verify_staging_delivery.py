@@ -12,6 +12,15 @@ from verify_staging_delivery import validate_state, get, state, wait_for_deliver
 
 
 class VerificationTests(unittest.TestCase):
+    def test_masked_failure_names_the_stage_but_not_the_error_text(self):
+        import verify_staging_delivery as v
+        v.step("browser warm-up /prints/5661")
+        message = v.failure_message(TimeoutError("token=hunter2 https://internal.example/x"))
+        self.assertIn("(TimeoutError) during browser warm-up /prints/5661", message)
+        self.assertNotIn("hunter2", message)
+        self.assertNotIn("internal.example", message)
+        v.step("start")
+
     def test_collector_token_check_requires_the_api_to_accept_the_website_pass(self):
         seen = []
         read = lambda url: seen.append(url) or {"status": "ok"}
