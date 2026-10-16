@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import common, diagnostic, enqueue_remaining, fleet, official_images, replan, run, storage_rates  # noqa: E402
+from ops import common, diagnostic, enqueue_remaining, fleet, official_images, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -135,6 +135,13 @@ class WorkflowsMatchRegistry(unittest.TestCase):
         self.assertEqual(self.options("ops-write.yml", "runbook"),
                          [n for n, v in run.RUNBOOKS.items() if v[0] == "write"])
         self.assertEqual(self.options("ops-readonly.yml", "diagnostic"), diagnostic.available())
+
+    def test_delivery_workflows_have_runs_of_their_own(self):
+        # A workflow_call-only workflow has no runs endpoint (404), which fails the preflight closed.
+        import yaml
+        for name in run.DELIVERY_WORKFLOWS:
+            data = yaml.safe_load((ROOT / ".github/workflows" / name).read_text())
+            self.assertTrue(set(data[True]) - {"workflow_call"}, name)
 
     def test_gates(self):
         ro = (ROOT / ".github/workflows/ops-readonly.yml").read_text()
@@ -379,6 +386,31 @@ class FleetAndImages(unittest.TestCase):
         node["latestDeployment"]["status"] = "SUCCESS"
         self.assertTrue(official_images.summarize(node, [], {"healthy": True}, {"n": 1})["healthy"])
         self.assertFalse(official_images.summarize(None, [], {}, {})["healthy"])
+
+    def test_images_brief_dates_recent_runs(self):
+        node = {"latestDeployment": {"id": "x", "status": "SUCCESS"}}
+        recent = [{"id": "x", "status": "SUCCESS", "createdAt": "2026-10-16T07:15:02Z"}]
+        result = official_images.summarize(node, recent, {"healthy": True}, {"n": 1})
+        out = official_images.brief(result, {"healthy": True}, {"n": 1})
+        self.assertEqual(out["recent_runs"], [{"status": "SUCCESS", "created_at": "2026-10-16T07:15:02Z"}])
+
+
+class StagingStateSummary(unittest.TestCase):
+    def snapshot(self, blockers):
+        return {"verified_at": "t", "blockers": blockers, "evidence": {"sha256": "e"},
+                "operational_health": {"yuyu": {"status": "HEALTHY"}}}
+
+    def test_quarantine_count_and_age_in_summary(self):
+        blockers = [{"id": "snkrdunk-identity-quarantine", "count": 23},
+                    {"id": "quarantined-refresh-work", "scope": "s", "count": 69,
+                     "oldest_blocked_since": "2026-10-02T15:54:00Z"}]
+        out = staging_state.summary(self.snapshot(blockers), {"repository": {"sha": "h"}}, {"mission_actions": []})
+        self.assertEqual(out["blockers"], ["snkrdunk-identity-quarantine", "quarantined-refresh-work"])
+        self.assertEqual(out["quarantined_refresh_work"], {"count": 69, "oldest_blocked_since": "2026-10-02T15:54:00Z"})
+
+    def test_no_quarantine_blocker(self):
+        out = staging_state.summary(self.snapshot([]), {"repository": {"sha": "h"}}, {"mission_actions": []})
+        self.assertIsNone(out["quarantined_refresh_work"])
 
 
 if __name__ == "__main__":

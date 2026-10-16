@@ -64,7 +64,14 @@ def run(out_dir):
     result = {"observed_at": state.timestamp(), "read_only": True, "source_requests": 0, "database_writes": 0,
               **summarize(node, recent, health, assets)}
     common.write_json(Path(out_dir) / "official-images-status.json", result)
+    return brief(result, health, assets)
+
+
+def brief(result, health, assets):
+    """The ops-summary, with each recent run's start time so REST readers can date the latest run."""
     return {"latest_run": result["latest_run"], "latest_run_failed": result["latest_run_failed"],
+            "recent_runs": [{"status": r.get("status"), "created_at": r.get("createdAt")}
+                            for r in result["recent_runs"]],
             "check_healthy": health.get("healthy"), "prints_checked": health.get("prints_checked"),
             "missing_copy": health.get("missing_copy"), "digest_mismatch": health.get("digest_mismatch"),
             "assets": assets.get("n"), "last_mirrored_at": assets.get("last_mirrored_at"),
