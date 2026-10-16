@@ -6,6 +6,9 @@ settings, staging writes, source jobs or PR.
 
 Revision 2 (14:48-15:00Z): live retry after the owner widened network access. Revision 1
 (desk study, commit `2d1e451`) is superseded where this says so.
+Revision 3 (15:12-15:25Z): Dorasuta buyback follow-up (§2.6) and owner email drafts
+(Appendix A: Aucfan, Appendix B: magi). There is no separate Dorasuta plan: the combined plan
+on `plan/new-sources` (CardRush thread) reads from this file.
 
 Evidence labels:
 - **MEASURED**: observed in this session (requests logged in §7), or read from the repo / an
@@ -37,6 +40,9 @@ Evidence labels:
 5. **Storage:** Dorasuta fits if captured "light" (top page daily, full sweep weekly, ~1 MB/day).
    A daily full sweep at plain gzip (~6.5 MB/day) does not fit at stress B. Aucfan on top still
    fits, with a thin margin (+46 MB). All ESTIMATE from MEASURED page sizes.
+6. **Revision 3:** the Dorasuta buyback audit still could not run (buy.dorasuta.jp refused by
+   the network policy at 15:13Z; 0 requests reached it, §2.6). Email drafts for Aucfan and magi
+   are in Appendices A and B, Japanese first; nothing has been sent.
 
 ---
 
@@ -49,7 +55,7 @@ legal route exists now.
 |---|---|---|---|---|---|---|---|
 | 1 | **Dorasuta asks** (dorasuta.jp) | Shop **ask**, raw; condition tiers 状態A / 状態A特価 / 状態C(プレイ用); stock count | **Medium, MEASURED**: Spearman 0.984 (same ordering) but median abs diff 25%, 10/18 >20% apart, median ratio 0.87 | **ESTIMATE 85-95%**: every set has a list (60 series MEASURED); every OP-05 print code checked has a row; 6/24 checked prints have a Dorasuta ask but no Yuyu price | robots.txt has no `*` rules (open); member terms Art. 7 bans unlawful/unfair access, nothing on scraping or reproduction; catch-all 「その他当社が不適切と判断すること」 | **~1.0 MB light**; ~10 MB once (ESTIMATE from MEASURED 24 KB gzip/page) | **Low-medium**: server HTML, GET pagination, card number in name |
 | 2 | **Aucfan** (licence) | **Sold** (Yahoo! Auctions, flea markets), raw + graded mixed in titles | **High** (ESTIMATE): auction clearing | ESTIMATE 35-55% with a sale in 30 d | **Contract only.** 429 on the first anonymous request (MEASURED); prices paywalled; data sold commercially (UNVERIFIED) | ~1.0 MB (JSON, ESTIMATE); ~10 MB | High: free-text titles, grade split |
-| 3 | Dorasuta **buyback** (buy.dorasuta.jp) | **Buyback**, raw | ESTIMATE medium-high (different signal type) | ESTIMATE 25-45% | Not audited: host refused by network policy (MEASURED) | ~0.1 MB weekly (ESTIMATE) | Low-medium |
+| 3 | Dorasuta **buyback** (buy.dorasuta.jp) | **Buyback**, raw | ESTIMATE medium-high (different signal type) | ESTIMATE 25-45% | Not audited: host still refused by network policy on the 15:13Z retry (MEASURED, §2.6); WEB買取 rules readable on dorasuta.jp | ~0.1 MB weekly (ESTIMATE) | Low-medium |
 | 4 | **magi** | **Sold** C2C (item JSON `status: traded`, price, `updated_at`), asks; PSA10-heavy | High (ESTIMATE) | Only ~384 active listings browsable without search (MEASURED: 1 singles series, 4 pages × 96) | **Permission only.** robots.txt disallows `/items/search` and `/products/search` for Claude-User, anthropic-ai, ClaudeBot, GPTBot…; terms Art. 8(v) and (dd) (MEASURED) | n/a without consent | High |
 | 5 | **Suruga-ya** | Multi-shop asks + buyback (UNVERIFIED) | ESTIMATE medium | ESTIMATE 70-90% | **403 on the first request** (MEASURED); stopped | — | — |
 | 6 | **Fullahead** | Shop asks + buyback (UNVERIFIED) | ESTIMATE low | ESTIMATE 70-90% | Not audited: refused by network policy (MEASURED) | — | — |
@@ -140,9 +146,48 @@ legal route exists now.
   Revision 1's desk notes stand (per-print product pages with multi-shop prices; a suspicious
   ¥100-620 snippet for OP01-120 SEC).
 
-### 2.5 Fullahead, Dorasuta buyback, Yuyu-Tei — not reached
-- `www.fullahead-tcg.com`, `buy.dorasuta.jp`, `yuyu-tei.jp`: proxy 403 on CONNECT (MEASURED
-  14:48-14:49Z). Not requests to the sites.
+### 2.5 Fullahead, Yuyu-Tei — not reached
+- `www.fullahead-tcg.com`, `yuyu-tei.jp`: proxy 403 on CONNECT (MEASURED 14:48-14:49Z). Not
+  requests to the sites. Dorasuta buyback: §2.6.
+
+### 2.6 Dorasuta buyback (buy.dorasuta.jp)
+
+**Result: not audited. The host is still refused by this environment's network policy.** The
+follow-up ran under the same rules (≤40 requests, one at a time, ≥3 s, robots first, stop on
+403/429/challenge, HTML only).
+
+MEASURED:
+- 2026-10-16 15:13Z `GET https://buy.dorasuta.jp/robots.txt` → proxy `CONNECT tunnel failed,
+  response 403` (agent-proxy `connect_rejected` for `buy.dorasuta.jp:443`). Same at 14:49Z.
+  The request never reached Dorasuta. The server-side fetch tool also fails
+  (`getaddrinfo ENOTFOUND buy.dorasuta.jp`). `dorasuta.jp` itself stays reachable, so only the
+  subdomain needs adding (Project settings → Cloud environment → gear → Network access →
+  Allowed domains: `buy.dorasuta.jp`).
+- Requests to buy.dorasuta.jp that reached the site: **0 of 40**. No robots.txt, terms, buylist,
+  structure or price was observed, so no buyback figure in this file is measured.
+- From pages already fetched in revision 2 (no new requests):
+  - dorasuta.jp links a ネット買取 site per game; One Piece is
+    `https://buy.dorasuta.jp/onepiece-cardgame` (top page, MEASURED link).
+  - `/guideline` 中古品買取時の注意事項 (WEB buyback rules): ID check for sellers 18+, no sellers
+    under 18; own items only; same-name bank account; 「買取見積(メール発行)の日付より５日経過し
+    買取が完了できない場合、査定品の所有権を全て放棄したものとさせていただきます」 (if a buyback is not
+    completed within 5 days of the emailed quote, ownership of the items is treated as
+    abandoned); 「買取査定金額に対しての交渉はお受け出来かねます」 (no negotiation on appraised
+    prices). These are seller rules; nothing on reading or reusing the price list.
+  - Store X posts embedded on the top page announce buylist updates per store (e.g. Akihabara
+    「買取表を更新しました」, 「明日からの強化買取」), with the caveat 「商品の状態や在庫状況によって減額
+    の可能性があり、表示金額の適用外となる場合がございます」 (prices may be reduced for condition or
+    stock and may not apply). So posted buy prices are **maximums for top condition**, and
+    store buylists can differ from the web list.
+- UNVERIFIED (review sites, revision 1): the web buylist updates weekly on Wednesdays; minimum
+  buy-price guarantees for some rarities.
+
+ESTIMATE, to replace once audited: weekly capture of the One Piece buylist, ≈30-60 pages,
+≈0.1 MB/day stored; coverage 25-45% of operational prints (chase cards and staples); signal
+type (3) buyback, new to the Index inputs. Plan for the audit, ≤40 requests: robots.txt (1),
+terms/guide pages on the buy site (2-3), One Piece top + 3 set buylists, first and last page
+each (≈8), 20 sampled prints matched to §3's Dorasuta asks to measure the ask/buy spread
+(≤20), spare (≈8).
 
 ## 3. Independence: Dorasuta vs our Yuyu-Tei (MEASURED)
 
@@ -214,7 +259,7 @@ byte-identical RAW de-duplication (CardRush plan §F4 option 2), R2 (paid, RED).
 2. **Aucfan licence enquiry now** (data-platform §G draft; add One Piece sold data, JP card
    numbers, PSA10 question, volume, price). Sales are priority (1) and this is the only legal
    route. Contract = paid service (RED); Index inclusion = methodology change (RED).
-3. **Dorasuta buyback**: allow `buy.dorasuta.jp`, run a ≤40-request audit (robots, terms, OP-05
+3. **Dorasuta buyback** (§2.6): allow `buy.dorasuta.jp`, run the ≤40-request audit (robots, terms, OP-05
    buylist). Weekly cadence, tiny storage, new signal type (3).
 4. **magi: written consent request** (株式会社ジラフ). No collection without it.
 5. **Suruga-ya: ask before any access** (403 to robots.txt). **Fullahead**: audit only if
@@ -228,8 +273,8 @@ byte-identical RAW de-duplication (CardRush plan §F4 option 2), R2 (paid, RED).
 | D1 | Dorasuta asks as the next source after (or alongside) CardRush | Yes, light mode; separate signal labelled `retail_sell`, Index inclusion is a separate methodology proposal (RED) |
 | D2 | Count Dorasuta 状態C / 特価 / sold-out rows? | No: store in RAW, count 状態A in-stock only |
 | D3 | Allow `buy.dorasuta.jp` and `www.fullahead-tcg.com` in network access for a follow-up audit | Yes for buy.dorasuta.jp; Fullahead optional |
-| D4 | Send the Aucfan data-licence enquiry | Yes, now; no payment without a separate RED approval |
-| D5 | Ask magi for written consent | Yes, now; otherwise drop magi |
+| D4 | Send the Aucfan data-licence enquiry (Appendix A) | Yes, now; no payment without a separate RED approval |
+| D5 | Ask magi for written consent (Appendix B) | Yes, now; otherwise drop magi |
 | D6 | Suruga-ya | Ask by email before any further request; no retries |
 | D7 | Storage budget | Dorasuta ≤1.5 MB/day measured over 48 h, or stop and re-plan |
 | D8 | PSA10 rows (magi, Aucfan titles) | RAW only; PSA10 stays OFF |
@@ -247,7 +292,7 @@ login.
 | www.suruga-ya.jp | 1 | robots.txt → 403; stopped |
 | magi.camp | 6 | robots.txt ×2, /terms/use, one item page, /series/100148/items, /card_titles/129 |
 | dorasuta.jp | 13 | robots.txt ×2, top, /onepiece-cardgame, /guideline, /member/agreement, series-list, 5 set-list pages, 1 product page |
-| www.fullahead-tcg.com, buy.dorasuta.jp, yuyu-tei.jp | 0 reached | proxy refused |
+| www.fullahead-tcg.com, buy.dorasuta.jp, yuyu-tei.jp | 0 reached | proxy refused (buy.dorasuta.jp retried 15:13Z, still refused) |
 | our staging site (vercel) | 20 | `/cards?q=<code>` for the comparison |
 
 Raw bodies were kept in the session scratchpad only (not committed, not stored in staging).
@@ -266,3 +311,165 @@ Raw bodies were kept in the session scratchpad only (not committed, not stored i
 - Earlier plans (CARRIED FORWARD): `origin/plan/data-platform:docs/agent/plans/data-platform/PLAN.md` §A6-A8,
   `origin/plan/cardrush-source:docs/agent/plans/cardrush-source/PLAN.md` §F
 - Coverage baseline (MEASURED, repo): `docs/agent/handoff/2026-10-13/capacity75-session12/evidence/coverage-start.json`
+
+---
+
+## Appendix A. Email draft: Aucfan (オークファン)
+
+Status: **DRAFT, not sent.** The owner sends it. It replaces data-platform §G-actions 4 (same
+asks, plus One Piece specifics and the PSA10 question data-platform H-Q3 asked for). A paid
+contract is a new paid service (RED); this email only asks for terms.
+
+- **To:** Aucfan's corporate / data-provision contact (法人向けお問い合わせ on aucfan.co.jp).
+  Address not verified: aucfan.com refused this session with 429 and aucfan.co.jp was not
+  requested.
+- **Fill in:** [氏名] / [Name], [メール] / [email], [URL]. Delete the PSA10 line if the owner
+  prefers not to signal graded interest.
+
+### Japanese (to send)
+
+> 件名：ワンピースカード相場（落札・成約）データの法人利用についてのご相談（Card Pirate）
+>
+> 株式会社オークファン 法人営業・データ提供ご担当者様
+>
+> 突然のご連絡失礼いたします。ワンピースカードゲーム日本版のシングルカード相場を追跡する
+> サイト「Card Pirate」を運営しております、[氏名]と申します。
+>
+> 貴社が相場データの外部提供を進めておられること、また aucfan.com の MCP サーバーを公開
+> されたことを拝見し、データのご提供についてご相談したくご連絡いたしました。
+> 当サイトは現在、国内ショップの販売価格をもとにカードごとの相場指数を算出しておりますが、
+> 実際の成約価格を加えることで、指数の正確さを高めたいと考えております。
+>
+> 対象として想定しているデータは以下のとおりです。
+> - 対象：ワンピースカードゲーム（日本語版）のシングルカード
+> - 項目：商品タイトル、カード番号（例：OP05-119）、成約価格（円）、成約日時、出品元
+>   （ヤフオク!・フリマ等）、状態・鑑定の表記（タイトルに含まれる範囲で構いません）
+> - 期間：直近の成約に加え、可能であれば過去12か月分
+> - 規模：カード約2,600種、1日1回程度の差分更新
+>
+> つきましては、以下についてお教えいただけますでしょうか。
+> 1. 提供形式（API・ファイル・MCP 等）、更新頻度、料金体系、試用（トライアル）の可否
+> 2. 当サイトでの表示（出典「オークファン」明記）、および当サイトが算出する集計値
+>    （中央値・相場指数）を第三者へ有償提供することの可否と条件
+> 3. 取得した元データの保存期間、再計算・監査目的での保管に関する制限
+> 4. PSA 等の鑑定品（例：PSA10）の成約データを、未鑑定品と区別して取得できるか
+>
+> 元データ（個別の成約記録）をそのまま第三者へ再販売することは想定しておりません。
+> 貴社の利用規約・データ提供条件に沿った方法でのみ利用いたします。
+> ご検討のほど、よろしくお願い申し上げます。
+>
+> [氏名]
+> Card Pirate
+> [メール] / [URL]
+
+### English (owner's reference)
+
+> Subject: Business use of One Piece card sold-price data (Card Pirate)
+>
+> Dear Aucfan corporate sales / data provision team,
+>
+> I run Card Pirate, a site that tracks prices of Japanese-edition One Piece Card Game singles.
+> We saw that Aucfan provides market-price data to outside parties and has released an MCP
+> server for aucfan.com, and we would like to discuss a data supply. Our per-card index is
+> currently built from Japanese shops' asking prices; adding real sold prices would make it
+> more accurate.
+>
+> The data we have in mind:
+> - Scope: Japanese-language One Piece Card Game singles.
+> - Fields: listing title, card number (e.g. OP05-119), sold price (JPY), sold date and time,
+>   marketplace (Yahoo! Auctions, flea markets, …), condition / grading text (as far as it
+>   appears in the title).
+> - Period: recent sales, and if possible the past 12 months.
+> - Volume: about 2,600 cards, a daily delta update.
+>
+> Could you tell us:
+> 1. The delivery format (API, file, MCP, …), update frequency, pricing, and whether a trial is
+>    possible.
+> 2. Whether we may display the data on our site (credited to Aucfan), and whether we may
+>    provide our own aggregates (medians, market index) to third parties for a fee, and on what
+>    terms.
+> 3. Any limits on how long we may keep the raw data, including for recalculation and audit.
+> 4. Whether sales of graded cards (e.g. PSA10) can be supplied separately from raw cards.
+>
+> We do not intend to resell individual sale records as they are, and will use the data only
+> as your terms and supply conditions allow.
+>
+> Kind regards,
+> [Name], Card Pirate, [email] / [URL]
+
+## Appendix B. Email draft: magi (株式会社ジラフ)
+
+Status: **DRAFT, not sent.** The owner sends it. Until magi answers in writing, Card Pirate
+collects nothing from magi (terms Art. 8(v), (dd); robots.txt AI-agent group, §2.3). The email
+says plainly that a 6-request survey read happened (§7), so magi hears it from us.
+
+- **To:** magi's operator 株式会社ジラフ, via the magi お問い合わせ form or Jiraffe's corporate
+  contact. Address not verified (not requested in this session).
+- **Fill in:** [氏名] / [Name], [メール] / [email], [URL].
+
+### Japanese (to send)
+
+> 件名：magi の取引価格データの利用許諾についてのご相談（Card Pirate）
+>
+> 株式会社ジラフ magi ご担当者様
+>
+> 突然のご連絡失礼いたします。ワンピースカードゲーム日本版のシングルカード相場を追跡する
+> サイト「Card Pirate」を運営しております、[氏名]と申します。
+>
+> 当サイトでは、カードごとの相場指数を国内ショップの販売価格から算出しております。
+> magi の個人間取引の成約価格は、ショップ価格とは異なる独立した相場の指標として大変有益だと
+> 考えており、利用のご許諾をお願いしたくご連絡いたしました。
+>
+> 利用規約第8条（v）「当社の事前の書面による承諾なく、当社のサービス外で、商業目的で…
+> 利用すること」および（dd）、ならびに robots.txt で AI エージェントによる検索ページの利用を
+> 制限されていることを拝見しております。そのため、書面でのご承諾をいただくまで、magi からの
+> データ取得は一切行いません。なお、調査のため 2026年10月16日に robots.txt（2回）・利用規約・
+> 公開ページ3ページの計6回、1件ずつ間隔を空けて閲覧したことをご報告いたします。
+>
+> ご相談したい内容は以下のとおりです。
+> 1. ワンピースカード（シングル）の成約データ（商品名、カード番号、成約価格、成約日、
+>    状態・鑑定の区分）を、貴社ご指定の方法（データ提供・API・ファイル等）で利用することの可否と条件
+> 2. 当サイトでの表示（出典「magi」明記、商品ページへのリンク付き）、および集計値
+>    （中央値・相場指数）を第三者へ有償提供することの可否と条件
+> 3. 貴社サーバーへの負荷をかけない取得方法・頻度のご指定（1日1回程度の差分を想定）
+>
+> 出品者の個人情報や個別の出品内容をそのまま転載・再販売することは想定しておりません。
+> ご許諾いただけない場合は、その旨を承り、magi のデータは利用いたしません。
+> ご検討のほど、よろしくお願い申し上げます。
+>
+> [氏名]
+> Card Pirate
+> [メール] / [URL]
+
+### English (owner's reference)
+
+> Subject: Permission to use magi transaction price data (Card Pirate)
+>
+> Dear magi team at Jiraffe Inc.,
+>
+> I run Card Pirate, a site that tracks prices of Japanese-edition One Piece Card Game singles.
+> Our per-card index is built from Japanese shops' asking prices. Sold prices from magi's
+> collector-to-collector trades would be a valuable, independent signal, and we are writing to
+> ask for permission to use them.
+>
+> We have read Art. 8(v) of your terms (no commercial use outside the service without prior
+> written consent) and (dd), and that your robots.txt restricts AI agents from search pages. We
+> will therefore collect no data from magi until we have your written consent. For
+> transparency: on 16 October 2026 we made six requests (robots.txt twice, the terms and three
+> public pages), one at a time and spaced apart, as part of a survey.
+>
+> We would like to ask:
+> 1. Whether, and on what terms, we may use One Piece singles sold data (item name, card number,
+>    sold price, sold date, condition / grading) through a method you specify (data supply, API,
+>    file, …).
+> 2. Whether we may display it on our site (credited to magi, with links to item pages) and
+>    provide our aggregates (medians, market index) to third parties for a fee, and on what
+>    terms.
+> 3. A collection method and frequency that puts no load on your servers (we assume a daily
+>    delta).
+>
+> We will not copy or resell sellers' personal data or individual listings. If you decline, we
+> will not use magi data.
+>
+> Kind regards,
+> [Name], Card Pirate, [email] / [URL]
