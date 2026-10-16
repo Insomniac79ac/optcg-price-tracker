@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Pre-launch security pass (owner request 2026-10-15), part A3: the web smoke scripts request the current collector pages (/collection, /watchlist, /account) and check the Collector v1 S8 legacy paths as exact 308 redirects instead of requesting removed pages. Not run in CI. Staging only; no application, migration, data, secret, setting, workflow or collector change.",
+  "mission": "Make the ops runbook workflows dispatchable (follow-up to PR #139): the default branch main does not carry ops-readonly.yml/ops-write.yml, so workflow_dispatch returned 404. A push to staging that changes either file registers it; every job is skipped on that push. Staging only; no collector, setting, price, identity, Market Value/Index, secret or Railway change; no deploy, enqueue or runbook run in this PR.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,13 +20,31 @@
   "impacts": [
     {
       "files": [
-        "scripts/staging_smoke_test.sh",
-        "scripts/web_route_smoke.sh"
+        ".github/workflows/ops-readonly.yml",
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Adds a push trigger limited to staging and to the workflow's own file, and gates every job on github.event_name == 'workflow_dispatch', so the push run only registers the workflow and runs nothing (no environment, no secret). ops-write's registration run uses its own concurrency group so it never displaces a run waiting for owner approval. Dispatch behaviour, inputs, gates and credentials are unchanged."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Manual smoke scripts only (scripts/final_audit.sh, phase audits); no delivery, verification or collector script reads them."
+      "reason": "Asserts the push trigger is limited to staging and the workflow's own path, and that every job is gated on workflow_dispatch."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Explains registration and what a 404 on dispatch means."
     }
   ],
   "deployment_verification": {
@@ -40,5 +58,42 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "2838571ba1211208f0688946cf58d1d0fc7b18d3089cf1aab2f25af68bac468d"
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "GitHub Actions: ops-readonly and ops-write workflows (registration push trigger only)"
+        }
+      ],
+      "routes": [
+        "None"
+      ],
+      "dependencies": [
+        "ops workflows from PR #139 (unchanged dispatch path)"
+      ],
+      "deployment_impact": "Workflow, test and doc only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes. The merge push starts one ops-readonly and one ops-write run whose jobs are all skipped.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "6f83c7d5ce2ad59893b9c6e1a79331ae0f4f2c1b",
+      "procedure": "Native revert of this PR removes the push trigger; the workflows then stay registered but unchanged otherwise. No data, schema, provider or service configuration to undo.",
+      "trigger": "Any ops job running on a push event, or a dispatch still returning 404 after the registration run.",
+      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/ops/run.py"
+      ],
+      "observation_window": "After merge: the registration runs show all jobs skipped; one ops-readonly staging-state run and one official-images-status run succeed with read-only sessions, and their summaries are attached to PR #139."
+    }
+  },
+  "diff_sha256": "4e888f1672c75cae05563b8c43df8ed85e70014a3fe725e3caaa331879850a4a"
 }
