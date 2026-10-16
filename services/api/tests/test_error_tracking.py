@@ -63,6 +63,7 @@ def test_dsn_initialises_without_pii_tracing_bodies_or_locals(fake_sdk):
             "send_default_pii": False,
             "include_local_variables": False,
             "max_request_body_size": "never",
+            "max_value_length": 8192,
             "traces_sample_rate": 0.0,
             "auto_session_tracking": False,
             "before_send": scrub_event,
@@ -183,3 +184,74 @@ def test_only_main_imports_error_tracking():
     )
     assert importers == ["app/main.py"]
     assert "import sentry_sdk" not in Path(error_tracking.__file__).read_text().split("def init_error_tracking")[0]
+
+
+def _integrity_error_text():
+    """The real text of a unique-constraint failure on the users table."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.orm import Session
+
+    from app.db import Base
+    from app.models import User
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine, tables=[User.__table__])
+    with Session(engine) as db:
+        db.add(User(google_sub="sub-1", email="collector@example.com", name="Collector Name"))
+        db.commit()
+        db.add(User(google_sub="sub-1", email="collector@example.com", name="Collector Name"))
+        try:
+            db.commit()
+        except IntegrityError as error:
+            return str(error)
+    raise AssertionError("expected an IntegrityError")
+
+
+def test_scrub_event_redacts_sql_parameters_and_emails_from_messages():
+    text = _integrity_error_text()
+    assert "collector@example.com" in text and "Collector Name" in text  # the leak being fixed
+    pg = 'duplicate key value violates unique constraint "users_email_key"\nDETAIL:  Key (email)=(collector@example.com) already exists.'
+    event = {
+        "exception": {"values": [{"type": "IntegrityError", "value": text}, {"type": "UniqueViolation", "value": pg}]},
+        "logentry": {"message": "lookup for %s failed", "params": ["collector@example.com"]},
+        "message": "user collector@example.com",
+        "breadcrumbs": {"values": [{"message": "INSERT ... [parameters: ('sub-1', 'collector@example.com', 'Collector Name')]"}]},
+    }
+
+    out = repr(scrub_event(event))
+
+    assert "collector@example.com" not in out
+    assert "Collector Name" not in out
+    assert "sub-1" not in out
+    assert "IntegrityError" in out and "UNIQUE constraint failed" in out  # the useful part stays
+
+
+def test_redact_text_leaves_ordinary_messages_alone():
+    from app.error_tracking import redact_text
+
+    assert redact_text("Rate limit exceeded for group 'admin'") == "Rate limit exceeded for group 'admin'"
+    assert redact_text(None) is None
+
+
+def test_redact_text_cannot_be_ended_early_by_a_stored_value():
+    from app.error_tracking import redact_text
+
+    text = ("(psycopg.errors.UniqueViolation) duplicate key\n[SQL: INSERT INTO users ...]\n"
+            "[parameters: {'note': '] (Background on this error', 'email': 'a@example.com', 'name': 'Secret Name'}]\n"
+            "(Background on this error at: https://sqlalche.me/e/20/gkpj)")
+    out = redact_text(text)
+    assert "Secret Name" not in out and "a@example.com" not in out
+    assert out.endswith("(Background on this error at: https://sqlalche.me/e/20/gkpj)")
+
+
+def test_redact_text_is_fast_and_bounded_on_hostile_input():
+    import time
+
+    from app.error_tracking import redact_text
+
+    for text in ("x" * 200_000, "[parameters: " * 20_000, "a@" * 100_000, ("a" * 70 + "@") * 3000):
+        started = time.perf_counter()
+        out = redact_text(text)
+        assert time.perf_counter() - started < 0.5
+        assert len(out) <= 8192 + len(" [truncated]") + len("[parameters: redacted]")
