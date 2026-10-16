@@ -36,6 +36,10 @@ file contains a known secret value.
 | `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
 | `web-smoke` | - | Signed-out Playwright smoke of the staging site (`scripts/staging_web_smoke.py`); also runs after every delivery | `web-smoke.json` |
 
+The `ops-summary` annotations carry what a check needs without the artifact: `staging-state`
+adds `quarantined_refresh_work` (count, oldest blocked-since), and `official-images-status` adds
+`recent_runs` (status and start time of each of the last 5 mirror runs).
+
 Nothing here is collector-affecting or a write, so no quiet window applies.
 
 ## Write runbooks (`ops-write`)
@@ -56,7 +60,8 @@ dispatch and again right before the runbook runs:
 - no collector-affecting runbook 02:00-06:00 UTC, no write runbook 19:30-20:30 UTC (a dry run
   is neither);
 - no staging delivery running or queued (`staging-automerge`, `staging-credential-presence`,
-  `Verify staging merge`, `Serialized staging delivery`).
+  `Verify staging merge`). `Serialized staging delivery` is `workflow_call` only and has no runs
+  of its own; a workflow that calls it is the one to list.
 
 Collector releases are not runbooks: they stay on the CI delivery path.
 
