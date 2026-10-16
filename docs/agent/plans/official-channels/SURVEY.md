@@ -19,6 +19,8 @@ Evidence labels:
 
 ## Plain summary (for the owner)
 
+0. **Status (owner, 2026-10-16 21:45Z): Yahoo! and Rakuten are KIV; Aucfan, magi and エーツー are
+   out unless the owner later decides to buy data (RED). No calls, signups or emails. See §6.**
 1. **I could not read any official doc or call any API from here.** Every docs and API host was
    refused by this environment's network policy (MEASURED, §6). So everything below comes from
    search results about those pages (UNVERIFIED), and no listing counts were measured. Both
@@ -157,7 +159,23 @@ Evidence labels:
   catalogue records, 2025. A licensed route is plausible; robots.txt returned 403 to us
   (MEASURED in source survey), so this is the only route.
 
-## 6. Requests made (MEASURED, 2026-10-16 15:29-15:31Z)
+## 6. Status: owner decision 2026-10-16 21:45Z (supersedes §7-§8)
+
+**All channels are parked. No app IDs, no host allowlist, no API calls, no emails or
+enquiries.** The owner is not asking any source for permission. Nothing in §7 or §8 is to be
+acted on until the owner reopens it.
+
+| Channel | Status | Needed to resume |
+|---|---|---|
+| Yahoo! Shopping 商品検索 v3 | **KIV** (keep in view) | Owner decision to resume; owner registers a Client ID (Yahoo! JAPAN ID) and stores it as an env secret only; allow `shopping.yahooapis.jp` and `developer.yahoo.co.jp`; a thread reads the full terms (storage, derived values) and the credit rule, then runs §2.3 (≤40 calls); owner accepts the credit display (D2) |
+| Rakuten Ichiba Item Search | **KIV** | Owner decision to resume; owner registers an app (Application ID + access key) as env secrets only; allow `openapi.rakuten.co.jp`, `app.rakuten.co.jp`, `webservice.rakuten.co.jp`; a thread reads the full terms including the paid-tool FAQ, then runs §2.3 (≤40 calls) |
+| Aucfan business data | **Out**: no contact | A separate owner **RED** decision to buy data; only then a quote request (draft kept in `plan/source-survey` Appendix A, not to be sent before that) |
+| magi (株式会社ジラフ) | **Out**: no contact, no collection | A separate owner **RED** decision to buy or licence data; draft kept in `plan/source-survey` Appendix B, not to be sent before that |
+| Suruga-ya via エーツー | **Out**: no contact | A separate owner **RED** decision to buy data; no draft written |
+| SNKRDUNK / SODA | Unchanged (existing source) | Nothing new; the data-platform email stays on HOLD for the legal opinion |
+| Affiliate networks, Amazon | Not pursued | New owner request |
+
+### 6.1 Requests made (MEASURED, 2026-10-16 15:29-15:31Z)
 
 One request per host, 3 s apart, `curl` default UA:
 
@@ -171,7 +189,7 @@ One request per host, 3 s apart, `curl` default UA:
 The server-side fetch tool also failed for webservice.rakuten.co.jp (`getaddrinfo ENOTFOUND`).
 No request reached any of these sites. No 403/429 from a site was involved.
 
-## 7. Recommended order
+## 7. Recommended order (superseded by §6; kept for reference)
 
 1. **Owner registers free app IDs** on Yahoo! Developer Network and Rakuten Web Service, stores
    them as environment secrets (never committed), and allows `shopping.yahooapis.jp`,
@@ -184,7 +202,7 @@ No request reached any of these sites. No 403/429 from a site was involved.
 5. Build an API source only after §2.3 shows enough One Piece singles with card numbers, and
    the terms allow storage and derived values. Each is a new source in `plan/new-sources`.
 
-## 8. Owner decisions (recommended defaults)
+## 8. Owner decisions (answered in §6: D1-D3 KIV, D4-D5 no, D6 no, D7 unchanged)
 
 | # | Decision | Recommended default |
 |---|---|---|
