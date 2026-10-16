@@ -2,7 +2,7 @@
 
 Status: **PLAN ONLY**, for owner review, 2026-10-16, branch `plan/cardrush-source`.
 - Base: `origin/staging` at `1068d3c` for the first revision (proxy-blocked audit, session `012tP9…`).
-  This revision is on `49e611c` and contains the completed audit.
+  This revision adds the completed audit on top of it (staging head at audit time: `49e611c`).
 - Scope: STAGING ONLY. Production RED. PSA10 OFF.
 - Nothing changed: code, collectors, settings, prices, identity, Market Value, the Index, staging data and
   Railway are untouched. No PR, no runbook dispatch, no source job.
@@ -39,7 +39,7 @@ Evidence labels:
 4. **Storage.**
    - With compressed raw pages, CardRush adds about **3.4 MB/day** plus about **27 MB once** (ESTIMATE).
      That fits the 90-day rule at planning (+504 MB) and stress B (+123 MB).
-   - Storing pages uncompressed would not fit at stress B (−350 MB). So compression is a precondition.
+   - Storing pages uncompressed would not fit at stress B (−399 MB). So compression is a precondition.
 5. **Policy risk, read first.** An earlier plan quoted a search snippet of CardRush's data policy that bans automated
    price collection (UNVERIFIED; the live page is 403). Robots.txt itself blocks only four named AI bots (MEASURED).
 6. **Decisions you need to make** (§H, each with a default):
