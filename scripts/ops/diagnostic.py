@@ -9,12 +9,16 @@ Adding a diagnostic is a reviewed PR; there is no free-form SQL input.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import re
 
 from ops import common
 
 DIRECTORY = common.ROOT / "scripts/diagnostics"
+# Rows small enough for the ops-summary annotations (9 x 3000 characters) go into the summary, so
+# an agent reads them over REST; a larger statement keeps only its count (rows in the artifact).
+INLINE_CHARS = 18000
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,62}")
 FORBIDDEN = re.compile(
     r"\b(insert|update|delete|merge|upsert|truncate|drop|alter|create|grant|revoke|copy|vacuum|analyze"
@@ -86,4 +90,19 @@ def run(out_dir, name):
     common.write_json(Path(out_dir) / f"diagnostic-{name}.json",
                       {"diagnostic": name, "read_only": True, "database_writes": 0, "results": result})
     return {"diagnostic": name, "statements": {k: len(v["rows"]) for k, v in result.items()},
-            "truncated": sorted(k for k, v in result.items() if v["truncated"])}
+            "truncated": sorted(k for k, v in result.items() if v["truncated"]), **inline(result)}
+
+
+def inline(result, limit=INLINE_CHARS):
+    """{"rows": {name: {columns, rows}}, "rows_omitted": [...]}, statements in order until the budget is spent."""
+    rows, omitted, used = {}, [], 0
+    for name, value in result.items():
+        table = {"columns": list(value["rows"][0]) if value["rows"] else [],
+                 "rows": [list(row.values()) for row in value["rows"]]}
+        size = len(json.dumps(table, separators=(",", ":"), default=common.json_default))
+        if used + size > limit:
+            omitted.append(name)
+            continue
+        rows[name] = table
+        used += size
+    return {"rows": rows, "rows_omitted": omitted}
