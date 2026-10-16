@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Root cause of the #140 staging verification timeouts (owner request 2026-10-16): the staging verifier's masked failure message names the stage in progress (fixed labels such as 'browser warm-up /prints/5661'), never the provider or driver text. Staging only; no deployment, data write, secret, setting, workflow or collector change.",
+  "mission": "Root cause of the #140 staging verification timeouts (owner request 2026-10-16): when a browser check's networkidle wait times out, the verifier's masked failure names the requests still loading (resource type plus path on the staging site, host elsewhere, never a query string). Staging only; no deployment, data write, secret, setting, workflow or collector change.",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -25,7 +25,7 @@
       "effects": [
         "application"
       ],
-      "reason": "Adds STEP/step()/failure_message(); main() and browser_check() set fixed stage labels before each check. Checks, order, timeouts and pass/fail conditions are unchanged; only the failure text gains 'during <stage>'. Not in either collector's import graph."
+      "reason": "browser_check tracks open requests (request/requestfinished/requestfailed) and, only when page.goto raises, adds still_loading() to the stage label before re-raising. request_label() keeps the path for the staging origin and the host elsewhere; queries are dropped. Checks, order, timeouts and pass/fail conditions are unchanged. Not in either collector's import graph."
     },
     {
       "files": [
@@ -34,7 +34,7 @@
       "effects": [
         "tests"
       ],
-      "reason": "The masked message names the stage and drops the error text (no token or URL leaks)."
+      "reason": "still_loading names paths and hosts, drops queries and tokens, caps the list and reports nothing when idle."
     }
   ],
   "deployment_verification": {
@@ -48,5 +48,5 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "db2dfa75e9f229c108cb03369851e1815bdc9cd0138c9da93ae8301dc7992d70"
+  "diff_sha256": "5c1ce966e5a9e0a5cbc6e04c3b9ef3a7c3efb2bf4e18a0b57bfc5f854b561731"
 }
