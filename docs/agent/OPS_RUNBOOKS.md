@@ -33,7 +33,7 @@ file contains a known secret value.
 | `storage-rates` | `transients` (comma list; empty = all named) | Planning and stress (worst rolling 24 h) since the current collector code, as observed, with named steps removed, and with named transients excluded (`scripts/ops/storage_events.json`) | `storage-rates.json`, `volume-series.json` |
 | `fleet-vs-receipt` | `receipt` (empty = PR #103 rollout) | All 10 collectors: live deployment, status, exact-commit marker, image digest, cron and deployment records after the receipt | `fleet-vs-receipt.json` |
 | `official-images-status` | - | Last 5 `official-images-mirror` runs and the `check_official_images` database check (no R2 or Bandai request) | `official-images-status.json` |
-| `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
+| `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json`; the summary also carries the rows when they fit (24,000 characters of compact JSON), else `rows_omitted` |
 | `web-smoke` | - | Signed-out Playwright smoke of the staging site (`scripts/staging_web_smoke.py`); also runs after every delivery | `web-smoke.json` |
 
 The `ops-summary` annotations carry what a check needs without the artifact: `staging-state`

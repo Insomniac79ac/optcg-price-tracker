@@ -6,15 +6,22 @@ SELECT or WITH query and may not contain a write or session keyword; the read-on
 transaction (default_transaction_read_only=on) remains the enforcement. `{{ELIGIBLE}}` expands
 to the shared operational-health population (app.services.operational_health_sql.ELIGIBLE).
 Adding a diagnostic is a reviewed PR; there is no free-form SQL input.
+
+The summary carries the rows themselves when they fit the ops-summary annotations
+(SUMMARY_ROWS_LIMIT characters of compact JSON), so a cloud session can read a small
+diagnostic over REST without the artifact; larger results stay in the artifact only.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import re
 
 from ops import common
 
 DIRECTORY = common.ROOT / "scripts/diagnostics"
+# run.annotations() carries at most 9 x 3000 escaped characters; leave room for the rest.
+SUMMARY_ROWS_LIMIT = 24000
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,62}")
 FORBIDDEN = re.compile(
     r"\b(insert|update|delete|merge|upsert|truncate|drop|alter|create|grant|revoke|copy|vacuum|analyze"
@@ -85,5 +92,16 @@ def run(out_dir, name):
         result = execute(conn, statements)
     common.write_json(Path(out_dir) / f"diagnostic-{name}.json",
                       {"diagnostic": name, "read_only": True, "database_writes": 0, "results": result})
-    return {"diagnostic": name, "statements": {k: len(v["rows"]) for k, v in result.items()},
-            "truncated": sorted(k for k, v in result.items() if v["truncated"])}
+    return summary(name, result)
+
+
+def summary(name, result):
+    out = {"diagnostic": name, "statements": {k: len(v["rows"]) for k, v in result.items()},
+           "truncated": sorted(k for k, v in result.items() if v["truncated"])}
+    rows = {k: v["rows"] for k, v in result.items()}
+    size = len(json.dumps(rows, separators=(",", ":"), default=common.json_default))
+    if size <= SUMMARY_ROWS_LIMIT:
+        out["rows"] = rows
+    else:
+        out["rows_omitted"] = f"{size} characters; see diagnostic-{name}.json in the artifact"
+    return out

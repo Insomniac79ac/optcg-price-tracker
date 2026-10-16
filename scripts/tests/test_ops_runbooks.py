@@ -235,6 +235,18 @@ class Diagnostics(unittest.TestCase):
                 diagnostic.parse(text, {"ELIGIBLE": "select 1"})
         self.assertEqual(diagnostic.parse("-- a\nselect 'delete' x from t;"), {"a": "select 'delete' x from t"})
 
+    def test_summary_carries_rows_only_when_they_fit_the_annotations(self):
+        small = {"a": {"rows": [{"code": "OP05-074", "n": 1}], "truncated": False}}
+        self.assertEqual(diagnostic.summary("x", small)["rows"], {"a": [{"code": "OP05-074", "n": 1}]})
+        big = {"a": {"rows": [{"code": "x" * 100}] * 300, "truncated": True}}
+        result = diagnostic.summary("x", big)
+        self.assertNotIn("rows", result)
+        self.assertIn("diagnostic-x.json", result["rows_omitted"])
+        self.assertEqual(result["truncated"], ["a"])
+        lines = run.annotations({"runbook": "db-diagnostic", "result": diagnostic.summary("x", {
+            "a": {"rows": [{"code": "y" * 100}] * (diagnostic.SUMMARY_ROWS_LIMIT // 120), "truncated": False}})})
+        self.assertNotIn("truncated; see summary.json", lines[-1])
+
     def test_unknown_name_refused(self):
         for name in ("../../etc/passwd", "nope", ""):
             with self.assertRaises(common.Refused):
