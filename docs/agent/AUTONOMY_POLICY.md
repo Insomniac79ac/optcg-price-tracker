@@ -153,6 +153,47 @@ tests; docs outside `docs/agent/`. The exact allowlists live in
 - RED still overrides: a product PR never changes production, pricing,
   identity, Market Value/Index meaning, or auth/security/secrets policy.
 
+## Cloud sessions and the runbook path (2026-10-15)
+
+Since 2026-10-15 agents run in Claude Code cloud sessions, not a Codespace. A cloud session reaches
+GitHub (REST; GraphQL is blocked) but not Postgres or the Railway API, and holds no staging
+credential. GitHub Actions holds the staging credentials. Dangerous actions are stopped by the
+repository, CI and credentials, not by prompt text:
+
+- **Data-lane execution** runs as allowlisted GitHub Actions runbooks
+  ([OPS_RUNBOOKS.md](OPS_RUNBOOKS.md)): `ops-readonly` (every database read
+  `default_transaction_read_only=on`) and `ops-write` (each run waits for the owner in the
+  `staging-ops` Environment). Agents dispatch them and read the summaries; they never see a secret.
+- **Guardrails as code**: the committed `.claude/settings.json` and `.claude/hooks/guard.py` block the
+  Railway CLI, remote `psql`/`pg_dump`, printing the environment, owner-approval signals (the
+  `hold-for-owner` label, repository variables and settings, PR approvals, admin merges), the GitHub
+  deployments/environments/rulesets/branch-protection/secrets APIs, direct pushes to `staging`, force
+  pushes, and Edit/Write on DATA-lane paths unless the session sets `CARDPIRATE_LANE=data`. CI tests
+  the hook (`scripts/tests/test_claude_guardrails.py`). The hook is defence in depth; the lane
+  classifier, branch rules and credentials remain the enforcement.
+
+**Agents may now do alone** (within an authorized mission and the lanes above):
+
+- product work end to end: branch, implement, test (Postgres 16 and Redis are in the session), open
+  the PR, mark it ready when no other delivery runs; CI arms, merges, delivers, verifies and runs the
+  signed-out web smoke;
+- data-lane code PRs with their mission manifest, delivered by CI as before (collector releases stay
+  on the CI delivery path);
+- dispatch any `ops-readonly` runbook at any time and dispatch `ops-write` runs, dry run first;
+- read runs, check-run annotations and PR state over REST.
+
+**Still the owner's:**
+
+- approving every `ops-write` run (dry run and apply; an apply also needs the approved-list SHA-256
+  from a reviewed dry run). Agents never approve a waiting run;
+- merging a PR labelled `hold-for-owner` (CI does not arm it). Use it for any PR that changes
+  `.github/**` or `.claude/**`, the guardrails themselves;
+- GitHub Environments, secrets, variables (`STAGING_AUTONOMY_ENABLED`), rulesets and repository
+  settings; Railway and Vercel settings; secret rotation;
+- product-lane migrations still need `alembic upgrade head` on staging, which needs Railway; until a
+  runbook exists, the owner runs it;
+- every RED decision above, unchanged.
+
 ## Fix-forward rule
 
 **An isolated operational defect is NOT a mission stop condition.** For a bounded

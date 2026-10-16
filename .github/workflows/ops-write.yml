@@ -1,0 +1,116 @@
+name: ops-write
+run-name: ops-write ${{ inputs.runbook }} apply=${{ inputs.apply }} ${{ inputs.request_id }}
+
+# Owner-gated staging write runbooks. The first job waits in the `staging-ops` Environment for
+# the owner's approval (required reviewer) and holds no credential; only then does the runbook
+# job get the staging credentials of `staging-delivery`. Dry run by default. Quiet windows and
+# "no staging delivery in progress" are checked at dispatch and again right before the runbook
+# runs. Collector releases are not here: they stay on the CI delivery path.
+# docs/agent/OPS_RUNBOOKS.md
+on:
+  workflow_dispatch:
+    inputs:
+      runbook:
+        description: Runbook
+        type: choice
+        required: true
+        options:
+          - enqueue-remaining-50
+      apply:
+        description: "Write (default: dry run, nothing written)"
+        type: boolean
+        default: false
+      expected_sha256:
+        description: "apply only: approved-list SHA-256 from the dry run the owner reviewed"
+        type: string
+        default: ""
+      count:
+        description: Candidates in the batch
+        type: string
+        default: "50"
+      request_id:
+        description: Free text shown in the run name, to find this run again
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-write
+  cancel-in-progress: false
+
+jobs:
+  owner-approval:
+    if: github.repository == 'Insomniac79ac/optcg-price-tracker' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Owner = required reviewer. No secrets are read in this job.
+    environment: staging-ops
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RUNBOOK: ${{ inputs.runbook }}
+      APPLY: ${{ inputs.apply }}
+      EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+      COUNT: ${{ inputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check runbook, quiet windows and running deliveries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(--preflight --workflow ops-write --count "$COUNT" --expected-sha256 "$EXPECTED_SHA256")
+          if [ "$APPLY" = true ]; then args+=(--apply); fi
+          python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
+
+  runbook:
+    needs: owner-approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: staging-delivery
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RUNBOOK: ${{ inputs.runbook }}
+      APPLY: ${{ inputs.apply }}
+      EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+      COUNT: ${{ inputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install tooling
+        run: |
+          pip install -q -r scripts/agent-state-requirements.txt -r services/api/requirements.txt
+          pip install -q --no-deps ./packages/opcg_source_identity
+          npm install -g @railway/cli@5.62.1
+      - name: Run runbook (re-checks windows and deliveries first)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+        run: |
+          args=(--out ops-out --workflow ops-write --count "$COUNT" --expected-sha256 "$EXPECTED_SHA256")
+          if [ "$APPLY" = true ]; then args+=(--apply); fi
+          python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-write-${{ inputs.runbook }}-${{ github.run_id }}
+          path: ops-out
+          retention-days: 90
+          if-no-files-found: ignore

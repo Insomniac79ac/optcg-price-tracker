@@ -1,0 +1,22 @@
+{
+ "_doc": "Named storage events for scripts/ops/storage_rates.py. A step is a measured one-off (a batch) removed from every later sample so it is not charged again per day. A transient is a rise that recovered; its samples can be excluded from the stress rate by name. Add an entry only with evidence; the as-observed rate is always reported too.",
+ "window_start": "2026-10-10T14:31:00.430268+00:00",
+ "window_start_reason": "a852244 collector rollout completed (PR #98 receipt): rates over current collector code only (owner decision 2026-10-12)",
+ "reserve_ceiling_mb_s9": 6778.7,
+ "reserve_reason": "3 GiB reserve on the 10 GB volume, s9 basis (GB x 1024): 3,655.3 + 3,123.4 MB (session 10)",
+ "steps": {
+  "new50": {
+   "from": "2026-10-13T16:05:00+00:00",
+   "to": "2026-10-13T16:30:00+00:00",
+   "evidence": "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/new50-evidence.json"
+  }
+ },
+ "transients": {
+  "2026-10-14-04z": {
+   "from": "2026-10-14T04:05:00+00:00",
+   "to": "2026-10-14T05:15:00+00:00",
+   "threshold_mb": 5,
+   "evidence": "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/spike-2026-10-14-04z-cause.json"
+  }
+ }
+}

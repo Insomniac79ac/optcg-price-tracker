@@ -1,6 +1,96 @@
 # CLAUDE.md
 
-Guidance for Claude Code when working in this repository.
+Guidance for Claude Code when working in this repository (Card Pirate, `Insomniac79ac/optcg-price-tracker`).
+The operating contract is [docs/agent/AUTONOMY_POLICY.md](docs/agent/AUTONOMY_POLICY.md) and the hard
+rules are [docs/agent/INVARIANTS.md](docs/agent/INVARIANTS.md). Read them; this file does not repeat them.
+
+## Hard lines
+
+- **Staging only.** Base branch `staging`. Production is RED: never touched without the owner's explicit decision.
+- **PSA10 is OFF.** Do not activate or build toward it unless the owner asks.
+- **Never print secrets**, their lengths or parts: no `env`, `printenv`, `.env` contents, tokens in logs,
+  commit messages, PR text or chat. Never commit credentials.
+- Prices are JPY, timestamps UTC. Exact-card identity guards are never weakened.
+- No merges 19:30-20:30 UTC (market-index snapshot). No collector change 02:00-06:00 UTC.
+
+## Lanes
+
+CI decides the lane from the diff (`scripts/product_lane.py`, run by `policy-gate`); any doubt is DATA.
+
+- **PRODUCT**: `apps/web` (not `vercel.json`), `services/api/tests`, docs outside `docs/agent/`
+  (plus `docs/agent/PRODUCT_LOG.md`), allowlisted collector-facing API modules, additive product
+  migrations. No mission manifest; append a line to `docs/agent/PRODUCT_LOG.md`. Auth/security paths
+  need an `Independent security review: ...` line in the PR description.
+- **DATA**: everything else, including collectors and their import graph, identity, prices, Market
+  Value/Index, `scripts/`, `docs/agent/`, `.github/`, `.claude/` and this file. Needs
+  `docs/agent/STAGING_MISSION.json` regenerated for the exact diff (`diff_sha256` from
+  `scripts/staging_policy.change_evidence(base, HEAD)`).
+- Split a change that spans both lanes into two PRs.
+- The committed hook `.claude/hooks/guard.py` blocks Edit/Write on DATA paths unless the session has
+  `CARDPIRATE_LANE=data` (the message says "Data lane. Split it into its own PR or open an issue for the owner.").
+- Confirm the collector import graph is untouched for every PR: `python scripts/product_lane.py
+  --base origin/staging` lists the lane and its reasons; no reason may read `collector runtime input
+  (import graph)`.
+
+## Delivery
+
+- Open PRs as **draft**. A non-draft PR to `staging` arms native auto-merge once CI passes
+  (`staging-automerge`), unless it carries the `hold-for-owner` label (the owner merges it by hand).
+  Agents may add that label, never remove it.
+- One staging delivery at a time: before marking a PR ready, check no `staging-automerge`,
+  `staging-credential-presence` or `Verify staging merge` job is running or queued
+  (commands in [docs/agent/OPS_RUNBOOKS.md](docs/agent/OPS_RUNBOOKS.md#commands-cloud-session-rest-only)).
+- Staging must be up to date: rebase on `staging` before marking ready.
+- The CI artifacts are the delivery receipt. After every delivery CI also runs the signed-out web
+  smoke (`scripts/staging_web_smoke.py`).
+
+## GitHub from a cloud session
+
+- GraphQL is blocked. Use `gh api` (REST). Draft/ready and auto-merge:
+  - `gh api -X POST repos/{o}/{r}/pulls/{n}/ccr/ready_for_review`
+  - `gh api -X POST repos/{o}/{r}/pulls/{n}/ccr/convert_to_draft`
+  - `gh api -X PUT repos/{o}/{r}/pulls/{n}/ccr/auto_merge` / `-X DELETE ...` (only when the task allows it)
+- Artifact zips and job logs redirect to blob storage, which the proxy blocks. Read runbook summaries
+  from check-run annotations, or use the GitHub MCP `get_job_logs` tool.
+- Blocked by the hook: deployments, pending deployments (environment approvals), rulesets, branch
+  protection, secrets, environments and variables APIs; direct pushes to `staging`; force pushes;
+  PR approvals; admin merges.
+
+## Staging data: ops runbooks
+
+Cloud sessions cannot reach Postgres or Railway and must not try (`railway` and remote `psql`/`pg_dump`
+are blocked). Trigger an allowlisted GitHub Actions runbook instead and read its summary:
+
+```bash
+R=repos/Insomniac79ac/optcg-price-tracker
+gh api -X POST $R/actions/workflows/ops-readonly.yml/dispatches -f ref=staging \
+  -f 'inputs[runbook]=staging-state' -f 'inputs[request_id]=my-id'
+```
+
+- `ops-readonly` (no approval): `staging-state`, `verify-lossless`, `storage-rates`, `fleet-vs-receipt`,
+  `official-images-status`, `db-diagnostic`, `web-smoke`. Every DB read is `default_transaction_read_only=on`.
+- `ops-write` (owner approves each run in the `staging-ops` Environment): `enqueue-remaining-50`, dry
+  run by default. Agents never approve a waiting run.
+- Finding the run and reading its result: [docs/agent/OPS_RUNBOOKS.md](docs/agent/OPS_RUNBOOKS.md).
+
+## Tests locally (cloud session)
+
+Postgres 16 and Redis are preinstalled. Start Postgres and create a test database once:
+
+```bash
+pg_ctlcluster 16 main start
+su postgres -c "psql -c \"create user opcg password 'opcg' superuser\"" && su postgres -c "createdb -O opcg opcg_test"
+python3 -m venv /tmp/venv && . /tmp/venv/bin/activate
+pip install -r services/api/requirements.txt -r services/worker/requirements.txt -r scripts/agent-state-requirements.txt pytest
+pip install --no-deps ./packages/opcg_source_identity     # the API/worker conftest refuses a stale copy
+```
+
+- API: `cd services/api && TEST_POSTGRES_URL=postgresql+psycopg://opcg:opcg@localhost:5432/opcg_test REQUIRE_POSTGRES=1 python -m pytest -q`
+- Worker: same variables, `cd services/worker && python -m pytest -q`.
+- Agent/CI tooling: `python -m unittest discover -s scripts/tests -p 'test_*.py'`
+  (ops runbooks also take `OPS_TEST_POSTGRES_URL`; guardrails: `-p test_claude_guardrails.py`).
+- Web: `cd apps/web && npm ci && npm test -- --maxWorkers=2 && npx tsc --noEmit`.
+- Redis (if a test needs it): `redis-server --daemonize yes`.
 
 ### Collector frontend workflow
 
