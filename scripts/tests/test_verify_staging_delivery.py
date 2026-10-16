@@ -12,6 +12,21 @@ from verify_staging_delivery import validate_state, get, state, wait_for_deliver
 
 
 class VerificationTests(unittest.TestCase):
+    def test_still_loading_names_paths_and_hosts_without_queries(self):
+        import verify_staging_delivery as v
+        web = v.WEB
+        entries = [("fetch", web + "/sign-in?callbackUrl=%2Fcollection&_rsc=abc"),
+                   ("fetch", web + "/sign-in?_rsc=def"),
+                   ("script", "https://va.vercel-scripts.com/v1/script.js?token=secret"),
+                   ("image", web + "/")]
+        text = v.still_loading(entries)
+        self.assertEqual(text, "fetch /sign-in, image /, script va.vercel-scripts.com")
+        self.assertNotIn("secret", text)
+        self.assertNotIn("_rsc", text)
+        many = [("fetch", f"{web}/p{i}") for i in range(9)]
+        self.assertTrue(v.still_loading(many).endswith(", +3 more"))
+        self.assertEqual(v.still_loading([]), "nothing")
+
     def test_masked_failure_names_the_stage_but_not_the_error_text(self):
         import verify_staging_delivery as v
         v.step("browser warm-up /prints/5661")

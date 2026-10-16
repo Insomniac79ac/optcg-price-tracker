@@ -10,6 +10,7 @@ import re
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import generate_staging_state as state
@@ -209,19 +210,42 @@ def failure_message(error):
             "no success receipt written")
 
 
+def request_label(request_type, url):
+    """Resource type and path for the staging site, host elsewhere; never a query."""
+    parts = urllib.parse.urlsplit(url)
+    if f"{parts.scheme}://{parts.netloc}" == WEB:
+        return f"{request_type} {parts.path or '/'}"
+    return f"{request_type} {parts.netloc}"
+
+
+def still_loading(entries, limit=6):
+    labels = sorted({request_label(kind, url) for kind, url in entries})
+    more = f", +{len(labels) - limit} more" if len(labels) > limit else ""
+    return (", ".join(labels[:limit]) or "nothing") + more
+
+
 def browser_check(label="browser"):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         errors = []
         page = browser.new_page()
+        # Requests still open when a networkidle wait times out name the cause.
+        pending = {}
+        page.on("request", lambda request: pending.__setitem__(request, (request.resource_type, request.url)))
+        page.on("requestfinished", lambda request: pending.pop(request, None))
+        page.on("requestfailed", lambda request: pending.pop(request, None))
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.on("console", lambda message: errors.append(message.text)
                 if message.type == "error" and re.search("hydration|react error", message.text, re.I) else None)
         results = []
         for route in ("/", "/prints/5661", "/analytics"):
             step(f"{label} {route}")
-            response = page.goto(WEB + route, wait_until="networkidle", timeout=60000)
+            try:
+                response = page.goto(WEB + route, wait_until="networkidle", timeout=60000)
+            except Exception:
+                step(f"{label} {route}; still loading: {still_loading(pending.values())}")
+                raise
             require(response is not None and response.status == 200, f"Route failed: {route}")
             require(page.locator("h1").count() > 0, f"Missing rendered page: {route}")
             results.append(route)
