@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Pre-launch security pass (owner request 2026-10-15), audit finding F1 (HIGH): a new collector's concurrent first /me requests share one users row instead of failing with a 500 whose text carries the email; Sentry before_send redacts SQL bound parameters, Postgres DETAIL lines and emails from exception, log and breadcrumb messages. Staging only; no migration, data write, secret, setting, workflow or collector change.",
+  "mission": "Root cause of the #140 staging verification timeouts (owner request 2026-10-16): when a browser check's networkidle wait times out, the verifier's masked failure names the requests still loading (resource type plus path on the staging site, host elsewhere, never a query string). Staging only; no deployment, data write, secret, setting, workflow or collector change.",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -20,31 +20,21 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/auth.py"
+        "scripts/verify_staging_delivery.py"
       ],
       "effects": [
         "application"
       ],
-      "reason": "_get_or_create_user: on IntegrityError roll back and re-select by google_sub; an email held by another account answers 409 without details. Token verification is unchanged. Not in either collector's import graph (scripts/collector_runtime_inputs.py at base)."
+      "reason": "browser_check tracks open requests (request/requestfinished/requestfailed) and, only when page.goto raises, adds still_loading() to the stage label before re-raising. request_label() keeps the path for the staging origin and the host elsewhere; queries are dropped. Checks, order, timeouts and pass/fail conditions are unchanged. Not in either collector's import graph."
     },
     {
       "files": [
-        "services/api/app/error_tracking.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "scrub_event also redacts exception values, logentry and breadcrumb messages. Only app.main imports it; not a collector runtime input (tests/test_error_tracking_import_graph.py)."
-    },
-    {
-      "files": [
-        "services/api/tests/test_auth_user.py",
-        "services/api/tests/test_error_tracking.py"
+        "scripts/tests/test_verify_staging_delivery.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Lost-race lookup reuses the winner's row (one row); shared email answers 409 without the address; a real IntegrityError's text is redacted of email, name and sub."
+      "reason": "still_loading names paths and hosts, drops queries and tokens, caps the list and reports nothing when idle."
     }
   ],
   "deployment_verification": {
@@ -58,5 +48,5 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "95f05c3789d033baba281ada94ee06a24081c0fca4fa047ffcfcede3d9cb8d40"
+  "diff_sha256": "5c1ce966e5a9e0a5cbc6e04c3b9ef3a7c3efb2bf4e18a0b57bfc5f854b561731"
 }
