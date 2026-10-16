@@ -10,6 +10,7 @@ import re
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import generate_staging_state as state
@@ -195,18 +196,56 @@ def sale_audit():
         variables.clear()
 
 
-def browser_check():
+# Fixed labels of the stage in progress. A masked failure names the stage, never
+# the provider/driver message (which may carry credentials or private URLs).
+STEP = {"name": "start"}
+
+
+def step(name):
+    STEP["name"] = name
+
+
+def failure_message(error):
+    return (f"Staging verification failed ({type(error).__name__}) during {STEP['name']}; "
+            "no success receipt written")
+
+
+def request_label(request_type, url):
+    """Resource type and path for the staging site, host elsewhere; never a query."""
+    parts = urllib.parse.urlsplit(url)
+    if f"{parts.scheme}://{parts.netloc}" == WEB:
+        return f"{request_type} {parts.path or '/'}"
+    return f"{request_type} {parts.netloc}"
+
+
+def still_loading(entries, limit=6):
+    labels = sorted({request_label(kind, url) for kind, url in entries})
+    more = f", +{len(labels) - limit} more" if len(labels) > limit else ""
+    return (", ".join(labels[:limit]) or "nothing") + more
+
+
+def browser_check(label="browser"):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         errors = []
         page = browser.new_page()
+        # Requests still open when a networkidle wait times out name the cause.
+        pending = {}
+        page.on("request", lambda request: pending.__setitem__(request, (request.resource_type, request.url)))
+        page.on("requestfinished", lambda request: pending.pop(request, None))
+        page.on("requestfailed", lambda request: pending.pop(request, None))
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.on("console", lambda message: errors.append(message.text)
                 if message.type == "error" and re.search("hydration|react error", message.text, re.I) else None)
         results = []
         for route in ("/", "/prints/5661", "/analytics"):
-            response = page.goto(WEB + route, wait_until="networkidle", timeout=60000)
+            step(f"{label} {route}")
+            try:
+                response = page.goto(WEB + route, wait_until="networkidle", timeout=60000)
+            except Exception:
+                step(f"{label} {route}; still loading: {still_loading(pending.values())}")
+                raise
             require(response is not None and response.status == 200, f"Route failed: {route}")
             require(page.locator("h1").count() > 0, f"Missing rendered page: {route}")
             results.append(route)
@@ -367,33 +406,44 @@ def main():
     if args.api_sha == "merge":
         # A build Railway legitimately skipped keeps its verified previous source;
         # a missing expected build or an unexpected build still fails.
+        step("Railway API deployment decision")
         api_expectation = resolve_api_sha(args.expected, deadline)
         args.api_sha = api_expectation["sha"]
+    step("native deployments ready")
     evidence = wait_for_delivery(args.expected, args.api_sha, deadline)
+    step("web /api/version")
     version = get(WEB + "/api/version")
     require(version["web"].get("source_commit") == args.expected,
             "Frontend runtime SHA disagrees with platform")
+    step("API /health and /version")
     health, api_version = get(API + "/health"), get(API + "/version")
     require(health.get("app_env") == "staging" and health.get("status") == "ok"
             and health.get("database_connected") and health.get("redis_connected"), "Staging API health failed")
     require(api_version.get("app_env") == "staging", "API destination is not staging")
     require(api_version.get("git_commit") in (args.api_sha, "unknown"), "API runtime SHA disagrees with platform")
+    step("web /api/auth/session")
     get(WEB + "/api/auth/session")
+    step("collector token check")
     token_check = collector_token_check()
+    step("live state read")
     evidence = state.collect_live()
     validate_state(evidence, args.expected, args.api_sha, args.revision)
     # Warm the route cache before the paced invariant audit. A single cold
     # render previously missed a homepage shell mismatch after ISR regeneration.
-    browser_check()
+    browser_check("browser warm-up")
+    step("sale invariant audit")
     sale = sale_audit()
-    routes = browser_check()
+    routes = browser_check("browser check")
+    step("component checks")
     run_component_checks(args.check, args.api_sha)
     # Re-read after browser/data checks, so a competing deployment cannot be called success.
+    step("live state re-read")
     evidence = state.collect_live()
     validate_state(evidence, args.expected, args.api_sha, args.revision)
     # The preceding provider reads also allow background regeneration from
     # the warm browser pass to settle before the final browser assertion.
-    browser_check()
+    browser_check("browser final")
+    step("final web /api/version")
     require(get(WEB + "/api/version")["web"].get("source_commit") == args.expected, "Frontend changed during verification")
     snapshot = state.write_snapshot(evidence, state.CANONICAL_OUTPUT)
     result = {"verified_at": state.timestamp(), "expected_commit": args.expected,
@@ -418,4 +468,4 @@ if __name__ == "__main__":
         raise SystemExit(str(error)) from None
     except Exception as error:
         # Provider/driver diagnostics may contain credentials or private URLs.
-        raise SystemExit(f"Staging verification failed ({type(error).__name__}); no success receipt written") from None
+        raise SystemExit(failure_message(error)) from None

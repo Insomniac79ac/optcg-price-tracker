@@ -1,0 +1,116 @@
+name: ops-readonly
+run-name: ops-readonly ${{ inputs.runbook }} ${{ inputs.request_id }}
+
+# Read-only staging runbooks for agents in cloud sessions, which hold no staging credential.
+# Dispatch on staging only; no approval. Every database read runs with
+# default_transaction_read_only=on on a fingerprinted staging connection. Outputs are an
+# artifact plus `ops-summary` notice annotations (readable over REST). How to dispatch and read
+# them: docs/agent/OPS_RUNBOOKS.md. The runbook allowlist is scripts/ops/run.py RUNBOOKS.
+on:
+  workflow_dispatch:
+    inputs:
+      runbook:
+        description: Runbook
+        type: choice
+        required: true
+        options:
+          - staging-state
+          - verify-lossless
+          - storage-rates
+          - fleet-vs-receipt
+          - official-images-status
+          - db-diagnostic
+          - web-smoke
+      ledger_floor:
+        description: "verify-lossless: exclusive ledger id floor"
+        type: string
+        default: ""
+      diagnostic:
+        description: "db-diagnostic: file name in scripts/diagnostics (without .sql)"
+        type: choice
+        default: work-by-state
+        options:
+          - degraded-signals
+          - freshness-not-met
+          - official-image-assets
+          - table-sizes
+          - work-by-state
+      transients:
+        description: "storage-rates: named transients to exclude (comma-separated; empty = all named)"
+        type: string
+        default: ""
+      receipt:
+        description: "fleet-vs-receipt: committed latest-collector-rollout.json under docs/agent (empty = latest rollout)"
+        type: string
+        default: ""
+      request_id:
+        description: Free text shown in the run name, to find this run again
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-readonly-${{ inputs.runbook }}
+  cancel-in-progress: false
+
+jobs:
+  runbook:
+    if: github.repository == 'Insomniac79ac/optcg-price-tracker' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # The staging read credentials live in this Environment; it holds no production secret.
+    environment: staging-delivery
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RUNBOOK: ${{ inputs.runbook }}
+      LEDGER_FLOOR: ${{ inputs.ledger_floor }}
+      DIAGNOSTIC: ${{ inputs.diagnostic }}
+      TRANSIENTS: ${{ inputs.transients }}
+      RECEIPT: ${{ inputs.receipt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check runbook and quiet windows (no credentials)
+        run: python scripts/ops/run.py "$RUNBOOK" --preflight --workflow ops-readonly
+      - name: Install read-only tooling
+        run: |
+          pip install -q -r scripts/agent-state-requirements.txt -r services/api/requirements.txt
+          pip install -q --no-deps ./packages/opcg_source_identity
+          npm install -g @railway/cli@5.62.1 vercel@60.1.3
+          if [ "$RUNBOOK" = web-smoke ]; then
+            pip install -q playwright==1.58.0
+            python -m playwright install --with-deps chromium
+          fi
+      - name: Run runbook
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+          STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
+        run: |
+          args=(--out ops-out --workflow ops-readonly)
+          case "$RUNBOOK" in
+            verify-lossless) args+=(--ledger-floor "$LEDGER_FLOOR") ;;
+            db-diagnostic) args+=(--diagnostic "$DIAGNOSTIC") ;;
+            storage-rates) args+=(--transients "$TRANSIENTS") ;;
+            fleet-vs-receipt) args+=(--receipt "$RECEIPT") ;;
+          esac
+          python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-readonly-${{ inputs.runbook }}-${{ github.run_id }}
+          path: ops-out
+          retention-days: 30
+          if-no-files-found: ignore

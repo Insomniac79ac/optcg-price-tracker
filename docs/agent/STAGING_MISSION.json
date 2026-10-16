@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Collector v1 S8 (owner request 2026-10-15), data half: remove the legacy collection backend (collection, wishlist, grading, tags, groups, notes, activity routers; per-user collection/wishlist analytics; card tag routes; admin and worker portfolio snapshot and its alert rule). Tables and models stay (listed for S9). Staging only; no migration, data write, secret, workflow or collector change.",
+  "mission": "Pre-launch security pass (owner request 2026-10-15), part A1: rate limit every /me route of the collector accounts API. Writes go to collection_write, reads to public_read, account export and DELETE /me to the strictest import_export group; /me is keyed by a digest of the verified collector subject instead of IP. Dead legacy entries removed. Staging only; no migration, data write, secret, setting, workflow or collector change.",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -20,82 +20,31 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/api/admin_actions.py",
-        "services/api/app/api/analytics.py",
-        "services/api/app/api/cards.py",
-        "services/api/app/api/collection.py",
-        "services/api/app/api/collector.py",
-        "services/api/app/api/collector_activity.py",
-        "services/api/app/api/collector_notes.py",
-        "services/api/app/api/grading.py",
-        "services/api/app/api/wishlist.py",
-        "services/api/app/main.py",
-        "services/api/app/services/collection_analytics.py",
-        "services/api/app/services/portfolio_valuation.py",
-        "services/api/app/services/wishlist_analytics.py",
-        "services/api/app/snapshot_portfolio_valuation.py"
+        "services/api/app/core/rate_limit.py"
       ],
       "effects": [
         "application"
       ],
-      "reason": "Deletes the legacy collection, wishlist, grading, tags/groups, notes and activity routers and their main.py includes; the per-user /analytics/collection and /analytics/wishlist endpoints and their services; the card tag assign/unassign routes; the admin snapshot-portfolio action and its service/CLI. full-market-refresh keeps its response shape with portfolio_snapshot_id always null. Models, tables, Market Value, the Card Pirate Index and market-index-snapshot are untouched (nothing they import is deleted; their only mentions are comments). Not in either collector's import graph (scripts/collector_runtime_inputs.py at base: snkrdunk 62 inputs, yuyutei 73, intersection empty)."
+      "reason": "Route classification and keying in the in-memory rate limiter. Reuses the existing RATE_LIMIT_* settings (app/settings.py is a collector runtime input and is not edited). Not in either collector's import graph (scripts/collector_runtime_inputs.py at base)."
     },
     {
       "files": [
-        "services/worker/worker/jobs/check_alerts.py",
-        "services/worker/worker/jobs/refresh_prices.py",
-        "services/worker/worker/portfolio_valuation.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Worker no longer writes a portfolio_valuation_snapshots row after each price refresh, and check_alerts drops the portfolio_value_change_pct rule (it only compared those snapshots). SNKRDUNK_FLOOR/YUYUTEI_SELL move into check_alerts; worker/portfolio_valuation.py is deleted. Price refresh, observations and every other alert rule are unchanged."
-    },
-    {
-      "files": [
-        "apps/web/src/app/admin/(protected)/actions/page.tsx",
-        "apps/web/src/app/api/admin/actions/snapshot-portfolio/route.ts",
-        "apps/web/src/lib/api.ts"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Admin Actions page drops the Portfolio snapshot button and its Next proxy route and client helper."
-    },
-    {
-      "files": [
-        "services/api/tests/test_activity_wiring.py",
-        "services/api/tests/test_admin_actions.py",
-        "services/api/tests/test_auth_user.py",
-        "services/api/tests/test_cache.py",
-        "services/api/tests/test_collection.py",
-        "services/api/tests/test_collection_analytics.py",
-        "services/api/tests/test_collection_csv.py",
-        "services/api/tests/test_collector.py",
-        "services/api/tests/test_collector_activity.py",
-        "services/api/tests/test_collector_notes.py",
-        "services/api/tests/test_file_jobs.py",
-        "services/api/tests/test_graded_adjusted_valuation.py",
-        "services/api/tests/test_grading.py",
-        "services/api/tests/test_legacy_routes_removed.py",
-        "services/api/tests/test_market_analytics.py",
-        "services/api/tests/test_mutating_route_auth.py",
-        "services/api/tests/test_pagination_endpoints.py",
-        "services/api/tests/test_portfolio_valuation.py",
-        "services/api/tests/test_portfolio_valuation_insights.py",
-        "services/api/tests/test_private_read_route_auth.py",
-        "services/api/tests/test_rate_limit.py",
-        "services/api/tests/test_snapshot_portfolio_valuation.py",
-        "services/api/tests/test_valuation_history.py",
-        "services/api/tests/test_wishlist.py",
-        "services/api/tests/test_wishlist_analytics.py",
-        "services/worker/tests/test_check_alerts_portfolio.py",
-        "services/worker/tests/test_refresh_prices.py"
+        "services/api/tests/test_rate_limit.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Deletes tests of the removed routers/services; retargets auth, cache, rate-limit, route-inventory and activity tests to routes that still exist; adds S8 removed-route tests (every legacy path 404s and is absent from OpenAPI)."
+      "reason": "Every /me route in OpenAPI pinned to its group; per-collector buckets with two users on one IP; forged token keyed by IP; export/delete 429 before the route runs; removed legacy paths no longer classified."
+    },
+    {
+      "files": [
+        "docs/deployment.md",
+        "docs/operations.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Rate-limit group table and active_keys wording."
     }
   ],
   "deployment_verification": {
@@ -109,5 +58,5 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "bf7e9c2771216c7f345fdb526d912079fe77ee8e9388c6da175a665d4e542ae3"
+  "diff_sha256": "bf72533822d2a09dff76f2f33cfb180be7025628f2b33c2b8d94bd06a90b960c"
 }
