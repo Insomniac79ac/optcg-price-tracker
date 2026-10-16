@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Pre-launch security pass (owner request 2026-10-15), part A1: rate limit every /me route of the collector accounts API. Writes go to collection_write, reads to public_read, account export and DELETE /me to the strictest import_export group; /me is keyed by a digest of the verified collector subject instead of IP. Dead legacy entries removed. Staging only; no migration, data write, secret, setting, workflow or collector change.",
+  "mission": "Pre-launch security pass (owner request 2026-10-15), part A3: the web smoke scripts request the current collector pages (/collection, /watchlist, /account) and check the Collector v1 S8 legacy paths as exact 308 redirects instead of requesting removed pages. Not run in CI. Staging only; no application, migration, data, secret, setting, workflow or collector change.",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -20,31 +20,13 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/core/rate_limit.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Route classification and keying in the in-memory rate limiter. Reuses the existing RATE_LIMIT_* settings (app/settings.py is a collector runtime input and is not edited). Not in either collector's import graph (scripts/collector_runtime_inputs.py at base)."
-    },
-    {
-      "files": [
-        "services/api/tests/test_rate_limit.py"
+        "scripts/staging_smoke_test.sh",
+        "scripts/web_route_smoke.sh"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Every /me route in OpenAPI pinned to its group; per-collector buckets with two users on one IP; forged token keyed by IP; export/delete 429 before the route runs; removed legacy paths no longer classified."
-    },
-    {
-      "files": [
-        "docs/deployment.md",
-        "docs/operations.md"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Rate-limit group table and active_keys wording."
+      "reason": "Manual smoke scripts only (scripts/final_audit.sh, phase audits); no delivery, verification or collector script reads them."
     }
   ],
   "deployment_verification": {
@@ -58,5 +40,5 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "bf72533822d2a09dff76f2f33cfb180be7025628f2b33c2b8d94bd06a90b960c"
+  "diff_sha256": "2838571ba1211208f0688946cf58d1d0fc7b18d3089cf1aab2f25af68bac468d"
 }
