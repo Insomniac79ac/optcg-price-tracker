@@ -197,6 +197,7 @@ staging project's settings.
 | #147 | D3 (sharp 0.35.5) | product; verified (run 38888685548) |
 | #148 | D1, part (Next 16.2.12) | product; verified with the following run 38906152623 (#150 merged during its own check) |
 | #151 | D1, rest (Next 16.3.8) | product; failed verification (run 38909877498), reverted by #152 |
+| #152 | Revert of #151 (back to Next 16.2.12) | product; verified (run 38913847744) |
 | #137 | F1 | data; verified (run 38882503658) |
 | #136 | A1 | data; verified (run 38885503713) |
 | #141 | A2 | product; verified (run 38891946439) |
