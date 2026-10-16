@@ -1,5 +1,9 @@
 # CardRush price source: read-only audit + plan (PLAN ONLY)
 
+> **SUPERSEDED by `plan/new-sources`** (`docs/agent/plans/new-sources/PLAN.md`), 2026-10-16.
+> Kept as history. Its CardRush audit (§0–§1) remains the MEASURED record; methodology, identity,
+> data model, storage and delivery are now governed by the combined plan.
+
 Status: **PLAN ONLY**, for owner review, 2026-10-16, branch `plan/cardrush-source`.
 - Base: `origin/staging` at `1068d3c` for the first revision (proxy-blocked audit, session `012tP9…`).
   This revision adds the completed audit on top of it (staging head at audit time: `49e611c`).
