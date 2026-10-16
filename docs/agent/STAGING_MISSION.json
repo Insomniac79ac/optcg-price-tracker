@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Pre-launch security pass (owner request 2026-10-15) and the #140 follow-up (owner request 2026-10-16): record the collector accounts audit (findings, evidence, fix PRs #136-#138, #141, #145-#149, #151-#152, the #140 timeout root cause, advisories still open with reachability and interim mitigations, owner checks) as docs/agent/security/2026-10-16-accounts-audit.md. Documentation only; no application, migration, data, secret, setting, workflow or collector change.",
+  "mission": "Coverage gap check D9 (owner request 2026-10-16), Step 1: add two reviewed read-only db-diagnostic SQL files that classify every active verified print without a fresh Yuyu-Tei price (never discovered, discovered but identity unresolved or mapping not approved, mapped but not refreshed, every same-release listing mapped to a sibling) by rarity and base vs parallel, with the survey sample prints; register them in ops-readonly; and let the db-diagnostic summary carry rows that fit the ops-summary annotations. Staging only; no collector, setting, mapping, enqueue, price, identity, Market Value/Index, secret or Railway change; no runbook run in this PR.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,12 +20,49 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/security/2026-10-16-accounts-audit.md"
+        "scripts/diagnostics/yuyu-coverage-gap.sql",
+        "scripts/diagnostics/yuyu-coverage-gap-samples.sql"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Two SELECT/WITH-only diagnostics (7 statements) over card_prints, canonical_cards, release_products, source_card_mappings, freshness_work, freshness_price_states, yuyutei_candidates, yuyutei_discovery_runs and source_mapping_proposal groups/alternatives. Run only through ops-readonly db-diagnostic (default_transaction_read_only=on, statement timeout). No write, no source request."
+    },
+    {
+      "files": [
+        "scripts/ops/diagnostic.py"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "The db-diagnostic summary also carries the result rows when their compact JSON is at most 24,000 characters (fits the 9 x 3000 ops-summary annotations), else rows_omitted. Same rows as the artifact file; no new query, request or write; assert_clean still scans every output."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Adds yuyu-coverage-gap and yuyu-coverage-gap-samples to the db-diagnostic choice list (tests keep it equal to the files present). No permission, secret, environment or trigger change."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Covers the summary rows/rows_omitted rule and that a summary at the limit is not truncated in the annotations. The existing Postgres test runs every diagnostic, the new ones included, in a read-only session."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "New audit document. No secret value, length or partial value is recorded; committed-secret scan results name only pattern classes."
+      "reason": "Documents that the db-diagnostic summary carries rows when they fit."
     }
   ],
   "deployment_verification": {
@@ -39,5 +76,43 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "f9da440996a465f23d6af94e6a7e022d7373eeaf1eb639985aefc1633706191b"
+  "diff_sha256": "85e0f2d91503dbc4a32ea2f7fadb652263c6b951fed3564b25690e484bb133d9",
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "GitHub Actions: ops-readonly db-diagnostic (scripts/ops, scripts/diagnostics)"
+        }
+      ],
+      "routes": [
+        "None"
+      ],
+      "dependencies": [
+        "ops workflows from PR #139 and #143 (unchanged)"
+      ],
+      "deployment_impact": "Ops tooling, SQL, test and doc only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "6f42813c5958c154b43e0d59aa1cff42e1af6835",
+      "procedure": "Native revert of this PR removes the two diagnostics and their workflow choices and restores the count-only summary. No data, schema, provider or service configuration to undo.",
+      "trigger": "A db-diagnostic run that fails the read-only check, exceeds its statement timeout, or whose summary or artifact shows anything but query rows.",
+      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/diagnostics/yuyu-coverage-gap.sql",
+        "scripts/diagnostics/yuyu-coverage-gap-samples.sql"
+      ],
+      "observation_window": "After merge: one ops-readonly db-diagnostic run per new file completes with status ok and read_only true, and its summary carries rows or rows_omitted."
+    }
+  }
 }
