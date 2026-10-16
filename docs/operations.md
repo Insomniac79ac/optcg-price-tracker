@@ -155,7 +155,7 @@ curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/rate-limit/st
 
 Returns whether rate limiting is enabled and, for each of the four route groups (`public_read`,
 `collection_write`, `admin`, `import_export`; `search` was removed in Collector v1 S1), its current limit, window, and
-`active_keys` (distinct client IPs with a live counter right now - a large number here across a
+`active_keys` (distinct client IPs, or collectors for `/me`, with a live counter right now - a large number here across a
 short window is a sign of either real traffic growth or abuse worth investigating). See
 "Security headers, CSP, and rate limiting" in `docs/deployment.md` for what each group covers and
 why this is single-instance only.

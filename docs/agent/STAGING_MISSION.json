@@ -77,7 +77,7 @@
       "estimated_runtime_minutes": 5
     },
     "recovery": {
-      "artifact": "d435161a60af3e70e53efcd03c59bb39078bd1c0",
+      "artifact": "6f83c7d5ce2ad59893b9c6e1a79331ae0f4f2c1b",
       "procedure": "Native revert of this PR removes the push trigger; the workflows then stay registered but unchanged otherwise. No data, schema, provider or service configuration to undo.",
       "trigger": "Any ops job running on a push event, or a dispatch still returning 404 after the registration run.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
