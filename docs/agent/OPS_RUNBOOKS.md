@@ -14,6 +14,9 @@ the results over the GitHub REST API without ever seeing a secret.
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
 Both workflows run only when dispatched on `staging`.
+The default branch is `main`, which does not carry them, and GitHub dispatches only workflows it
+has registered. A push to `staging` that changes a workflow file registers it; that push run skips
+every job. A dispatch that returns 404 means the workflow is not registered yet.
 
 ## Read-only runbooks (`ops-readonly`)
 
