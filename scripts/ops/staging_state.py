@@ -25,8 +25,16 @@ def run(out_dir):
     snapshot = state.write_snapshot(evidence, output)
     health = check_raw_health.decision(evidence)
     common.write_json(Path(out_dir) / "raw-health.json", health)
+    return summary(snapshot, evidence, health)
+
+
+def summary(snapshot, evidence, health):
+    """The ops-summary: blocker ids, plus the quarantine count and age so REST readers see them."""
+    quarantined = next((b for b in snapshot["blockers"] if b["id"] == "quarantined-refresh-work"), None)
     return {"verified_at": snapshot["verified_at"], "staging_head": evidence["repository"]["sha"],
             "blockers": [b["id"] for b in snapshot["blockers"]],
+            "quarantined_refresh_work": quarantined and {
+                "count": quarantined["count"], "oldest_blocked_since": quarantined["oldest_blocked_since"]},
             "operational_health": {k: snapshot["operational_health"][k]["status"]
                                    for k in ("yuyu", "snkrdunk") if k in snapshot["operational_health"]},
             "raw_health_actions": len(health["mission_actions"]),

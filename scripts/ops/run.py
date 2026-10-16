@@ -27,8 +27,10 @@ from ops import common  # noqa: E402
 
 REPOSITORY = "Insomniac79ac/optcg-price-tracker"
 # Workflows and CI jobs that deliver to staging (docs/agent/STAGING_DELIVERY.md).
+# staging-delivery.yml is workflow_call only: it runs inside its caller's run and has no runs
+# endpoint of its own (404, which would refuse every write); a caller's job belongs here instead.
 DELIVERY_WORKFLOWS = {"ci.yml": {"staging-credential-presence", "staging-automerge"},
-                      "staging-verify.yml": None, "staging-delivery.yml": None}
+                      "staging-verify.yml": None}
 
 
 def _staging_state(args, out):
