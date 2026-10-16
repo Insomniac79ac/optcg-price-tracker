@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import jwt
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -37,7 +38,17 @@ def _get_or_create_user(db: Session, *, google_sub: str, email: str, name: str |
         return user
     user = User(google_sub=google_sub, email=email, name=name)
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # A new collector's first page sends several /me requests at once,
+        # and each finds no row. One insert wins; the rest use its row
+        # instead of failing with a 500 (whose message would carry the email).
+        db.rollback()
+        user = db.scalar(select(User).where(User.google_sub == google_sub))
+        if user is None:
+            raise HTTPException(status_code=409, detail="Account could not be created") from None
+        return user
     db.refresh(user)
     return user
 

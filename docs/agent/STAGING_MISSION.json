@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Guardrails as code and ops runbooks in GitHub Actions (owner request 2026-10-15): agents in cloud sessions run data-lane reads and owner-gated writes through allowlisted workflow_dispatch runbooks and never see a secret; committed Claude Code settings and hook; hold-for-owner merge hold; signed-out web smoke after deliveries; intake/reporting templates. Staging only; no collector, setting, price, identity, Market Value/Index, secret or Railway change; no deploy, enqueue or runbook run in this PR.",
+  "mission": "Pre-launch security pass (owner request 2026-10-15), part A1: rate limit every /me route of the collector accounts API. Writes go to collection_write, reads to public_read, account export and DELETE /me to the strictest import_export group; /me is keyed by a digest of the verified collector subject instead of IP. Dead legacy entries removed. Staging only; no migration, data write, secret, setting, workflow or collector change.",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,86 +20,31 @@
   "impacts": [
     {
       "files": [
-        ".github/workflows/ops-readonly.yml",
-        ".github/workflows/ops-write.yml"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "New workflow_dispatch-only workflows, staging ref only, no pull_request trigger. ops-readonly runs allowlisted read-only runbooks with the staging-delivery Environment's existing read credentials; every database session is default_transaction_read_only=on on a fingerprinted staging connection. ops-write waits for the owner in a new staging-ops Environment (required reviewer, holds no secret) before its runbook job gets credentials; dry run by default; quiet windows and running deliveries are checked at dispatch and again before the runbook. Nothing runs until someone dispatches it; this PR dispatches nothing."
-    },
-    {
-      "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml",
-        ".github/workflows/staging-verify.yml"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "CI: staging-pr-live treats a PR labelled hold-for-owner as not current, so it is never armed (owner merges by hand); after the existing delivery verification, staging-automerge, the reusable delivery workflow and Verify staging merge run the read-only signed-out web smoke and add its receipt to the artifact; agent-state-tests gains a Postgres 16 service and runs the guardrail, ops-runbook and web-smoke tests. No secret, variable, environment, provider or production destination changes; arming, merge window and rollout logic otherwise unchanged."
-    },
-    {
-      "files": [
-        "scripts/diagnostics/degraded-signals.sql",
-        "scripts/diagnostics/freshness-not-met.sql",
-        "scripts/diagnostics/official-image-assets.sql",
-        "scripts/diagnostics/table-sizes.sql",
-        "scripts/diagnostics/work-by-state.sql",
-        "scripts/ops/__init__.py",
-        "scripts/ops/common.py",
-        "scripts/ops/db.py",
-        "scripts/ops/diagnostic.py",
-        "scripts/ops/enqueue_remaining.py",
-        "scripts/ops/fleet.py",
-        "scripts/ops/lossless.py",
-        "scripts/ops/official_images.py",
-        "scripts/ops/replan.py",
-        "scripts/ops/run.py",
-        "scripts/ops/staging_state.py",
-        "scripts/ops/storage_events.json",
-        "scripts/ops/storage_rates.py",
-        "scripts/staging_web_smoke.py"
+        "services/api/app/core/rate_limit.py"
       ],
       "effects": [
         "application"
       ],
-      "reason": "Read-only ops tooling moved from the session 13 handoff tools (db, storage rates, lossless verify, fleet vs receipt, re-plan, approved list) plus official-images status, named diagnostics SQL and the web smoke. The only write path is the existing PR #116 enqueue tool behind ops-write (owner approval, dry run default, apply only with the reviewed list SHA-256). scripts/ is not installed in any image: 0 collector runtime inputs (scripts/product_lane.py import-graph check, SNKRDUNK and Yuyu-Tei)."
+      "reason": "Route classification and keying in the in-memory rate limiter. Reuses the existing RATE_LIMIT_* settings (app/settings.py is a collector runtime input and is not edited). Not in either collector's import graph (scripts/collector_runtime_inputs.py at base)."
     },
     {
       "files": [
-        ".claude/hooks/guard.py",
-        ".claude/settings.json"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Claude Code project settings and a PreToolUse hook for agent sessions: deny the Railway CLI, remote psql/pg_dump, printing the environment, owner-approval signals, GitHub deployments/environments/rulesets/branch-protection/secrets APIs, direct pushes to staging and force pushes; block Edit/Write on DATA-lane paths (scripts/product_lane.path_reason) unless CARDPIRATE_LANE=data. Agent tooling only; no runtime, CI credential or auth change. Tightens agent permissions; does not change the security or secrets policy."
-    },
-    {
-      "files": [
-        "scripts/tests/test_claude_guardrails.py",
-        "scripts/tests/test_ops_runbooks.py",
-        "scripts/tests/test_staging_web_smoke.py"
+        "services/api/tests/test_rate_limit.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Guardrail hook tests (exit 2 on every blocked class, allowed commands pass, lane agrees with product_lane), ops runbook tests (session 13 storage rates reproduced from committed evidence, quiet windows, delivery check, secret scan, read-only diagnostics on a real schema with a refused write), web smoke decision rules."
+      "reason": "Every /me route in OpenAPI pinned to its group; per-collector buckets with two users on one IP; forged token keyed by IP; export/delete 429 before the route runs; removed legacy paths no longer classified."
     },
     {
       "files": [
-        ".github/ISSUE_TEMPLATE/agent-task.yml",
-        ".github/pull_request_template.md",
-        "CLAUDE.md",
-        "docs/agent/AUTONOMY_POLICY.md",
-        "docs/agent/OPS_RUNBOOKS.md",
-        "docs/agent/STAGING_DELIVERY.md"
+        "docs/deployment.md",
+        "docs/operations.md"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "Agent task issue form, PR template (plain summary, lane, verification, staging URL, owner check), root CLAUDE.md (lanes, local tests, runbooks, GitHub REST notes, hard lines; links the policy), AUTONOMY_POLICY.md cloud-session section (what agents may do alone, what stays the owner's), OPS_RUNBOOKS.md, STAGING_DELIVERY.md owner hold and web smoke."
+      "reason": "Rate-limit group table and active_keys wording."
     }
   ],
   "deployment_verification": {
@@ -113,53 +58,5 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "safeguards": {
-    "impact": {
-      "resources": [
-        {
-          "name": "GitHub Actions: new ops-readonly and ops-write workflows (dispatch only); CI staging-pr-live, staging-automerge, agent-state-tests; staging-delivery reusable workflow; Verify staging merge"
-        },
-        {
-          "name": "Claude Code agent sessions in this repository (.claude/settings.json, .claude/hooks/guard.py)"
-        }
-      ],
-      "routes": [
-        "None (no application route changes); the web smoke only reads /, /cards, /prints/5661, /sign-in, /account, /collection, /watchlist signed out"
-      ],
-      "dependencies": [
-        "staging-delivery Environment secrets STAGING_RAILWAY_TOKEN and STAGING_VERCEL_READ_TOKEN (reused, unchanged)",
-        "new staging-ops Environment (owner as required reviewer, no secrets) created by the owner before the first ops-write run",
-        "scripts/product_lane.py (lane definition shared with the hook)",
-        "PR #116 scripts/yuyu_identity_capture_enqueue.py (unchanged)"
-      ],
-      "deployment_impact": "Workflow, tooling, tests and docs only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; scripts/, .github/ and .claude/ are not installed in any image. api_sha=merge accepts a skipped API build; web redeploys through Vercel Git with no app change.",
-      "database_writes": 0,
-      "source_requests": 0,
-      "estimated_runtime_minutes": 30
-    },
-    "recovery": {
-      "artifact": "4dbc70ba16a183cf9e8732af69072cc76aa00d03",
-      "procedure": "Native revert of this PR removes the ops workflows, guard hook and settings, the hold-label check and the web smoke step, restoring the previous CI exactly. No data, schema, provider or service configuration to undo; the staging-ops Environment and hold-for-owner label are inert without the workflows.",
-      "trigger": "Arming of a PR that carries hold-for-owner, or a non-held ready PR no longer arming; web smoke failing on a healthy site; agent-state-tests red from the new suites; any ops runbook output containing a secret or a database session that is not read-only.",
-      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
-      "validation": [
-        "scripts/tests/test_claude_guardrails.py",
-        "scripts/tests/test_ops_runbooks.py",
-        "scripts/tests/test_staging_web_smoke.py",
-        "scripts/tests/test_product_lane.py"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/generate_staging_state.py",
-        "scripts/ops/run.py"
-      ],
-      "observation_window": "After the owner's hand merge: Verify staging merge receipt with the web smoke OK; one ops-readonly staging-state run and one official-images-status run succeed with read-only sessions, and their summaries are attached to this PR."
-    }
-  },
-  "diff_sha256": "bed94105948a4541bb6df066b87dc95e3c08006eacdd1dbace72436f1ef8a887"
+  "diff_sha256": "bf72533822d2a09dff76f2f33cfb180be7025628f2b33c2b8d94bd06a90b960c"
 }
