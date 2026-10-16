@@ -12,11 +12,13 @@ Railway, the database, settings or collectors was touched or read.
   of history contain no committed secret.
 - The most serious issue was the web framework: Next.js 16.2.10 sits in the range of
   critical advisories (remote code execution in `next/og`, which the share cards use, and
-  in image optimisation). next-auth beta.31 had a fail-open advisory. Both are fixed by
-  upgrades.
+  in image optimisation). next-auth beta.31 had a fail-open advisory. next-auth and sharp
+  are fixed; Next.js is on 16.2.12, which fixes the 16.2.11 set. The 16.3.x-only
+  advisories stay open because Next.js 16.3.8 fails staging verification (see
+  "Dependency upgrade: what happened").
 - Three HIGH issues are fixed: `/me` had no write rate limit, a new collector's first
-  page load raced account creation (500, and the email and name went to Sentry), and the
-  dependencies above.
+  page load raced account creation (500, and the email and name went to Sentry), and
+  next-auth/sharp.
 - The open items are MEDIUM or lower. The ones worth doing before a public launch are
   JWT claim hardening (F2), a secret-strength check (F3), HSTS and a tighter CSP (F14),
   and an export that covers everything delete removes (F5).
@@ -43,9 +45,9 @@ Railway, the database, settings or collectors was touched or read.
 
 | ID | Severity | Area | Evidence | Status |
 |---|---|---|---|---|
-| D1 | CRITICAL | Dependencies | `next` 16.2.10: GHSA-vcvr-r3jv-pc5j (RCE in `next/og` ImageResponse; used by `src/lib/shareCard.tsx`, `src/app/share/[kind]/[id]/route.tsx`), GHSA-2xp9-vwfh-vxw4 (RCE, image optimisation with AVIF), GHSA-cjq9-62q9-8jv4 and GHSA-p9j2-gv94-2wf4 (SSRF), GHSA-6gpp-xcg3-4w24 (proxy bypass), plus DoS and cache-confusion items | fixed in #140 (next 16.3.8, outside every range; 16.4.2 skipped, published the same day) |
-| D2 | HIGH | Dependencies | `next-auth` 5.0.0-beta.31 / `@auth/core` 0.41.2: GHSA-8fpg-xm3f-6cx3 (configuration errors fail open), GHSA-7rqj-j65f-68wh, GHSA-xmf8-cvqr-rfgj, GHSA-x445-f3h2-j279 | fixed in #140 (beta.32 / 0.41.3) |
-| D3 | HIGH | Dependencies | `sharp` 0.34.5 (used by `src/lib/socialArtwork.ts`): libvips, libheif and librsvg advisories; build-time `browserslist`, `source-map-js`, `baseline-browser-mapping` | fixed in #140; `npm audit --omit=dev`: 0 |
+| D1 | CRITICAL | Dependencies | `next` 16.2.10: GHSA-vcvr-r3jv-pc5j (RCE in `next/og` ImageResponse; used by `src/lib/shareCard.tsx`, `src/app/share/[kind]/[id]/route.tsx`), GHSA-2xp9-vwfh-vxw4 (RCE, image optimisation with AVIF), GHSA-cjq9-62q9-8jv4 and GHSA-p9j2-gv94-2wf4 (SSRF), GHSA-6gpp-xcg3-4w24 (proxy bypass), plus DoS and cache-confusion items | partly fixed: #148 (16.2.12) clears the 16.2.11 set (GHSA-6gpp, -p9j2, -m99w, -89xv and five moderate). #151 (16.3.8) failed staging verification and was reverted (#152), so the 16.3.x-only ones stay open; see the table under "Dependency upgrade" |
+| D2 | HIGH | Dependencies | `next-auth` 5.0.0-beta.31 / `@auth/core` 0.41.2: GHSA-8fpg-xm3f-6cx3 (configuration errors fail open), GHSA-7rqj-j65f-68wh, GHSA-xmf8-cvqr-rfgj, GHSA-x445-f3h2-j279 | fixed in #146 (beta.32 / 0.41.3) |
+| D3 | HIGH | Dependencies | `sharp` 0.34.5 (used by `src/lib/socialArtwork.ts`): libvips, libheif and librsvg advisories; build-time `browserslist`, `source-map-js`, `baseline-browser-mapping` | our sharp fixed in #147 (0.35.5). Next 16.2.x keeps its own nested sharp 0.34.5 and postcss for `next/image`, which go away with Next 16.3 |
 | A1 | HIGH | Rate limiting | `core/rate_limit.py` `COLLECTION_WRITE_PREFIXES` named the removed S8 paths, so no `/me` write was limited; `/me` reads, export and delete fell into per-IP `public_read`, and the website reaches `/me` from shared egress IPs (`lib/meProxy.ts` forwards no client IP) | fixed in #136 (writes 60/5 min, reads 300/5 min, export and delete 20/10 min, keyed per collector; IP keys prefixed so a spoofed header cannot name a collector bucket) |
 | F1 | HIGH | Accounts, PII | `auth.py` `_get_or_create_user` select-then-insert; `lib/collectionServer.ts:70-78` sends 4 concurrent `/me` calls, `lib/accountServer.ts:75-78` 2. Losers raised `IntegrityError` → 500 on a new collector's first visit, and its text carries the bound email, name and Google subject into logs and Sentry (`error_tracking.scrub_event` did not touch exception values). *Verified*: probe reproduced the error and the email in its text | fixed in #137 (losers reuse the winner's row; Sentry redacts SQL parameters, Postgres DETAIL and emails) |
 | A2 | MEDIUM | Abuse | `/api/collector-token-check` called the API on every request; the API counts all website traffic in one IP bucket | fixed in #141 (60 s cache, in-flight dedupe, 10 requests/min per client, 429 with Retry-After, which `verify_staging_delivery.py` honours) |
@@ -132,15 +134,60 @@ Ship it first as `Content-Security-Policy-Report-Only` for one staging cycle. Re
 `'unsafe-inline'` scripts needs a per-request nonce from `proxy.ts` and makes pages
 dynamic (effort M).
 
+## Dependency upgrade: what happened
+
+#140 moved Next.js, next-auth and sharp in one step and failed staging verification
+twice with only `TimeoutError`. It was reverted (#144), the verifier was taught to name
+the failing stage and the requests still in flight (#145, #149), and the upgrade was
+retried one package at a time:
+
+- next-auth beta.32 (#146), sharp 0.35.5 (#147) and Next.js 16.2.12 (#148) each verified
+  green.
+- Next.js 16.3.8 alone (#151) failed the same way. The receipt now reads
+  `TimeoutError during browser warm-up /; still loading: fetch /sign-in`. The home page
+  never reaches network idle because a request for `/sign-in` (the header's Sign in link,
+  `components/ui/TopBar.tsx`) never completes on staging.
+
+So the cause is Next.js 16.3.x together with the `/sign-in` route on Vercel. Locally
+(`next start`, stub API), clicking Sign in on 16.3.8 renders in 0.2 s. The one
+difference seen there: 16.3 answers the link's plain `/sign-in?callbackUrl=...` RSC
+request with a 307 to an `_rsc`-hashed URL, which 16.2.12 does not. That suggests the
+hang is in how Vercel handles that redirect or the hashed request; it is inferred, not
+confirmed. The Vercel request logs for `/sign-in` between 14:00 and 14:02Z on
+2026-10-16 would settle it.
+
+Advisories still open on Next.js 16.2.12 (`npm audit --omit=dev`):
+
+| Advisory | Severity | Fixed in | Reachable here? | Interim mitigation |
+|---|---|---|---|---|
+| GHSA-vcvr-r3jv-pc5j, RCE in `next/og` ImageResponse | critical | 16.3.6 | Yes: `/share/[kind]/[id]` renders share cards with `ImageResponse` | The route only accepts `print`/`release` with a numeric id or `market/overall`, and renders text and artwork from our own API. Turning share images off until the upgrade is the safe option if the advisory turns out to need no attacker input |
+| GHSA-2xp9-vwfh-vxw4, RCE in image optimisation with AVIF | critical | 16.3.3 | No on Vercel: `/_next/image` is served by Vercel's optimiser, and `next.config.ts` sets no `images` formats or remote patterns | Keep `images` unset; do not self-host the web app on 16.2.x |
+| GHSA-p293-qw3h-jr36, RCE on Windows-hosted servers | critical | 16.3.3 | No: Vercel runs Linux | None needed |
+| GHSA-cjq9-62q9-8jv4, SSRF in image optimisation | high | 16.3.8 | No on Vercel (as above); no `remotePatterns` | Keep `images.remotePatterns` unset |
+| GHSA-mcj8-r9mp-w47p, GHSA-4jqv-mc3x-m676, cache poisoning of SSG/ISR | moderate | 16.3.8 | Low: no `generateStaticParams` or `revalidate` in `src/app`; 4jqv is self-hosted only | None needed beyond staying on Vercel |
+| GHSA-f87g-xv8r-7p7x, metadata image routes | moderate | 16.3.8 | No: `icon.svg` and `apple-icon.png` are static files | None |
+| GHSA-39w2-rjm5-chcv, dev-server MCP endpoint | low | 16.3.8 | No: dev server only | None |
+| Next's nested sharp 0.34.5 (GHSA-f88m, -rgj7, -wq5f) and postcss | high/moderate | Next 16.3 | No on Vercel: used by Next's own image optimiser and build | Same as GHSA-2xp9 |
+| browserslist, source-map-js, baseline-browser-mapping, nanoid | high/moderate | lockfile refresh | No: build-time tooling, not served | Refresh the lockfile in a later dependency PR |
+
+Next step for the upgrade: find why `/sign-in` hangs on Vercel under 16.3 (the request
+log above), fix that route or its link (for example `prefetch={false}` if the prefetch is
+the request), then retry 16.3.8 alone.
+
 ## Fix PRs
 
 | PR | Fixes | Lane / receipt scope |
 |---|---|---|
-| #140 | D1, D2, D3 | product / product |
-| #137 | F1 | data / full |
-| #136 | A1 | data / full |
-| #141 | A2 | product / product |
-| #138 | A3 | data / full |
+| #140 | D1, D2, D3 in one step | product; failed verification twice, reverted by #144 |
+| #145, #149 | Verifier names the failing stage and the requests still loading | data |
+| #146 | D2 (next-auth beta.32) | product; verified (run 38879184848) |
+| #147 | D3 (sharp 0.35.5) | product; verified (run 38888685548) |
+| #148 | D1, part (Next 16.2.12) | product; verified with the following run 38906152623 (#150 merged during its own check) |
+| #151 | D1, rest (Next 16.3.8) | product; failed verification (run 38909877498), reverted by #152 |
+| #137 | F1 | data; verified (run 38882503658) |
+| #136 | A1 | data; verified (run 38885503713) |
+| #141 | A2 | product; verified (run 38891946439) |
+| #138 | A3 | data; verified (run 38894740983) |
 
 CI run ids and receipts are recorded on each PR. Every PR's diff was checked against
 `scripts/collector_runtime_inputs.py` at base (snkrdunk 62 inputs, yuyutei 73):
@@ -153,3 +200,8 @@ intersection empty.
 - Decide when `app/db.py` gets `hide_parameters=True` (L1): it changes both collector
   images' inputs.
 - No exposed secret was found, so no rotation is needed beyond 2026-10-15's.
+- To unblock Next.js 16.3: check the Vercel request log for `/sign-in` on the #151
+  deployment between 14:00 and 14:02Z on 2026-10-16 (status, duration, any redirect
+  loop), or open the `staging-delivery-1068d3c…` artifact of run 38909877498. This
+  session cannot reach Vercel or the artifact store.
+- Decide whether `/share` images stay on while `next/og` is on 16.2.12 (GHSA-vcvr).
