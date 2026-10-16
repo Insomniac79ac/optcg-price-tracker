@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Pre-launch security pass (owner request 2026-10-15): record the collector accounts audit (findings, evidence, fix PRs #136, #137, #138, #140, #141, open items and owner checks) as docs/agent/security/2026-10-16-accounts-audit.md. Documentation only; no application, migration, data, secret, setting, workflow or collector change.",
+  "mission": "Let the ops-write preflight run, and make two session-14 numbers readable over REST. The preflight's delivery check listed .github/workflows/staging-delivery.yml, which is workflow_call only and has no runs endpoint (GitHub answers 404), so every ops-write dispatch was refused with 'GitHub read failed' (run 38899254401). Drop that entry; ci.yml delivery jobs and Verify staging merge are still checked and any read error still refuses. The staging-state and official-images-status ops-summary annotations gain the quarantined-refresh-work count/oldest blocked-since and the recent mirror runs' start times. Staging only; no collector, setting, price, identity, Market Value/Index, secret or Railway change; no deploy, enqueue or runbook run in this PR.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,12 +20,40 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/security/2026-10-16-accounts-audit.md"
+        "scripts/ops/run.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "DELIVERY_WORKFLOWS no longer lists staging-delivery.yml (workflow_call only, no runs of its own, so its runs endpoint 404s and the fail-closed preflight refused every write runbook). The ci.yml staging-automerge/staging-credential-presence jobs and staging-verify.yml runs are still checked; any read error still refuses. Quiet windows, owner approval (staging-ops) and the apply/sha checks are unchanged."
+    },
+    {
+      "files": [
+        "scripts/ops/staging_state.py",
+        "scripts/ops/official_images.py"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Read-only summaries only: staging-state adds quarantined_refresh_work {count, oldest_blocked_since} from the snapshot's blocker; official-images-status adds recent_runs (status, createdAt of the last 5 Railway runs it already reads). No new query, request or write."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Asserts every DELIVERY_WORKFLOWS entry has a trigger besides workflow_call, and covers the two new summary fields."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "New audit document. No secret value, length or partial value is recorded; committed-secret scan results name only pattern classes."
+      "reason": "Documents the new summary fields and why Serialized staging delivery is not in the delivery check."
     }
   ],
   "deployment_verification": {
@@ -39,5 +67,42 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "e82af4e54aaac0f80f1d270c21af4a42ada69b3b88cf4f0541b51266057d355c"
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "GitHub Actions: ops-write preflight and ops-readonly summaries (scripts/ops)"
+        }
+      ],
+      "routes": [
+        "None"
+      ],
+      "dependencies": [
+        "ops workflows from PR #139 and #143 (unchanged)"
+      ],
+      "deployment_impact": "Ops tooling, test and doc only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/, apps/ or .github/ changes.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "1bdde86b91340bf748a8e9570a979c2bdcb66694",
+      "procedure": "Native revert of this PR restores the old delivery list (ops-write then refuses again) and the shorter summaries. No data, schema, provider or service configuration to undo.",
+      "trigger": "An ops-write preflight that passes while a staging-automerge, staging-credential-presence or Verify staging merge run is queued or running.",
+      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/ops/run.py"
+      ],
+      "observation_window": "After merge: an ops-write enqueue-remaining-50 dry run passes its preflight and its owner-approval job waits for the owner; staging-state and official-images-status summaries show the new fields."
+    }
+  },
+  "diff_sha256": "f841e856301ad2ec882c01eef0f64843618d459dac373f7c771637a55f678985"
 }

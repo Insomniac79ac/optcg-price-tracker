@@ -33,8 +33,10 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
+          # The owner's `hold-for-owner` label keeps a ready PR unarmed: the owner merges
+          # it by hand (docs/agent/STAGING_DELIVERY.md, "Owner hold").
           gh api "repos/$REPO/pulls/$PR" \
-            --jq '"current=\(.draft == false and .head.sha == env.HEAD)"' >> "$GITHUB_OUTPUT"
+            --jq '"current=\(.draft == false and .head.sha == env.HEAD and ([.labels[].name] | index("hold-for-owner") == null))"' >> "$GITHUB_OUTPUT"
 
   staging-credential-presence:
     # An independent normal Environment job distinguishes unavailable staging
@@ -272,11 +274,14 @@ jobs:
                           '--output', 'docs/agent/evidence/latest-staging-delivery.json',
                           '--scope', 'docs/agent/evidence/latest-delivery-scope.json', *extra], check=True)
           PY
+      - name: Signed-out website smoke (public pages, sign-in redirects, card images)
+        run: python scripts/staging_web_smoke.py --output docs/agent/evidence/latest-web-smoke.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: staging-delivery-${{ steps.merge.outputs.sha }}
           path: |
+            docs/agent/evidence/latest-web-smoke.json
             docs/agent/CURRENT_STATE.yaml
             docs/agent/evidence/latest-staging-delivery.json
             docs/agent/evidence/latest-collector-rollout.json
@@ -359,6 +364,21 @@ jobs:
 
   agent-state-tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: opcg
+          POSTGRES_PASSWORD: opcg
+          POSTGRES_DB: opcg_ops_test
+        ports: ["5545:5432"]
+        options: >-
+          --health-cmd "pg_isready -U opcg -d opcg_ops_test" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      # Ops runbook tests run every diagnostic SQL file read-only against a real schema.
+      OPS_TEST_POSTGRES_URL: postgresql+psycopg://opcg:opcg@localhost:5545/opcg_ops_test
+      REQUIRE_POSTGRES: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -379,6 +399,12 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p test_yuyu_raw_reader_component.py -v
       # pytest-style tests: the sequential collector rollout and the recovery scan.
       - run: pip install pytest==8.4.2 && python -m pytest -q scripts/tests/test_deploy_staging_collectors.py scripts/tests/test_collector_variables.py
+      # Guardrails as code: the committed Claude Code settings and hooks block what they should.
+      - run: python -m unittest discover -s scripts/tests -p test_claude_guardrails.py -v
+      # Ops runbooks (scripts/ops) with the API package they read through.
+      - run: pip install -r services/api/requirements.txt && pip install --no-deps ./packages/opcg_source_identity
+      - run: python -m unittest discover -s scripts/tests -p 'test_ops_*.py' -v
+      - run: python -m unittest discover -s scripts/tests -p test_staging_web_smoke.py -v
 
   check-secrets:
     runs-on: ubuntu-latest
