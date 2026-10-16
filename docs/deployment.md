@@ -493,14 +493,17 @@ host, you'll need to widen the matching CSP directive in `next.config.ts` or it'
 blocked (check the browser console for a CSP violation, not a generic network error).
 
 **Rate limiting** (`app.core.rate_limit`) is in-memory, keyed by client IP + route group, no
-external dependency. Five groups, each independently configurable via env var (defaults shown):
+external dependency. The collector's own `/me` routes are keyed by the signed-in collector instead
+(a digest of the verified bearer token's subject; an unverifiable token falls back to the IP),
+because the website calls `/me` server-to-server and every collector arrives from the same few
+platform egress addresses. Five groups, each independently configurable via env var (defaults shown):
 
 | Group | Applies to | Default limit | Window |
 |---|---|---|---|
-| `public_read` | Non-admin `GET` endpoints | `RATE_LIMIT_PUBLIC_READ_PER_5M=300` | 5 min |
-| `collection_write` | Collection/wishlist/grading/note writes | `RATE_LIMIT_COLLECTION_WRITE_PER_5M=60` | 5 min |
+| `public_read` | Non-admin `GET` endpoints, including `/me` reads (per collector) | `RATE_LIMIT_PUBLIC_READ_PER_5M=300` | 5 min |
+| `collection_write` | `/me` writes: collection, watchlist, preferences (per collector) | `RATE_LIMIT_COLLECTION_WRITE_PER_5M=60` | 5 min |
 | `admin` | All `/admin/*` and `/snkrdunk/*` (admin-token-gated) | `RATE_LIMIT_ADMIN_PER_5M=120` | 5 min |
-| `import_export` | CSV import/export, backup export/validate/restore, DB backup listing | `RATE_LIMIT_IMPORT_EXPORT_PER_10M=20` | 10 min |
+| `import_export` | Backup export/validate/restore, DB backup listing; `/me/export*` and `DELETE /me` (per collector) | `RATE_LIMIT_IMPORT_EXPORT_PER_10M=20` | 10 min |
 | ~~`search`~~ | group removed in Collector v1 S1 with `/search` and `/search/suggestions`; `RATE_LIMIT_SEARCH_PER_5M` is inert until S9 removes it from `settings.py` | n/a | n/a |
 
 A request over its group's limit gets `429` with `{"detail": "Rate limit exceeded",
