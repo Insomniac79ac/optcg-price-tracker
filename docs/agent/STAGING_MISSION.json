@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Guardrails as code and ops runbooks in GitHub Actions (owner request 2026-10-15): agents in cloud sessions run data-lane reads and owner-gated writes through allowlisted workflow_dispatch runbooks and never see a secret; committed Claude Code settings and hook; hold-for-owner merge hold; signed-out web smoke after deliveries; intake/reporting templates. Staging only; no collector, setting, price, identity, Market Value/Index, secret or Railway change; no deploy, enqueue or runbook run in this PR.",
+  "mission": "Make the ops runbook workflows dispatchable (follow-up to PR #139): the default branch main does not carry ops-readonly.yml/ops-write.yml, so workflow_dispatch returned 404. A push to staging that changes either file registers it; every job is skipped on that push. Staging only; no collector, setting, price, identity, Market Value/Index, secret or Railway change; no deploy, enqueue or runbook run in this PR.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -26,80 +26,25 @@
       "effects": [
         "infrastructure"
       ],
-      "reason": "New workflow_dispatch-only workflows, staging ref only, no pull_request trigger. ops-readonly runs allowlisted read-only runbooks with the staging-delivery Environment's existing read credentials; every database session is default_transaction_read_only=on on a fingerprinted staging connection. ops-write waits for the owner in a new staging-ops Environment (required reviewer, holds no secret) before its runbook job gets credentials; dry run by default; quiet windows and running deliveries are checked at dispatch and again before the runbook. Nothing runs until someone dispatches it; this PR dispatches nothing."
+      "reason": "Adds a push trigger limited to staging and to the workflow's own file, and gates every job on github.event_name == 'workflow_dispatch', so the push run only registers the workflow and runs nothing (no environment, no secret). ops-write's registration run uses its own concurrency group so it never displaces a run waiting for owner approval. Dispatch behaviour, inputs, gates and credentials are unchanged."
     },
     {
       "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml",
-        ".github/workflows/staging-verify.yml"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "CI: staging-pr-live treats a PR labelled hold-for-owner as not current, so it is never armed (owner merges by hand); after the existing delivery verification, staging-automerge, the reusable delivery workflow and Verify staging merge run the read-only signed-out web smoke and add its receipt to the artifact; agent-state-tests gains a Postgres 16 service and runs the guardrail, ops-runbook and web-smoke tests. No secret, variable, environment, provider or production destination changes; arming, merge window and rollout logic otherwise unchanged."
-    },
-    {
-      "files": [
-        "scripts/diagnostics/degraded-signals.sql",
-        "scripts/diagnostics/freshness-not-met.sql",
-        "scripts/diagnostics/official-image-assets.sql",
-        "scripts/diagnostics/table-sizes.sql",
-        "scripts/diagnostics/work-by-state.sql",
-        "scripts/ops/__init__.py",
-        "scripts/ops/common.py",
-        "scripts/ops/db.py",
-        "scripts/ops/diagnostic.py",
-        "scripts/ops/enqueue_remaining.py",
-        "scripts/ops/fleet.py",
-        "scripts/ops/lossless.py",
-        "scripts/ops/official_images.py",
-        "scripts/ops/replan.py",
-        "scripts/ops/run.py",
-        "scripts/ops/staging_state.py",
-        "scripts/ops/storage_events.json",
-        "scripts/ops/storage_rates.py",
-        "scripts/staging_web_smoke.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Read-only ops tooling moved from the session 13 handoff tools (db, storage rates, lossless verify, fleet vs receipt, re-plan, approved list) plus official-images status, named diagnostics SQL and the web smoke. The only write path is the existing PR #116 enqueue tool behind ops-write (owner approval, dry run default, apply only with the reviewed list SHA-256). scripts/ is not installed in any image: 0 collector runtime inputs (scripts/product_lane.py import-graph check, SNKRDUNK and Yuyu-Tei)."
-    },
-    {
-      "files": [
-        ".claude/hooks/guard.py",
-        ".claude/settings.json"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Claude Code project settings and a PreToolUse hook for agent sessions: deny the Railway CLI, remote psql/pg_dump, printing the environment, owner-approval signals, GitHub deployments/environments/rulesets/branch-protection/secrets APIs, direct pushes to staging and force pushes; block Edit/Write on DATA-lane paths (scripts/product_lane.path_reason) unless CARDPIRATE_LANE=data. Agent tooling only; no runtime, CI credential or auth change. Tightens agent permissions; does not change the security or secrets policy."
-    },
-    {
-      "files": [
-        "scripts/tests/test_claude_guardrails.py",
-        "scripts/tests/test_ops_runbooks.py",
-        "scripts/tests/test_staging_web_smoke.py"
+        "scripts/tests/test_ops_runbooks.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Guardrail hook tests (exit 2 on every blocked class, allowed commands pass, lane agrees with product_lane), ops runbook tests (session 13 storage rates reproduced from committed evidence, quiet windows, delivery check, secret scan, read-only diagnostics on a real schema with a refused write), web smoke decision rules."
+      "reason": "Asserts the push trigger is limited to staging and the workflow's own path, and that every job is gated on workflow_dispatch."
     },
     {
       "files": [
-        ".github/ISSUE_TEMPLATE/agent-task.yml",
-        ".github/pull_request_template.md",
-        "CLAUDE.md",
-        "docs/agent/AUTONOMY_POLICY.md",
-        "docs/agent/OPS_RUNBOOKS.md",
-        "docs/agent/STAGING_DELIVERY.md"
+        "docs/agent/OPS_RUNBOOKS.md"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "Agent task issue form, PR template (plain summary, lane, verification, staging URL, owner check), root CLAUDE.md (lanes, local tests, runbooks, GitHub REST notes, hard lines; links the policy), AUTONOMY_POLICY.md cloud-session section (what agents may do alone, what stays the owner's), OPS_RUNBOOKS.md, STAGING_DELIVERY.md owner hold and web smoke."
+      "reason": "Explains registration and what a 404 on dispatch means."
     }
   ],
   "deployment_verification": {
@@ -117,36 +62,27 @@
     "impact": {
       "resources": [
         {
-          "name": "GitHub Actions: new ops-readonly and ops-write workflows (dispatch only); CI staging-pr-live, staging-automerge, agent-state-tests; staging-delivery reusable workflow; Verify staging merge"
-        },
-        {
-          "name": "Claude Code agent sessions in this repository (.claude/settings.json, .claude/hooks/guard.py)"
+          "name": "GitHub Actions: ops-readonly and ops-write workflows (registration push trigger only)"
         }
       ],
       "routes": [
-        "None (no application route changes); the web smoke only reads /, /cards, /prints/5661, /sign-in, /account, /collection, /watchlist signed out"
+        "None"
       ],
       "dependencies": [
-        "staging-delivery Environment secrets STAGING_RAILWAY_TOKEN and STAGING_VERCEL_READ_TOKEN (reused, unchanged)",
-        "new staging-ops Environment (owner as required reviewer, no secrets) created by the owner before the first ops-write run",
-        "scripts/product_lane.py (lane definition shared with the hook)",
-        "PR #116 scripts/yuyu_identity_capture_enqueue.py (unchanged)"
+        "ops workflows from PR #139 (unchanged dispatch path)"
       ],
-      "deployment_impact": "Workflow, tooling, tests and docs only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; scripts/, .github/ and .claude/ are not installed in any image. api_sha=merge accepts a skipped API build; web redeploys through Vercel Git with no app change.",
+      "deployment_impact": "Workflow, test and doc only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes. The merge push starts one ops-readonly and one ops-write run whose jobs are all skipped.",
       "database_writes": 0,
       "source_requests": 0,
-      "estimated_runtime_minutes": 30
+      "estimated_runtime_minutes": 5
     },
     "recovery": {
-      "artifact": "4dbc70ba16a183cf9e8732af69072cc76aa00d03",
-      "procedure": "Native revert of this PR removes the ops workflows, guard hook and settings, the hold-label check and the web smoke step, restoring the previous CI exactly. No data, schema, provider or service configuration to undo; the staging-ops Environment and hold-for-owner label are inert without the workflows.",
-      "trigger": "Arming of a PR that carries hold-for-owner, or a non-held ready PR no longer arming; web smoke failing on a healthy site; agent-state-tests red from the new suites; any ops runbook output containing a secret or a database session that is not read-only.",
+      "artifact": "cc5a08f8196374eaa1da3803cdf0e5cea94883b5",
+      "procedure": "Native revert of this PR removes the push trigger; the workflows then stay registered but unchanged otherwise. No data, schema, provider or service configuration to undo.",
+      "trigger": "Any ops job running on a push event, or a dispatch still returning 404 after the registration run.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
       "validation": [
-        "scripts/tests/test_claude_guardrails.py",
-        "scripts/tests/test_ops_runbooks.py",
-        "scripts/tests/test_staging_web_smoke.py",
-        "scripts/tests/test_product_lane.py"
+        "scripts/tests/test_ops_runbooks.py"
       ]
     },
     "verification": {
@@ -154,12 +90,10 @@
         "engineering-gate"
       ],
       "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/generate_staging_state.py",
         "scripts/ops/run.py"
       ],
-      "observation_window": "After the owner's hand merge: Verify staging merge receipt with the web smoke OK; one ops-readonly staging-state run and one official-images-status run succeed with read-only sessions, and their summaries are attached to this PR."
+      "observation_window": "After merge: the registration runs show all jobs skipped; one ops-readonly staging-state run and one official-images-status run succeed with read-only sessions, and their summaries are attached to PR #139."
     }
   },
-  "diff_sha256": "bed94105948a4541bb6df066b87dc95e3c08006eacdd1dbace72436f1ef8a887"
+  "diff_sha256": "4e888f1672c75cae05563b8c43df8ed85e70014a3fe725e3caaa331879850a4a"
 }
