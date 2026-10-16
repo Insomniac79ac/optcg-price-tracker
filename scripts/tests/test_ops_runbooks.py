@@ -235,6 +235,19 @@ class Diagnostics(unittest.TestCase):
                 diagnostic.parse(text, {"ELIGIBLE": "select 1"})
         self.assertEqual(diagnostic.parse("-- a\nselect 'delete' x from t;"), {"a": "select 'delete' x from t"})
 
+    def test_small_results_inline_in_summary(self):
+        from datetime import datetime, timezone
+        at = datetime(2026, 10, 16, 23, tzinfo=timezone.utc)
+        result = {"work": {"rows": [{"work_id": 1, "state": "pending", "at": at}], "truncated": False},
+                  "big": {"rows": [{"x": "y" * 100}] * 10, "truncated": False},
+                  "empty": {"rows": [], "truncated": False}}
+        out = diagnostic.inline(result, limit=200)
+        self.assertEqual(out["rows"]["work"], {"columns": ["work_id", "state", "at"],
+                                               "rows": [[1, "pending", at]]})
+        self.assertEqual(out["rows"]["empty"], {"columns": [], "rows": []})
+        self.assertEqual(out["rows_omitted"], ["big"])
+        self.assertTrue(run.annotations({"result": out})[0].startswith("::notice title=ops-summary 1/1::"))
+
     def test_unknown_name_refused(self):
         for name in ("../../etc/passwd", "nope", ""):
             with self.assertRaises(common.Refused):
