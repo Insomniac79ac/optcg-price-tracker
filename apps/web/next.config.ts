@@ -94,13 +94,27 @@ const CONTENT_SECURITY_POLICY = [
   `img-src 'self' data: ${IMAGE_HOSTS.join(" ")}`,
   `connect-src ${buildConnectSrc()}`,
   "frame-ancestors 'none'",
-  // Security audit 2026-10-16, F14: nothing here uses <object>/<embed> or a
-  // <base> tag, and every form posts to this origin (Google sign-in is a
-  // client fetch then a redirect, allowed below for browsers that apply
-  // form-action to redirects).
+].join("; ");
+
+// The tighter policy proposed by the 2026-10-16 security audit (F14), sent as
+// Content-Security-Policy-Report-Only for a staging cycle first: browsers log
+// what it would block and block nothing. Nothing here uses <object>/<embed>,
+// <base> or frames, and every form posts to this origin (Google sign-in is a
+// client fetch then a redirect, allowed for browsers that apply form-action
+// to redirects). Enforce it in its own change once staging shows no reports.
+const CONTENT_SECURITY_POLICY_REPORT_ONLY = [
+  "default-src 'self'",
+  `script-src ${scriptSrc}`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: ${IMAGE_HOSTS.join(" ")}`,
+  "font-src 'self'",
+  `connect-src ${buildConnectSrc()}`,
+  "frame-src 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https://accounts.google.com",
+  "manifest-src 'self'",
+  "worker-src 'self'",
 ].join("; ");
 
 // Two years, as Vercel already sends on its own domains. No `preload` until
@@ -128,6 +142,7 @@ const nextConfig: NextConfig = {
             value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
           },
           { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
+          { key: "Content-Security-Policy-Report-Only", value: CONTENT_SECURITY_POLICY_REPORT_ONLY },
           { key: "Strict-Transport-Security", value: STRICT_TRANSPORT_SECURITY },
         ],
       },
