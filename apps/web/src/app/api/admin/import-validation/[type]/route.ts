@@ -14,7 +14,7 @@ export async function POST(
   { params }: { params: Promise<{ type: string }> },
 ) {
   const { type } = await params;
-  const auth = await requireAdminOrResponse();
+  const auth = await requireAdminOrResponse(request);
   if ("response" in auth) return auth.response;
   const headers: Record<string, string> = { ...adminAuthHeaders() };
 
@@ -32,7 +32,7 @@ export async function POST(
     );
   }
 
-  const backendUrl = `${API_INTERNAL_URL}/admin/import-validation/${type}${request.nextUrl.search}`;
+  const backendUrl = `${API_INTERNAL_URL}/admin/import-validation/${encodeURIComponent(type)}${request.nextUrl.search}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);

@@ -89,6 +89,37 @@ describe("mutating API routes require authentication", () => {
   });
 });
 
+describe("admin writes refuse cross-site requests and ids are checked", () => {
+  const files = routeFiles(API_DIR);
+  const relative = (file: string) => path.relative(API_DIR, file);
+
+  // Audit F9: proxyAdminJson/proxyAdminActorJson check Origin themselves;
+  // a handler calling requireAdminOrResponse directly must pass the request.
+  it("every mutating admin handler passes the request to the CSRF check", () => {
+    const unprotected = files
+      .filter((file) => {
+        const source = fs.readFileSync(file, "utf8");
+        return MUTATING_EXPORT.test(source) && source.includes("requireAdminOrResponse");
+      })
+      .filter((file) => !fs.readFileSync(file, "utf8").includes("requireAdminOrResponse(request)"))
+      .map(relative);
+    expect(unprotected).toEqual([]);
+  });
+
+  // Audit F8: numeric [id] segments are checked before they reach an upstream path.
+  it("every [id] handler checks the id is numeric", () => {
+    const idRoutes = files.filter((file) => relative(file).includes("[id]"));
+    expect(idRoutes.map(relative)).toContain("saved-views/[id]/route.ts");
+    const unchecked = idRoutes
+      .filter((file) => {
+        const source = fs.readFileSync(file, "utf8");
+        return !source.includes("isNumericRouteId(id)") && !source.includes("encodeURIComponent(id)");
+      })
+      .map(relative);
+    expect(unchecked).toEqual([]);
+  });
+});
+
 describe("read API routes require authentication unless explicitly public", () => {
   const files = routeFiles(API_DIR);
   const relative = (file: string) => path.relative(API_DIR, file);
