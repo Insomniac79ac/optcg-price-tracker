@@ -68,7 +68,7 @@
       "estimated_runtime_minutes": 5
     },
     "recovery": {
-      "artifact": "8fa5d892be202658804a32782b573dc85f4ddb21",
+      "artifact": "bc20082aa130074e4c4611527c2354a9dd146aea",
       "procedure": "Native revert of this PR restores the previous yuyu-f1-sizing and removes capture-day-storage and its workflow choice. No data, schema, provider or service configuration to undo.",
       "trigger": "A db-diagnostic run of either file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
