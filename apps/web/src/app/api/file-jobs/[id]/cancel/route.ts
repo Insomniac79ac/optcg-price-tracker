@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuthHeaders } from "@/lib/adminProxy";
 import { auth } from "@/lib/auth";
 import { collectorAuthHeadersFor, crossSiteRejection } from "@/lib/collectorApi";
+import { invalidRouteIdResponse, isNumericRouteId } from "@/lib/routeId";
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
@@ -17,6 +18,7 @@ export async function POST(
   const rejected = crossSiteRejection(request);
   if (rejected) return rejected;
   const { id } = await params;
+  if (!isNumericRouteId(id)) return invalidRouteIdResponse();
   const headers: Record<string, string> = {};
   const session = await auth();
   Object.assign(headers, (await collectorAuthHeadersFor(session)) ?? {});
@@ -78,7 +80,6 @@ export async function POST(
       {
         error: "Invalid JSON from backend API",
         backend_status: backendResponse.status,
-        body_preview: bodyText.slice(0, 500),
       },
       { status: fallbackStatus },
     );
