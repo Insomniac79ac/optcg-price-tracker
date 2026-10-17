@@ -268,7 +268,7 @@ def test_positive_special_rarity_uniquely_resolves_authoritative_release(db_sess
     assert refreshed.evidence_digest != old_digest
 
 
-@pytest.mark.parametrize("token", ["R", "P-R", "SR", "P-SR", "SPC", "SP-P", ""])
+@pytest.mark.parametrize("token", ["P-R", "P-SR", "SPC", "SP-P", ""])
 def test_generic_or_unknown_rarity_never_selects_a_physical_variant(db_session, token):
     _base(db_session)
     release = _release(db_session, "OP-17")
@@ -918,3 +918,153 @@ def test_digest_upgrade_never_touches_approved_exact_groups_or_their_physical_pr
         assert result["created"] == result["superseded"] == 0
     assert approved_with_proof() == before  # same rows, digests, versions, approvals, proofs
     assert all(g.superseded_at is None for g, _ in proofs)
+
+
+def _plan_for(db, candidate):
+    return next(
+        p for p in analyse_source_mapping_proposals(db).plans
+        if p.source_name == "yuyutei" and p.source_candidate_id == candidate.id
+    )
+
+
+def _recommended(plan):
+    return [a.card_print_id for a in plan.alternatives if a.recommended]
+
+
+def test_unique_listing_kind_resolves_base_and_parallel_both_ways(db_session):
+    _base(db_session)
+    release = _release(db_session, "OP-05")
+    family = _family(db_session, "OP05-100")
+    base = _print(db_session, family, release)
+    base.official_rarity = "SR"
+    parallel = _print(db_session, family, release, "p1")
+    parallel.official_rarity = "SR"
+    run = _run(db_session, "op05")
+    plain = _yuyu(db_session, run, "op05", 1990, family.card_code, name_jp="エネル", detected_rarity="SR")
+    annotated = _yuyu(db_session, run, "op05", 1978, family.card_code,
+                      name_jp="エネル(パラレル)", detected_rarity="P-SR")
+    db_session.commit()
+
+    plain_plan, parallel_plan = _plan_for(db_session, plain), _plan_for(db_session, annotated)
+    assert plain_plan.resolution_status == parallel_plan.resolution_status == "exact"
+    assert _recommended(plain_plan) == [base.id]
+    assert _recommended(parallel_plan) == [parallel.id]
+    assert "unique_listing_kind_resolves_one_release_sibling" in plain_plan.resolution_reasons
+    assert plain_plan.evidence_summary["unique_listing_kind_match"]["release_listings_of_kind"] == [plain.id]
+    assert "unique_listing_kind_in_release" in plain_plan.alternatives[0].supporting_evidence
+
+
+def test_second_listing_of_the_same_kind_reverts_to_the_ambiguous_version(db_session):
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+
+    _base(db_session)
+    release = _release(db_session, "OP-05")
+    family = _family(db_session, "OP05-091")
+    _print(db_session, family, release)
+    _print(db_session, family, release, "p1")
+    run = _run(db_session, "op05")
+    plain = _yuyu(db_session, run, "op05", 601, family.card_code, name_jp="カード", detected_rarity="SR")
+    first = refresh_discovery_proposals(db_session, "yuyutei", [plain.id])
+    assert first["resolutions"] == {"exact": 1}
+    assert refresh_discovery_proposals(db_session, "yuyutei", [plain.id])["reused"] == 1
+
+    duplicate = _yuyu(db_session, run, "op05", 602, family.card_code, name_jp="カード", detected_rarity="SR")
+    second = refresh_discovery_proposals(db_session, "yuyutei", [plain.id, duplicate.id])
+    assert second["resolutions"] == {"ambiguous": 2}
+    assert second["superseded"] == 1
+    assert db_session.query(SourceCardMapping).count() == 0
+
+
+def test_listing_named_for_the_release_on_another_category_counts_towards_uniqueness(db_session):
+    _base(db_session)
+    release = _release(db_session, "PRB-01", name="PREMIUM BOOSTER")
+    family = _family(db_session, "OP04-100")
+    _print(db_session, family, release, "r1")
+    _print(db_session, family, release, "p1")
+    run = _run(db_session, "prb01", "promo-op10")
+    on_shelf = _yuyu(db_session, run, "prb01", 701, family.card_code, name_jp="カポネ・ベッジ", detected_rarity="R")
+    _yuyu(db_session, run, "promo-op10", 702, family.card_code,
+          name_jp="カポネ・ベッジ(PREMIUM BOOSTER)", detected_rarity="R")
+    db_session.commit()
+    assert _plan_for(db_session, on_shelf).resolution_status == "ambiguous"
+
+
+def test_two_parallel_prints_and_one_parallel_listing_stay_ambiguous(db_session):
+    _base(db_session)
+    release = _release(db_session, "OP-13")
+    family = _family(db_session, "OP13-118")
+    _print(db_session, family, release)
+    _print(db_session, family, release, "p1")
+    _print(db_session, family, release, "p2")
+    candidate = _yuyu(db_session, _run(db_session, "op13"), "op13", 801, family.card_code,
+                      name_jp="カード(パラレル)", detected_rarity="P-SEC")
+    db_session.commit()
+    assert _plan_for(db_session, candidate).resolution_status == "ambiguous"
+
+
+@pytest.mark.parametrize("treatment,expected", [("ラメフォイル", "exact"), (None, "ambiguous")])
+def test_foil_listing_is_its_own_kind_and_matches_only_a_foil_print(db_session, treatment, expected):
+    _base(db_session)
+    release = _release(db_session, "PRB-02")
+    family = _family(db_session, "OP05-004")
+    reprint = _print(db_session, family, release, "r1")
+    reprint.treatment = treatment
+    _print(db_session, family, release, "p1")
+    candidate = _yuyu(db_session, _run(db_session, "prb02"), "prb02", 3413, family.card_code,
+                      name_jp="エンポリオ・イワンコフ(ラメフォイル)", detected_rarity="UC")
+    db_session.commit()
+    plan = _plan_for(db_session, candidate)
+    assert plan.resolution_status == expected
+    if expected == "exact":
+        assert _recommended(plan) == [reprint.id]
+        assert plan.evidence_summary["unique_listing_kind_match"]["listing_kind"] == "foil"
+
+
+def test_plain_listing_never_selects_a_foil_print(db_session):
+    _base(db_session)
+    release = _release(db_session, "PRB-01")
+    family = _family(db_session, "OP06-036")
+    _print(db_session, family, release, "r1").treatment = "海賊旗フォイル"
+    _print(db_session, family, release, "p1")
+    candidate = _yuyu(db_session, _run(db_session, "prb01"), "prb01", 901, family.card_code,
+                      name_jp="リューマ", detected_rarity="R")
+    db_session.commit()
+    assert _plan_for(db_session, candidate).resolution_status == "ambiguous"
+
+
+def test_print_approved_for_another_listing_is_never_selected(db_session):
+    yuyu, _ = _base(db_session)
+    release = _release(db_session, "OP-10")
+    family = _family(db_session, "OP10-032")
+    base = _print(db_session, family, release)
+    _print(db_session, family, release, "p1")
+    run = _run(db_session, "op10")
+    candidate = _yuyu(db_session, run, "op10", 431, family.card_code, name_jp="たしぎ", detected_rarity="SR")
+    db_session.add(SourceCardMapping(
+        source_id=yuyu.id,
+        source_card_id=family.card_code,
+        source_url="https://yuyu-tei.jp/sell/opc/card/promo-op10/999",
+        card_print_id=base.id,
+        review_status="approved",
+        is_active=True,
+    ))
+    db_session.commit()
+    assert _plan_for(db_session, candidate).resolution_status == "ambiguous"
+
+
+def test_listing_kind_rule_exact_proposal_survives_approval_revalidation(db_session):
+    from app.services.source_mapping_proposals import resolve_current_candidate_proposal
+
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-020")
+    base = _print(db_session, family, release)
+    _print(db_session, family, release, "p1")
+    candidate = _yuyu(db_session, _run(db_session, "op17"), "op17", 1187, family.card_code,
+                      name_jp="シャンクス", detected_rarity="L")
+    db_session.commit()
+    plan = _plan_for(db_session, candidate)
+    current = resolve_current_candidate_proposal(db_session, source_name="yuyutei", candidate_id=candidate.id)
+    assert current.resolution_status == plan.resolution_status == "exact"
+    assert current.evidence_digest == plan.evidence_digest
+    assert _recommended(current) == [base.id]
