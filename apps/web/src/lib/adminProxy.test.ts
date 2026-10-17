@@ -11,6 +11,7 @@ vi.mock("@/lib/adminSession", () => ({ getAdminIdentityForRouteHandler }));
 import { adminAuthHeaders, proxyAdminJson, requireAdminOrResponse } from "./adminProxy";
 
 const ADMIN_IDENTITY = { id: "staging-admin", email: "admin@example.com" };
+const SAME_ORIGIN = { origin: "http://localhost", "sec-fetch-site": "same-origin" };
 
 function req(url: string, init?: RequestInit): NextRequest {
   return new NextRequest(new Request(url, init));
@@ -30,6 +31,34 @@ describe("requireAdminOrResponse", () => {
     if ("response" in result) {
       expect(result.response.status).toBe(401);
     }
+  });
+});
+
+describe("requireAdminOrResponse with a request (CSRF, audit F9)", () => {
+  beforeEach(() => getAdminIdentityForRouteHandler.mockReset());
+
+  it.each([
+    ["another origin", { origin: "https://evil.example" }],
+    ["a cross-site fetch", { origin: "http://localhost", "sec-fetch-site": "cross-site" }],
+    ["no Origin header", {}],
+  ])("refuses a POST from %s with 403 before reading the session", async (_label, headers) => {
+    const result = await requireAdminOrResponse(
+      req("http://localhost/api/admin/cache/clear", { method: "POST", headers }),
+    );
+    expect("response" in result && result.response.status).toBe(403);
+    expect(getAdminIdentityForRouteHandler).not.toHaveBeenCalled();
+  });
+
+  it("accepts a same-origin POST and a GET from anywhere", async () => {
+    getAdminIdentityForRouteHandler.mockResolvedValue(ADMIN_IDENTITY);
+    const post = await requireAdminOrResponse(
+      req("http://localhost/api/admin/cache/clear", { method: "POST", headers: SAME_ORIGIN }),
+    );
+    const get = await requireAdminOrResponse(
+      req("http://localhost/api/admin/cache/status", { headers: { origin: "https://evil.example" } }),
+    );
+    expect(post).toEqual({ identity: ADMIN_IDENTITY });
+    expect(get).toEqual({ identity: ADMIN_IDENTITY });
   });
 });
 
@@ -107,6 +136,24 @@ describe("proxyAdminJson", () => {
     expect(init.headers["X-Admin-Token"]).toBe("server-side-secret");
   });
 
+  it("refuses a cross-site POST with 403 and never calls fetch", async () => {
+    const fetchSpy = vi.fn();
+    global.fetch = fetchSpy;
+
+    const res = await proxyAdminJson(
+      req("http://localhost/api/admin/cards/merge", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+        body: "{}",
+      }),
+      "/admin/cards/merge",
+    );
+
+    expect(res.status).toBe(403);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(getAdminIdentityForRouteHandler).not.toHaveBeenCalled();
+  });
+
   it("forwards a POST body and sets Content-Type", async () => {
     getAdminIdentityForRouteHandler.mockResolvedValueOnce(ADMIN_IDENTITY);
     const fetchSpy = vi.fn().mockResolvedValue(new Response('{"ok":true}', { status: 200 }));
@@ -115,6 +162,7 @@ describe("proxyAdminJson", () => {
     await proxyAdminJson(
       req("http://localhost/api/admin/cards/merge", {
         method: "POST",
+        headers: SAME_ORIGIN,
         body: JSON.stringify({ from: 1, to: 2 }),
       }),
       "/admin/cards/merge",
@@ -144,7 +192,7 @@ describe("proxyAdminJson", () => {
     global.fetch = fetchSpy;
 
     await proxyAdminJson(
-      req("http://localhost/api/admin/backup/export/job", { method: "POST" }),
+      req("http://localhost/api/admin/backup/export/job", { method: "POST", headers: SAME_ORIGIN }),
       "/admin/backup/export/job",
       { emptyBodyFallback: "{}" },
     );

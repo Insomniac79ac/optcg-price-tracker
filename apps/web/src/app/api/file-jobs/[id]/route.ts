@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuthHeaders } from "@/lib/adminProxy";
 import { auth } from "@/lib/auth";
 import { collectorAuthHeadersFor } from "@/lib/collectorApi";
+import { invalidRouteIdResponse, isNumericRouteId } from "@/lib/routeId";
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
@@ -23,6 +24,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  if (!isNumericRouteId(id)) return invalidRouteIdResponse();
   const headers = await buildHeaders();
   const backendUrl = `${API_INTERNAL_URL}/file-jobs/${id}`;
 
@@ -79,7 +81,6 @@ export async function GET(
       {
         error: "Invalid JSON from backend API",
         backend_status: backendResponse.status,
-        body_preview: bodyText.slice(0, 500),
       },
       { status: fallbackStatus },
     );

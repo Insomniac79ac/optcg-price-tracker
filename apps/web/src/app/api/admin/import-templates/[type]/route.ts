@@ -14,11 +14,11 @@ export async function GET(
   { params }: { params: Promise<{ type: string }> },
 ) {
   const { type } = await params;
-  const auth = await requireAdminOrResponse();
+  const auth = await requireAdminOrResponse(request);
   if ("response" in auth) return auth.response;
   const headers: Record<string, string> = { ...adminAuthHeaders() };
 
-  const backendUrl = `${API_INTERNAL_URL}/admin/import-templates/${type}.csv`;
+  const backendUrl = `${API_INTERNAL_URL}/admin/import-templates/${encodeURIComponent(type)}.csv`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);

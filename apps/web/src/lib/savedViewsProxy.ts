@@ -88,7 +88,6 @@ export async function proxySavedViews(
       {
         error: "Invalid JSON from backend API",
         backend_status: backendResponse.status,
-        body_preview: bodyText.slice(0, 500),
       },
       { status: backendResponse.ok ? 502 : backendResponse.status },
     );
