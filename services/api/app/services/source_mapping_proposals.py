@@ -62,7 +62,9 @@ YUYU_SPECIAL_RARITIES = {"SP": frozenset({"SPカード", "SP P"}),
 # A named foil treatment is its own kind, never plain, and matches only a print
 # whose catalogue treatment names a foil. Unknown tokens, variants or kinds
 # never take part, and a print approved for another listing is never selected.
-YUYU_ORDINARY_RARITIES = frozenset({"C", "UC", "R", "SR", "SEC", "L", "P"})
+# A bare P (promo) token is left to the special-rarity rule: promo parallels
+# are not reliably marked, so P never decides a kind here.
+YUYU_ORDINARY_RARITIES = frozenset({"C", "UC", "R", "SR", "SEC", "L"})
 _YUYU_FOIL_TITLE = re.compile(r"ラメフォイル|海賊旗フォイル")
 _FOIL_TREATMENT = re.compile(r"foil|フォイル", re.IGNORECASE)
 _SPECIAL_OFFICIAL_RARITIES = frozenset({"SPカード", "SP P", "TR"})

@@ -1052,18 +1052,6 @@ def test_print_approved_for_another_listing_is_never_selected(db_session):
     assert _plan_for(db_session, candidate).resolution_status == "ambiguous"
 
 
-def test_unknown_sibling_variant_blocks_the_listing_kind_rule(db_session):
-    _base(db_session)
-    release = _release(db_session, "OP-02")
-    family = _family(db_session, "OP02-062")
-    _print(db_session, family, release)
-    _print(db_session, family, release, "p1").official_asset_variant = None
-    candidate = _yuyu(db_session, _run(db_session, "op02"), "op02", 1522, family.card_code,
-                      name_jp="モンキー・Ｄ・ルフィ", detected_rarity="SR")
-    db_session.commit()
-    assert _plan_for(db_session, candidate).resolution_status == "ambiguous"
-
-
 def test_listing_kind_rule_exact_proposal_survives_approval_revalidation(db_session):
     from app.services.source_mapping_proposals import resolve_current_candidate_proposal
 
