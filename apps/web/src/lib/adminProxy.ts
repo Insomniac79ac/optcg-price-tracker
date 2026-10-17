@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getAdminIdentityForRouteHandler } from "@/lib/adminSession";
 import { signAdminActorAssertion } from "@/lib/adminActorAssertion";
+import { crossSiteRejection } from "@/lib/crossSite";
 
 /** Shared server-side boundary + upstream-fetch helper for every
  * /api/admin/** Route Handler (and any other Next.js route that performs
@@ -44,10 +45,17 @@ export function adminAuthHeaders(): Record<string, string> {
  * for Server Components/Actions and redirects/404s instead of returning a
  * Response). Returns the validated identity, or a ready-to-return 401 JSON
  * response if the caller doesn't have an admin session - callers should
- * `return` that response immediately without contacting the backend. */
-export async function requireAdminOrResponse(): Promise<
+ * `return` that response immediately without contacting the backend.
+ *
+ * Pass the request from every state-changing handler: a cross-site
+ * POST/PUT/PATCH/DELETE then gets a 403 before the session is read, the same
+ * Origin/Sec-Fetch-Site check collector writes use (security audit
+ * 2026-10-16, F9). SameSite=Lax cookies stay the first layer. */
+export async function requireAdminOrResponse(request?: Request): Promise<
   { identity: { id: string; email: string } } | { response: NextResponse }
 > {
+  const rejected = request ? crossSiteRejection(request) : null;
+  if (rejected) return { response: rejected };
   const identity = await getAdminIdentityForRouteHandler();
   if (!identity) {
     return {
@@ -82,7 +90,7 @@ export async function proxyAdminJson(
   backendPath: string,
   options?: ProxyAdminJsonOptions,
 ): Promise<NextResponse> {
-  const auth = await requireAdminOrResponse();
+  const auth = await requireAdminOrResponse(request);
   if ("response" in auth) return auth.response;
 
   const method = request.method.toUpperCase();
@@ -160,7 +168,7 @@ export async function proxyAdminActorJson(
   backendPath: string,
   options?: Pick<ProxyAdminJsonOptions, "timeoutMs" | "logLabel">,
 ): Promise<NextResponse> {
-  const auth = await requireAdminOrResponse();
+  const auth = await requireAdminOrResponse(request);
   if ("response" in auth) return auth.response;
 
   const adminToken = process.env.ADMIN_TOKEN;

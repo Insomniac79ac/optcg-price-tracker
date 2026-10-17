@@ -54,15 +54,14 @@ const SRC_DIR = join(LIB_DIR, "..");
  * belong under exactly the same rule and for a sharper reason: this page
  * aggregates ACROSS platforms, so a single hardcoded token here would not
  * mislabel one chart line, it would silently drop or misclassify a whole
- * platform's contribution to a published count. */
+ * platform's contribution to a published count. The landscape's view model
+ * and section components were removed as dead code in the 2026-10 design
+ * cleanup; the page that replaced them stays audited. */
 const AUDITED = [
   "lib/printPriceHistory.ts",
   "lib/printSeries.ts",
   "components/ui/PrintPriceHistory.tsx",
   "app/prints/[id]/page.tsx",
-  "lib/marketAnalytics.ts",
-  "components/ui/MarketLandscapeFilters.tsx",
-  "components/ui/MarketLandscapeSections.tsx",
   "app/analytics/page.tsx",
 ];
 
@@ -72,9 +71,6 @@ const AUDITED = [
  * rule, so widening it to the whole audited list would be a different change
  * from the one this tranche is making. */
 const MARKET_LANDSCAPE = [
-  "lib/marketAnalytics.ts",
-  "components/ui/MarketLandscapeFilters.tsx",
-  "components/ui/MarketLandscapeSections.tsx",
   "app/analytics/page.tsx",
 ];
 

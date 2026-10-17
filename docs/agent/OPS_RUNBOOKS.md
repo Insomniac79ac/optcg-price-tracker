@@ -41,8 +41,9 @@ adds `quarantined_refresh_work` (count, oldest blocked-since), `official-images-
 `recent_runs` (status and start time of each of the last 5 mirror runs), and `db-diagnostic` adds
 `rows` (each statement as `columns` plus `rows`, in file order while they fit 18,000 characters;
 the rest are named in `rows_omitted` and stay in the artifact).
-`identity-capture-work` lists every Yuyu identity-capture work item (state, attempts, denials,
-transient failures) and the last 24 h of their attempt outcomes: the post-enqueue progress check.
+`identity-capture-work` gives Yuyu identity-capture work totals by state (with id range), the newest
+100 items (state, attempts, denials, transient failures) and the last 24 h of their attempt
+outcomes: the post-enqueue progress check. Older items (500+ on staging) stay out of the summary.
 
 Nothing here is collector-affecting or a write, so no quiet window applies.
 

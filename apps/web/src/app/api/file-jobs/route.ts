@@ -85,7 +85,6 @@ export async function GET(request: NextRequest) {
       {
         error: "Invalid JSON from backend API",
         backend_status: backendResponse.status,
-        body_preview: bodyText.slice(0, 500),
       },
       { status: fallbackStatus },
     );
