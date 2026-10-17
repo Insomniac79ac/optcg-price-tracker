@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "D9 follow-up (owner decisions 2026-10-17): add three reviewed read-only db-diagnostic files. yuyu-f1-sizing sizes a two-way-unique match rule over stored Yuyu-Tei listing evidence for the ambiguous prints (counts by release and rarity, 20 sample matches); yuyu-f3-aliases lists Yuyu-Tei categories that resolve to no release with sample listings and where PRB reprint codes are listed; storage-savings measures RAW and observation growth to size storage-cutting options. Register them in ops-readonly. Staging only; no rule, alias, proposal, mapping, enqueue, collector, setting, price, identity, Market Value/Index, secret or Railway change; no runbook run in this PR.",
+  "mission": "Security follow-ups (owner request 2026-10-17): mark the medium/low findings fixed by #159, #160, #161, #162 and #165 in docs/agent/security/2026-10-16-accounts-audit.md (F5, F8, F9, F11, F12 fixed; F13 and F14 web parts fixed). Documentation only; no application, migration, data, secret, setting, workflow or collector change.",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,23 +20,12 @@
   "impacts": [
     {
       "files": [
-        "scripts/diagnostics/storage-savings.sql",
-        "scripts/diagnostics/yuyu-f1-sizing.sql",
-        "scripts/diagnostics/yuyu-f3-aliases.sql"
+        "docs/agent/security/2026-10-16-accounts-audit.md"
       ],
       "effects": [
-        "infrastructure"
+        "documentation"
       ],
-      "reason": "Three SELECT/WITH-only diagnostics (16 statements) over catalogue, mapping, candidate, proposal, freshness, raw_snapshots, raw_snapshot_dictionaries, price_observations and catalogue size views, run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. No write, no source request."
-    },
-    {
-      "files": [
-        ".github/workflows/ops-readonly.yml"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "Adds storage-savings, yuyu-f1-sizing and yuyu-f3-aliases to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
+      "reason": "Status column only for F5, F8, F9, F11, F12, F13, F14: PR numbers and what each fixed. No new vulnerability detail, no secret value, length or partial value."
     }
   ],
   "deployment_verification": {
@@ -89,5 +78,5 @@
       "observation_window": "After merge: one ops-readonly db-diagnostic run per new file completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
     }
   },
-  "diff_sha256": "c29dc32e3a71edd1a42e3f7471ed6fc48dc1a4304a2809e85c5bba0578350843"
+  "diff_sha256": "8b666e9ea7e9281158c36c36854f163c5bf748d39031eb42fa3e89235c4c8b4e"
 }
