@@ -31,12 +31,19 @@ def _note_text(value: str | None) -> str | None:
     return value
 
 
-def _acquired_on(value: date | None) -> date | None:
-    # The website refuses dates after the collector's local today; one day of
-    # slack covers time zones ahead of UTC.
+def acquired_on_error(value: date | None) -> str | None:
+    """Why ``value`` is out of range, or None. The website refuses dates after
+    the collector's local today; one day of slack covers time zones ahead of UTC."""
     latest = datetime.now(timezone.utc).date() + timedelta(days=1)
     if value is not None and not EARLIEST_ACQUIRED_ON <= value <= latest:
-        raise ValueError(f"acquired_on must be between {EARLIEST_ACQUIRED_ON.isoformat()} and today")
+        return f"acquired_on must be between {EARLIEST_ACQUIRED_ON.isoformat()} and today"
+    return None
+
+
+def _acquired_on(value: date | None) -> date | None:
+    error = acquired_on_error(value)
+    if error:
+        raise ValueError(error)
     return value
 
 
@@ -73,7 +80,10 @@ class CollectionEntryUpdateIn(BaseModel):
 
     quantity: int | None = Field(default=None, ge=1, le=MAX_QUANTITY)
     paid_jpy_per_card: int | None = Field(default=None, ge=0, le=MAX_JPY)
-    acquired_on: AcquiredOn = None
+    # Range-checked in service.update_collection_entry only when it changes:
+    # the website re-sends the stored date on every edit, and a date copied
+    # from the legacy tables must not block a quantity change.
+    acquired_on: date | None = None
     note: NoteText = None
 
 

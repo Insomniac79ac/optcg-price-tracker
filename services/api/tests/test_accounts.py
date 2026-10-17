@@ -689,6 +689,19 @@ def test_acquired_on_is_bounded(client, enabled, prints):
     assert client.patch(f"/me/collection/{entry}", json={"acquired_on": None}).status_code == 200
 
 
+def test_unchanged_out_of_range_date_does_not_block_an_edit(client, db_session, enabled, prints):
+    # A date copied from the legacy tables (migrate_legacy) was never range
+    # checked, and the website re-sends the stored date with every edit.
+    entry_id = client.post("/me/collection", json={"card_print_id": prints["OP01-001"].id}).json()["id"]
+    entry = db_session.get(CollectionEntry, entry_id)
+    entry.acquired_on = date(1850, 5, 1)
+    db_session.commit()
+
+    response = client.patch(f"/me/collection/{entry_id}", json={"quantity": 3, "acquired_on": "1850-05-01"})
+    assert response.status_code == 200 and response.json()["quantity"] == 3
+    assert client.patch(f"/me/collection/{entry_id}", json={"acquired_on": "1850-05-02"}).status_code == 422
+
+
 def test_delete_account_requires_confirmation_and_removes_everything(client, db_session, enabled, prints):
     client.post("/me/collection", json={"card_print_id": prints["OP01-001"].id})
     client.post("/me/watchlist", json={"card_print_id": prints["OP01-002"].id})

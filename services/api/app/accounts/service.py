@@ -23,6 +23,7 @@ from app.accounts.models import (
     UserPreferences,
     WatchlistEntry,
 )
+from app.accounts.schemas import acquired_on_error
 from app.models.canonical_card import CanonicalCard
 from app.models.card_print import CardPrint
 from app.models.file_job import FileJob
@@ -157,6 +158,10 @@ def update_collection_entry(
     entry = get_collection_entry(db, user_id, entry_id)
     if "quantity" in changes and changes["quantity"] is None:
         raise HTTPException(status_code=422, detail="quantity cannot be null; remove the entry instead")
+    if "acquired_on" in changes and changes["acquired_on"] != entry.acquired_on:
+        error = acquired_on_error(changes["acquired_on"])
+        if error:
+            raise HTTPException(status_code=422, detail=error)
     before = entry.quantity
     for key, value in changes.items():
         setattr(entry, key, value)
