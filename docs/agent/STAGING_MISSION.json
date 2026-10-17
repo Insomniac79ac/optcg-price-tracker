@@ -187,7 +187,7 @@
    "observation_window": "Delivery artifact plus one completed natural discovery turn per Yuyu shard on the new code. Then: approved exact and approved-with-proof unchanged; new exact pending proposals about 762 with reason unique_listing_kind_resolves_one_release_sibling; 0 stored-proposal-differs errors; 0 discovery failures; lossless green; storage-rates 48 h after release."
   }
  },
- "diff_sha256": "6056452e1f0fe8c961da444bdd1eeb740e560b1a2bf445cf65b5a76f3666d14d",
+ "diff_sha256": "9554208060e1b61784943675adeec653ed06ef7c9c036e0fc0bfdee89420c98e",
  "operational_notes": [
   "Identity-capture batches are PAUSED from 2026-10-17 15:41Z (owner decision) until the F1 batches are live: no new capture work is enqueued (no enqueue-remaining-50 or yuyu_identity_capture_enqueue apply). Already-queued intents may finish. The snkrdunk and yuyutei collector services are not stopped, redeployed or changed.",
   "While paused, D9 F2 (about 220 prints waiting on capture intents or captures not yet enqueued) stalls: prints whose intents are already queued may still complete, nothing new is added."
