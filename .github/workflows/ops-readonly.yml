@@ -30,6 +30,7 @@ on:
         type: choice
         default: work-by-state
         options:
+          - capture-day-storage
           - degraded-signals
           - freshness-not-met
           - identity-capture-work
