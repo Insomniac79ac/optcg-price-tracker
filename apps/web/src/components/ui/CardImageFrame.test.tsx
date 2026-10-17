@@ -261,8 +261,6 @@ describe("collector surfaces share this component", () => {
   const consumers = [
     // /cards - the public catalogue grid tile.
     "src/components/ui/PrintCardTile.tsx",
-    // Analytics - the "Cards in this view" strip.
-    "src/components/ui/MarketLandscapeCards.tsx",
   ];
 
   it.each(consumers)("%s renders CardImageFrame rather than its own <img>", async (path) => {
@@ -289,5 +287,21 @@ describe("collector surfaces share this component", () => {
     expect(frameProps).toContain("padded");
     expect(frameProps).toContain('size="full"');
     expect(frameProps).toContain("geometry={print.imageGeometry}");
+  });
+
+  // Analytics - the "Most valuable cards" strip. Its rows carry a display
+  // image rather than a print UI model, so only the framing inputs are shared.
+  it("analytics' most valuable strip renders the same padded CardImageFrame", async () => {
+    const fs = await import("fs/promises");
+    const source = await fs.readFile("src/components/ui/MarketValueDiscovery.tsx", "utf8");
+    const frameProps = source.slice(
+      source.indexOf("<CardImageFrame"),
+      source.indexOf("/>", source.indexOf("<CardImageFrame")),
+    );
+
+    expect(source).toMatch(/from "(\.\/|@\/components\/ui\/)CardImageFrame"/);
+    expect(source).not.toMatch(/<img\b/);
+    expect(frameProps).toContain("padded");
+    expect(frameProps).toContain('size="full"');
   });
 });
