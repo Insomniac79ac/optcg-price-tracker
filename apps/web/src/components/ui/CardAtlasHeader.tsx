@@ -16,10 +16,10 @@ export function CardAtlasHeader({
 }) {
   return (
     <section className={styles.identity} aria-labelledby="card-atlas-title">
-      <p className={styles.kicker}>Japanese One Piece singles</p>
+      <p className={`atlas-kicker ${styles.kicker}`}>Japanese One Piece singles</p>
       <div className={styles.identityBody}>
         <div>
-          <h1 id="card-atlas-title" className={styles.heading}>Card Prices</h1>
+          <h1 id="card-atlas-title" className={`atlas-display-title ${styles.heading}`}>Card Prices</h1>
           <p className={styles.description}>
             Find a One Piece card and compare prices for the exact version you own or want.
           </p>

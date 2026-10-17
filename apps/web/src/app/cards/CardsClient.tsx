@@ -26,7 +26,7 @@ export default function PrintsCataloguePage({ initialReleases = null, seed }: { 
   return seed ? <CatalogueRoute initialReleases={initialReleases} seed={seed} /> : <Suspense fallback={<CatalogueFallback />}><CatalogueRoute initialReleases={initialReleases} seed={seed} /></Suspense>;
 }
 function CatalogueFallback() {
-  return <><AppHeader /><main className={styles.main}><CardAtlasHeader query="" onSearch={() => {}} totalPrints={null} /><CardGridSkeleton count={24} /></main></>;
+  return <><AppHeader /><main className={`atlas-chapters ${styles.main}`}><CardAtlasHeader query="" onSearch={() => {}} totalPrints={null} /><CardGridSkeleton count={24} /></main></>;
 }
 function CatalogueRoute({ initialReleases, seed }: { initialReleases: ReleaseCatalogueList | null; seed?: Seed }) {
   const searchParams = useSearchParams();
@@ -67,7 +67,7 @@ function CatalogueView({ seed, query, filters, offset, releases, releaseStatus, 
   const chooseRelease = (id: number | null) => navigate({ ...filters, releaseProductId: id, legacySet: "" });
   return <div className="min-h-screen">
     <AppHeader />
-    <main className={styles.main}>
+    <main className={`atlas-chapters ${styles.main}`}>
       <CardAtlasHeader query={filters.q} onSearch={(q) => navigate({ ...filters, q })} totalPrints={total} />
       {filters.releaseProductId && <section className="my-5"><h2 className="text-xl font-semibold">{releaseLabelEnglish(releases.find((r) => r.release_product_id === filters.releaseProductId)?.official_code, releases.find((r) => r.release_product_id === filters.releaseProductId)?.display_name)} card prices</h2><p className="mt-2 text-text-secondary">Compare the exact card variants from this release. A missing price is not a value of zero.</p><Link href={`/analytics?release_product_id=${filters.releaseProductId}`} className="mt-3 inline-flex min-h-11 items-center text-accent-gold">See this release’s market movement →</Link></section>}
       <ReleaseNavigation releases={releases} status={releaseStatus} selected={filters.releaseProductId}
@@ -77,7 +77,7 @@ function CatalogueView({ seed, query, filters, offset, releases, releaseStatus, 
         <PrintCatalogueToolbar releases={releases} filters={filters} facets={facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
         <div id="catalogue-results" className={styles.catalogueContent}>
           <div className={styles.catalogueBar}>
-            <div className={styles.catalogueMeta}><h2 className={styles.catalogueTitle}>Exact card variants</h2>
+            <div className={styles.catalogueMeta}><h2 className={`atlas-chapter-title ${styles.catalogueTitle}`}>Exact card variants</h2>
               {total !== null && <p className={styles.catalogueCount}>{total.toLocaleString()} {total === 1 ? 'entry' : 'entries'} in this view</p>}
             </div>
             <PrintCatalogueSortControl value={filters.sort} onChange={(sort) => navigate({ ...filters, sort })} />

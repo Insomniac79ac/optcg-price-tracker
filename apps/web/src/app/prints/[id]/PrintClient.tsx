@@ -677,9 +677,16 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
 }
 
 /** Exact-print identity only: no sibling prices or follow-up requests. */
+/** The grid holds at most two rows (4 columns below 1280px, 5 from there);
+ * the phone swipe row holds the same 8. Past that, "Show all" leads to the
+ * card's all-versions page, which marks the version the reader came from. */
+const VERSIONS_SHOWN = 8;
+const VERSIONS_SHOWN_WIDE = 10;
+
 function OtherVersions({ detail, shelf }: { detail: PrintDetail; shelf: CollectorShelf }) {
   const siblings = detail.siblings.filter((sibling) => sibling.card_print_id !== detail.card_print_id);
   if (siblings.length === 0) return null;
+  const total = siblings.length + 1;
   return (
     <section className={styles.siblings} aria-labelledby="other-versions-heading">
       <h2 id="other-versions-heading">Other versions</h2>
@@ -695,6 +702,15 @@ function OtherVersions({ detail, shelf }: { detail: PrintDetail; shelf: Collecto
           </li>
         ))}
       </ul>
+      {total > VERSIONS_SHOWN && detail.card_code && (
+        <Link
+          href={`/cards/code/${encodeURIComponent(detail.card_code)}?from=${detail.card_print_id}`}
+          className={`${styles.showAllVersions} ${total <= VERSIONS_SHOWN_WIDE ? styles.showAllNarrowOnly : ""}`}
+          data-testid="show-all-versions"
+        >
+          Show all {total} versions <span aria-hidden="true">→</span>
+        </Link>
+      )}
     </section>
   );
 }

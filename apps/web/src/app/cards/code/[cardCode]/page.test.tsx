@@ -16,10 +16,12 @@ vi.mock("next-auth/react", () => ({
 }));
 
 let routeParams: Record<string, string> = { cardCode: "OP04-044" };
+let searchString = "";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/cards/code/OP04-044",
   useParams: () => routeParams,
+  useSearchParams: () => new URLSearchParams(searchString),
 }));
 
 const fetchPrintCatalogue = vi.fn();
@@ -96,6 +98,7 @@ function printLinks() {
 beforeEach(() => {
   vi.clearAllMocks();
   routeParams = { cardCode: "OP04-044" };
+  searchString = "";
 });
 
 describe("A. multi-print family", () => {
@@ -307,5 +310,30 @@ describe("L. the public family route is public", () => {
       vi.unstubAllGlobals();
       sessionValue = { data: null, status: "unauthenticated" };
     }
+  });
+});
+
+describe("arriving from a print page's Show all", () => {
+  it("marks the version the reader came from and keeps the normal order", async () => {
+    mockCatalogue([BASE, ALT, UNPRICED]);
+    searchString = "from=14";
+    render(<CardFamilyPage />);
+    await waitFor(() => expect(printLinks()).toHaveLength(3));
+    const marked = screen.getByTestId("tile-marker").closest("a")!;
+    expect(marked).toHaveAttribute("href", "/prints/14");
+    expect(marked).toHaveTextContent("You were viewing");
+    expect(marked.getAttribute("aria-label")).toMatch(/You were viewing$/);
+    expect(screen.getAllByTestId("tile-marker")).toHaveLength(1);
+    expect(printLinks().map((l) => l.getAttribute("href"))).toEqual(
+      [BASE, ALT, UNPRICED].map((p) => `/prints/${p.card_print_id}`),
+    );
+  });
+
+  it("marks nothing without a from, or when it names a print not on the page", async () => {
+    mockCatalogue([BASE, ALT]);
+    searchString = "from=999999";
+    render(<CardFamilyPage />);
+    await waitFor(() => expect(printLinks()).toHaveLength(2));
+    expect(screen.queryByTestId("tile-marker")).toBeNull();
   });
 });

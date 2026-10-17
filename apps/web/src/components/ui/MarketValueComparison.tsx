@@ -73,7 +73,7 @@ export function MarketValueComparison({ releases, loading, failed }: {
 
   return <section className={styles.section} aria-labelledby="compare-releases-title" data-testid="market-value-comparison">
     <header className={styles.header}>
-      <div><h2 id="compare-releases-title">Compare releases</h2><p>Compare price movement across releases.</p></div>
+      <div><h2 id="compare-releases-title" className="atlas-chapter-title">Compare releases</h2><p>Compare price movement across releases.</p></div>
       <span className={styles.period}>7D performance</span>
     </header>
     {failed ? <p className={styles.notice}>Release list unavailable. Comparison will be available when the list returns.</p>

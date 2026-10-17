@@ -1,6 +1,6 @@
 .section { max-width: 1200px; margin: 64px auto 0; }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.header h2 { font-family: var(--font-display); font-size: 28px; line-height: 1.2; letter-spacing: -.025em; }
+.header h2 { margin: 0; }
 .header p { margin-top: 8px; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
 .period { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
 .picker { width: min(100%, 380px); margin-top: 24px; }
