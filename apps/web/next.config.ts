@@ -87,22 +87,12 @@ const APPROVED_IMAGE_HOSTS = ["https://card.yuyu-tei.jp", "https://cdn.snkrdunk.
 // See src/lib/cspImageOrigin.ts.
 const IMAGE_HOSTS = buildImageSrcHosts(APPROVED_IMAGE_HOSTS, process.env.R2_PUBLIC_BASE_URL);
 
+// Audit 2026-10-16, F14. This tighter policy ran as
+// Content-Security-Policy-Report-Only on staging first (#161) and is enforced
+// from here on. Nothing here uses <object>/<embed>, <base> or frames, and
+// every form posts to this origin (Google sign-in is a client fetch then a
+// redirect, allowed for browsers that apply form-action to redirects).
 const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  `script-src ${scriptSrc}`,
-  "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: ${IMAGE_HOSTS.join(" ")}`,
-  `connect-src ${buildConnectSrc()}`,
-  "frame-ancestors 'none'",
-].join("; ");
-
-// The tighter policy proposed by the 2026-10-16 security audit (F14), sent as
-// Content-Security-Policy-Report-Only for a staging cycle first: browsers log
-// what it would block and block nothing. Nothing here uses <object>/<embed>,
-// <base> or frames, and every form posts to this origin (Google sign-in is a
-// client fetch then a redirect, allowed for browsers that apply form-action
-// to redirects). Enforce it in its own change once staging shows no reports.
-const CONTENT_SECURITY_POLICY_REPORT_ONLY = [
   "default-src 'self'",
   `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
@@ -115,6 +105,7 @@ const CONTENT_SECURITY_POLICY_REPORT_ONLY = [
   "form-action 'self' https://accounts.google.com",
   "manifest-src 'self'",
   "worker-src 'self'",
+  "frame-ancestors 'none'",
 ].join("; ");
 
 // Two years, as Vercel already sends on its own domains. No `preload` until
@@ -142,7 +133,6 @@ const nextConfig: NextConfig = {
             value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
           },
           { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
-          { key: "Content-Security-Policy-Report-Only", value: CONTENT_SECURITY_POLICY_REPORT_ONLY },
           { key: "Strict-Transport-Security", value: STRICT_TRANSPORT_SECURITY },
         ],
       },
