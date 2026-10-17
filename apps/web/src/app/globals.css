@@ -50,8 +50,7 @@
    * than as literal Tailwind heights in several places) because the admin
    * navigation rail in components/ui/AppShell.tsx has to offset itself by
    * exactly this value. 60px on mobile gives the 44px brand mark 8px of
-   * clearance top and bottom; desktop is taller so the supplied
-   * cardpirate-atlas-logo.png lockup can be rendered at real size. */
+   * clearance top and bottom; desktop is taller for the full nav row. */
   --header-h: 60px;
 
   /* Width of the admin navigation rail. Only the admin surface has one -
