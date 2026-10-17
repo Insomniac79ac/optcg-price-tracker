@@ -10,7 +10,7 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 60_000;
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdminOrResponse();
+  const auth = await requireAdminOrResponse(request);
   if ("response" in auth) return auth.response;
   const headers: Record<string, string> = { ...adminAuthHeaders() };
 
