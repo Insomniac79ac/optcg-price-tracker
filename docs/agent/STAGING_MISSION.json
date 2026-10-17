@@ -60,7 +60,7 @@
         "None"
       ],
       "dependencies": [
-        "ops runbooks from PR #139, #143, #150, #155, #157 (unchanged)"
+        "ops runbooks from PR #139, #143, #150, #155, #157, #158 (unchanged)"
       ],
       "deployment_impact": "Two read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes.",
       "database_writes": 0,
@@ -68,7 +68,7 @@
       "estimated_runtime_minutes": 5
     },
     "recovery": {
-      "artifact": "585a49b85d2853a7b9e02db5084169f7c35c6d7f",
+      "artifact": "58e5e87ecb6a3aaa40bcd553b0dab653018d2f27",
       "procedure": "Native revert of this PR removes the two diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
       "trigger": "A db-diagnostic run of either new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
