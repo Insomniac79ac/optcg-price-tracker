@@ -23,6 +23,7 @@ from app.accounts.models import (
     UserPreferences,
     WatchlistEntry,
 )
+from app.accounts.schemas import acquired_on_error
 from app.models.canonical_card import CanonicalCard
 from app.models.card_print import CardPrint
 from app.models.file_job import FileJob
@@ -157,6 +158,10 @@ def update_collection_entry(
     entry = get_collection_entry(db, user_id, entry_id)
     if "quantity" in changes and changes["quantity"] is None:
         raise HTTPException(status_code=422, detail="quantity cannot be null; remove the entry instead")
+    if "acquired_on" in changes and changes["acquired_on"] != entry.acquired_on:
+        error = acquired_on_error(changes["acquired_on"])
+        if error:
+            raise HTTPException(status_code=422, detail=error)
     before = entry.quantity
     for key, value in changes.items():
         setattr(entry, key, value)
@@ -298,6 +303,41 @@ VALUE_POINT_EXPORT_FIELDS = (
     "total_cards",
 )
 
+# Rows delete_account also removes (security audit 2026-10-16, F5), so the
+# export covers everything we store. File jobs list metadata only: storage
+# paths are internal, and the files themselves are the user's own uploads
+# and earlier exports.
+SAVED_VIEW_EXPORT_FIELDS = (
+    "name",
+    "description",
+    "route_path",
+    "view_type",
+    "scope",
+    "filters_json",
+    "sort_json",
+    "columns_json",
+    "density",
+    "is_default",
+    "pinned",
+    "last_used_at",
+    "usage_count",
+    "notes",
+    "created_at",
+    "updated_at",
+)
+SEARCH_HISTORY_EXPORT_FIELDS = ("query", "result_count", "created_at")
+FILE_JOB_EXPORT_FIELDS = (
+    "job_type",
+    "status",
+    "original_filename",
+    "output_filename",
+    "mode",
+    "dry_run",
+    "created_at",
+    "started_at",
+    "finished_at",
+)
+
 
 def _plain(value: Any) -> Any:
     return value.isoformat() if hasattr(value, "isoformat") else value
@@ -319,6 +359,17 @@ def export_account(db: Session, user: User) -> dict[str, Any]:
         .where(CollectionValuePoint.user_id == user.id)
         .order_by(CollectionValuePoint.point_date, CollectionValuePoint.methodology_version)
     )
+    saved_views = db.scalars(
+        select(SavedView).where(SavedView.user_id == user.id).order_by(SavedView.created_at, SavedView.id)
+    )
+    searches = db.scalars(
+        select(SearchHistory)
+        .where(SearchHistory.user_id == user.id)
+        .order_by(SearchHistory.created_at, SearchHistory.id)
+    )
+    file_jobs = db.scalars(
+        select(FileJob).where(FileJob.user_id == user.id).order_by(FileJob.created_at, FileJob.id)
+    )
     return {
         "format": "card-pirate-account-export-v1",
         "exported_at": _now().isoformat(),
@@ -334,6 +385,9 @@ def export_account(db: Session, user: User) -> dict[str, Any]:
         "collection_history": _rows(events, EVENT_EXPORT_FIELDS),
         "watchlist": _rows(list_watchlist(db, user.id), WATCHLIST_EXPORT_FIELDS),
         "collection_value_points": _rows(points, VALUE_POINT_EXPORT_FIELDS),
+        "saved_views": _rows(saved_views, SAVED_VIEW_EXPORT_FIELDS),
+        "search_history": _rows(searches, SEARCH_HISTORY_EXPORT_FIELDS),
+        "file_jobs": _rows(file_jobs, FILE_JOB_EXPORT_FIELDS),
     }
 
 
