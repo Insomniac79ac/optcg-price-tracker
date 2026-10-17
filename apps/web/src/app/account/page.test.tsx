@@ -20,6 +20,8 @@ const OK = {
   state: "ok",
   profile: { email: "nami@example.com", name: "Nami", member_since: "2026-10-14T12:00:00Z" },
   preferences: { currency: "JPY", collection_visibility: "private" },
+  collection: null,
+  watchlist: { currency: "JPY", as_of: null, entries: [] },
 };
 
 afterEach(() => {
@@ -50,6 +52,23 @@ describe("/account", () => {
     expect(screen.getByRole("button", { name: /delete my account/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
     expect(loadAccountOverview).toHaveBeenCalledWith({ sub: "google-123", email: "nami@example.com", name: "Nami" });
+  });
+
+  it("opens with the overview strip, above the profile", async () => {
+    authMock.mockResolvedValueOnce(COLLECTOR);
+    loadAccountOverview.mockResolvedValueOnce(OK);
+    render(await AccountPage());
+    const strip = screen.getByRole("region", { name: "Overview" });
+    expect(within(strip).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/collection", "/collection", "/watchlist", "/watchlist"]);
+    expect(within(strip).getByText("Nothing watched yet")).toBeInTheDocument();
+    expect(strip.compareDocumentPosition(screen.getByRole("heading", { name: "Profile" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows no overview strip when accounts are off", async () => {
+    authMock.mockResolvedValueOnce(COLLECTOR);
+    loadAccountOverview.mockResolvedValueOnce({ state: "disabled" });
+    render(await AccountPage());
+    expect(screen.queryByRole("region", { name: "Overview" })).not.toBeInTheDocument();
   });
 
   it("renders no token or secret into the page", async () => {

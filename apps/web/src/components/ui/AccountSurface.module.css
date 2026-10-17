@@ -215,6 +215,86 @@
   overflow-wrap: anywhere;
 }
 
+/* The overview strip: one ruled panel, four ways into /collection and
+   /watchlist. Two by two on phones, one row from 640px. */
+.overview {
+  margin-top: 2rem;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--surface-rule);
+  border-radius: 10px;
+  background: var(--surface-rule);
+}
+
+.tiles > li {
+  display: flex;
+  min-width: 0;
+}
+
+.tile {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 1rem 1.125rem 1.125rem;
+  background: var(--surface-map);
+  color: var(--text-body);
+  transition: background-color 150ms ease;
+}
+
+.tile:hover {
+  background: #15232a;
+}
+
+.tileLabel {
+  font: 500 0.6875rem/1.5 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--teal-ink);
+}
+
+.tileValue {
+  font: italic 800 1.375rem/1.2 var(--font-sans);
+  letter-spacing: -0.03em;
+  color: var(--text-parchment);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.tileDetail {
+  color: var(--text-subdued);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.tileDetail[data-direction="up"] {
+  color: #8dc9c4;
+}
+
+.tileDetail[data-direction="down"] {
+  color: #d9a08e;
+}
+
+@media (min-width: 640px) {
+  .tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    transition: none;
+  }
+}
+
 .sections {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -347,6 +427,12 @@
 }
 
 @media (max-width: 359px) {
+  .tile {
+    padding: 0.875rem 0.875rem 1rem;
+  }
+  .tileValue {
+    font-size: 1.1875rem;
+  }
   .title {
     font-size: 1.875rem;
   }
