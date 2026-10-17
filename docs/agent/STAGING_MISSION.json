@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Make the remaining-50 follow-up readable over REST: the apply (run 38977099606) wrote 50 Yuyu identity-capture work items, but their ids exist only in the blob-stored artifact, and db-diagnostic summaries carry row counts only, so a cloud session cannot record the work ids or check capture progress and denials. The enqueue summary now lists written_work_ids, db-diagnostic summaries carry rows within the annotation budget, and a new read-only diagnostic identity-capture-work lists each identity-capture item's state, denials and transient failures. Staging only; no collector, setting, price, identity, Market Value/Index, secret or Railway change; no deploy, enqueue or write runbook run in this PR.",
+  "mission": "Record capacity session 14 (owner request 2026-10-16): Step 1 ops-readonly checks, the owner-approved remaining-50 enqueue (apply 38977099606, 50 work rows 3728-3777, all captured on the ordinary schedule with 0 denials), the tooling PRs, end-of-session state and what session 15 must verify, as docs/agent/handoff/2026-10-16/capacity75-session14/HANDOFF.md; and carry the owner's one-line GHSA-vcvr correction into docs/agent/security/2026-10-16-accounts-audit.md. Documentation only; no application, migration, data, secret, setting, workflow or collector change.",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,49 +20,21 @@
   "impacts": [
     {
       "files": [
-        "scripts/ops/diagnostic.py",
-        "scripts/ops/enqueue_remaining.py"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "Summary fields only: db-diagnostic adds rows/rows_omitted (statements in file order within 18,000 characters, after the existing secret scan of the output), enqueue-remaining-50 adds written_work_ids. Queries, read-only session, guards, approval gate and the apply's expected_sha256 check are unchanged."
-    },
-    {
-      "files": [
-        "scripts/diagnostics/identity-capture-work.sql"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "New SELECT-only diagnostic over freshness_work/freshness_attempts for scope yuyu-identity:%, run in the existing default_transaction_read_only session."
-    },
-    {
-      "files": [
-        ".github/workflows/ops-readonly.yml"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "Adds identity-capture-work to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
-    },
-    {
-      "files": [
-        "scripts/tests/test_ops_runbooks.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Asserts small results inline, oversized ones are named in rows_omitted, and the annotation stays one chunk."
-    },
-    {
-      "files": [
-        "docs/agent/OPS_RUNBOOKS.md"
+        "docs/agent/handoff/2026-10-16/capacity75-session14/HANDOFF.md"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "Documents the new summary fields and the diagnostic."
+      "reason": "New session handoff. Run ids, work ids, list SHA-256 and measured numbers only; no secret value, length or partial value."
+    },
+    {
+      "files": [
+        "docs/agent/security/2026-10-16-accounts-audit.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "GHSA-vcvr row: fixed off by #153's static /share fallback (run 38922562795); still open for Next 16.3 (owner correction)."
     }
   ],
   "deployment_verification": {
@@ -76,43 +48,5 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "safeguards": {
-    "impact": {
-      "resources": [
-        {
-          "name": "GitHub Actions: ops-readonly db-diagnostic summary and ops-write enqueue-remaining-50 summary (scripts/ops)"
-        }
-      ],
-      "routes": [
-        "None"
-      ],
-      "dependencies": [
-        "ops runbooks from PR #139, #143, #150, #155 (unchanged)"
-      ],
-      "deployment_impact": "Ops tooling, one read-only diagnostic, a workflow choice entry, test and docs. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes.",
-      "database_writes": 0,
-      "source_requests": 0,
-      "estimated_runtime_minutes": 5
-    },
-    "recovery": {
-      "artifact": "21b3e5b4a5f1eb0c87abcb8935a04f0df77a4441",
-      "procedure": "Native revert of this PR restores count-only summaries and removes the diagnostic. No data, schema, provider or service configuration to undo.",
-      "trigger": "A summary that carries a secret value (the run.py scan would delete the outputs) or an ops-readonly run that fails on the new diagnostic.",
-      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
-      "validation": [
-        "scripts/tests/test_ops_runbooks.py"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/ops/diagnostic.py",
-        "scripts/diagnostics/identity-capture-work.sql"
-      ],
-      "observation_window": "After merge: ops-readonly db-diagnostic identity-capture-work returns the 50 work items written by run 38977099606 in its ops-summary rows."
-    }
-  },
-  "diff_sha256": "c8d59cb02f728bb7be23f04d6f700ab86048a02db6cf49d756e63a0959bc475f"
+  "diff_sha256": "23b7734e26391a080df607811e15ba03b4282e2dac603066ed566ebd0234cb5e"
 }

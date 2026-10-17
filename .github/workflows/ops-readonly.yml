@@ -36,6 +36,8 @@ on:
           - official-image-assets
           - table-sizes
           - work-by-state
+          - yuyu-coverage-gap
+          - yuyu-coverage-gap-samples
       transients:
         description: "storage-rates: named transients to exclude (comma-separated; empty = all named)"
         type: string

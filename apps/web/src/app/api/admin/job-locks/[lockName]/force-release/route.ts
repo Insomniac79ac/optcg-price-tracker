@@ -7,5 +7,5 @@ export async function POST(
   { params }: { params: Promise<{ lockName: string }> },
 ) {
   const { lockName } = await params;
-  return proxyAdminJson(request, `/admin/job-locks/${lockName}/force-release`, { logLabel: "job-locks-force-release" });
+  return proxyAdminJson(request, `/admin/job-locks/${encodeURIComponent(lockName)}/force-release`, { logLabel: "job-locks-force-release" });
 }

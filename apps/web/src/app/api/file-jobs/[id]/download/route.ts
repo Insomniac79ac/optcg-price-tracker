@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuthHeaders } from "@/lib/adminProxy";
 import { auth } from "@/lib/auth";
 import { collectorAuthHeadersFor } from "@/lib/collectorApi";
+import { invalidRouteIdResponse, isNumericRouteId } from "@/lib/routeId";
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 30_000;
@@ -15,6 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  if (!isNumericRouteId(id)) return invalidRouteIdResponse();
   const headers: Record<string, string> = {};
   const session = await auth();
   Object.assign(headers, (await collectorAuthHeadersFor(session)) ?? {});
@@ -61,7 +63,6 @@ export async function GET(
         {
           error: "Backend download failed",
           backend_status: backendResponse.status,
-          body_preview: bodyText.slice(0, 500),
         },
         { status: backendResponse.status },
       );
