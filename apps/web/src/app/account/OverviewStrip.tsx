@@ -59,7 +59,7 @@ function watchingTile(watchlist: WatchlistResponse | null): Tile {
 function closestTile(watchlist: WatchlistResponse | null): Tile {
   const base = { key: "closest", href: "/watchlist", label: "Closest to target" } as const;
   if (!watchlist) return { ...base, value: UNAVAILABLE, detail: "Open your watchlist" };
-  if (watchlist.entries.length === 0) return { ...base, value: "Nothing watched yet", detail: "Set a target when you watch a card" };
+  if (watchlist.entries.length === 0) return { ...base, value: "No watches yet", detail: "Set a target when you watch a card" };
   if (!watchlist.entries.some((entry) => entry.target_jpy !== null)) return { ...base, value: "No targets set", detail: "Add a target price to a watch" };
   const closest = closestToTarget(watchlist.entries);
   const distance = closest ? targetDistance(closest) : null;

@@ -59,7 +59,7 @@ describe("/account", () => {
     render(await AccountPage());
     const strip = screen.getByRole("region", { name: "Overview" });
     expect(within(strip).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual(["/collection", "/collection", "/watchlist", "/watchlist"]);
-    expect(within(strip).getByText("Nothing watched yet")).toBeInTheDocument();
+    expect(within(strip).getByText("No watches yet")).toBeInTheDocument();
     expect(strip.compareDocumentPosition(screen.getByRole("heading", { name: "Profile" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 

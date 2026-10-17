@@ -107,7 +107,7 @@ describe("OverviewStrip", () => {
     expect(tile("cards").text).toContain("0 cards");
     expect(tile("cards").text).toContain("Your collection is empty");
     expect(tile("watching").text).toContain("0 cards");
-    expect(tile("closest").text).toContain("Nothing watched yet");
+    expect(tile("closest").text).toContain("No watches yet");
     expect(tile("value").link).toHaveAttribute("href", "/collection");
     expect(tile("closest").link).toHaveAttribute("href", "/watchlist");
   });

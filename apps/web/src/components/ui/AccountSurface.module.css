@@ -427,6 +427,10 @@
   .tile {
     padding: 0.875rem 0.875rem 1rem;
   }
+  /* Two-line labels ("Collection value") keep values level across a row. */
+  .tileLabel {
+    min-height: 3em;
+  }
   .tileValue {
     font-size: 1.1875rem;
   }
