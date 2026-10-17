@@ -18,26 +18,19 @@ describe("next.config.ts security headers", () => {
     expect(hsts).toBe("max-age=63072000; includeSubDomains");
   });
 
-  it("reports, without enforcing, the tighter policy proposed by the audit", async () => {
-    const all = await headers();
-    const reportOnly = all.get("Content-Security-Policy-Report-Only")!.split("; ");
-    expect(reportOnly).toContain("object-src 'none'");
-    expect(reportOnly).toContain("base-uri 'self'");
-    expect(reportOnly).toContain("form-action 'self' https://accounts.google.com");
-    expect(reportOnly).toContain("frame-src 'none'");
-    // The enforced policy is unchanged until staging shows no reports.
-    const enforced = all.get("Content-Security-Policy")!.split("; ");
-    expect(enforced.find((d) => d.startsWith("object-src"))).toBeUndefined();
-    expect(enforced.find((d) => d.startsWith("form-action"))).toBeUndefined();
+  it("enforces the tighter policy proposed by the audit", async () => {
+    const csp = (await headers()).get("Content-Security-Policy")!.split("; ");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("base-uri 'self'");
+    expect(csp).toContain("form-action 'self' https://accounts.google.com");
+    expect(csp).toContain("frame-src 'none'");
+    expect(csp).toContain("font-src 'self'");
+    expect(csp).toContain("manifest-src 'self'");
+    expect(csp).toContain("worker-src 'self'");
   });
 
-  it("reports with the same sources the site already loads from", async () => {
-    const all = await headers();
-    const pick = (header: string, name: string) =>
-      all.get(header)!.split("; ").find((d) => d.startsWith(`${name} `));
-    for (const name of ["script-src", "style-src", "img-src", "connect-src"]) {
-      expect(pick("Content-Security-Policy-Report-Only", name)).toBe(pick("Content-Security-Policy", name));
-    }
+  it("no longer sends the report-only copy", async () => {
+    expect((await headers()).has("Content-Security-Policy-Report-Only")).toBe(false);
   });
 
   it("keeps the directives the site already relies on", async () => {
