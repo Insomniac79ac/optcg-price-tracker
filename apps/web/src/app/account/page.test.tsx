@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe("/account", () => {
-  it("shows profile, currency, export, delete and sign out for a collector", async () => {
+  it("shows profile, currency, export and delete for a collector", async () => {
     authMock.mockResolvedValueOnce(COLLECTOR);
     loadAccountOverview.mockResolvedValueOnce(OK);
     render(await AccountPage());
@@ -50,7 +50,6 @@ describe("/account", () => {
     expect(screen.getByRole("link", { name: /collection \(csv\)/i })).toHaveAttribute("href", "/api/me/export/collection.csv");
     expect(screen.getByRole("link", { name: /watchlist \(csv\)/i })).toHaveAttribute("href", "/api/me/export/watchlist.csv");
     expect(screen.getByRole("button", { name: /delete my account/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
     expect(loadAccountOverview).toHaveBeenCalledWith({ sub: "google-123", email: "nami@example.com", name: "Nami" });
   });
 
@@ -63,6 +62,17 @@ describe("/account", () => {
     expect(within(strip).getByText("Nothing watched yet")).toBeInTheDocument();
     expect(strip.compareDocumentPosition(screen.getByRole("heading", { name: "Profile" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it.each([["ok", OK], ["accounts off", { state: "disabled" }], ["a failed load", { state: "error" }]])(
+    "leaves Sign out to the header (%s)",
+    async (_label, overview) => {
+      authMock.mockResolvedValueOnce(COLLECTOR);
+      loadAccountOverview.mockResolvedValueOnce(overview);
+      render(await AccountPage());
+      expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
+      expect(screen.queryByText(/^sign out$/i)).not.toBeInTheDocument();
+    },
+  );
 
   it("shows no overview strip when accounts are off", async () => {
     authMock.mockResolvedValueOnce(COLLECTOR);
