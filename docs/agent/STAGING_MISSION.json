@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Record capacity session 14 (owner request 2026-10-16): Step 1 ops-readonly checks, the owner-approved remaining-50 enqueue (apply 38977099606, 50 work rows 3728-3777, all captured on the ordinary schedule with 0 denials), the tooling PRs, end-of-session state and what session 15 must verify, as docs/agent/handoff/2026-10-16/capacity75-session14/HANDOFF.md; and carry the owner's one-line GHSA-vcvr correction into docs/agent/security/2026-10-16-accounts-audit.md. Documentation only; no application, migration, data, secret, setting, workflow or collector change.",
+  "mission": "D9 follow-up (owner decisions 2026-10-17): add three reviewed read-only db-diagnostic files. yuyu-f1-sizing sizes a two-way-unique match rule over stored Yuyu-Tei listing evidence for the ambiguous prints (counts by release and rarity, 20 sample matches); yuyu-f3-aliases lists Yuyu-Tei categories that resolve to no release with sample listings and where PRB reprint codes are listed; storage-savings measures RAW and observation growth to size storage-cutting options. Register them in ops-readonly. Staging only; no rule, alias, proposal, mapping, enqueue, collector, setting, price, identity, Market Value/Index, secret or Railway change; no runbook run in this PR.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,21 +20,23 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/handoff/2026-10-16/capacity75-session14/HANDOFF.md"
+        "scripts/diagnostics/storage-savings.sql",
+        "scripts/diagnostics/yuyu-f1-sizing.sql",
+        "scripts/diagnostics/yuyu-f3-aliases.sql"
       ],
       "effects": [
-        "documentation"
+        "infrastructure"
       ],
-      "reason": "New session handoff. Run ids, work ids, list SHA-256 and measured numbers only; no secret value, length or partial value."
+      "reason": "Three SELECT/WITH-only diagnostics (16 statements) over catalogue, mapping, candidate, proposal, freshness, raw_snapshots, raw_snapshot_dictionaries, price_observations and catalogue size views, run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. No write, no source request."
     },
     {
       "files": [
-        "docs/agent/security/2026-10-16-accounts-audit.md"
+        ".github/workflows/ops-readonly.yml"
       ],
       "effects": [
-        "documentation"
+        "infrastructure"
       ],
-      "reason": "GHSA-vcvr row: fixed off by #153's static /share fallback (run 38922562795); still open for Next 16.3 (owner correction)."
+      "reason": "Adds storage-savings, yuyu-f1-sizing and yuyu-f3-aliases to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
     }
   ],
   "deployment_verification": {
@@ -48,5 +50,44 @@
     "yuyu_reader_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
     "yuyu_capacity_cadence": true
   },
-  "diff_sha256": "23b7734e26391a080df607811e15ba03b4282e2dac603066ed566ebd0234cb5e"
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "GitHub Actions: ops-readonly db-diagnostic (three new read-only SQL files)"
+        }
+      ],
+      "routes": [
+        "None"
+      ],
+      "dependencies": [
+        "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156 (unchanged)"
+      ],
+      "deployment_impact": "Three read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "2acd34288d254acf0a043ca2310d0ed97bcec59f",
+      "procedure": "Native revert of this PR removes the three diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
+      "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
+      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/diagnostics/yuyu-f1-sizing.sql",
+        "scripts/diagnostics/yuyu-f3-aliases.sql",
+        "scripts/diagnostics/storage-savings.sql"
+      ],
+      "observation_window": "After merge: one ops-readonly db-diagnostic run per new file completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
+    }
+  },
+  "diff_sha256": "c29dc32e3a71edd1a42e3f7471ed6fc48dc1a4304a2809e85c5bba0578350843"
 }
