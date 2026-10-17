@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Fit the identity-capture-work diagnostic (PR #157) into the ops summary: staging holds 500+ Yuyu identity-capture work items, so its per-item statement hit the 500-row cap and was omitted from the summary (run 38980652834), leaving the remaining-50 work ids unreadable over REST. The file now gives totals by state with id range, the newest 100 items and the 24 h outcomes. Read-only SQL and docs only; no collector, setting, price, identity, Market Value/Index, secret or Railway change; no deploy, enqueue or write runbook run in this PR.",
+  "mission": "Coverage gap check D9 (owner request 2026-10-16), Step 1: add two reviewed read-only db-diagnostic SQL files that classify every active verified print without a fresh Yuyu-Tei price (never discovered, discovered but identity unresolved or mapping not approved, mapped but not refreshed, every same-release listing mapped to a sibling) by rarity and base vs parallel, with the survey sample prints, and register them in ops-readonly. Their rows reach the ops-summary through the existing PR #157 inline budget. Staging only; no collector, setting, mapping, enqueue, price, identity, Market Value/Index, secret or Railway change; no runbook run in this PR.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,21 +20,22 @@
   "impacts": [
     {
       "files": [
-        "scripts/diagnostics/identity-capture-work.sql"
+        "scripts/diagnostics/yuyu-coverage-gap.sql",
+        "scripts/diagnostics/yuyu-coverage-gap-samples.sql"
       ],
       "effects": [
         "infrastructure"
       ],
-      "reason": "SELECT-only: adds a states statement and limits the per-item statement to the newest 100 by id. Runs in the existing default_transaction_read_only session."
+      "reason": "Two SELECT/WITH-only diagnostics (7 statements) over card_prints, canonical_cards, release_products, source_card_mappings, freshness_work, freshness_price_states, yuyutei_candidates, yuyutei_discovery_runs and source_mapping_proposal groups/alternatives, run only in the existing default_transaction_read_only db-diagnostic session. No write, no source request."
     },
     {
       "files": [
-        "docs/agent/OPS_RUNBOOKS.md"
+        ".github/workflows/ops-readonly.yml"
       ],
       "effects": [
-        "documentation"
+        "infrastructure"
       ],
-      "reason": "Describes the new statements."
+      "reason": "Adds yuyu-coverage-gap and yuyu-coverage-gap-samples to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
     }
   ],
   "deployment_verification": {
@@ -52,24 +53,24 @@
     "impact": {
       "resources": [
         {
-          "name": "GitHub Actions: ops-readonly db-diagnostic identity-capture-work (scripts/diagnostics)"
+          "name": "GitHub Actions: ops-readonly db-diagnostic (two new read-only SQL files)"
         }
       ],
       "routes": [
         "None"
       ],
       "dependencies": [
-        "ops runbooks from PR #139, #143, #150, #155, #157 (unchanged)"
+        "ops runbooks from PR #139, #143, #150, #155, #157, #158 (unchanged)"
       ],
-      "deployment_impact": "One read-only diagnostic and docs. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/, apps/ or .github/ changes.",
+      "deployment_impact": "Two read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 5
     },
     "recovery": {
-      "artifact": "4f77839d355b1d14b61c3e9556bc832802680215",
-      "procedure": "Native revert of this PR restores the #157 statement. No data, schema, provider or service configuration to undo.",
-      "trigger": "An ops-readonly run that fails on the diagnostic.",
+      "artifact": "58e5e87ecb6a3aaa40bcd553b0dab653018d2f27",
+      "procedure": "Native revert of this PR removes the two diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
+      "trigger": "A db-diagnostic run of either new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
       "validation": [
         "scripts/tests/test_ops_runbooks.py"
@@ -80,10 +81,11 @@
         "engineering-gate"
       ],
       "post_change": [
-        "scripts/diagnostics/identity-capture-work.sql"
+        "scripts/diagnostics/yuyu-coverage-gap.sql",
+        "scripts/diagnostics/yuyu-coverage-gap-samples.sql"
       ],
-      "observation_window": "After merge: ops-readonly db-diagnostic identity-capture-work shows states, latest_work and outcomes_24h in its ops-summary rows, with the 50 items written by run 38977099606 in latest_work."
+      "observation_window": "After merge: one ops-readonly db-diagnostic run per new file completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
     }
   },
-  "diff_sha256": "34e675e1837263cfc67b2d5927cb95cc235840d3820a272f499ae7e9df244047"
+  "diff_sha256": "09a9dc490186af79471384262f6eeb81c8c0bc4bb9fe0aec74671c200373a490"
 }
