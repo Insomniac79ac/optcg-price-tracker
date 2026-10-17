@@ -38,7 +38,12 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * Admin pages have a grouped operational rail and native modal drawer.
  * Collector pages keep their existing header, drawer and public bottom nav.
  */
-export function AppShell({ pathnameHint }: { pathnameHint?: string } = {}) {
+export function AppShell({ pathnameHint, publicShell: forcePublicShell = false }: {
+  pathnameHint?: string;
+  /** For pages that can render under any path (the 404): use the public
+   * shell even where `isPublicShellRoute` does not know the path. */
+  publicShell?: boolean;
+} = {}) {
   const routerPathname = usePathname();
   // A page can provide its known path for background/ISR renders where the
   // router context is unavailable. The same hint reaches every shell child.
@@ -52,6 +57,7 @@ export function AppShell({ pathnameHint }: { pathnameHint?: string } = {}) {
   // failed client session fetch must not strip chrome from authorized content.
   const adminSurface = useAdminSurface();
   const showAdminNavigation = isAdminRoute && adminSurface?.authorized === true;
+  const publicShell = !showAdminNavigation && (forcePublicShell || isPublicShellRoute(pathname ?? ""));
   const [mobileNavigation, setMobileNavigation] = useState({ pathname, open: false });
   const mobileNavOpen = mobileNavigation.pathname === pathname && mobileNavigation.open;
   const setMobileNavOpen = (open: boolean) => setMobileNavigation({ pathname, open });
@@ -131,9 +137,10 @@ export function AppShell({ pathnameHint }: { pathnameHint?: string } = {}) {
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
         mobileNavOpen={mobileNavOpen}
+        publicShell={forcePublicShell}
       />
 
-      {isPublicShellRoute(pathname ?? "") && <PublicBottomNav pathnameHint={pathname ?? undefined} />}
+      {publicShell && <PublicBottomNav pathnameHint={pathname ?? undefined} />}
 
       {/* Fixed admin rail; body clearance follows data-app-rail in globals.css. */}
       {showAdminNavigation && (
@@ -148,7 +155,7 @@ export function AppShell({ pathnameHint }: { pathnameHint?: string } = {}) {
       {/* Public drawer matches the header toggle below `md`; private/admin rules stay separate. */}
       {mobileNavOpen && showAdminNavigation && <AdminNavigationDrawer onClose={() => setMobileNavOpen(false)} />}
       {mobileNavOpen && !isAdminRoute && (
-        <div className={`fixed inset-0 top-[var(--header-h)] z-40 ${isPublicShellRoute(pathname ?? "") ? "md:hidden" : "lg:hidden"}`}>
+        <div className={`fixed inset-0 top-[var(--header-h)] z-40 ${publicShell ? "md:hidden" : "lg:hidden"}`}>
           <button
             type="button"
             aria-label="Close navigation"
