@@ -98,6 +98,7 @@ def run(out_dir, *, apply=False, count=50, expected_sha256=""):
             "approved_list_sha256": sha, "eligible": replanned["summary"]["eligible"],
             "guard_failures": replanned["summary"]["guard_failures"],
             "to_enqueue": len(receipt.get("to_enqueue", [])), "already_enqueued": len(receipt.get("already_enqueued", [])),
-            "written": len(receipt.get("written", [])), "storage_fit": {
+            "written": len(receipt.get("written", [])),
+            "written_work_ids": [w["work_id"] for w in receipt.get("written", [])], "storage_fit": {
                 "one_off_mb_s9": fit["one_off_mb_s9"], "fits_planning_and_stress_A": fit["fits_planning_and_stress_A"],
                 "fits_planning_and_stress_B": fit["fits_planning_and_stress_B"]}}

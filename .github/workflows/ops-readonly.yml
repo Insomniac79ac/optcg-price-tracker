@@ -32,6 +32,7 @@ on:
         options:
           - degraded-signals
           - freshness-not-met
+          - identity-capture-work
           - official-image-assets
           - table-sizes
           - work-by-state

@@ -33,12 +33,16 @@ file contains a known secret value.
 | `storage-rates` | `transients` (comma list; empty = all named) | Planning and stress (worst rolling 24 h) since the current collector code, as observed, with named steps removed, and with named transients excluded (`scripts/ops/storage_events.json`) | `storage-rates.json`, `volume-series.json` |
 | `fleet-vs-receipt` | `receipt` (empty = PR #103 rollout) | All 10 collectors: live deployment, status, exact-commit marker, image digest, cron and deployment records after the receipt | `fleet-vs-receipt.json` |
 | `official-images-status` | - | Last 5 `official-images-mirror` runs and the `check_official_images` database check (no R2 or Bandai request) | `official-images-status.json` |
-| `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json`; the summary also carries the rows when they fit (24,000 characters of compact JSON), else `rows_omitted` |
+| `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
 | `web-smoke` | - | Signed-out Playwright smoke of the staging site (`scripts/staging_web_smoke.py`); also runs after every delivery | `web-smoke.json` |
 
 The `ops-summary` annotations carry what a check needs without the artifact: `staging-state`
-adds `quarantined_refresh_work` (count, oldest blocked-since), and `official-images-status` adds
-`recent_runs` (status and start time of each of the last 5 mirror runs).
+adds `quarantined_refresh_work` (count, oldest blocked-since), `official-images-status` adds
+`recent_runs` (status and start time of each of the last 5 mirror runs), and `db-diagnostic` adds
+`rows` (each statement as `columns` plus `rows`, in file order while they fit 18,000 characters;
+the rest are named in `rows_omitted` and stay in the artifact).
+`identity-capture-work` lists every Yuyu identity-capture work item (state, attempts, denials,
+transient failures) and the last 24 h of their attempt outcomes: the post-enqueue progress check.
 
 Nothing here is collector-affecting or a write, so no quiet window applies.
 
@@ -52,7 +56,8 @@ Nothing here is collector-affecting or a write, so no quiet window applies.
    rule is fit at planning AND stress).
 4. Runs the #116 tool: dry run by default (read-only session, rolled back). `apply=true` writes,
    and only when `expected_sha256` equals this run's list, i.e. the list from a dry run the owner
-   reviewed. A moved digest changes the list, and the apply refuses.
+   reviewed. A moved digest changes the list, and the apply refuses. The summary lists
+   `written_work_ids`.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
