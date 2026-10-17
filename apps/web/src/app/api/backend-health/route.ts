@@ -71,7 +71,6 @@ export async function GET() {
         service: "web",
         error: "Invalid JSON from backend API",
         backend_status: backendResponse.status,
-        body_preview: bodyText.slice(0, 500),
       },
       { status: 502 },
     );

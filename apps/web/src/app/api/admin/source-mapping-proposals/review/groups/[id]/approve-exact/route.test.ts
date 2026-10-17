@@ -22,7 +22,11 @@ const BODY = '{"selected_alternative_id":7,"expected_evidence_digest":"' +
 function request(headers: Record<string, string> = {}): NextRequest {
   return new NextRequest(
     "http://localhost/api/admin/source-mapping-proposals/review/groups/42/approve-exact",
-    { method: "POST", body: BODY, headers: { "content-type": "application/json", ...headers } },
+    {
+      method: "POST",
+      body: BODY,
+      headers: { "content-type": "application/json", origin: "http://localhost", "sec-fetch-site": "same-origin", ...headers },
+    },
   );
 }
 
@@ -48,6 +52,15 @@ describe("POST approve-exact proxy", () => {
     getAdminIdentityForRouteHandler.mockResolvedValueOnce(null);
     const response = await POST(request(), { params: Promise.resolve({ id: "42" }) });
     expect(response.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("refuses a cross-site request before reading the session", async () => {
+    const response = await POST(request({ origin: "https://evil.example", "sec-fetch-site": "cross-site" }), {
+      params: Promise.resolve({ id: "42" }),
+    });
+    expect(response.status).toBe(403);
+    expect(getAdminIdentityForRouteHandler).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
