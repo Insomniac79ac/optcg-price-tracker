@@ -69,7 +69,7 @@
       "estimated_runtime_minutes": 5
     },
     "recovery": {
-      "artifact": "2acd34288d254acf0a043ca2310d0ed97bcec59f",
+      "artifact": "a4edb7144c92ead2fdb0fbd2ce9ae53b4935cdd8",
       "procedure": "Native revert of this PR removes the three diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
       "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
