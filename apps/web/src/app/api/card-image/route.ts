@@ -17,14 +17,20 @@ import { isProxiedImageHost } from "@/lib/cardImage";
  *  - redirects are not followed, so an approved host can't bounce the
  *    request onward to somewhere unapproved (or to a link-local metadata
  *    address);
- *  - the upstream response must actually be an image, and is capped, so this
- *    can't be used to shift arbitrary bulk content through our origin;
+ *  - the upstream response must actually be a raster image (never SVG, which
+ *    can carry script on our origin), and is capped, so this can't be used
+ *    to shift arbitrary bulk content through our origin;
  *  - no cookies, credentials, or client headers are forwarded upstream, and
- *    no upstream headers except content-type reach the client.
+ *    no upstream headers except content-type reach the client;
+ *  - the response carries `Content-Security-Policy: sandbox`, so even a
+ *    mislabelled body opened directly runs in an opaque origin.
  */
 
 const MAX_BYTES = 8 * 1024 * 1024; // a 600x838 card PNG is ~250KB
 const UPSTREAM_TIMEOUT_MS = 15_000;
+// Raster formats only: an SVG served from our origin is a document that can
+// run script (security audit 2026-10-16, F12).
+const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
 
 function reject(status: number, reason: string): NextResponse {
   return NextResponse.json({ error: reason }, { status });
@@ -68,8 +74,8 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
   if (!upstream.ok) return reject(502, "Image host returned an error");
 
-  const contentType = upstream.headers.get("content-type") ?? "";
-  if (!contentType.startsWith("image/")) return reject(502, "Upstream response was not an image");
+  const contentType = (upstream.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  if (!RASTER_TYPES.has(contentType)) return reject(502, "Upstream response was not a raster image");
 
   const declaredLength = Number(upstream.headers.get("content-length") ?? "0");
   if (declaredLength > MAX_BYTES) return reject(502, "Image too large");
@@ -87,6 +93,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       "Cache-Control": "public, max-age=86400, s-maxage=604800, immutable",
       "Cross-Origin-Resource-Policy": "same-origin",
       "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "sandbox",
     },
   });
 }

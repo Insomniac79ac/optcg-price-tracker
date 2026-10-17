@@ -235,6 +235,19 @@ class Diagnostics(unittest.TestCase):
                 diagnostic.parse(text, {"ELIGIBLE": "select 1"})
         self.assertEqual(diagnostic.parse("-- a\nselect 'delete' x from t;"), {"a": "select 'delete' x from t"})
 
+    def test_small_results_inline_in_summary(self):
+        from datetime import datetime, timezone
+        at = datetime(2026, 10, 16, 23, tzinfo=timezone.utc)
+        result = {"work": {"rows": [{"work_id": 1, "state": "pending", "at": at}], "truncated": False},
+                  "big": {"rows": [{"x": "y" * 100}] * 10, "truncated": False},
+                  "empty": {"rows": [], "truncated": False}}
+        out = diagnostic.inline(result, limit=200)
+        self.assertEqual(out["rows"]["work"], {"columns": ["work_id", "state", "at"],
+                                               "rows": [[1, "pending", at]]})
+        self.assertEqual(out["rows"]["empty"], {"columns": [], "rows": []})
+        self.assertEqual(out["rows_omitted"], ["big"])
+        self.assertTrue(run.annotations({"result": out})[0].startswith("::notice title=ops-summary 1/1::"))
+
     def test_unknown_name_refused(self):
         for name in ("../../etc/passwd", "nope", ""):
             with self.assertRaises(common.Refused):
@@ -347,6 +360,15 @@ class ReplanAndEnqueue(unittest.TestCase):
         self.assertEqual(hashlib.sha256(data).hexdigest(), sha)
         with self.assertRaisesRegex(common.Refused, "only 3 eligible"):
             replan.approved_list(replanned, 4)
+
+    def test_approved_list_sha_ignores_replan_time_not_digests(self):
+        # The apply re-plans at a later time; an unchanged list must hash to the dry run's SHA.
+        rows = [dict(self.row(i, [2 * i, 2 * i + 1]), eligible=True) for i in range(1, 3)]
+        dry = replan.approved_list({"records": rows, "observed_at": "t1", "resolver_version": "1.3"}, 2)[1]
+        later = replan.approved_list({"records": rows, "observed_at": "t2", "resolver_version": "1.3"}, 2)[1]
+        self.assertEqual(dry, later)
+        moved = [dict(rows[0], evidence_digest="d2"), rows[1]]
+        self.assertNotEqual(dry, replan.approved_list({"records": moved, "observed_at": "t2", "resolver_version": "1.3"}, 2)[1])
 
     def test_apply_needs_the_dry_run_sha(self):
         enqueue_remaining.check_apply(False, "", "a" * 64)
