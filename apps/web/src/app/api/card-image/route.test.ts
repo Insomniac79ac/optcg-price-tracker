@@ -98,6 +98,31 @@ describe("GET /api/card-image", () => {
     expect(res.status).toBe(502);
   });
 
+  it("refuses SVG, which would run as a document on our origin", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', {
+        status: 200,
+        headers: { "content-type": "image/svg+xml" },
+      }),
+    );
+
+    const res = await GET(req(APPROVED));
+
+    expect(res.status).toBe(502);
+  });
+
+  it("accepts raster types with parameters and serves them sandboxed", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      imageResponse(undefined, { "content-type": "Image/JPEG; charset=binary" }),
+    );
+
+    const res = await GET(req(APPROVED));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(res.headers.get("Content-Security-Policy")).toBe("sandbox");
+  });
+
   it("refuses an oversized image", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(new Uint8Array(4), {
