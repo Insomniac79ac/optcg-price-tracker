@@ -67,7 +67,7 @@ function CatalogueView({ seed, query, filters, offset, releases, releaseStatus, 
   const chooseRelease = (id: number | null) => navigate({ ...filters, releaseProductId: id, legacySet: "" });
   return <div className="min-h-screen">
     <AppHeader />
-    <main className={styles.main}>
+    <main className={`atlas-chapters ${styles.main}`}>
       <CardAtlasHeader query={filters.q} onSearch={(q) => navigate({ ...filters, q })} totalPrints={total} />
       {filters.releaseProductId && <section className="my-5"><h2 className="text-xl font-semibold">{releaseLabelEnglish(releases.find((r) => r.release_product_id === filters.releaseProductId)?.official_code, releases.find((r) => r.release_product_id === filters.releaseProductId)?.display_name)} card prices</h2><p className="mt-2 text-text-secondary">Compare the exact card variants from this release. A missing price is not a value of zero.</p><Link href={`/analytics?release_product_id=${filters.releaseProductId}`} className="mt-3 inline-flex min-h-11 items-center text-accent-gold">See this release’s market movement →</Link></section>}
       <ReleaseNavigation releases={releases} status={releaseStatus} selected={filters.releaseProductId}

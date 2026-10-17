@@ -90,7 +90,8 @@
 }
 
 /* Chapter numbers (01, 02, ...) in document order, drawn like the homepage's
- * outlined chapter numerals. Decorative: screen readers get the plain title. */
+ * outlined chapter numerals (plain `content`: Next's CSS pipeline drops a rule
+ * that uses the `/ ""` alt-text form). */
 .section {
   counter-increment: info-section;
   padding-top: 2.5rem;
@@ -110,7 +111,6 @@
 
 .sectionTitle::before {
   content: counter(info-section, decimal-leading-zero);
-  content: counter(info-section, decimal-leading-zero) / "";
   flex: none;
   font: normal 800 2.75rem/0.9 var(--font-sans);
   letter-spacing: -0.07em;

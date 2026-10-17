@@ -153,7 +153,8 @@ body {
   /* Homepage type for public pages (Home.module.css): mono kicker, italic 800
    * display title, and numbered chapter titles. `.atlas-chapters` on a page
    * container numbers each `.atlas-chapter-title` inside it (01, 02, ...) with
-   * the homepage's outlined numerals; the numeral is decorative. */
+   * the homepage's outlined numerals. No `content: ... / ""` alt text: Next's
+   * CSS pipeline drops the whole block when it sees that syntax. */
   .atlas-kicker {
     font: 500 0.75rem/1.6 var(--font-mono);
     text-transform: uppercase;
@@ -185,7 +186,6 @@ body {
   }
   .atlas-chapters .atlas-chapter-title::before {
     content: counter(atlas-chapter, decimal-leading-zero);
-    content: counter(atlas-chapter, decimal-leading-zero) / "";
     flex: none;
     font: normal 800 4rem/0.9 var(--font-sans);
     letter-spacing: -0.07em;
