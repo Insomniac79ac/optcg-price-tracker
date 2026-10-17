@@ -12,6 +12,7 @@ import { isPublicShellRoute } from "./publicNavigation";
 import { AdminNavigation, AdminNavigationDrawer } from "@/components/admin/AdminNavigation";
 import { useAdminSurface } from "@/components/admin/AdminSurfaceProvider";
 import adminStyles from "@/components/admin/AdminShell.module.css";
+import drawerStyles from "./PublicDrawer.module.css";
 
 // "g then <key>" goto-shortcut targets (design brief - "Workflow
 // shortcuts"). Kept in sync with KeyboardShortcutsModal's reference list and
@@ -154,7 +155,7 @@ export function AppShell({ pathnameHint }: { pathnameHint?: string } = {}) {
             onClick={() => setMobileNavOpen(false)}
             className="absolute inset-0 bg-black/60"
           />
-          <div className="relative h-full w-64 max-w-[80vw] border-r border-border-default bg-bg-surface shadow-xl">
+          <div className={drawerStyles.panel}>
             <SidebarNav className="h-full" />
           </div>
         </div>

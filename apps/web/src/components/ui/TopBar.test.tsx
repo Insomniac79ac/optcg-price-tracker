@@ -142,4 +142,33 @@ describe("TopBar", () => {
     expect(shortcuts.className).toMatch(/\bhidden\b/);
     expect(shortcuts.className).toMatch(/lg:flex/);
   });
+
+  // Signed in at 320-390px the bar used to wrap Account and Sign out onto a
+  // second row. Below `sm` Account is a 44px icon and Sign out lives in the
+  // drawer (SidebarNav); from `sm` both are back in the bar.
+  it("collapses the collector's account controls below sm so the bar keeps one row", () => {
+    currentPathname = "/collection";
+    clientSession = {
+      data: { user: { email: "collector@example.com", name: "Nami" } as { email: string }, sessionKind: "collector" },
+      status: "authenticated",
+    };
+    render(<TopBar />);
+    const account = screen.getByRole("link", { name: /Account/ });
+    expect(account).toHaveAttribute("href", "/account");
+    expect(account.querySelector("svg")).not.toBeNull();
+    expect(account).toHaveClass("h-11", "min-w-11");
+    const signOut = screen.getByRole("button", { name: "Sign out" });
+    expect(signOut).toHaveClass("hidden", "sm:flex");
+    expect(screen.getByRole("button", { name: "Toggle navigation" })).toHaveClass("md:hidden");
+  });
+
+  it("keeps Sign out in the bar for a non-collector session, which has no Account link", () => {
+    currentPathname = "/cards";
+    clientSession = { data: { user: { email: "admin@example.com", role: "admin" }, sessionKind: "admin" }, status: "authenticated" };
+    render(<TopBar />);
+    expect(screen.queryByRole("link", { name: /Account/ })).not.toBeInTheDocument();
+    const signOut = screen.getByRole("button", { name: "Sign out" });
+    expect(signOut).toHaveClass("flex");
+    expect(signOut).not.toHaveClass("hidden");
+  });
 });
