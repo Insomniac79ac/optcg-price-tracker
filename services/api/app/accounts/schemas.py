@@ -6,10 +6,11 @@ cannot be measured is ``null`` with a reason, never 0.
 
 from __future__ import annotations
 
-from datetime import date, datetime
-from typing import Literal
+import re
+from datetime import date, datetime, timedelta, timezone
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from app.accounts.models import NOTE_MAX_LENGTH
 
@@ -17,6 +18,30 @@ MAX_QUANTITY = 9999
 MAX_JPY = 100_000_000
 
 Currency = Literal["JPY"]
+
+# Security audit 2026-10-16, F11: Postgres rejects NUL in text (a 500), and no
+# other C0 control belongs in a note. Tab and line breaks stay allowed.
+_CONTROL_CHARACTERS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+EARLIEST_ACQUIRED_ON = date(1900, 1, 1)
+
+
+def _note_text(value: str | None) -> str | None:
+    if value is not None and _CONTROL_CHARACTERS.search(value):
+        raise ValueError("note must not contain control characters")
+    return value
+
+
+def _acquired_on(value: date | None) -> date | None:
+    # The website refuses dates after the collector's local today; one day of
+    # slack covers time zones ahead of UTC.
+    latest = datetime.now(timezone.utc).date() + timedelta(days=1)
+    if value is not None and not EARLIEST_ACQUIRED_ON <= value <= latest:
+        raise ValueError(f"acquired_on must be between {EARLIEST_ACQUIRED_ON.isoformat()} and today")
+    return value
+
+
+NoteText = Annotated[str | None, Field(max_length=NOTE_MAX_LENGTH), AfterValidator(_note_text)]
+AcquiredOn = Annotated[date | None, AfterValidator(_acquired_on)]
 
 
 class PrintSummaryOut(BaseModel):
@@ -37,8 +62,8 @@ class CollectionEntryCreateIn(BaseModel):
     card_print_id: int = Field(gt=0)
     quantity: int = Field(default=1, ge=1, le=MAX_QUANTITY)
     paid_jpy_per_card: int | None = Field(default=None, ge=0, le=MAX_JPY)
-    acquired_on: date | None = None
-    note: str | None = Field(default=None, max_length=NOTE_MAX_LENGTH)
+    acquired_on: AcquiredOn = None
+    note: NoteText = None
 
 
 class CollectionEntryUpdateIn(BaseModel):
@@ -48,8 +73,8 @@ class CollectionEntryUpdateIn(BaseModel):
 
     quantity: int | None = Field(default=None, ge=1, le=MAX_QUANTITY)
     paid_jpy_per_card: int | None = Field(default=None, ge=0, le=MAX_JPY)
-    acquired_on: date | None = None
-    note: str | None = Field(default=None, max_length=NOTE_MAX_LENGTH)
+    acquired_on: AcquiredOn = None
+    note: NoteText = None
 
 
 class CollectionEntryOut(BaseModel):
@@ -213,14 +238,14 @@ class WatchlistEntryCreateIn(BaseModel):
 
     card_print_id: int = Field(gt=0)
     target_jpy: int | None = Field(default=None, gt=0, le=MAX_JPY)
-    note: str | None = Field(default=None, max_length=NOTE_MAX_LENGTH)
+    note: NoteText = None
 
 
 class WatchlistEntryUpdateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     target_jpy: int | None = Field(default=None, gt=0, le=MAX_JPY)
-    note: str | None = Field(default=None, max_length=NOTE_MAX_LENGTH)
+    note: NoteText = None
 
 
 class WatchlistEntryOut(BaseModel):
