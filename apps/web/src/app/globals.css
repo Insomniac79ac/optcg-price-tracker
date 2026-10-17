@@ -150,6 +150,64 @@ body {
  * ------------------------------------------------------------------------- */
 
 @layer components {
+  /* Homepage type for public pages (Home.module.css): mono kicker, italic 800
+   * display title, and numbered chapter titles. `.atlas-chapters` on a page
+   * container numbers each `.atlas-chapter-title` inside it (01, 02, ...) with
+   * the homepage's outlined numerals; the numeral is decorative. */
+  .atlas-kicker {
+    font: 500 0.75rem/1.6 var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #8dc9c4;
+  }
+  .atlas-display-title {
+    font: italic 800 clamp(2.25rem, 4.2vw, 3.5rem)/1.08 var(--font-sans);
+    letter-spacing: -0.045em;
+    color: #eef2f2;
+    overflow-wrap: anywhere;
+  }
+  .atlas-chapters {
+    counter-reset: atlas-chapter;
+  }
+  .atlas-chapter-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+    font: italic 800 clamp(1.375rem, 2.2vw, 1.875rem)/1.15 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: -0.035em;
+    color: #eef2f2;
+    overflow-wrap: anywhere;
+  }
+  .atlas-chapters .atlas-chapter-title {
+    counter-increment: atlas-chapter;
+  }
+  .atlas-chapters .atlas-chapter-title::before {
+    content: counter(atlas-chapter, decimal-leading-zero);
+    content: counter(atlas-chapter, decimal-leading-zero) / "";
+    flex: none;
+    font: normal 800 4rem/0.9 var(--font-sans);
+    letter-spacing: -0.07em;
+    color: transparent;
+    -webkit-text-stroke: 1px #58908d;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 767px) {
+    .atlas-kicker {
+      letter-spacing: 0.08em;
+    }
+    .atlas-display-title {
+      font-size: 2.25rem;
+    }
+    .atlas-chapter-title {
+      gap: 0.75rem;
+    }
+    .atlas-chapters .atlas-chapter-title::before {
+      font-size: 3rem;
+    }
+  }
+
   .mono {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;

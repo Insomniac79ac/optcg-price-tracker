@@ -28,7 +28,7 @@ export function MarketValueReleaseMarket({ releases, loading, failed, onScopeCha
   const dates = [...new Set(releases.map((release) => release.as_of))];
   return <section className={`${styles.section} ${styles.releaseMarket}`} aria-labelledby="release-market-title" data-testid="release-market">
     <header className={styles.header}>
-      <div><h2 id="release-market-title">Release market</h2><p>Tracked value and price coverage across One Piece releases.</p></div>
+      <div><h2 id="release-market-title" className="atlas-chapter-title">Release market</h2><p>Tracked value and price coverage across One Piece releases.</p></div>
       <label className={styles.search}>Search releases<input type="search" value={search} placeholder="Code or English name" onChange={(event) => { setSearch(event.target.value); setLimit(12); }} /></label>
     </header>
     {loading ? <p className={styles.notice} role="status">Loading release markets…</p>

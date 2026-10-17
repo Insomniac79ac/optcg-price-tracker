@@ -38,8 +38,8 @@ export function MarketValueHero(props: MarketValueHeroProps) {
     <section className={styles.hero} aria-labelledby="market-title" data-testid="market-value-hero">
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>One Piece card prices</p>
-          <h1 id="market-title">How is the One Piece market doing?</h1>
+          <p className={`atlas-kicker ${styles.eyebrow}`}>One Piece card prices</p>
+          <h1 id="market-title" className="atlas-display-title">How is the One Piece market doing?</h1>
           <p className={styles.subtitle}>See what is rising or falling across the Japanese card variants we track. Coverage is partial.</p>
         </div>
         <div className={styles.scopeControl}>

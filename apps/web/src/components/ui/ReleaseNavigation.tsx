@@ -48,7 +48,7 @@ export function ReleaseNavigation({ releases, status, selected, hrefFor, onSelec
   };
   return <section className={styles.releaseSection} aria-labelledby="release-browse-title">
     <div className={styles.releaseHeadingRow}>
-      <div><h2 id="release-browse-title" className={styles.sectionTitle}>Browse by release</h2><p className={styles.releaseHint}>Newest releases first · {releases.length} products</p></div>
+      <div><h2 id="release-browse-title" className={`atlas-chapter-title ${styles.sectionTitle}`}>Browse by release</h2><p className={styles.releaseHint}>Newest releases first · {releases.length} products</p></div>
     </div>
     <div className={styles.releaseCarousel}>
       <button type="button" className={styles.releaseArrow} aria-label="Scroll releases left" aria-controls={trackId} disabled={!edges.previous} onClick={() => scroll(-1)}>←</button>

@@ -26,7 +26,7 @@ export default function PrintsCataloguePage({ initialReleases = null, seed }: { 
   return seed ? <CatalogueRoute initialReleases={initialReleases} seed={seed} /> : <Suspense fallback={<CatalogueFallback />}><CatalogueRoute initialReleases={initialReleases} seed={seed} /></Suspense>;
 }
 function CatalogueFallback() {
-  return <><AppHeader /><main className={styles.main}><CardAtlasHeader query="" onSearch={() => {}} totalPrints={null} /><CardGridSkeleton count={24} /></main></>;
+  return <><AppHeader /><main className={`atlas-chapters ${styles.main}`}><CardAtlasHeader query="" onSearch={() => {}} totalPrints={null} /><CardGridSkeleton count={24} /></main></>;
 }
 function CatalogueRoute({ initialReleases, seed }: { initialReleases: ReleaseCatalogueList | null; seed?: Seed }) {
   const searchParams = useSearchParams();
@@ -77,7 +77,7 @@ function CatalogueView({ seed, query, filters, offset, releases, releaseStatus, 
         <PrintCatalogueToolbar releases={releases} filters={filters} facets={facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
         <div id="catalogue-results" className={styles.catalogueContent}>
           <div className={styles.catalogueBar}>
-            <div className={styles.catalogueMeta}><h2 className={styles.catalogueTitle}>Exact card variants</h2>
+            <div className={styles.catalogueMeta}><h2 className={`atlas-chapter-title ${styles.catalogueTitle}`}>Exact card variants</h2>
               {total !== null && <p className={styles.catalogueCount}>{total.toLocaleString()} {total === 1 ? 'entry' : 'entries'} in this view</p>}
             </div>
             <PrintCatalogueSortControl value={filters.sort} onChange={(sort) => navigate({ ...filters, sort })} />

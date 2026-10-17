@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 
-import { CardGrid } from "@/components/ui/CardGrid";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import { printsNeedingArtOrdinal, type PrintUiModel } from "@/lib/prints";
@@ -43,6 +42,7 @@ export function CardPrintingChooser({
   cardCode,
   canonicalName,
   ownedByPrint,
+  highlightPrintId = null,
 }: {
   status: PrintingChooserStatus;
   prints: PrintUiModel[];
@@ -55,6 +55,9 @@ export function CardPrintingChooser({
    * badges. Absent for a visitor. There is deliberately no add button here:
    * the collector picks the exact version first (PLAN E1). */
   ownedByPrint?: ReadonlyMap<number, { quantity: number }>;
+  /** The version the reader arrived from (a print page's "Show all"). It is
+   * marked "You were viewing" in place; the order never changes. */
+  highlightPrintId?: number | null;
 }) {
   // Scoped to the prints shown together, exactly as the catalogue grid scopes
   // it: an ordinal earns its place only when two tiles on THIS page would
@@ -63,24 +66,24 @@ export function CardPrintingChooser({
   const ordinalNeeded = useMemo(() => printsNeedingArtOrdinal(prints), [prints]);
 
   return (
-    <section className="rounded-panel border border-border-default bg-bg-surface p-4">
-      <h2 className="text-sm font-semibold text-text-primary">
+    <section>
+      <h2 className="atlas-chapter-title">
         Card variants of{" "}
         {canonicalName ? (
           <>
             {canonicalName}{" "}
-            <span className="mono font-normal text-text-muted">{cardCode}</span>
+            <span className="mono text-base font-normal not-italic tracking-normal text-text-muted">{cardCode}</span>
           </>
         ) : (
           <span className="mono">{cardCode}</span>
         )}
       </h2>
-      <p className="mt-1 text-xs text-text-secondary">
+      <p className="mt-3 max-w-2xl text-sm text-text-secondary">
         Each version of this card is valued separately. Choose the one you
         have to see its Market Index and price history.
       </p>
 
-      <div className="mt-3">
+      <div className="mt-6">
         {status === "loading" && <CardGridSkeleton count={3} />}
 
         {status === "error" && (
@@ -96,16 +99,19 @@ export function CardPrintingChooser({
         )}
 
         {status === "ready" && prints.length > 0 && (
-          <CardGrid>
+          // The print page's "Other versions" grid, without its row limit:
+          // 2 columns on phones, 4 from 640px, 5 from 1280px.
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 xl:grid-cols-5">
             {prints.map((print) => (
               <PrintCardTile
                 key={print.cardPrintId}
                 print={print}
                 showArtOrdinal={ordinalNeeded.has(print.cardPrintId)}
                 ownedQuantity={ownedByPrint?.get(print.cardPrintId)?.quantity ?? null}
+                marker={print.cardPrintId === highlightPrintId ? "You were viewing" : null}
               />
             ))}
-          </CardGrid>
+          </div>
         )}
       </div>
     </section>

@@ -262,7 +262,25 @@ describe("shared public shell", () => {
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-public-shell]")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Mobile public sections" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Card Pirate — Home" }).querySelector("img")).not.toBeNull();
+    // The old raster ATLAS logo is gone; every header carries the compass.
+    const home = screen.getByRole("link", { name: "Card Pirate — Home" });
+    expect(home.querySelector("img")).toBeNull();
+    expect(home.querySelector("svg")).not.toBeNull();
+  });
+
+  it.each(["/about", "/methodology", "/privacy", "/terms"])("puts the info page %s in the public shell", (pathname) => {
+    currentPathname = pathname;
+    const { container } = render(<AppShell />);
+    expect(container.querySelectorAll("[data-public-shell]")).toHaveLength(1);
+    expect(screen.getByRole("navigation", { name: "Mobile public sections" })).toBeInTheDocument();
+  });
+
+  it("uses the public shell on an unknown path when the page asks for it (the 404)", () => {
+    currentPathname = "/no-such-page";
+    const { container } = render(<AppShell publicShell />);
+    expect(container.querySelectorAll("[data-public-shell]")).toHaveLength(1);
+    expect(screen.getByRole("navigation", { name: "Mobile public sections" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle navigation" })).toHaveClass("md:hidden");
   });
 
   it("updates the shared navigation and removes public scope when leaving browsing", () => {

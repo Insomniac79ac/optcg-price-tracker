@@ -41,6 +41,8 @@ export default function GlobalError({
             <button type="button" onClick={reset} className={styles.primary}>
               Try again
             </button>
+            {/* A full reload on purpose: the error may be in client state. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/" className={styles.secondary}>
               Back to Home
             </a>
