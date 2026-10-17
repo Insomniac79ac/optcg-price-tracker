@@ -57,7 +57,7 @@
 .printingLink { display: flex; flex-direction: column; height: 100%; border-radius: 8px; }
 .printingLink:hover { color: #a5dad5; }
 .printingLink:hover :global(.vault-frame) { outline: 2px solid var(--accent-teal); outline-offset: 0; }
-.currentPrinting :global(.vault-frame) { outline: 1px solid #7ebfba; outline-offset: 2px; }
+.currentPrinting :global(.vault-frame) { outline: 1px solid #7ebfba; outline-offset: -1px; }
 .versionName { display: block; margin-top: 10px; overflow: hidden; color: #eef2f2; font-size: 14px; font-weight: 600; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .versionCode { display: block; margin-top: 4px; color: #8dc9c4; font-size: 11px; }
 .versionDescriptor { display: block; margin-top: 6px; color: #a5dad5; }

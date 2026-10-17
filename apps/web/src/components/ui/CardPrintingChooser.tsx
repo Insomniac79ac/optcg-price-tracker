@@ -72,7 +72,7 @@ export function CardPrintingChooser({
         {canonicalName ? (
           <>
             {canonicalName}{" "}
-            <span className="mono text-base font-normal not-italic tracking-normal text-text-muted">{cardCode}</span>
+            <span className="mono whitespace-nowrap text-base font-normal not-italic tracking-normal text-text-muted">{cardCode}</span>
           </>
         ) : (
           <span className="mono">{cardCode}</span>
