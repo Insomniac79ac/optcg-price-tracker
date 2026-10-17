@@ -1,9 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useSessionMock = vi.fn();
+const signOutMock = vi.fn();
 vi.mock("next-auth/react", () => ({
   useSession: () => useSessionMock(),
+  signOut: (...args: unknown[]) => signOutMock(...args),
 }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -59,6 +61,19 @@ describe("SidebarNav - signed out", () => {
     expect(screen.queryByText("Activity")).not.toBeInTheDocument();
   });
 
+  it("offers no account or sign-out controls", () => {
+    render(<SidebarNav />);
+    expect(screen.queryByRole("link", { name: "Account" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+  });
+
+  it("is a flat list of real links, with no collapsible group toggles", () => {
+    render(<SidebarNav />);
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Card Prices" })).not.toHaveAttribute("aria-current");
+  });
+
   it("shows no Admin or Admin · More sections", () => {
     render(<SidebarNav />);
     expect(screen.queryByText("Admin")).not.toBeInTheDocument();
@@ -98,6 +113,24 @@ describe("SidebarNav - signed in (collector session)", () => {
     expect(screen.getByText("Watchlist")).toBeInTheDocument();
     expect(screen.queryByText("Grading")).not.toBeInTheDocument();
     expect(screen.queryByText("Activity")).not.toBeInTheDocument();
+  });
+
+  it("carries Sign out, which the header drops below sm, with the same callback", () => {
+    render(<SidebarNav />);
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    expect(signOutMock).toHaveBeenCalledWith({ callbackUrl: "/" });
+  });
+
+  it("links Account only for a collector session, matching the header", () => {
+    const { unmount } = render(<SidebarNav />);
+    expect(screen.queryByRole("link", { name: "Account" })).not.toBeInTheDocument();
+    unmount();
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "collector@example.com" }, sessionKind: "collector" },
+      status: "authenticated",
+    });
+    render(<SidebarNav />);
+    expect(screen.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account");
   });
 
   it("still shows no Admin sections for an ordinary collector session", () => {

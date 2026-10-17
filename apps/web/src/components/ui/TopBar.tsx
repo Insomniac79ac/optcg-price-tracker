@@ -9,9 +9,8 @@ import styles from "./PublicShell.module.css";
 import adminStyles from "@/components/admin/AdminShell.module.css";
 import { AdminReauthenticateLink } from "@/components/admin/AdminReauthenticateLink";
 import { useAdminSurface } from "@/components/admin/AdminSurfaceProvider";
-import { isPublicShellRoute, publicSectionActive } from "./publicNavigation";
+import { isPublicShellRoute, publicSectionActive, PUBLIC_NAV_ITEMS } from "./publicNavigation";
 import { brand } from "@/lib/brand";
-import { PUBLIC_NAV_ITEMS } from "./SidebarNav";
 
 /** Shared controls and compact Atlas branding. Public and admin palettes are
  * scoped separately; the admin rail/drawer is owned by AppShell. */
@@ -252,18 +251,22 @@ function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: b
     );
   }
 
+  const collector = session.sessionKind === "collector";
   return (
     <div className="flex items-center gap-2 text-xs text-text-secondary">
-      {session.sessionKind === "collector" ? (
-        // The collector's own account page (Collector v1 S5, PLAN §D4).
+      {collector ? (
+        // The collector's own account page (Collector v1 S5, PLAN §D4). Below
+        // `sm` it is a 44px icon and Sign out moves into the drawer, so the
+        // 320-390px bar stays on one row.
         <Link
           href="/account"
           title={`Your account (${session.user?.email ?? ""})`}
           aria-current={pathname === "/account" ? "page" : undefined}
-          className={`flex h-11 min-w-0 shrink items-center rounded-control px-1.5 font-medium underline-offset-4 transition-colors hover:text-text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 ${pathname === "/account" ? "text-text-primary underline decoration-accent-gold" : "text-text-secondary"}`}
+          className={`${styles.account} flex h-11 min-w-11 shrink-0 items-center justify-center rounded-control px-1.5 font-medium underline-offset-4 transition-colors hover:text-text-primary sm:min-w-0 sm:justify-start sm:hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 ${pathname === "/account" ? "text-text-primary sm:underline sm:decoration-accent-gold" : "text-text-secondary"}`}
         >
+          <AccountIcon />
+          <span className="sr-only sm:hidden">Account</span>
           <span className="hidden max-w-[10rem] truncate sm:inline">{session.user?.name || session.user?.email}</span>
-          <span className="sm:hidden">Account</span>
         </Link>
       ) : (
         <span
@@ -277,11 +280,20 @@ function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: b
         type="button"
         onClick={() => signOut({ callbackUrl: "/" })}
         title={session.user?.name || session.user?.email || undefined}
-        className="flex h-11 shrink-0 items-center rounded-control border border-border-default px-2.5 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 md:px-2"
+        className={`${collector ? "hidden sm:flex" : "flex"} h-11 shrink-0 items-center rounded-control border border-border-default px-2.5 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 md:px-2`}
       >
         Sign out
       </button>
     </div>
+  );
+}
+
+function AccountIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true" focusable="false" className="h-5 w-5 sm:hidden">
+      <circle cx="10" cy="7" r="3.25" />
+      <path d="M3.75 17c.9-3.1 3.3-4.75 6.25-4.75S15.35 13.9 16.25 17" />
+    </svg>
   );
 }
 
