@@ -3,12 +3,9 @@
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 
-import { ActionButton } from "@/components/ui/ActionButton";
 import { accountSurfaceStyles as styles } from "@/components/ui/AccountSurface";
 
 export const DELETE_CONFIRMATION = "delete my account";
-
-const BUTTON_SIZE = "min-h-11 px-4 text-sm md:min-h-9";
 
 /** Typed confirmation, then DELETE /api/me (same-origin; the server mints the
  * API token and refuses cross-site requests). On success the session is
@@ -62,13 +59,5 @@ export function DeleteAccount() {
         </p>
       )}
     </div>
-  );
-}
-
-export function SignOutButton() {
-  return (
-    <ActionButton className={BUTTON_SIZE} onClick={() => signOut({ callbackUrl: "/" })}>
-      Sign out
-    </ActionButton>
   );
 }

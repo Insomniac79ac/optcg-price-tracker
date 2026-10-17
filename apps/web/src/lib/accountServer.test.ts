@@ -13,6 +13,21 @@ function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
+const PROFILE = { email: IDENTITY.email, name: "Test Collector", member_since: "2026-10-15T00:00:00Z" };
+const PREFERENCES = { currency: "JPY", collection_visibility: "private" };
+const VALUE = { as_of: "2026-10-17", window: "7d", summary: { value_jpy: 1200, total_cards: 1 } };
+const WATCHLIST = { currency: "JPY", as_of: "2026-10-17", entries: [] };
+
+function respond(url: string, override: Record<string, Response> = {}) {
+  const path = url.replace("http://api.test/me/", "");
+  if (path in override) return override[path];
+  if (path === "profile") return json(200, PROFILE);
+  if (path === "preferences") return json(200, PREFERENCES);
+  if (path === "collection/value?window=7d") return json(200, VALUE);
+  if (path === "watchlist") return json(200, WATCHLIST);
+  return json(500, {});
+}
+
 let errors: string[];
 
 beforeEach(() => {
@@ -36,12 +51,46 @@ function expectNoPrivateData() {
   expect(all).not.toContain("Test Collector");
 }
 
-describe("loadAccountOverview upstream logging", () => {
-  it("logs nothing when both reads succeed", async () => {
+describe("loadAccountOverview overview strip", () => {
+  it("reads the 7D value and the watchlist with the same single token", async () => {
+    const fetchMock = vi.fn(async (url: string) => respond(url));
+    vi.stubGlobal("fetch", fetchMock);
+    const overview = await loadAccountOverview(IDENTITY);
+    expect(mintApiToken).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.map(([url]) => url).sort()).toEqual([
+      "http://api.test/me/collection/value?window=7d",
+      "http://api.test/me/preferences",
+      "http://api.test/me/profile",
+      "http://api.test/me/watchlist",
+    ]);
+    for (const [, init] of fetchMock.mock.calls as unknown as [string, RequestInit][]) {
+      expect(init.headers).toEqual({ Authorization: `Bearer ${TOKEN}` });
+    }
+    expect(overview).toMatchObject({ state: "ok", collection: VALUE, watchlist: WATCHLIST });
+  });
+
+  it("keeps the page when a strip read fails, with that part null", async () => {
     vi.stubGlobal("fetch", vi.fn(async (url: string) =>
-      url.endsWith("/profile")
-        ? json(200, { email: IDENTITY.email, name: "Test Collector", member_since: "2026-10-15T00:00:00Z" })
-        : json(200, { currency: "JPY", collection_visibility: "private" })));
+      respond(url, { "collection/value?window=7d": json(503, {}), watchlist: json(200, WATCHLIST) })));
+    const overview = await loadAccountOverview(IDENTITY);
+    expect(overview).toMatchObject({ state: "ok", collection: null, watchlist: WATCHLIST });
+    expect(errors).toEqual(["[account] GET /me/collection/value failed status=503"]);
+  });
+
+  it("keeps the page when a strip read throws", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.endsWith("/watchlist")) throw new TypeError("fetch failed");
+      return respond(url);
+    }));
+    const overview = await loadAccountOverview(IDENTITY);
+    expect(overview).toMatchObject({ state: "ok", collection: VALUE, watchlist: null });
+    expect(errors).toEqual(["[account] GET /me/watchlist failed error=TypeError"]);
+  });
+});
+
+describe("loadAccountOverview upstream logging", () => {
+  it("logs nothing when every read succeeds", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => respond(url)));
     const overview = await loadAccountOverview(IDENTITY);
     expect(overview.state).toBe("ok");
     expect(errors).toEqual([]);
