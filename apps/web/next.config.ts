@@ -94,7 +94,18 @@ const CONTENT_SECURITY_POLICY = [
   `img-src 'self' data: ${IMAGE_HOSTS.join(" ")}`,
   `connect-src ${buildConnectSrc()}`,
   "frame-ancestors 'none'",
+  // Security audit 2026-10-16, F14: nothing here uses <object>/<embed> or a
+  // <base> tag, and every form posts to this origin (Google sign-in is a
+  // client fetch then a redirect, allowed below for browsers that apply
+  // form-action to redirects).
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://accounts.google.com",
 ].join("; ");
+
+// Two years, as Vercel already sends on its own domains. No `preload` until
+// the production domain plan is settled (audit F14).
+const STRICT_TRANSPORT_SECURITY = "max-age=63072000; includeSubDomains";
 
 const nextConfig: NextConfig = {
   // Preserve Next’s HTML-only search/social defaults and cover documented
@@ -114,9 +125,10 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
           },
           { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
+          { key: "Strict-Transport-Security", value: STRICT_TRANSPORT_SECURITY },
         ],
       },
     ];
