@@ -15,35 +15,22 @@
 .identity::before {
   position: absolute;
   z-index: -1;
-  inset: -8rem -2rem auto 44%;
-  height: 17rem;
+  inset: 0;
   content: "";
-  opacity: 0.42;
-  background:
-    radial-gradient(circle at 52% 48%, transparent 0 3px, rgba(79, 141, 134, 0.22) 3.5px 4.5px, transparent 5px),
-    repeating-radial-gradient(circle at 52% 48%, transparent 0 2.1rem, rgba(232, 222, 199, 0.045) 2.15rem 2.2rem),
-    linear-gradient(115deg, transparent 0 47%, rgba(199, 154, 75, 0.12) 47.1% 47.35%, transparent 47.45%);
+  pointer-events: none;
+  /* The homepage hero's dotted chart band. */
+  background-image: radial-gradient(circle, rgba(111, 181, 176, 0.24) 1px, transparent 1.5px);
+  background-size: 10px 10px;
+  mask-image: linear-gradient(100deg, transparent 35%, #000 85%);
 }
 
 .kicker {
   margin: 0;
-  color: var(--accent-gold);
-  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
 }
 
 .heading {
   max-width: 13ch;
-  margin: 0.45rem 0 0;
-  color: var(--text-primary);
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-size: clamp(3.15rem, 6vw, 5rem);
-  font-weight: 600;
-  line-height: 0.93;
-  letter-spacing: -0.055em;
+  margin: 0.75rem 0 0;
 }
 
 .identityBody {
@@ -73,8 +60,7 @@
 .queryContext {
   margin: 0 0 0.65rem;
   color: var(--text-secondary);
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .queryContext strong {
@@ -189,10 +175,6 @@
 
 .sectionTitle {
   margin: 0.25rem 0 0;
-  color: var(--text-primary);
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-size: 1.3rem;
-  font-weight: 600;
 }
 
 .releaseHint {
@@ -331,10 +313,6 @@
 
 .catalogueTitle {
   margin: 0;
-  color: var(--text-primary);
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-size: 1.35rem;
-  font-weight: 600;
 }
 
 .catalogueCount {
@@ -422,9 +400,6 @@
     padding: 0.6rem 0 0.9rem;
   }
 
-  .identity::before {
-    inset: -6rem -5rem auto 28%;
-  }
 
   .identityBody {
     display: block;

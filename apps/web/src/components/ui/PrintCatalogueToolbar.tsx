@@ -32,7 +32,7 @@ export function PrintCatalogueToolbar({ filters, facets, releases, onChange, leg
   const count = collectorRefinementCount(filters);
   if (!mobile) return (
     <aside className="sticky top-[calc(var(--header-h)+1rem)] rounded-panel border border-border-default bg-bg-surface p-4" aria-labelledby="catalogue-filters-title">
-      <h2 id="catalogue-filters-title" className="font-display text-lg font-semibold">Collector filters{count > 0 ? ` · ${count}` : ""}</h2>
+      <h2 id="catalogue-filters-title" className="text-lg font-bold">Collector filters{count > 0 ? ` · ${count}` : ""}</h2>
       <CatalogueFilterFields releases={releases} filters={filters} facets={facets} onChange={onChange} />
       <div className="mt-4 border-t border-border-muted pt-4">{legend}</div>
       {count > 0 && <button type="button" className="mt-2 min-h-11 text-xs underline" onClick={() => onChange({ ...filters, rarities: [], treatments: [] })}>Clear collector filters</button>}

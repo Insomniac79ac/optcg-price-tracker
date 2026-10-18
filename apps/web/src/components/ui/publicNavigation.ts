@@ -29,7 +29,9 @@ export function isPublicShellRoute(pathname: string): boolean {
     // Sign-in, the collector's account (Collector v1 S6), collection (S7)
     // and watchlist (S8) share the homepage's chrome: same compact mark,
     // header and bottom navigation.
-    pathname === "/sign-in" || pathname === "/account" || pathname === "/collection" || pathname === "/watchlist";
+    pathname === "/sign-in" || pathname === "/account" || pathname === "/collection" || pathname === "/watchlist" ||
+    // The long-form info pages (design cleanup c).
+    pathname === "/about" || pathname === "/methodology" || pathname === "/privacy" || pathname === "/terms";
 }
 
 /** An exact print belongs to Cards in both public navigation surfaces. */

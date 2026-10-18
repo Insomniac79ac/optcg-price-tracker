@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -51,6 +51,11 @@ export default function CardFamilyPage() {
   const [prints, setPrints] = useState<PrintUiModel[]>([]);
   const [identity, setIdentity] = useState<CanonicalPrintIdentity | null>(null);
   const [status, setStatus] = useState<Status>("loading");
+  // `?from=<card_print_id>` from a print page's "Show all N versions": that
+  // version is marked in place. It changes nothing about which versions are
+  // shown or their order.
+  const from = Number(useSearchParams()?.get("from"));
+  const fromPrintId = Number.isInteger(from) && from > 0 ? from : null;
   const shelf = useCollectorShelf();
 
   useEffect(() => {
@@ -101,12 +106,12 @@ export default function CardFamilyPage() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="atlas-chapters mx-auto max-w-6xl px-4 py-6">
         <Link
           href="/cards"
-          className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-text-muted transition-colors hover:text-accent-teal"
+          className="mb-4 inline-flex min-h-11 items-center gap-1.5 font-mono text-xs text-[#8aa7ad] transition-colors hover:text-accent-teal"
         >
-          <span aria-hidden="true">←</span> Catalogue
+          <span aria-hidden="true">←</span> Card Prices
         </Link>
 
         {status === "loading" && <LoadingState>Loading this card…</LoadingState>}
@@ -153,11 +158,12 @@ export default function CardFamilyPage() {
 
         {status === "ready" && identity && (
           <article>
-            <header className="mb-5">
-              <h1 className="font-display text-[30px] font-semibold leading-[1.05] tracking-tight text-text-primary sm:text-[34px]">
+            <header className="mb-10">
+              <p className="atlas-kicker">All versions · {prints.length}</p>
+              <h1 className="atlas-display-title mt-3">
                 {identity.name}
               </h1>
-              <p className="mono mt-2 text-xs text-text-muted">{cardCode}</p>
+              <p className="mono mt-3 text-sm text-[#8dc9c4]">{cardCode}</p>
             </header>
 
             <CardPrintingChooser
@@ -166,6 +172,7 @@ export default function CardFamilyPage() {
               cardCode={cardCode ?? ""}
               canonicalName={identity.name}
               ownedByPrint={shelf.status === "ready" ? shelf.held : undefined}
+              highlightPrintId={fromPrintId}
             />
           </article>
         )}

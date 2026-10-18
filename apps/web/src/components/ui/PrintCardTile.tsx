@@ -49,6 +49,7 @@ export function PrintCardTile({
   print,
   showArtOrdinal = false,
   ownedQuantity = null,
+  marker = null,
 }: {
   print: PrintUiModel;
   /** Last-resort disambiguator. The grid sets it only for prints whose
@@ -60,6 +61,10 @@ export function PrintCardTile({
   /** How many of this exact version the signed-in collector has, when known
    * and above zero. Drawn as a small "In your collection ×2" badge. */
   ownedQuantity?: number | null;
+  /** A short label that marks this tile among its neighbours, such as "You
+   * were viewing" on a card's all-versions page. Drawn as a tag and read
+   * as part of the link's name. */
+  marker?: string | null;
 }) {
   // The printing type is derived from Bandai's own asset address, never from
   // artwork, rarity or product - and a base printing gets nothing, which is
@@ -79,6 +84,7 @@ export function PrintCardTile({
     artOrdinal,
     print.releaseCode || print.releaseProductId ? `found in ${releaseLabelEnglish(print.releaseCode)}` : null,
     ownedQuantity ? `in your collection ×${ownedQuantity}` : null,
+    marker,
   ]
     .filter(Boolean)
     .join(", ");
@@ -88,6 +94,7 @@ export function PrintCardTile({
       href={`/prints/${print.cardPrintId}`}
       prefetch={false}
       aria-label={accessibleName}
+      data-marked={marker ? "" : undefined}
       className={`group flex flex-col rounded-panel border border-border-muted bg-bg-elevated p-2 ${styles.tile}`}
     >
       {/* Untouched: bounded geometry, the natural-size guard, exact-print
@@ -178,6 +185,10 @@ export function PrintCardTile({
             </span>
           )}
         </div>
+
+        {marker && (
+          <span className={styles.marker} data-testid="tile-marker">{marker}</span>
+        )}
 
         {ownedQuantity ? (
           <span className="inline-flex self-start rounded bg-[#1d3a3a] px-1.5 py-0.5 text-[11px] font-medium text-[#cdeae6]" data-testid="owned-badge">

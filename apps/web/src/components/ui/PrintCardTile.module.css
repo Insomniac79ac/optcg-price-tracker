@@ -17,3 +17,20 @@
     outline-color: Highlight;
   }
 }
+
+/* A marked tile (e.g. the version the reader came from) keeps the frame
+ * geometry and adds the print page's "Current" outline and tag. */
+.tile[data-marked] > :global(.vault-frame) {
+  outline: 1px solid #7ebfba;
+  outline-offset: 2px;
+}
+
+.marker {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border: 1px solid #527f7c;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #a5dad5;
+}
