@@ -478,6 +478,20 @@ class FleetAndImages(unittest.TestCase):
             with self.assertRaises(common.Refused):
                 fleet.receipt_path(bad)
 
+    def test_default_receipt_chain(self):
+        receipts = fleet.load_receipts(None)
+        self.assertEqual([d["source_sha"][:7] for _, d in receipts], ["a504e47", "2bcbe90"])
+        owners = {n: fleet.receipt_for(n, receipts)[1]["source_sha"][:7]
+                  for n in receipts[0][1]["deployments"]}
+        self.assertEqual(len(owners), 10)
+        self.assertEqual(owners["snkrdunk-collector"], "a504e47")
+        self.assertEqual(sorted(n for n, c in owners.items() if c == "2bcbe90"),
+                         sorted(receipts[1][1]["deployments"]))
+        self.assertEqual(len(receipts[1][1]["deployments"]), 9)
+        self.assertIsNone(fleet.receipt_for("not-a-collector", receipts))
+        with self.assertRaises(common.Refused):
+            fleet.load_receipts(fleet.DEFAULT_RECEIPTS[0] + ",docs/agent/STAGING_MISSION.json")
+
     def test_compare(self):
         receipt = {"deployment_id": "d1", "image_digest": "sha256:x", "schedule_utc": "1 * * * *"}
         live = {"live_deployment": "d1", "live_digest": "sha256:x", "marker": True, "status": "SUCCESS",
