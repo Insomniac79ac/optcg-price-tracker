@@ -26,7 +26,7 @@ stands. Plan branches (`plan/*`), handoffs and reports are the detail behind it.
 |---|---|---|
 | 2026-10-16 | Add Dorasuta and CardRush now. | The rule against a third source before two-source stability ([PROJECT_HANDOVER.md](PROJECT_HANDOVER.md) §8, "do not expand source scope"); `plan/data-platform` plain summary 5 and §G6 source order (Cardmarket and Aucfan first, shops later); `plan/source-survey` §5 order. |
 | 2026-10-16 | No permission requests to sources. Collect public pages with an honest User-Agent, respect robots.txt, stop on any 403 or 429. (Outreach closed 21:45Z, recorded in `plan/official-channels` §6.) | `plan/data-platform`: "permission comes first" (plain summary 4), §A8, §G1 holds, §G6, G-actions 1, 2 and 6, the permission gates of §F steps 9 and 12; `plan/source-survey` §6 D4 to D6 and email appendices A and B; `plan/official-channels` §7 and §8; `plan/cardrush-source` §A parallel email and Q1 default; `plan/onchain-phase1` §B1 "written permission on file" for public pages. |
-| 2026-10-17 | Repo stays public. No time spent on grey-area legal concerns; the legal opinion is not a gate. | `plan/data-platform` G-actions 6 (legal opinion first), §G6 "hold until the legal opinion", §H2 and step 9 "or an accepted legal opinion"; `plan/official-channels` §6 SNKRDUNK "on hold for the legal opinion"; `plan/cardrush-source` "no external delivery until the legal opinion". RED still applies to new commitments: contracts, paying for data, publishing Terms and Privacy. |
+| 2026-10-17 | Repo stays public. The legal opinion is not a gate. | `plan/data-platform` G-actions 6, §G6 (second half), §H2 and §F step 9 gate wording; `plan/official-channels` §6 (SNKRDUNK hold); `plan/cardrush-source` §A external-delivery hold. RED still applies to new commitments: contracts, paying for data, publishing Terms and Privacy. |
 | 2026-10-18 | Identity captures resumed; no storage cut built (captures are a one-off of about 300 MB against 2,825 MB free). Storage watch: flag the owner below 45 days to the 3 GiB reserve. | The 2026-10-17 capture pause; capture-day storage options A to G (D9 report, 2026-10-18); #172 (closed unmerged); the 90-day storage-fit rule in `plan/source-survey` §4, `plan/cardrush-source` §F3 and the session 14 handoff. |
 | 2026-10-18 | Collector PRs are delivered only by the `staging-automerge` CI job, never hand-merged. | Hand merges of `hold-for-owner` PRs that change a collector (#171 left the shards on old code: [plans/coverage-gap-d9/F1-ROLLOUT.md](plans/coverage-gap-d9/F1-ROLLOUT.md)). |
 
@@ -145,8 +145,8 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
   flag enforcement (`PSA10_ENABLED` is read by no app code), instrument `reference_type`, separate
   series and API field, verifiers, a UI category.
 - **Blocker:** the owner's switch-on (CLAUDE.md: PSA10 OFF unless the owner asks).
-- **Superseded:** the activation gate "SODA permission or an accepted legal opinion" (data-platform
-  G1, H-4), by the 2026-10-16 and 2026-10-17 decisions.
+- **Superseded:** the activation gate in data-platform G1 and H-4, by the 2026-10-16 and 2026-10-17
+  decisions.
 - **Class:** owner decision, then AMBER build with a SNKRDUNK collector release.
 
 ### 5. Card pages
