@@ -1,0 +1,132 @@
+/* 404 and error pages in the homepage's look: dotted hero band, mono kicker,
+ * italic 800 Manrope title, teal path links (Home.module.css). The error page
+ * renders without the shell, so colours are literal here. */
+.root {
+  min-height: 100vh;
+  background: #0c1115;
+  color: #eef2f2;
+}
+
+.band {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, #101c22 0%, #0c1115 100%);
+}
+
+.band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(111, 181, 176, 0.24) 1px, transparent 1.5px);
+  background-size: 10px 10px;
+  mask-image: linear-gradient(100deg, transparent 35%, #000 85%);
+}
+
+.content {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 4rem 1rem 3rem;
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 2rem;
+  font: 800 0.9375rem/1 var(--font-sans);
+  letter-spacing: 0.025em;
+}
+
+.mark svg {
+  width: 34px;
+  height: 34px;
+}
+
+.mark span > span {
+  color: #6fb5b0;
+}
+
+.kicker {
+  margin: 0;
+  font: 500 0.75rem/1.6 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #8dc9c4;
+}
+
+.title {
+  margin: 0.75rem 0 0;
+  font: italic 800 clamp(2rem, 4.2vw, 3rem)/1.08 var(--font-sans);
+  letter-spacing: -0.045em;
+  color: #eef2f2;
+}
+
+.body {
+  margin-top: 0.875rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #b4c3c6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font: 600 0.875rem/1.3 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid #3e696a;
+  background: transparent;
+  color: #a6d8d3;
+}
+
+.secondary {
+  border: 1px solid #2b3c42;
+  background: transparent;
+  color: #b4c3c6;
+}
+
+.primary:hover,
+.secondary:hover {
+  color: #eef2f2;
+  border-color: #6fb5b0;
+}
+
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid #a6d8d3;
+  outline-offset: 4px;
+}
+
+.wave {
+  display: block;
+  width: 100%;
+  height: 24px;
+  fill: none;
+  stroke: #548c88;
+  stroke-width: 1.5;
+}
+
+@media (max-width: 767px) {
+  .content {
+    padding: 2.5rem 1rem 2rem;
+  }
+  .kicker {
+    letter-spacing: 0.08em;
+  }
+}

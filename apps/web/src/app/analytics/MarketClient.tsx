@@ -15,7 +15,7 @@ export default function MarketPage({ initialData = null }: { initialData?: Marke
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-[1280px] px-3 py-5 sm:px-6 sm:py-9">
+      <main className="atlas-chapters mx-auto max-w-[1280px] px-3 py-5 sm:px-6 sm:py-9">
         {initialData ? <MarketView initialData={initialData} /> : <Suspense fallback={<MarketLoading />}><MarketView initialData={initialData} /></Suspense>}
       </main>
     </div>
@@ -94,6 +94,6 @@ function MarketView({ initialData }: { initialData: MarketValue | null }) {
       changeScope(id);
       globalThis.window.scrollTo({ top: 0, behavior: globalThis.window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     }} />
-    <section className="mt-10 max-w-3xl space-y-3 text-sm leading-7 text-text-secondary"><h2 className="text-lg font-semibold text-text-primary">Understanding Market Value</h2><p>Tracked Market Value is the value in JPY of one copy of each version we can currently price in the selected market. It is a partial basket, not the value of every One Piece card. Adding or removing priced cards can change that total.</p><p>Price movement compares eligible cards across published periods. Missing or insufficient history is shown as unavailable, not zero. Check the coverage beside each figure before treating it as a wider market trend.</p><p>The published date describes the market series. It does not mean every source was checked then. Each card’s source observations have their own dates.</p></section>
+    <section className="mx-auto mt-16 max-w-[1200px] text-sm leading-7 text-text-secondary"><h2 className="atlas-chapter-title">Understanding Market Value</h2><div className="mt-5 max-w-3xl space-y-3"><p>Tracked Market Value is the value in JPY of one copy of each version we can currently price in the selected market. It is a partial basket, not the value of every One Piece card. Adding or removing priced cards can change that total.</p><p>Price movement compares eligible cards across published periods. Missing or insufficient history is shown as unavailable, not zero. Check the coverage beside each figure before treating it as a wider market trend.</p><p>The published date describes the market series. It does not mean every source was checked then. Each card’s source observations have their own dates.</p></div></section>
   </>;
 }

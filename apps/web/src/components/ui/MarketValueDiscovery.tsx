@@ -92,7 +92,7 @@ export function MarketValueMoversSection({ releaseProductId }: { releaseProductI
 
   return <section className={styles.section} aria-labelledby="market-movers-title" data-testid="market-value-movers">
     <header className={styles.header}>
-      <div><h2 id="market-movers-title">Market movers</h2><p>What changed in the latest published market step.</p></div>
+      <div><h2 id="market-movers-title" className="atlas-chapter-title">Market movers</h2><p>What changed in the latest published market step.</p></div>
       <div className={styles.modes} role="group" aria-label="Mover mode">
         {MODES.map((mode) => <button type="button" key={mode.order} aria-pressed={order === mode.order} onClick={() => setOrder(mode.order)}>{mode.label}</button>)}
       </div>
@@ -125,7 +125,7 @@ export function MarketValueMostValuableSection({ releaseProductId, releaseCode }
 
   return <section className={styles.section} aria-labelledby="market-valuable-title" data-testid="market-value-most-valuable">
     <header className={styles.header}>
-      <div><h2 id="market-valuable-title">{heading}</h2></div>
+      <div><h2 id="market-valuable-title" className="atlas-chapter-title">{heading}</h2></div>
       <Link className={styles.browse} href={browseUrl}>Browse all cards →</Link>
     </header>
     <div className={styles.settled} aria-busy={busy} data-testid="valuable-settled">

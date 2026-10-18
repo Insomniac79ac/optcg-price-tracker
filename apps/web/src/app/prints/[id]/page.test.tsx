@@ -164,6 +164,71 @@ describe("Collector actions (Collector v1 S6)", () => {
   });
 });
 
+describe("Other versions: grid, swipe row and Show all", () => {
+  function family(count: number): PrintDetail {
+    const siblings = Array.from({ length: count - 1 }, (_, i) =>
+      makeDetail({ card_print_id: 100 + i, card_code: "OP02-013", official_asset_variant: `p${i + 1}`, siblings: [] }));
+    return makeDetail({ card_print_id: 1, card_code: "OP02-013", siblings });
+  }
+
+  it("puts the current version first, tagged Current, and links the rest to their own pages", async () => {
+    fetchPrint.mockResolvedValue(family(6));
+    render(<PrintDetailPage />);
+    const section = await screen.findByRole("region", { name: "Other versions" });
+    const items = within(section).getAllByRole("listitem");
+    expect(items).toHaveLength(6);
+    expect(within(items[0]).getByText("Current")).toBeInTheDocument();
+    expect(within(items[0]).queryByRole("link")).toBeNull();
+    expect(items.slice(1).map((li) => within(li).getByRole("link").getAttribute("href")))
+      .toEqual(["/prints/100", "/prints/101", "/prints/102", "/prints/103", "/prints/104"]);
+  });
+
+  it("offers no Show all link while two rows hold every version", async () => {
+    fetchPrint.mockResolvedValue(family(8));
+    render(<PrintDetailPage />);
+    await screen.findByRole("region", { name: "Other versions" });
+    expect(screen.queryByTestId("show-all-versions")).toBeNull();
+  });
+
+  it("links Show all N versions to the card's all-versions page, carrying this print", async () => {
+    fetchPrint.mockResolvedValue(family(13));
+    render(<PrintDetailPage />);
+    const link = await screen.findByTestId("show-all-versions");
+    expect(link).toHaveTextContent("Show all 13 versions");
+    expect(link).toHaveAttribute("href", "/cards/code/OP02-013?from=1");
+    // Every version stays in the list; CSS limits what two rows show.
+    expect(within(screen.getByRole("region", { name: "Other versions" })).getAllByRole("listitem")).toHaveLength(13);
+  });
+
+  it("hides Show all on wide screens when five columns already fit every version", async () => {
+    fetchPrint.mockResolvedValue(family(10));
+    const { unmount } = render(<PrintDetailPage />);
+    const nine = await screen.findByTestId("show-all-versions");
+    const narrowOnly = Array.from(nine.classList).find((c) => /showAllNarrowOnly/.test(c));
+    expect(narrowOnly).toBeTruthy();
+    unmount();
+    fetchPrint.mockResolvedValue(family(11));
+    render(<PrintDetailPage />);
+    const eleven = await screen.findByTestId("show-all-versions");
+    expect(Array.from(eleven.classList).some((c) => /showAllNarrowOnly/.test(c))).toBe(false);
+  });
+
+  // jsdom has no layout, so the breakpoint contract is pinned on the
+  // stylesheet; the screenshot harness measures it in Chromium at 390/1280.
+  it("swipes on phones and wraps into a two-row grid from 640px", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const css = readFileSync(path.resolve(__dirname, "../../../components/ui/PrintDetail.module.css"), "utf-8").replace(/\s+/g, " ");
+    expect(css).toContain(".printingStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));");
+    expect(css).toContain(".printingStrip > li:nth-child(n + 9) { display: none; }");
+    expect(css).toMatch(/@media \(min-width: 1280px\) \{ \.printingStrip \{ grid-template-columns: repeat\(5, minmax\(0, 1fr\)\); \}.*\.printingStrip > li:nth-child\(n \+ 11\) \{ display: none; \}/);
+    const phone = css.slice(css.indexOf("@media (max-width: 639px)"));
+    expect(phone).toMatch(/display: flex;.*overflow-x: auto;.*scroll-snap-type: x mandatory;.*scrollbar-width: none;/);
+    expect(phone).toContain(".printingStrip::-webkit-scrollbar { display: none; }");
+    expect(phone).toMatch(/\.printingStrip > li \{ flex: 0 0 min\(44%, 180px\); scroll-snap-align: start; \}/);
+  });
+});
+
 describe("Other versions", () => {
   const anniversary = "プレミアムカードコレクション 25周年エディション";
   function franky(overrides: Partial<PrintDetail> = {}): PrintDetail {

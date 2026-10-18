@@ -46,20 +46,45 @@
 .sourcePrice { font-size: 20px; font-weight: 650; text-align: right; }
 .sourceRow > p { margin-top: 4px; }
 .siblings { grid-column: 2; grid-row: 6; min-width: 0; }
-.printingStrip { display: flex; gap: 16px; margin-top: 16px; padding: 4px 4px 12px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+/* Other versions. Phones: one swipe row, a card per snap, the next card
+ * peeking, no scrollbar. From 640px: a wrapping grid in the homepage tile
+ * rhythm, at most two rows (4 columns, 5 from 1280px); the rest are one
+ * "Show all" away. The current version is always first. */
+.printingStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 16px; margin: 16px 0 0; padding: 4px; list-style: none; }
 .printingStrip:focus-visible { outline: 2px solid #78c4bf; outline-offset: 3px; }
-.printingStrip > li { flex: 0 0 220px; min-width: 0; font-size: 14px; line-height: 1.4; color: #b5c6cd; scroll-snap-align: start; }
+.printingStrip > li { min-width: 0; font-size: 12px; line-height: 1.4; color: #a0b2b6; }
+.printingStrip > li:nth-child(n + 9) { display: none; }
 .printingLink { display: flex; flex-direction: column; height: 100%; border-radius: 8px; }
 .printingLink:hover { color: #a5dad5; }
-.printingLink:hover :global(.vault-frame) { border-color: #76b9b5; }
-.currentPrinting :global(.vault-frame) { outline: 1px solid #7ebfba; outline-offset: 2px; }
-.versionName { display: block; margin-top: 12px; color: #e6eeee; font-size: 16px; font-weight: 600; }
-.versionCode { display: block; margin-top: 2px; }
-.versionDescriptor { display: block; margin-top: 8px; color: #a5dad5; }
-.versionRelease { display: block; margin-top: 6px; overflow-wrap: anywhere; }
-.versionBadges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.currentBadge { display: inline-block; padding: 2px 8px; border: 1px solid #527f7c; border-radius: 4px; font-size: 12px; color: #a5dad5; }
-.ownedBadge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #1d3a3a; font-size: 12px; color: #cdeae6; }
+.printingLink:hover :global(.vault-frame) { outline: 2px solid var(--accent-teal); outline-offset: 0; }
+.currentPrinting :global(.vault-frame) { outline: 1px solid #7ebfba; outline-offset: -1px; }
+.versionName { display: block; margin-top: 10px; overflow: hidden; color: #eef2f2; font-size: 14px; font-weight: 600; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.versionCode { display: block; margin-top: 4px; color: #8dc9c4; font-size: 11px; }
+.versionDescriptor { display: block; margin-top: 6px; color: #a5dad5; }
+.versionRelease { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.versionBadges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.currentBadge { display: inline-block; padding: 2px 8px; border: 1px solid #527f7c; border-radius: 4px; font-size: 11px; color: #a5dad5; }
+.ownedBadge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #1d3a3a; font-size: 11px; color: #cdeae6; }
+.showAllVersions { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; color: #8dc9c4; font-size: 14px; font-weight: 600; }
+.showAllVersions:hover { color: #a6d8d3; }
+@media (min-width: 1280px) {
+  .printingStrip { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .printingStrip > li:nth-child(n + 9) { display: block; }
+  .printingStrip > li:nth-child(n + 11) { display: none; }
+  .showAllNarrowOnly { display: none; }
+}
+@media (min-width: 1024px) {
+  /* Room for home-sized tiles: the strip spans both columns. */
+  .siblings { grid-column: 1 / -1; }
+}
+@media (max-width: 639px) {
+  .printingStrip {
+    display: flex; gap: 14px; margin-inline: -4px; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scroll-padding-inline: 4px; scrollbar-width: none;
+  }
+  .printingStrip::-webkit-scrollbar { display: none; }
+  .printingStrip > li { flex: 0 0 min(44%, 180px); scroll-snap-align: start; }
+}
 .performance { grid-column: 2; grid-row: 7; min-width: 0; }
 .performance > section { margin-top: 0; }
 @media (max-width: 1023px) {
@@ -80,7 +105,6 @@
   .secondaryIdentity { font-size: 12px; margin-top: 8px; }
   .index { padding: 18px; }
   .indexValue { font-size: 40px; }
-  .printingStrip { gap: 14px; }
 }
 @media (max-width: 359px) {
   .page { padding-inline: 16px; }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 
-import { AtlasLogoImage, AtlasMarkImage } from "@/components/brand/AtlasBrandAssets";
+import { CompassMark } from "@/components/brand/CompassMark";
 import styles from "./PublicShell.module.css";
 import adminStyles from "@/components/admin/AdminShell.module.css";
 import { AdminReauthenticateLink } from "@/components/admin/AdminReauthenticateLink";
@@ -42,16 +42,17 @@ export function TopBar({
   onOpenShortcuts,
   mobileNavOpen = false,
   pathnameHint,
+  publicShell: forcePublicShell = false,
 }: {
   onToggleMobileNav?: () => void;
   onOpenPalette?: () => void;
   onOpenShortcuts?: () => void;
   mobileNavOpen?: boolean;
   pathnameHint?: string;
+  publicShell?: boolean;
 }) {
   const routerPathname = usePathname();
   const pathname = pathnameHint ?? routerPathname ?? "";
-  const publicShell = isPublicShellRoute(pathname);
   const { status } = useSession();
   const adminSurface = useAdminSurface();
   const adminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
@@ -59,6 +60,7 @@ export function TopBar({
   // collector. The login entry point itself remains publicly reachable.
   const adminNavigation = adminRoute && adminSurface?.authorized === true;
   const adminShell = pathname === "/admin/login" || adminNavigation;
+  const publicShell = !adminShell && (forcePublicShell || isPublicShellRoute(pathname));
   const authenticated = status === "authenticated";
 
   return (
@@ -85,9 +87,9 @@ export function TopBar({
           ☰
         </button>}
 
-        {/* Single explicit aria-label on the link itself - both brand images
-            are decorative (alt="") so the link's accessible name is exactly
-            this one string, never a concatenation with the artwork's alt.
+        {/* Single explicit aria-label on the link itself - the compass and
+            wordmark are decorative (aria-hidden) so the link's accessible name
+            is exactly this one string, never a concatenation.
             `pr-1` on mobile keeps the 44px mark from sitting flush against
             the utilities when the bar is at its tightest. */}
         <Link
@@ -95,10 +97,7 @@ export function TopBar({
           className="flex shrink-0 items-center pr-1 md:pr-0"
           aria-label={`${brand.productName} — Home`}
         >
-          {publicShell || adminShell ? <PublicLogo /> : <>
-            <AtlasMarkImage className="h-11 w-11 md:hidden" />
-            <AtlasLogoImage className="hidden h-16 w-auto md:block" />
-          </>}
+          <PublicLogo />
         </Link>
 
         {adminNavigation ? <span className="hidden border-l border-border-default pl-5 text-xs font-medium tracking-wide text-text-muted xl:block">ADMIN WORKSPACE</span> : adminShell ? null : <PublicNav pathname={pathname} />}
@@ -300,13 +299,7 @@ function AccountIcon() {
 /** Canonical Atlas compass and wordmark, decorative inside the Home link. */
 function PublicLogo() {
   return <span className={styles.logo} aria-hidden="true">
-    <svg viewBox="0 0 36 36" fill="none" focusable="false">
-      <circle cx="18" cy="18" r="16" stroke="#33565b" />
-      <circle cx="18" cy="18" r="12.5" stroke="#6fb5b0" />
-      <path d="M18 5 20.5 15.5 31 18 20.5 20.5 18 31 15.5 20.5 5 18 15.5 15.5Z" stroke="#6fb5b0" fill="#12262a" />
-      <path d="M18 5 20.5 15.5 18 18 15.5 15.5Z" fill="#d6a84f" />
-      <circle cx="18" cy="18" r="1.5" fill="#eef2f2" />
-    </svg>
+    <CompassMark />
     <span className={styles.wordmark}>CARD<span>PIRATE</span></span>
   </span>;
 }
