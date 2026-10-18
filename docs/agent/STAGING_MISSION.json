@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "D9 F1 rule (owner decision 2026-10-17 15:41Z): in the shared source-mapping resolver, a Yuyu-Tei listing whose release has exactly one listing of its kind (plain, parallel, foil) and exactly one eligible print of that kind resolves to that print as an exact PROPOSAL. Foil listings (ラメフォイル, 海賊旗フォイル) are their own kind and match only a foil print, else stay unmatched. Proposals only: nothing is approved, mapped or priced by this change; going live is a later owner-approved ops-write batch of about 500 with a 48 h storage check. The yuyutei collector imports the resolver, so its nine shards are redeployed one at a time; snkrdunk is untouched. Identity-capture batches stay paused.",
+ "mission": "D9 F1 rule rollout (owner allowed the yuyutei redeploy, 2026-10-18 13:57Z): PR #171 was merged by hand under hold-for-owner, which skips the collector rollout. This delivery releases the already-merged resolver to the nine yuyutei collector shards one at a time and re-verifies staging. No code change; proposals only, nothing approved; snkrdunk untouched.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,23 +20,13 @@
  "impacts": [
   {
    "files": [
-    "services/api/app/services/source_mapping_proposals.py"
+    "docs/agent/plans/coverage-gap-d9/F1-ROLLOUT.md"
    ],
    "effects": [
-    "application",
     "staging_deployment",
     "infrastructure"
    ],
-   "reason": "Shared resolver, collector runtime input for yuyutei only (import graph). New branch before the ambiguous result, Yuyu-Tei only, when more than one print is eligible: listing kind from title and rarity token (C, UC, R, SR, SEC, L, or P- plus one of them; a bare promo P never decides), print kind from treatment and variant; exact only when the release holds exactly this one listing of the kind (all Yuyu-Tei candidates, slug or published label), exactly one same-kind print, every sibling kind known, and the print is not approved for another listing. Adds unique_listing_kind_match to the payload, so only matched listings get a new digest; RESOLVER_VERSION unchanged. Status exact means a pending proposal; approval still goes through the existing reviewed path and re-runs the resolver. No identity guard is removed; every other branch is byte-identical."
-  },
-  {
-   "files": [
-    "services/api/tests/test_source_mapping_proposals.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Base and parallel resolve both ways; a second same-kind listing reverts to ambiguous on refresh; labelled listings on another category count; two parallel prints with one listing stay ambiguous; foil matches only a foil print; plain never selects a foil print; a print approved elsewhere is never selected; an unknown sibling kind blocks the rule; approval revalidation keeps the same digest."
+   "reason": "Records why PR #171 needs this follow-up delivery. The delivery redeploys the nine yuyutei shards (collector_services) to the merged staging head, which already contains the PR #171 resolver; no application file changes."
   }
  ],
  "deployment_verification": {
@@ -156,16 +146,16 @@
     "None"
    ],
    "dependencies": [
-    "resolver 1.3 (PR #103 rollout, receipt a504e476); D9 sizing PR #156, #166, #169"
+    "PR #171 (merged 2026-10-18 14:36Z, rollout skipped by hand merge); resolver 1.3 receipt a504e476"
    ],
-   "deployment_impact": "Nine yuyutei collector shards redeployed sequentially by deploy_staging_collectors (refuses to start 02:00-06:00 UTC, restores newest-first on failure). snkrdunk-collector not in collector_services. No raw_dependency_migration, no DDL, no variable, schedule, budget or pacing change.",
+   "deployment_impact": "Nine yuyutei collector shards redeployed sequentially to the merged head by deploy_staging_collectors (refuses to start 02:00-06:00 UTC, restores newest-first on failure). snkrdunk-collector not in collector_services. No raw_dependency_migration, no DDL, no variable, schedule, budget or pacing change.",
    "database_writes": 2000,
    "source_requests": 0,
    "estimated_runtime_minutes": 150
   },
   "recovery": {
-   "artifact": "e6368332c186ed8481ed35360e8abc95e0175e9f",
-   "procedure": "Automatic during rollout: every touched shard restored newest-first to its recovery_deployment_id (the PR #103 a504e476 images, matched by fleet-vs-receipt 10/10 at 2026-10-17 15:53Z). After delivery: native revert PR of this change, delivered the same way; proposals written by the rule stay as pending history and the old code re-versions those listings back to ambiguous. Nothing is approved by this change, so no mapping or price needs undoing.",
+   "artifact": "414695a16ee51021ef6d13a2be7b0aea825e4b38",
+   "procedure": "Automatic during rollout: every touched shard restored newest-first to its recovery_deployment_id (the PR #103 a504e476 images; fleet-vs-receipt 10/10 at 2026-10-18 13:59Z). After delivery: native revert of PR #171 delivered the same way. Proposals written by the rule stay as pending history; nothing is approved by this change.",
    "trigger": "Any drop in approved exact or approved-with-proof counts versus pre-release staging-state; any stored proposal differs RuntimeError; any discovery failure; any 403/429/challenge; deployment failure; schedule or flag drift; more new proposal versions on the first full discovery cycle than about 1,000 (about 762 prints expected: 775 MEASURED in sizing run 39076525684, less 13 bare-P promo prints the rule now leaves to the special-rarity rule).",
    "backup": "No schema change. Railway Postgres daily backups continue; no row is rewritten, only new proposal versions appended.",
    "validation": [
@@ -187,7 +177,7 @@
    "observation_window": "Delivery artifact plus one completed natural discovery turn per Yuyu shard on the new code. Then: approved exact and approved-with-proof unchanged; new exact pending proposals about 762 with reason unique_listing_kind_resolves_one_release_sibling; 0 stored-proposal-differs errors; 0 discovery failures; lossless green; storage-rates 48 h after release."
   }
  },
- "diff_sha256": "9554208060e1b61784943675adeec653ed06ef7c9c036e0fc0bfdee89420c98e",
+ "diff_sha256": "40570393448ebcee3b97c1d35c923d55fd2c97c02eedf1d87aa91cb0406fa502",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
