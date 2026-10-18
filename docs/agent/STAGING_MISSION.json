@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "D9 F1 approval runbook (owner ask 2026-10-18 23:11Z, step 2): add the ops-write runbook approve-f1-batch, which approves current exact Yuyu-Tei proposals made by the F1 listing-kind rule in batches of about 500 through the admin page's approve_exact_proposal. Each run waits for the owner in staging-ops; the dry run lists every proposal, a 20-row seeded random sample and storage room; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR (batch 1 only after merge, owner-approved).",
+ "mission": "D9 F1 approval runbook and PR #173 rollout receipt (owner asks 2026-10-18 23:11Z and 23:43Z): commit the PR #173 rollout receipt the owner downloaded and let fleet-vs-receipt compare each collector with the newest receipt that deployed it (default chain PR #103 then PR #173); plan, not build, publishing receipts from the delivery job; and add the ops-write runbook approve-f1-batch, which approves current exact Yuyu-Tei proposals made by the F1 listing-kind rule in batches of about 500 through the admin page's approve_exact_proposal. Each run waits for the owner in staging-ops; the dry run lists every proposal, a 20-row seeded random sample and storage room; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR (batch 1 only after merge, owner-approved).",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -30,6 +30,16 @@
   },
   {
    "files": [
+    "scripts/ops/fleet.py",
+    "docs/agent/handoff/2026-10-18/pr173-delivery/staging-delivery-2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3/evidence/latest-collector-rollout.json"
+   ],
+   "effects": [
+    "infrastructure"
+   ],
+   "reason": "Commits the owner-supplied PR #173 rollout receipt (run 39139111207 artifact; service and deployment ids, digests, schedules, three non-secret flag values). fleet-vs-receipt takes comma-separated committed receipts and compares each collector with the newest one that deployed it, so the 9 yuyutei shards are checked against PR #173 (2bcbe90) and snkrdunk-collector against PR #103 (a504e47). Read-only Railway queries as before; no deploy."
+  },
+  {
+   "files": [
     ".github/workflows/ops-write.yml"
    ],
    "effects": [
@@ -40,12 +50,13 @@
   {
    "files": [
     "scripts/tests/test_ops_runbooks.py",
-    "docs/agent/OPS_RUNBOOKS.md"
+    "docs/agent/OPS_RUNBOOKS.md",
+    "docs/agent/plans/rollout-receipt-publish/PLAN.md"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation."
+   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job."
   }
  ],
  "deployment_verification": {
@@ -99,7 +110,7 @@
    "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
- "diff_sha256": "0b377a9a4f62d1bf6d8e092dfa4729f3f785799f8dd79e30c4ba175e5f3cc1c5",
+ "diff_sha256": "531a24d94fd06c705160db3b2fe24fedcbb09f61ba09ac8ead34616fc18b1f7e",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
@@ -111,8 +122,9 @@
    "engineering-gate"
   ],
   "post_change": [
-   "scripts/ops/f1_approve.py"
+   "scripts/ops/f1_approve.py",
+   "scripts/ops/fleet.py"
   ],
-  "observation_window": "After merge: one approve-f1-batch dry run (owner-approved in staging-ops) completes with status ok, batch_size about 500 and no excluded reason the owner did not expect; batch 1 apply only after the owner reviews it, then a 48 h storage check."
+  "observation_window": "After merge: one fleet-vs-receipt run with the default chain reports all_match true for 10 collectors; one approve-f1-batch dry run (owner-approved in staging-ops) completes with status ok, batch_size about 500 and no excluded reason the owner did not expect; batch 1 apply only after the owner reviews it, then a 48 h storage check."
  }
 }
