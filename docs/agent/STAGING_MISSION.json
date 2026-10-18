@@ -76,5 +76,5 @@
       "observation_window": "After merge: the audit doc on staging shows the updated status cells; Verify staging merge passes."
     }
   },
-  "diff_sha256": "8b666e9ea7e9281158c36c36854f163c5bf748d39031eb42fa3e89235c4c8b4e"
+  "diff_sha256": "c3162b8b3592543f6df1fba427176aee609086a9ae4531021e83b3f06acf7d31"
 }
