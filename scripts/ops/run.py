@@ -76,7 +76,13 @@ def _web_smoke(args, out):
 
 def _enqueue(args, out):
     from ops import enqueue_remaining
-    return enqueue_remaining.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+    count = 50 if args.count is None else args.count
+    return enqueue_remaining.run(out, apply=args.apply, count=count, expected_sha256=args.expected_sha256)
+
+
+def _approve_f1(args, out):
+    from ops import f1_approve
+    return f1_approve.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
 
 
 # name: (kind, collector_affecting, handler). A write runbook runs only in ops-write.
@@ -89,6 +95,7 @@ RUNBOOKS = {
     "db-diagnostic": ("read", False, _diagnostic),
     "web-smoke": ("read", False, _web_smoke),
     "enqueue-remaining-50": ("write", True, _enqueue),
+    "approve-f1-batch": ("write", True, _approve_f1),
 }
 
 
@@ -161,7 +168,7 @@ def main(argv=None):
     parser.add_argument("--transients")
     parser.add_argument("--receipt")
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--count", type=int, default=50)
+    parser.add_argument("--count", type=int, help="batch size (runbook default when omitted)")
     parser.add_argument("--expected-sha256", default="")
     args = parser.parse_args(argv)
     summary = {"runbook": args.runbook, "workflow": args.workflow, "apply": args.apply,
