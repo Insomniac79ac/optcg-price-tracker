@@ -127,6 +127,16 @@
   }
 }
 
+/* Below `sm` the signed-in Account control is an icon; the current page gets
+ * the header nav's gold rule instead of the underlined name. */
+@media (max-width: 639px) {
+  .account[aria-current="page"] {
+    color: #eef2f2;
+    box-shadow: inset 0 -2px #d6a84f;
+    border-radius: 0;
+  }
+}
+
 @media (max-width: 359px) {
   .wordmark {
     display: none;

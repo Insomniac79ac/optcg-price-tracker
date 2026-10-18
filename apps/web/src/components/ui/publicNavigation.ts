@@ -1,3 +1,25 @@
+export interface NavItem {
+  href: string;
+  label: string;
+}
+
+// The three public destinations, shared by the desktop header nav (TopBar),
+// the mobile bottom nav (PublicBottomNav) and the mobile drawer (SidebarNav)
+// so the surfaces cannot drift apart or quietly gain an admin entry.
+//
+// "Market Index" is not a destination: /market/movers became a re-sorted copy
+// of /cards and redirects there (tranche 1A, 2026-08-19); the metric stays on
+// every tile and print page. "Market" points at /analytics, the public market
+// landscape (Analytics 1A-B, 2026-09-06), whose endpoints are deliberately
+// unauthenticated. The legacy /analytics/* leaf pages (collection, wishlist,
+// grading, ...) describe one collector's holdings, are gated in proxyGuard and
+// get no entry here.
+export const PUBLIC_NAV_ITEMS: NavItem[] = [
+  { href: "/", label: "Home" },
+  { href: "/cards", label: "Card Prices" },
+  { href: "/analytics", label: "Market" },
+];
+
 /** Public browsing surfaces only. Private analytics leaves and account/admin
  * tools deliberately retain their existing shell; this is not an auth guard. */
 export function isPublicShellRoute(pathname: string): boolean {
