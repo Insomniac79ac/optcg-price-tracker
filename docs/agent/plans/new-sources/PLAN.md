@@ -1,48 +1,62 @@
-# New price sources: combined plan (PLAN ONLY)
+# New price sources: combined plan (PLAN ONLY), revision 2
 
-Status: **PLAN ONLY**, awaiting owner approval before any build. Written 2026-10-16 on base
-`origin/staging` 4cb52c3, branch `plan/new-sources`. STAGING ONLY. Production RED. PSA10 OFF.
-No code, migration, collector, setting, staging write, source job or PR.
+Status: **PLAN ONLY**, awaiting owner approval before any build (step P0). Revision 2 written 2026-10-18 on
+branch `plan/new-sources`, against `origin/staging` 99844c6. Revision 1 (394608b, 2026-10-16) is in git history.
+STAGING ONLY. Production RED. PSA10 OFF. No code, migration, collector, setting, staging write, source request
+or PR was made for this revision.
 
-**Supersedes** `plan/cardrush-source` (kept as history at `1c6a511`; its PLAN.md is marked
-superseded). The S1–S3 CardRush build was **not started**.
+**Supersedes** `plan/cardrush-source` (history at `1c6a511`, keeps the MEASURED CardRush audit). Nothing from
+either plan has been built.
 
-**Inputs:**
-- `origin/plan/cardrush-source:docs/agent/plans/cardrush-source/PLAN.md` @ `1c6a511`, which carries the
-  MEASURED CardRush audit (74 requests, 2026-10-16);
-- `origin/plan/source-survey:docs/agent/plans/source-survey/SURVEY.md` @ `f3061f9` (rev 3, latest at writing). It
-  carries the MEASURED Dorasuta, magi, Aucfan and Suruga-ya probes, the Dorasuta buyback follow-up (SV §2.6:
-  host still refused by network policy at 15:13Z, 0 requests reached it), and the Aucfan (SV Appendix A) and
-  magi (SV Appendix B) email drafts. These are referenced, not copied;
-- the owner's answers of 2026-10-16:
-  - Q1: plan default;
-  - Q2–Q5 and Q7–Q13: accepted;
-  - **Q6: splice, not break.**
+**What changed since revision 1:**
+1. **Yuyu-Tei F1 foil rule** (owner 2026-10-17/18): ラメフォイル / 海賊旗フォイル titles are their own kind, never
+   plain. 762 F1 proposals (about 79% Yuyu-Tei coverage) accepted, going live in owner-approved batches of about
+   500 with a 48 h storage check after each. F3 dropped, no aliases. New sources follow the same foil rule (§2.3).
+2. **Identity-capture batches resumed** (owner 2026-10-18), each ops-write batch owner-approved and dry-run first.
+   About 225 captures left, about 300 MB one-off (ESTIMATE). The capture-day storage option was declined, so no
+   image saving is assumed.
+3. **Storage**: 2,807 MB left before the 3 GiB reserve (MEASURED, `storage-rates`, 2026-10-18 16:3xZ; owner figure
+   about 2,825 MB), growth about 30 MB/day (owner figure; planning 33.3, last 24 h 27.2, MEASURED). The
+   revision 1 budget (2,938 MB room, 23.35 MB/day) is obsolete. §4 is rebuilt on days until the reserve, the
+   owner's standing watch (flag below 45 days).
+4. **Delivery rule**: a PR that rolls out a collector merges **only** through the `staging-automerge` CI job
+   (marked ready, no `hold-for-owner`). Never hand-merged, never GitHub native auto-merge armed by hand: both skip
+   the rollout step. §5 marks which PRs roll out a collector.
+5. **Outreach closed** (owner 2026-10-16 21:45Z): no emails or enquiries to any source. Aucfan, magi and エーツー
+   are out unless the owner decides to buy data (RED); Yahoo! Shopping and Rakuten APIs are KIV. The CardRush
+   permission email of revision 1 is therefore **not to be sent** and has been removed from this plan (still in
+   394608b). CardRush Q1 can now clear only by the owner's written acceptance (decision N2).
+6. **Import graph measured** (this revision, `scripts/collector_runtime_inputs.py` at 99844c6): both existing
+   collectors import every module under `services/api/app/models/` through `models/__init__.py`, plus
+   `raw_dictionary_storage.py`, `freshness_*.py`, `operational_health*.py` and `source_recovery.py`. The yuyutei
+   collector also imports `exact_print_approval.py`, `source_mapping_proposals.py`, `official_asset_variant.py`
+   and others. Revision 1 put shared code in those files, which would have redeployed all 10 Yuyu/SNKR services.
+   Revision 2 keeps every new-source change outside those files (§2.7).
 
-Labels: **MEASURED** (source given), **CARRIED FORWARD** (from a committed plan), **ESTIMATE**,
-**UNVERIFIED**. Section references like "CR §1.4" point to the CardRush plan, and "SV §2.1" to the survey.
+Labels: **MEASURED** (source given), **CARRIED FORWARD** (from a committed plan), **ESTIMATE**, **UNVERIFIED**.
+"CR §x" = CardRush plan, "SV §x" = `plan/source-survey` SURVEY.md.
 
 ---
 
 ## Plain summary (for the owner)
 
-1. **Dorasuta's shop prices go live first.**
-   - Its site is open to polite reading, and its terms have no scraping clause.
-   - Its prices move independently enough from Yuyu-Tei to matter: a median 25% apart (MEASURED, 18 cards).
-   - About 1 MB/day of storage (ESTIMATE).
-2. **CardRush comes second, once your permission email gets an answer** (or you accept the risk in writing).
-   It is the larger source, at about 14,820 listings including PSA10.
-3. **Shared parts are built once and used by every new source.** They cover the grade field, product records,
-   the card matcher, the collector frame, the guard that keeps hidden prices off public pages, and the
-   **splice** that adds a source to Market Value and the Index without breaking their history.
-4. **Storage.** Everything except CardRush fits with room to spare, remaining-50 batch included.
-   - Stress B margin is about +234 MB (ESTIMATE).
-   - **CardRush at a daily refresh does not fit on top** (−99 MB at stress B). At an every-48-hours refresh it
-     fits thinly (+40 MB). We decide with measured numbers when CardRush is unblocked.
-5. **Aucfan and magi are placeholders** until they reply to the licence and consent enquiries. Suruga-ya is parked
-   and Fullahead is skipped.
-6. **Decisions you need to make:** the 14 open questions in §6, each with a default. The CardRush email draft is
-   the appendix, ready for you to send.
+1. **Order stays the same:** shared foundations, then Dorasuta shop prices, then Dorasuta buyback, then CardRush.
+   Both shops are kept, on the same terms: honest bot name with a contact address, robots.txt read on every
+   run, one request at a time, no images, and a full stop on any 403, 429, challenge page or notice from the site.
+2. **Raw prices only.** Graded listings (PSA and others) are recognised and kept apart in storage. They never
+   become prices while PSA10 is OFF.
+3. **None of this redeploys the Yuyu-Tei or SNKRDUNK collectors** (design target, checked by a test in every PR).
+   Three PRs roll out a collector, each only the new one: Dorasuta, the buyback job, CardRush. Those three merge
+   only through the staging-automerge job.
+4. **Storage:** both sources together add about 3 MB/day (ESTIMATE). Days until the reserve go from about 75
+   (today plus the Yuyu work already approved) to about 68 with both sources (ESTIMATE). That stays above your
+   45-day flag. If the SNKRDUNK discovery fix also goes ahead, it falls to about 57 days.
+5. **Coverage:** with Yuyu F1 live, about 78% of prints have a raw price. Dorasuta could take that to about 91%
+   and CardRush to about 96% (ESTIMATE). Biggest gains are SEC (55% to about 93%) and SR (74% to about 97%).
+   Prints with two or more shop prices go from 334 to about 3,300 (ESTIMATE).
+6. **You decide 16 things in §7**, each with a recommended answer. New in substance: N2 (CardRush permission
+   without an email), N3 (storage rule), N13 (no Yuyu/SNKR redeploy), N14 (order versus the SNKRDUNK fix),
+   N15 (stop rule) and N16 (contact address).
 
 ---
 
@@ -50,28 +64,28 @@ Labels: **MEASURED** (source given), **CARRIED FORWARD** (from a committed plan)
 
 | Source | Signal | Legal position | Gate to next step |
 |---|---|---|---|
-| **Dorasuta asks** (dorasuta.jp) | Shop ask, raw, tiers 状態A / 状態A特価 / 状態C(プレイ用), stock (SV §2.1) | robots.txt has no `*` group (open); member terms have no scraping or reproduction clause (MEASURED, SV §2.1) | **Open: the next live source.** Gate is plan approval + shared foundations (§5 F1–F4) |
-| **CardRush** (cardrush-op.jp) | Shop ask by condition grade; 2,176 PSA10/graded asks (CR §1) | robots.txt blocks only 4 AI bots; data policy page 403; snippet bans automated collection (UNVERIFIED) | **Permission pending (Q1).** No live request until RUSH says yes or the owner accepts the clause in writing; email in the Appendix |
-| **Dorasuta buyback** (buy.dorasuta.jp) | Shop buy price, raw; a new signal type | Not yet audited; host still refused by network policy at 15:13Z (MEASURED, SV §2.6) | **Pending audit**: ≤40-request plan in SV §2.6, after the owner allows the host (N6) |
-| **Aucfan** | Sold prices (auctions, flea markets) | Contract only: anonymous robots.txt got 429 (MEASURED, SV §2.2) | **Licence enquiry** (draft: SV Appendix A). Payment and Index use are RED |
-| **magi** (magi.camp) | C2C sold, PSA10-heavy | robots.txt closes search to AI agents; terms ban commercial use and other interfaces (MEASURED, SV §2.3) | **Consent enquiry** (draft: SV Appendix B). No collection without written consent |
-| **Suruga-ya** | Multi-shop asks + buyback (UNVERIFIED) | robots.txt returned 403 (MEASURED, SV §2.4) | **Parked.** No requests; email only if the owner chooses |
-| **Fullahead** | Shop asks (UNVERIFIED) | Not audited | **Skipped** |
+| **Dorasuta asks** (dorasuta.jp) | Shop ask, raw, tiers 状態A / 状態A特価 / 状態C(プレイ用), stock (SV §2.1) | robots.txt has no `*` group (open); member terms have no scraping or reproduction clause; Art. 8 allows suspension on load (MEASURED, SV §2.1) | **First live source.** Plan approval (N1) + foundations S0 to S4 |
+| **Dorasuta buyback** (buy.dorasuta.jp) | Shop buy price, raw | Not audited; host refused by this environment's network policy (MEASURED 2026-10-16) | Owner allows the host (N8), then the ≤40-request audit in SV §2.6 |
+| **CardRush** (cardrush-op.jp) | Shop ask by condition; graded asks (CR §1) | robots.txt blocks only 4 AI bots (MEASURED); data policy page 403 (MEASURED); search snippet bans automated price collection (UNVERIFIED) | **Q1:** no email will be sent, so live only on the owner's written acceptance (N2), then storage re-check at C0 |
+| Aucfan, magi, Suruga-ya / エーツー | Sold prices / shop asks | Contract or consent only | **Out**, no contact (owner 2026-10-16 21:45Z) |
+| Yahoo! Shopping, Rakuten APIs | Shop asks | Official APIs | **KIV**, no app IDs, no calls |
+| Fullahead | Shop asks | Not audited | Skipped |
 
 ---
 
 ## 2. Shared foundations (built once)
 
-Every item is additive and staging-only. Yuyu-Tei and SNKRDUNK behaviour is unchanged unless stated.
+All additive, staging-only. Yuyu-Tei and SNKRDUNK behaviour and deployed code are unchanged.
 
-### 2.1 `grade_key` column and vocabulary (accepted Q13)
+### 2.1 `grade_key` and vocabulary (accepted Q13)
 
-- **Column.** Nullable `price_observations.grade_key VARCHAR(32)`. The CHECK is added `NOT VALID`, then validated.
-  No backfill, and NULL means "derive from `price_type`/`condition_label`".
-- **Vocabulary:**
-  - `raw:A`, `raw:A-`, `raw:B`, `raw:C`, `raw:D`, `raw:damaged`, `raw:play`;
-  - `graded:<grader>:<grade>[:flawed]`, e.g. `graded:PSA:10`, `graded:PSA:10:flawed`, `graded:PSA:9`.
-- **Per-source mapping:**
+- Nullable `price_observations.grade_key VARCHAR(32)`; CHECK added `NOT VALID`, then validated. No backfill;
+  NULL means "derive from `price_type` / `condition_label`".
+- Vocabulary: `raw:A`, `raw:A-`, `raw:B`, `raw:C`, `raw:D`, `raw:damaged`, `raw:play`;
+  `graded:<grader>:<grade>[:flawed]` (e.g. `graded:PSA:10`, `graded:BGS:9.5`, `graded:PSA:10:flawed`).
+- **The ORM column is not added to `models/price_observation.py` in this work** (that file is in both collectors'
+  import graph, §2.7). The new collectors write `grade_key` through their own table definition. The ORM line is
+  folded into the next owner-approved Yuyu/SNKR redeploy, whenever that happens for its own reasons.
 
 | Source text | grade_key |
 |---|---|
@@ -80,112 +94,98 @@ Every item is additive and staging-only. Yuyu-Tei and SNKRDUNK behaviour is unch
 | CardRush group 42 (傷アリ特価) member | `raw:damaged` (overrides the name label) |
 | CardRush 〔PSA10鑑定済〕 / 〔※状態難/PSA10鑑定済〕 | `graded:PSA:10` / `graded:PSA:10:flawed` |
 | Dorasuta 状態A / 状態A特価 / 状態C(プレイ用) | `raw:A` / `raw:damaged` / `raw:play` |
-| SNKRDUNK floor A–D, psa10_asking (read-time only) | `raw:A`…`raw:D`, `graded:PSA:10` |
+| Any new-source title with PSA, BGS, CGC, ARS, 鑑定 or a slab marker | `graded:<grader>:<grade>`; unparseable grade → `graded:unknown` |
+| SNKRDUNK floor A-D, psa10_asking (read-time only) | `raw:A`…`raw:D`, `graded:PSA:10` |
 | Yuyu-Tei sell (read-time only) | `raw:A` |
 
-`condition_label` keeps the verbatim source text. `price_type` keeps its meaning: `sell` for shop asks, `buy`
-for buyback, `promotion_state='sale'` for sales.
+**Graded separation:** `graded:*` products are stored in RAW and `source_product_variants` only. They never
+produce a `price_observations` row while PSA10 is OFF, never count as raw, and never feed Index, Market Value
+or a public line. Turning graded on later is a separate RED decision.
 
-### 2.2 Source and product-variant records (generic, not per-source)
+### 2.2 Generic source records (unchanged from revision 1)
 
-- **Why generic.** Yuyu-Tei and SNKRDUNK keep their own `*_candidates` tables. New sources share three generic
-  tables, so a third or fourth source needs no new migration.
-- **`source_product_groups`.** Columns: source_id, group key, URL, verbatim title, kind
-  (pack/promo/graded/damaged/sale/deck/other), resolved `release_product_id` (nullable), first and last seen.
-  Covers CardRush product groups and Dorasuta `sid` series.
-- **`source_products`.** One row per source product id. Columns:
-  - source_id, source product id (unique per source), URL;
-  - group keys (array; CardRush products sit in several groups, MEASURED);
-  - verbatim name;
-  - parsed code, rarity, variant markers and qualifier;
-  - `match_status` (`unmatched|print_matched|identity_conflict|quarantined`) with a refusal code;
-  - nullable `card_print_id`;
-  - first and last seen.
-- **`source_product_variants`.** One row per product × `grade_key`, with last price, stock, sale flag, last seen
-  and last `raw_snapshot_id`.
-  - CardRush has one variant per product: one product = one condition (MEASURED, CR §1.2).
-  - Dorasuta has up to three per product: one product per print, with prices per tier (MEASURED, SV §2.1).
-- **`source_variant_renderings`.** Reviewed marker text → `official_asset_variant`/artwork rule, per source.
-  Examples: CardRush `パラレル/illust:…`; Dorasuta スーパーパラレル, ゴールドスーパーパラレル, 金箔, WANTED.
-  Manual entries only.
-- **Seeds.** `sources` rows `dorasuta` and `cardrush` are seeded in the same migration. The `cardrush` row is inert
-  without a collector.
-- **Proposal groups.** `source_mapping_proposal_groups.source_candidate_type` CHECK widened with `source_product`.
-- **Mappings.** Existing `source_card_mappings`, one per source product. Observations link through
-  `source_card_mapping_id` + `raw_snapshot_id` and carry `grade_key`.
+- `source_product_groups` (source, group key, URL, verbatim title, kind, resolved `release_product_id`, seen
+  times): CardRush groups, Dorasuta `sid` series.
+- `source_products` (one row per source product id: URL, group keys array, verbatim name, parsed code, rarity,
+  variant markers, qualifier, foil marker, `match_status` + refusal code, nullable `card_print_id`, seen times).
+- `source_product_variants` (product × `grade_key`: last price, stock, sale flag, last seen, last
+  `raw_snapshot_id`). CardRush: one per product. Dorasuta: up to three per product.
+- `source_variant_renderings` (reviewed marker text → `official_asset_variant` / artwork rule, per source;
+  manual entries only).
+- `sources` rows `dorasuta` and `cardrush` seeded (the `cardrush` row is inert without a collector).
+  `source_mapping_proposal_groups.source_candidate_type` CHECK widened with `source_product`. Observations link
+  through `source_card_mapping_id` + `raw_snapshot_id` and carry `grade_key`.
+- ORM models for these tables live in a new module **not imported by `models/__init__.py`** (§2.7).
 
-### 2.3 Resolver framework with per-source rules
+### 2.3 Resolver framework
 
-- **One entry point.** `SourceEvidence.from_source_product(product, rules)` feeds the existing
-  `exact_print_approval.resolve_exact_print`. The refusal codes, `NEEDS_REVIEW_REFUSALS` and manual-mapping
-  precedence are unchanged (INVARIANTS.md:14-17).
-- **Per-source rule modules** supply only parsing:
-  - `cardrush_rules`: name grammar CR §1.3;
-  - `dorasuta_rules`: `name(rarity/variant)(CODE)【tag】`, SV §2.1.
-- **Shared rules for all sources:**
-  - code required;
-  - release from the group, never from the code prefix; a product in two release groups is refused;
-  - a variant only from explicit markers via `source_variant_renderings`;
-  - condition never affects identity;
-  - every non-exact outcome is quarantined.
-- **Listing identity.** `packages/opcg_source_identity` gains `dorasuta.jp …product?pid=N` → `dorasuta:N` and
+- New module `source_product_resolver.py`: `SourceEvidence.from_source_product(product, rules)` calls the
+  existing `exact_print_approval.resolve_exact_print` **without modifying it**. Refusal codes,
+  `NEEDS_REVIEW_REFUSALS` and manual-mapping precedence (manual always wins) are unchanged.
+- Per-source rule modules supply parsing only: `cardrush_rules` (CR §1.3 grammar), `dorasuta_rules`
+  (`name(rarity/variant)(CODE)【tag】`, SV §2.1).
+- Shared rules: code required; release from the group, never from the code prefix; a product in two release
+  groups is refused; variant only from explicit markers through `source_variant_renderings`; condition never
+  affects identity; every non-exact outcome is quarantined.
+- **Same kinds as Yuyu-Tei F1 (owner 2026-10-17):** a product is plain, parallel, special, or **foil**. Titles
+  with ラメフォイル or 海賊旗フォイル are foil, never plain, and match only a foil print of the same card;
+  with no foil print in the catalogue they stay unmatched (today true for all PRB foils, MEASURED 162 Yuyu
+  listings). A bare promo "P" token never decides a kind. The two-way-unique rule (one product of a kind, one
+  print of that kind, inside one release) is the only absence-based rule allowed.
+- Listing identity: `packages/opcg_source_identity` gains `dorasuta.jp …product?pid=N` → `dorasuta:N` and
   `www.cardrush-op.jp/product/N` → `cardrush:N`, with conformance vectors.
 
-### 2.4 Collector framework
+### 2.4 Collector kit and source etiquette
 
-- **Package.** `services/source_collector_kit/` is a small library: plain-HTTP fetch, robots gate, rate limiter,
-  budget client, RAW-first writer, list-page work unit, health report and lossless counts. Each new collector
-  (`dorasuta_collector`, later `cardrush_collector`) is a thin package on top. The kit is a runtime input of the
-  **new** collectors only, so Yuyu and SNKR are not in its import graph.
-- **Shared settings per source:**
-  - one service, no shards, resumable segments;
-  - one request at a time, 5 s spacing (3 s floor) + jitter;
-  - honest user agent `CardPirateBot/1.0 (+contact URL)` (Q8 accepted);
-  - robots.txt read on every run, fail closed;
-  - `source_dispatch_budgets` row per source;
-  - stop with `source_denial` and no retry on 403/429/challenge;
-  - no images ever.
-- **Health and lossless.** Each run reports pages, header totals vs ids seen, parse failures, new/gone, identity
-  outcomes by refusal code, quarantine count and bytes stored. It follows `RAW_OPERATIONAL_HEALTH.md`, and
-  `check_raw_health.py` learns each source. `verify-lossless` covers each new parser in
-  `raw_dictionary_storage.PARSERS`.
-- **Quarantine.** `freshness_work.state='blocked'` plus `source_products.match_status`, reported by
-  `scripts/quarantine_reporting.py`.
+- `services/source_collector_kit/`: plain-HTTP fetch, robots gate, rate limiter, budget client, RAW-first
+  writer, list-page work unit, health report, lossless counts, its own RAW parser registry. Each collector
+  (`dorasuta_collector`, later `cardrush_collector`) is a thin package on it. Only the new collectors import it.
+- **Etiquette (both sources, not configurable per run):**
+  - honest user agent `CardPirateBot/1.0 (+<contact>)`, contact from an env variable (N16), never a browser UA,
+    never one of the agents a robots.txt names;
+  - robots.txt fetched at the start of every run; fetch failure or a disallow on a needed path = no run
+    (fail closed);
+  - one request at a time, 5 s spacing + jitter (Dorasuta Art. 8 load clause makes this a hard floor);
+  - no images, no product pages in routine runs (list pages only), no login, no cookies beyond the session;
+  - `source_dispatch_budgets` row per source.
+- **Stop rule (N15):** any HTTP 403 or 429, a challenge or captcha page, a robots.txt change that disallows us,
+  or any notice from the site (on-page notice, email to the contact address) stops that source at once:
+  `source_denial` recorded, no retry, cron turned off by the owner, owner told the same day. Restart only on a
+  new owner decision.
+- Health: pages, header totals vs ids seen, parse failures, new/gone, identity outcomes by refusal code,
+  quarantine count, **bytes stored per run**. `check_raw_health.py` learns each source; `verify-lossless`
+  covers each new parser through the kit's registry.
 
-### 2.5 Public-series guard
+### 2.5 Public-series guard (unchanged)
 
-- Register every new source in `services/source_instruments.py` `SOURCE_INSTRUMENTS` **before any row exists**.
-  Today an unregistered source exposes every price_type publicly (`source_instruments.py:99-103`, CR §D3).
-- New sources are **hidden** from public reads until their cutover. After cutover, only the counted category is
-  public (`raw:A` ask), as an attributed per-source line (Q7 accepted).
+Register each new source in `services/source_instruments.py` `SOURCE_INSTRUMENTS` **before any row exists**
+(today an unregistered source exposes every price_type, `source_instruments.py:99-103`). Hidden until its
+cutover; after cutover only `raw:A` asks are public, as an attributed per-source line (Q7).
 
-### 2.6 Splice at cutover (Q6 owner decision: splice, not break)
+### 2.6 Splice at cutover (Q6: splice, not break; unchanged)
 
-- **Problem.** Adding a source bumps `SOURCE_SEMANTICS_VERSION` and changes contributor sets. Today
-  `market_value._comparability_reason` then excludes every print (`source_semantics_version_changed`,
-  `contributor_set_changed`, `market_value.py:397-426`). That starts a new segment, and 7D/30D windows can't
-  cross it.
-- **Splice:**
-  - On the cutover day D, the snapshot job computes each print's Market Index on **both** bases: old semantics
-    without the new source, and new semantics with it.
-  - The step D−1 → D uses the old basis at D, and the step D → D+1 uses the new basis at D.
-  - Because Market Value is a chained ratio of comparable sums, the chain continues through D. History, 7D and
-    30D stay continuous, and no level jump is attributed to the new source.
-  - The Card Pirate Index uses the same basis rule for its constituents on D, so `METHODOLOGY_VERSION` stays 1
-    (owner to confirm, §6 N11).
-- **Additive schema:**
-  - `market_index_splices`: day, from/to `SOURCE_SEMANTICS_VERSION`, source added, approved_at.
-  - `market_index_splice_snapshots`: the old-basis rows for D only. `market_index_snapshots` keeps its
-    `(card_print_id, snapshot_date)` key, `market_index_snapshot.py:82-84`.
-- **Comparability change.** A version change is comparable only when a splice row exists for that boundary and
-  both bases exist on D. Otherwise today's exclusion stands.
-- **Rules:**
-  - The machinery is built in F4, inert until a splice row exists.
-  - Each source cutover is a separate splice. Splices are at least 14 days apart, and never on a day with
-    another version change.
-  - Ordinary contributor entries and exits after D (a print first gaining a Dorasuta price) stay
-    `contributor_set_changed` as today.
-- **Authority.** Using a splice is RED (methodology) at each cutover. Building it is AMBER.
+On cutover day D the snapshot job computes each print's Market Index on both bases (old semantics without the
+new source, new with it); D−1 → D uses the old basis, D → D+1 the new. History and 7D/30D stay continuous.
+Additive `market_index_splices` and `market_index_splice_snapshots` tables; a version change is comparable only
+when a splice row exists and both bases exist on D. Built inert in S4; each use is RED. One splice per source,
+≥14 days apart, never on a day with another version change; CPI `METHODOLOGY_VERSION` stays 1 (N12).
+`SOURCE_SEMANTICS_VERSION` is 3 today (MEASURED, `source_semantics.py:116`).
+
+### 2.7 Keeping Yuyu-Tei and SNKRDUNK out of it (new)
+
+- **Files no new-source PR may change** (they are runtime inputs of the existing collectors, MEASURED at
+  99844c6): anything under `services/api/app/models/` that `models/__init__.py` imports, `models/__init__.py`
+  itself, `db.py`, `settings.py`, `env.py`, `exact_print_approval.py`, `source_mapping_proposals.py`,
+  `official_asset_variant.py`, `artwork_*.py`, `physical_artwork_proof.py`, `identity_evidence_scope.py`,
+  `discovery_proposal_refresh.py`, `raw_dictionary_storage.py`, `freshness_integration.py`,
+  `freshness_policy.py`, `freshness_queue.py`, `operational_health*.py`, `source_recovery.py`,
+  `snkrdunk_urls.py`, `yuyutei_urls.py`.
+- **Guard test** in S1: `collector_runtime_inputs.changed_runtime_inputs` for `yuyutei` and `snkrdunk` between
+  the PR base and head must be empty on every new-source PR. A non-empty result fails the PR.
+- **If a design step cannot avoid one of those files** (for example the freshness work-unit CHECK needs code in
+  `freshness_queue.py`), that change is pulled out into **one** bundled PR that redeploys Yuyu/SNKR, needs the
+  owner's explicit redeploy go (standing rule), merges through staging-automerge, and ideally rides the
+  SNKRDUNK "-P" resolver redeploy if the owner approves that separately (N13).
 
 ---
 
@@ -193,269 +193,190 @@ for buyback, `promotion_state='sale'` for sales.
 
 ### 3.1 Dorasuta asks (first live source)
 
-**Methodology** (proposed defaults; Q2–Q4 rules applied for source-neutrality):
-- **Counted:** `raw:A` only.
-- **Excluded from counting:** 状態A特価 (`raw:damaged`) and 状態C(プレイ用) (`raw:play`).
-- **Stored in RAW and variants:** everything.
-- **Sale:** provenance only.
-- **Out of stock:** the accepted Q4 rule (Yuyu rule: eligible up to 7 days old, stock recorded). The survey's
-  "in-stock only" (SV D2) is open as **N2**.
-- **Index and Market Value:** a third or fourth median input via the splice, after shadow.
+- **Counted:** `raw:A` only. 状態A特価 (`raw:damaged`) and 状態C(プレイ用) (`raw:play`) stored, not counted.
+  Graded titles per §2.1. Sale = provenance only.
+- **Out of stock:** Q4 rule (eligible up to 7 days, stock recorded), so all shop asks share one rule (N4).
+  Sold-out rows keep a stale price on the site (MEASURED, SV §2.1): stored with stock 0, not counted beyond 7 days.
+- **Identity** (MEASURED grammar): `name(rarity[/variant])(CODE)[【tag】]`; code from the last `(XXnn-nnn)`;
+  release from the `sid` series (SP reprints sit under the reprinting set, which is correct release evidence);
+  one product id per print (MEASURED). Variant markers (パラレル, スーパーパラレル, レッドスーパーパラレル,
+  ゴールドスーパーパラレル, 金箔/銀箔, WANTED, キャラクターエディション, ★) go through reviewed renderings; none →
+  quarantined. Dorasuta lists no promo series (60 series: OP, EB, PRB, ST, one fest set, MEASURED), so promos
+  are not expected from it.
+- **Canary gate:** ≥65% of sampled `raw:A` products resolve exactly, and 0 of 50 hand-checked resolve to a wrong
+  print.
+- **Collector** (ESTIMATE from MEASURED structure): daily page 1 of each of the 60 series (SEC/SP/parallel rows
+  first) + all about 255 list pages over a 6-day sweep (about 43/day), so every row is ≤7 days old (N5). About
+  105 requests/day, about 11 min/day, slot 15:00 UTC; budget row 200/86,400 s.
+- **Storage** (ESTIMATE, SV §2.1): about **1.0 MB/day** (dictionary RAW about 0.6 + rows about 0.4) + about
+  10 MB once. Cap 1.5 MB/day measured over 48 h, else stop and re-plan (N6).
 
-**Identity rules** (MEASURED grammar, SV §2.1):
-- **Name grammar:** `name(rarity[/variant])(CODE)[【tag】]`, e.g. 「シャンクス(SP/SR/金箔)(OP09-004)【3周年SP】」.
-- **Code** comes from the last `(XXnn-nnn)`. **Release** comes from the `sid` series; SP reprints are listed under the
-  reprinting set, which is correct release evidence.
-- **Variant markers** (パラレル, スーパーパラレル, レッドスーパーパラレル, ゴールドスーパーパラレル, 金箔/銀箔, WANTED,
-  キャラクターエディション, ★) go through reviewed `source_variant_renderings` to p1…p7. Without a rendering the
-  product is quarantined.
-- **One product id per print** (MEASURED), so the expected collision rate is low. The ambiguity rate is
-  **not yet measured**.
-- **Gate in the canary:** at least 65% of sampled `raw:A` products resolve exactly, and 0 of 50 hand-checked
-  resolve to a wrong print.
+### 3.2 Dorasuta buyback (after its audit)
 
-**Collector settings** (ESTIMATE from MEASURED structure):
+- `price_type='buy'`, auxiliary-only like Yuyu `buy` (`AUXILIARY_ONLY_PRICE_TYPES`): never Index, Market Value
+  or public until a separate decision (N9). Same etiquette and stop rule.
+- Weekly. About **0.1 MB/day** + about 2 MB once (ESTIMATE, SV §1). Audit first (≤40 requests: robots.txt,
+  terms, one buylist), which needs `buy.dorasuta.jp` allowed (N8). No buyback figure is measured yet.
+- Lives in `dorasuta_collector` as a second job, so its PR rolls out only the Dorasuta service.
 
-| Item | Setting |
-|---|---|
-| Daily | Page 1 of each of the 60 series (rows are ordered SEC/SP/parallel first, where prices move) |
-| Sweep | All about 255 list pages over a 6-day cycle (about 43/day), so every row is ≤ 7 days old (the Index ask max age) |
-| Requests | About 103/day + robots + series-list ≈ **105/day**; budget row 200/86,400 s |
-| Run time | About 105 × (5 + 1.5) s ≈ **11 min/day** |
-| Slot | 15:00 UTC daily, clear of Yuyu/SNKR fires and quiet windows |
-| Freshness | Page-1 rows 24 h; swept rows ≤ 7 days (**N3**) |
-| Load | Terms Art. 8 lets Dorasuta suspend service on load, so the 5 s spacing is a hard floor for Dorasuta |
+### 3.3 CardRush (when Q1 clears)
 
-**Storage** (ESTIMATE, SV §2.1):
-- About **1.0 MB/day** (RAW dictionary-encoded about 0.6 + rows about 0.4) plus about **10 MB** once.
-- Cap: **1.5 MB/day measured over 48 h**, or stop and re-plan (survey D7, **N5**).
-
-### 3.2 CardRush (second live source, when Q1 clears)
-
-**Status.** The plan is complete in CR §A–§H, with accepted answers Q2–Q5, Q7–Q13 and splice for Q6. The
-differences from the CardRush plan:
-- **Records.** Generic records (§2.2) replace `cardrush_candidates` and `cardrush_product_groups`. The fields
-  are the same.
-- **Grade.** A group-42 member gets `raw:damaged` regardless of its name label.
-- **Cutover.** It uses the shared splice, not a break.
-
-**Methodology (accepted):**
-- **Raw:** unlabeled = 状態A only. Group 42, graded, ☆SALE☆, sealed, decks and oripa are excluded.
-- **Sale:** provenance only.
-- **Out of stock:** Yuyu rule.
-- **PSA10:** kept in RAW and variants, with no PSA10 observations while OFF; 状態難 slabs are excluded when turned on.
-- **Public:** an attributed 状態A line after cutover.
-
-**Identity** (CR §C, MEASURED sample of 1,988 raw candidates, CR §1.5):
-- 52.5% are the only listing for their code;
-- 18.0% are a base print among variants;
-- 23.9% are variants needing renderings;
-- 5.0% are uncoded;
-- 1.5% are in two pack groups (refused);
-- 0.6% have a qualifier prefix.
-- **ESTIMATE:** 65–75% exact on first pass.
-
-**Collector** (CR §E):
-- **Daily:** the 145 pack/promo group pages.
-- **Weekly sweep:** `/product-list` (149 pages) plus groups 37/42, about 27/day.
-- **Requests:** about 200/day, 5 s spacing, about 17 min/day, slot 16:00 UTC.
-
-**Storage** (CR §F, ESTIMATE from MEASURED 400 KB list pages):
-
-| Mode | Per day | Notes |
-|---|---|---|
-| Daily, encoded RAW | 3.4 MB | |
-| Daily, plaintext | 9.2 MB | Does not fit |
-| 48-hour cadence, encoded | 1.85 MB | Freshness target 48 h for CardRush only (**N4**) |
-
-The one-off is about 27 MB in every mode.
-
-### 3.3 Dorasuta buyback (pending audit)
-
-- **Placeholder.** Store as `price_type='buy'`, **auxiliary-only**, like Yuyu `buy`
-  (`AUXILIARY_ONLY_PRICE_TYPES`). It is never an Index or Market Value input and never public until a separate
-  decision (**N12**).
-- **Cadence:** weekly.
-- **Storage:** about 0.1 MB/day + about 2 MB once (ESTIMATE, SV §1).
-- **Next step:** the ≤40-request audit planned in SV §2.6 (robots.txt, terms, an OP-05 buylist) sets identity,
-  cadence and the go/no-go. It needs `buy.dorasuta.jp` allowed in network access (N6). No buyback figure is measured yet.
-
-### 3.4 Aucfan (placeholder: licence enquiry)
-
-- **Route:** contract only (SV §2.2). Sold data from auctions and flea markets. Titles mix raw and graded, so
-  `graded:*` would be split out by title rules.
-- **On reply,** this section gets its own methodology: sales vs asks in the median, title-to-print rules and
-  volume.
-- **Approvals:** payment is RED (a paid service), and Index inclusion is RED (methodology).
-- **Storage placeholder:** about 1.0 MB/day + about 10 MB once (ESTIMATE, SV §1).
-
-### 3.5 magi (placeholder: consent enquiry)
-
-- No collection without written consent from 株式会社ジラフ (terms Art. 8(v)/(dd), robots.txt search disallow
-  for Claude agents, MEASURED SV §2.3).
-- On consent, a section like Aucfan's follows. There is no storage budget until then.
+- Plan complete in CR §A-§H, with accepted Q2-Q5, Q7-Q13 and splice for Q6. Differences: generic records
+  (§2.2), group-42 member = `raw:damaged`, shared splice, foil and graded rules from §2.1/§2.3.
+- **Counted:** unlabeled = 状態A only. Group 42, graded, ☆SALE☆, sealed, decks, oripa excluded. PSA10 rows: RAW
+  and variants only while OFF (CR §1.4 MEASURED 114 PSA10 products in a 4-set sample); 状態難 slabs excluded if
+  ever turned on.
+- **Identity** (MEASURED sample of 1,988 raw candidates, CR §1.5): 52.5% only listing for the code, 18.0% base
+  among variants, 23.9% variants needing renderings, 5.0% uncoded, 1.5% in two pack groups (refused). First-pass
+  exact 65-75% (ESTIMATE). CardRush has promo groups, so it is the only new source for P promos.
+- **Collector** (CR §E): 145 pack/promo group pages + weekly sweep of `/product-list` (149 pages) and groups
+  37/42. Slot 16:00 UTC.
+- **Cadence (N7):** every 48 h by default (about 100 requests/day average, about 9 min/day), daily only if the
+  C0 storage re-check allows it.
+- **Storage** (CR §F, ESTIMATE from MEASURED 400 KB list pages): 48 h encoded **1.85 MB/day**; daily encoded
+  3.4 MB/day; daily plaintext 9.2 MB/day (never). About 27 MB once in every mode.
 
 ---
 
-## 4. One storage budget (ESTIMATE unless marked)
+## 4. Storage (days until the 3 GiB reserve)
 
-- **Owner figures** (MEASURED, 2026-10-16, `storage-rates` run 38898278774): room to the 3 GiB reserve
-  **2,938 MB**; planning **23.35 MB/day**; stress B **27.58 MB/day**.
-- **Rule:** (rate + new) × 90 + one-off ≤ room at planning **and** stress B.
-- **Remaining-50 batch:** 70.6 MB once + 0.45 MB/day recurring allowance (MEASURED basis,
-  `capacity75-session13/HANDOFF.md:59`, `scripts/ops/enqueue_remaining.py:24`).
+**Inputs:** room 2,807 MB (MEASURED 2026-10-18); today's growth 30 MB/day (owner figure; MEASURED range 27.2 to
+33.3). Yuyu work already approved: about 225 remaining captures, about 300 MB one-off (ESTIMATE); 762 F1 prints
+put on refresh at about 4.2 KB per print per day, about 3.2 MB/day (ESTIMATE from MEASURED per-print rate).
+This may double-count if the 30 MB/day already averages in capture days, so the table leans pessimistic.
 
-Cumulative, in delivery order:
+**Days = (room − one-offs) ÷ daily growth.** All ESTIMATE.
 
-| Added (cumulative) | MB/day | One-off MB | Total new MB/day | Total one-off | Planning margin | Stress B margin |
-|---|---|---|---|---|---|---|
-| Today only | 0 | 0 | 0 | 0 | +836.5 | +455.8 |
-| + remaining-50 batch | 0.45 | 70.6 | 0.45 | 70.6 | +725.4 | +344.7 |
-| + Dorasuta asks (light) | 1.0 | 10 | 1.45 | 80.6 | +625.4 | +244.7 |
-| + Dorasuta buyback (weekly) | 0.1 | 2 | 1.55 | 82.6 | **+614.4** | **+233.7** |
-| + CardRush, daily, encoded | 3.4 | 27 | 4.95 | 109.6 | +281.4 | **−99.3 does not fit** |
-| + CardRush at 48 h instead | 1.85 | 27 | 3.40 | 109.6 | +420.9 | **+40.2 (thin)** |
-| + Aucfan placeholder (on 48 h CardRush) | 1.0 | 10 | 4.40 | 119.6 | +320.9 | **−59.8 does not fit** |
-
-- **What this means:**
-  - Dorasuta asks, buyback and the remaining-50 batch fit comfortably.
-  - CardRush fits only at a 48-hour cadence, and thinly, at today's stress B.
-  - Aucfan on top does not fit without new room.
-- **Admission rule.** Each later source is admitted only on a **re-run** of `storage-rates` with measured bytes
-  from the earlier sources. Measured Dorasuta and CardRush ratios may be better or worse than these estimates.
-- **Levers before paid storage**, in order:
-  1. byte-identical RAW de-duplication (CR §F4.2);
-  2. a 48-hour cadence for asks-only sources;
-  3. narrowing scope to prints with fewer than two sources.
-- **Never:** RAW retention or deletion.
-- **RAW-to-R2 is a separate future plan, noted only here.** It is the data-platform design. It is a paid service
-  (RED), it changes the RAW location for all sources, and it would lift the cap for CardRush daily plus Aucfan.
-  It is out of scope.
-
----
-
-## 5. Delivery sequence
-
-**Conventions:**
-- **Lanes.** Everything below is DATA lane (collectors, import graph, identity, prices, MI/MV, migrations,
-  `docs/agent/`). Each delivery has a regenerated `STAGING_MISSION.json`.
-- **One delivery at a time.** Draft PRs only, one staging delivery at a time.
-- **Quiet windows.** No merges 19:30–20:30 UTC. No collector change 02:00–06:00 UTC. Collector releases only
-  06:00–23:00 UTC, at least 5 min after and 8 min before a collector fire.
-
-| Step | What | Level | Canary | Owner approvals |
+| Step (cumulative) | New MB/day | One-off MB | Growth MB/day | Days to reserve |
 |---|---|---|---|---|
-| **P0** | Approve this plan and the §6 answers | RED decisions | — | **Yes** |
-| **F1** | Migration: `grade_key`, generic source tables (§2.2), splice tables (§2.6), `sources` seeds; public-series guard registrations (§2.5). No collector code | AMBER (additive migration) | — | Owner runs `alembic upgrade head` (backup under 24 h) |
-| **F2** | Shared modules: `opcg_source_identity` hosts + vectors, `from_source_product` + rule modules, `PARSERS` entries, freshness list-page unit, tooling (`COLLECTORS`, `NAMES`, cap, lane, raw health). One sequential 10-service rollout with restore path | AMBER | existing collectors per `STAGING_DELIVERY.md` | Cap raise (**N10**) |
-| **F3** | `source_collector_kit` + `dorasuta_collector` package and Dockerfile, tested only on fixtures from SV §2.1 (mock data first). No deploy | AMBER | — | — |
-| **F4** | Splice machinery in MI snapshot, Market Value and CPI, inert without a splice row; replay tests on a synthetic cutover | AMBER (code; no methodology change until used) | replay on staging data via `ops-readonly` | — |
-| **D1** | Dorasuta live canary: owner creates `dorasuta-collector` (cron off) and sets variables and budget. 3 sets in full daily (about 21 pages), observations hidden | AMBER (new source volume) | 3 sets | **Yes**: Railway service, variables, envelope, cron on |
-| **D2** | **48 h storage check**: `storage-rates` + measured bytes per page; identity gate (§3.1). Go only if ≤ 1.5 MB/day projected and the gate passes; then widen to light mode (60 series + sweep) | GREEN (read-only) → AMBER widen | — | Widen: **yes** |
-| **D3** | **Shadow ≥ 14 days**, hidden. Daily report: storage, denials, parse, quarantine, Dorasuta vs Yuyu divergence; proposed cutover date | GREEN | — | — |
-| **D4** | **Splice cutover**: Dorasuta `SOURCE_SEMANTICS` entry, version v3→v4, resolver in `print_market_index.py`, splice row for D, attributed public line | **RED** (methodology) | single day, before the 20:00 UTC snapshot | **Yes**: date and go |
-| **B1** | Dorasuta buyback (after its audit): parser + weekly job, auxiliary-only | AMBER | 1 set | **Yes**: envelope, cron |
-| **C0** | **Q1 clears**: RUSH's written yes, or the owner's written acceptance of the clause. Re-run `storage-rates`; choose daily or 48 h (**N4**) | RED decision | — | **Yes** |
-| **C1** | `cardrush_collector` package on the kit, fixtures from CR §1. No deploy | AMBER | — | — |
-| **C2** | CardRush canary: OP-01 group (4 pages) daily for 3 days → 5 groups → all 145; observations hidden; **48 h storage check** as D2 | AMBER + RED (Q1 already cleared in C0) | 4 → 20 → 145 pages | **Yes**: service, variables, envelope, each widen |
-| **C3** | Shadow ≥ 14 days (as D3) | GREEN | — | — |
-| **C4** | Splice cutover for CardRush, v4→v5, at least 14 days after D4 | **RED** | single day | **Yes** |
-| **A/M** | Aucfan or magi only after a written licence or consent; own plan section first | RED | — | **Yes** |
-| — | Any external delivery of derived values (partner API, licensing) | RED | — | Blocked until the legal opinion covers each source |
+| Today | 0 | 0 | 30.0 | **93** |
+| + Yuyu captures + F1 refresh (approved) | 3.2 | 300 | 33.2 | **75** |
+| + Dorasuta asks | 1.0 | 10 | 34.2 | **73** |
+| + Dorasuta buyback | 0.1 | 2 | 34.3 | **72** |
+| + CardRush, 48 h | 1.85 | 27 | 36.2 | **68** |
+| CardRush daily instead of 48 h | 3.4 | 27 | 37.7 | 65 |
+| + SNKRDUNK discovery fix (not approved; 100-250 MB once, about 4 MB/day) on CardRush 48 h | 4.0 | 175 | 40.2 | **57** |
+| same, on CardRush daily | 4.0 | 175 | 41.7 | 55 |
+
+**Per source (ESTIMATE):** Dorasuta asks 1.0 MB/day, Dorasuta buyback 0.1 MB/day, CardRush 1.85 MB/day at 48 h
+(3.4 daily). Both sources together about 2.95 MB/day, under 10% of today's growth.
+
+**What this means:**
+- Every step stays above the 45-day flag.
+- Revision 1's rule ((rate + new) × 90 + one-off ≤ room) now fails on today's growth plus the approved Yuyu work
+  alone (33.2 × 90 + 300 = 3,288 MB > 2,807 MB), so it can no longer separate a good source from a bad one.
+  Proposed replacement (N3): **admit a source only if days to reserve, re-measured with `storage-rates` and the
+  per-source bytes diagnostic, stay ≥60 after adding it.** That leaves 15 days of warning above the flag.
+- Under that rule, CardRush fits at 48 h (68) and daily (65) on today's numbers, but **not** if the SNKRDUNK
+  discovery fix lands first (57 / 55). Then at C0 the choice is: CardRush 48 h anyway (still above 45), RAW
+  byte-identical de-duplication first (CR §F4.2), or a bigger volume (owner, paid).
+- Levers before paid storage: 48 h cadence for ask-only sources; RAW byte-identical de-duplication; narrowing
+  CardRush to prints with fewer than two sources. Never RAW retention or deletion without an owner decision.
+- Every widen step has a 48 h storage check; the per-source bytes diagnostic (S0) attributes bytes by source,
+  so Dorasuta and CardRush checks can overlap Yuyu F1 batches without confusing the numbers.
 
 ---
 
-## 6. Owner questions still open (merged, renumbered)
+## 5. Build split (PRs in order)
 
-Already answered and not repeated: CR Q1 (plan default), Q2–Q5, Q7–Q13 accepted, Q6 splice.
+**Merge paths:**
+- **Rollout PR:** changes a collector's runtime inputs and the manifest selects it. Marked ready, no
+  `hold-for-owner`, merged **only** by the `staging-automerge` CI job, which rolls the collector out. Never
+  hand-merged, never native auto-merge armed by hand. Never touches `.github/workflows/ops-readonly.yml`.
+  Released 06:00-23:00 UTC, never 02:00-06:00, and the job itself holds out 19:30-20:30.
+- **Hold PR:** touches `ops-readonly.yml` (new diagnostics). Draft + `hold-for-owner`, merged by hand by the owner
+  (or the coordinator when delegated). Never contains collector code.
+- **Plain PR:** DATA lane, regenerated `STAGING_MISSION.json`, no collector selected, merged by staging-automerge
+  with nothing to roll out.
+- One staging delivery at a time. Every new-source PR carries the §2.7 guard test (Yuyu/SNKR inputs unchanged).
 
-| # | Question | Default |
-|---|---|---|
-| N1 | Make Dorasuta asks the first live source, in light mode (SV D1)? | **Yes** |
-| N2 | Dorasuta out-of-stock: use the accepted Q4 rule (eligible ≤ 7 days, stock recorded) or the survey's in-stock only (SV D2)? | **Q4 rule**, so all shop asks follow one rule |
-| N3 | Dorasuta freshness: page-1 rows daily, the rest on a 6-day sweep (all ≤ 7 days)? | **Yes** |
-| N4 | CardRush storage: does not fit daily on top of the rest. Choose at C0 with measured numbers, falling back to a 48 h cadence (CardRush-only freshness 48 h)? | **Yes**: measure at C0, 48 h if still short; no paid storage |
-| N5 | Dorasuta storage cap 1.5 MB/day measured over 48 h, else stop and re-plan (SV D7)? | **Yes** |
-| N6 | Allow `buy.dorasuta.jp` for the buyback audit (SV D3); keep Fullahead skipped? | **Yes** / skipped |
-| N7 | Send the Aucfan licence enquiry and the magi consent request (SV Appendix A and B)? | **Yes**, now; no payment without a separate RED approval |
-| N8 | Send the CardRush permission email (Appendix) from your own address? | **Yes**, now |
-| N9 | Suruga-ya: stay parked with no requests? | **Yes** |
-| N10 | Collector service cap 10 → 11 at F2 (Dorasuta) and → 12 at C2 (CardRush)? | **Yes**, one step each |
-| N11 | Splice rules: one splice per source, ≥ 14 days apart, CPI `METHODOLOGY_VERSION` stays 1? | **Yes** |
-| N12 | Dorasuta buyback auxiliary-only (never Index/MV, not public) like Yuyu buy? | **Yes** |
-| N13 | PSA10 or graded rows from every new source: RAW and variants only, PSA10 OFF (SV D8)? | **Yes** |
-| N14 | Open a separate check of the Yuyu-Tei base-print mapping gaps seen in SV §3 (D9)? | **Yes**, a separate thread |
+| # | PR | Merge path | Collector rollout | Owner step |
+|---|---|---|---|---|
+| P0 | Approve this plan and §7 | n/a | none | **Yes** |
+| S0 | Diagnostic `source-bytes-by-source` (bytes per source per UTC day, RAW and rows) and `new-source-coverage` (priced prints by rarity and source count) | Hold | none | Hand merge |
+| S1 | Additive migration: `grade_key`, generic source tables, splice tables, `sources` seeds, proposal CHECK widen; new-source ORM module outside `models/__init__`; §2.7 guard test | Plain | none | Runs `alembic upgrade head` (backup <24 h) |
+| S2 | Public-series guard registrations for `dorasuta`, `cardrush` (before any row) | Plain | none | n/a |
+| S3 | `opcg_source_identity` hosts + vectors; `source_product_resolver` + `dorasuta_rules` + `cardrush_rules`; foil/graded parsing; kit parser registry. Fixtures only | Plain | none | n/a |
+| S4 | Splice machinery in MI snapshot, Market Value, CPI, inert; synthetic replay tests | Plain | none (worker/api only) | n/a |
+| D0 | `source_collector_kit` + `dorasuta_collector` + Dockerfile, tested on SV §2.1 fixtures (mock data first); not selected by the manifest | Plain | none | n/a |
+| D1 | Register `dorasuta` in deploy tooling (`COLLECTORS`, `NAMES`, cap 10 → 11, raw health) and select it in the manifest | **Rollout** | **Yes: `dorasuta-collector` only** | Before: creates the Railway service (cron off), variables incl. contact (N16), budget row. After: cron on for 3 sets |
+| D2 | 48 h storage + identity check (read-only). Widen to 60 series + sweep by variable if ≤1.5 MB/day and the gate passes | n/a | none (variable change) | **Yes**: widen |
+| D3 | Shadow ≥14 days, hidden; daily report (bytes, denials, parse, quarantine, Dorasuta vs Yuyu divergence) | n/a | none | n/a |
+| D4 | Cutover: Dorasuta `SOURCE_SEMANTICS` entry, v3 → v4, splice row, attributed public line | Plain | none | **Yes, RED**: date and go |
+| B0 | Buyback audit (≤40 requests), report only | n/a | none | Allows `buy.dorasuta.jp` (N8) |
+| B1 | Buyback parser + weekly job inside `dorasuta_collector`, auxiliary-only | **Rollout** | **Yes: `dorasuta-collector` only** | Envelope, cron |
+| C0 | Q1 cleared (N2) + `storage-rates` re-run; choose 48 h or daily (N7) under N3 | n/a | none | **Yes, RED** |
+| C1 | `cardrush_collector` on the kit, CR §1 fixtures; not selected | Plain | none | n/a |
+| C2 | Register `cardrush` in deploy tooling (cap 11 → 12), select it; canary OP-01 (4 pages) → 5 groups → all, 48 h check after each | **Rollout** | **Yes: `cardrush-collector` only** | Service, variables, each widen |
+| C3 | Shadow ≥14 days | n/a | none | n/a |
+| C4 | Cutover v4 → v5, ≥14 days after D4 | Plain | none | **Yes, RED** |
+
+**Rollouts in total: three (D1, B1, C2), each of one new service.** Zero Yuyu/SNKR redeploys planned. If §2.7
+forces one, it becomes a separate bundled PR with the owner's redeploy go (N13).
 
 ---
 
-## Appendix: CardRush permission email (draft; the owner sends)
+## 6. Expected coverage gain by rarity (ESTIMATE)
 
-To: info@cardrush-op.jp. Placeholders are in 【 】. Nothing has been sent.
+**Baseline** (MEASURED, `yuyu-coverage-gap` run 39014897188, 2026-10-17): 4,316 verified prints, 2,616 with a
+fresh Yuyu-Tei price. **After Yuyu F1** (ESTIMATE from MEASURED `yuyu-f1-sizing` run 39076525684 by-rarity
+rows, 762 proposals). SNKRDUNK adds under 1% today (28 high-rarity prints fresh, MEASURED) and is ignored.
 
-### 日本語
+**Assumed share of still-unpriced prints each source prices** (listed × resolves exactly; ESTIMATE from SV §2.1
+and CR §1.5): Dorasuta base 75%, parallel 60%, reprint 55%, SP 60%, promo 0%; CardRush (on what Dorasuta
+leaves) base 70%, parallel 55%, reprint 50%, SP 55%, promo 40%.
 
-件名：価格データの参照に関するご相談（ONE PIECEカードゲーム相場サイト「Card Pirate」）
+| Rarity (all kinds) | Prints | Priced now | After Yuyu F1 | + Dorasuta | + CardRush | Priced after both | 2+ shop sources |
+|---|---|---|---|---|---|---|---|
+| L | 307 | 130 (42%) | 260 (85%) | +32 | +9 | 301 (98%) | 245 |
+| SEC | 128 | 30 (23%) | 70 (55%) | +37 | +12 | 119 (93%) | 81 |
+| SP | 129 | 117 (91%) | 117 (91%) | +7 | +3 | 127 (98%) | 100 |
+| SR | 616 | 195 (32%) | 458 (74%) | +105 | +31 | 595 (97%) | 462 |
+| R | 882 | 509 (58%) | 694 (79%) | +121 | +39 | 854 (97%) | 689 |
+| UC | 717 | 515 (72%) | 527 (74%) | +111 | +42 | 680 (95%) | 544 |
+| C | 1,478 | 1,113 (75%) | 1,245 (84%) | +142 | +50 | 1,437 (97%) | 1,217 |
+| P (promo) | 57 | 5 (9%) | 5 (9%) | 0 | +21 | 26 (46%) | 2 |
+| TR | 2 | 2 | 2 | 0 | 0 | 2 | 2 |
+| **Total** | **4,316** | **2,616 (61%)** | **3,378 (78%)** | **+555** | **+207** | **4,140 (96%)** | **3,342 (77%)** |
 
-株式会社RUSH
-カードラッシュ ワンピース ご担当者様
+- "2+ shop sources" today: 334 prints (CARRIED FORWARD, 2026-10-15 state). This is what makes the median
+  meaningful: about 3,300 prints would have two or three independent shop asks (ESTIMATE).
+- **Low case** (every resolve rate 40% lower): about 3,900 prints priced, about 90% (ESTIMATE).
+- The new sources also reach base prints that Yuyu-Tei cannot tell apart (SEC base 1 of 38 priced today):
+  Dorasuta lists one product per print, which is exactly where Yuyu-Tei's listing data is ambiguous.
+- Measured by S0's `new-source-coverage` diagnostic in each shadow report; these estimates are replaced then.
 
-突然のご連絡失礼いたします。ONE PIECEカードゲームの相場情報サイト「Card Pirate」（【サイトURL】）を
-運営しております【氏名】と申します。
+---
 
-貴社サイト（www.cardrush-op.jp）の公開商品一覧ページに掲載されている販売価格・在庫表示を、
-相場の参考値として参照させていただけないか、ご相談のためご連絡いたしました。
-フッターの「当サイトの価格データ等の利用について」（cardrush.media/data_policy）を拝見しようとしましたが、
-現在アクセスできない状態のため、直接お問い合わせさせていただきます。
+## 7. Owner decisions (approve in one go)
 
-想定している利用方法は以下のとおりです。
-1. 取得方法：商品一覧ページのみを1日1回、1リクエストずつ5秒以上の間隔をあけて取得します（1日あたり約150〜200ページ）。
-   画像は一切取得・保存・表示いたしません。robots.txt を毎回確認し、連絡先を明記した専用のUser-Agentを使用します。
-2. 利用目的：複数店舗の価格から算出する相場の参考値（中央値など）の計算にのみ使用します。
-3. 表示：貴社の個別の商品名・説明文・画像を転載することはありません。表示する場合は算出値のみとし、
-   出典として「カードラッシュ」を明記いたします。
-4. 第三者提供：貴社の価格データを第三者へ提供・販売することはいたしません。
-5. 停止：ご要望があれば、ただちに取得を停止し、ご指示に従います。
+Already decided and not repeated: CR Q1 plan default, Q2-Q5, Q7-Q13 accepted, Q6 splice; outreach closed
+(no emails; Aucfan, magi, エーツー out; Yahoo/Rakuten KIV); Yuyu F1 foil rule, F3 dropped, captures resumed.
 
-上記の範囲での参照をご許可いただけますでしょうか。条件やご懸念点がございましたら、
-それに沿って運用いたします。許可いただけない場合も、その旨ご返信いただければ取得は行いません。
+| # | Decision | Recommended | Why (one line) |
+|---|---|---|---|
+| N1 | Approve this plan: foundations, then Dorasuta asks (light mode), then buyback, then CardRush | **Yes** | Dorasuta is open, cheap (1 MB/day) and fills the base-print gap Yuyu-Tei can't. |
+| N2 | CardRush Q1: since no email will be sent, do you accept in writing that CardRush runs under the §2.4 etiquette and stop rule, despite the unread data policy? | **Yes, live start still gated at C0** | You asked to keep both sources; the email route is closed, and stop-on-notice limits the risk of the unverified clause. |
+| N3 | Storage rule: admit a source only if days to reserve stay ≥60 after adding it (45-day flag unchanged) | **Yes** | The old 90-day rule already fails on today's growth, so it can't judge new sources. |
+| N4 | Dorasuta out of stock: Q4 rule (eligible ≤7 days, stock recorded) | **Yes** | One rule for every shop ask. |
+| N5 | Dorasuta freshness: page 1 daily, rest on a 6-day sweep (all ≤7 days) | **Yes** | Chase cards stay daily at about 105 requests/day. |
+| N6 | Dorasuta cap: 1.5 MB/day measured over 48 h, else stop and re-plan | **Yes** | Catches a bad bytes estimate before it costs days of runway. |
+| N7 | CardRush cadence: 48 h by default, daily only if N3 still holds at C0 | **48 h** | Saves 1.55 MB/day; shop asks move slowly. |
+| N8 | Allow `buy.dorasuta.jp` in Project settings > environment > Network access for the ≤40-request audit | **Yes** | Buy prices are a new signal and the audit is tiny. |
+| N9 | Dorasuta buyback auxiliary-only (never Index, Market Value or public) | **Yes** | Same treatment as Yuyu `buy`; no methodology change. |
+| N10 | Graded rows from new sources: RAW and variants only, no observations, PSA10 OFF | **Yes** | Keeps raw prices clean and graded data ready for later. |
+| N11 | Collector service cap 10 → 11 at D1 and → 12 at C2 | **Yes** | One new service each, one step at a time. |
+| N12 | Splice: one per source, ≥14 days apart, CPI `METHODOLOGY_VERSION` stays 1 | **Yes** | History stays continuous and each cutover is checked on its own. |
+| N13 | No Yuyu/SNKR redeploy for new sources; anything unavoidable goes in one bundled redeploy PR needing your go | **Yes** | Honours the standing rule; three rollouts touch only new services. |
+| N14 | Order versus the SNKRDUNK discovery fix (if you approve it): CardRush first, SNKRDUNK fix after | **CardRush first** | SNKRDUNK fix first would push CardRush below the 60-day rule (57 days). |
+| N15 | Stop rule: 403, 429, challenge, robots disallow or any site notice stops the source until you decide | **Yes** | Your instruction, made a hard rule in the kit. |
+| N16 | Contact in the user agent: a dedicated address you create (not your personal email), stored as an env variable | **Yes, you supply it before D1** | Honest identification without exposing a personal address or committing it. |
 
-お忙しいところ恐れ入りますが、ご検討のほどよろしくお願い申し上げます。
+---
 
-【氏名】
-Card Pirate 運営
-【メールアドレス】
-【サイトURL】
+## 8. Risks
 
-### English
-
-Subject: Request regarding use of price data (One Piece Card Game price site "Card Pirate")
-
-To the CardRush One Piece team, RUSH Co., Ltd.
-
-My name is 【name】 and I run "Card Pirate" (【site URL】), a price reference site for the One Piece
-Card Game.
-
-I am writing to ask whether we may refer to the selling prices and stock indications shown on the public
-product list pages of your site (www.cardrush-op.jp) as one input to market reference values. I tried to
-read the "About the use of price data on this site" page linked in your footer
-(cardrush.media/data_policy), but it is currently not accessible, so I am asking you directly.
-
-What we propose:
-1. Collection: product list pages only, once a day, one request at a time at least 5 seconds apart
-   (about 150–200 pages a day). No images are fetched, stored or shown. We check robots.txt on every run
-   and use a dedicated User-Agent that includes our contact details.
-2. Purpose: only to calculate reference values (such as a median) across several shops.
-3. Display: we do not reproduce your product names, descriptions or images. Where shown, only the
-   calculated values appear, with "CardRush" credited as a source.
-4. Third parties: we do not provide or sell your price data to anyone.
-5. Stopping: on your request we stop collecting immediately and follow your instructions.
-
-Would you allow this use within the scope above? If you have conditions or concerns, we will operate
-accordingly. If you do not allow it, a short reply is enough and we will not collect.
-
-Thank you for considering this request.
-
-【name】
-Card Pirate
-【email】
-【site URL】
+- CardRush's policy text is unread (403); N2 is a legal-risk acceptance, not a permission.
+- Dorasuta's exact-match rate is not measured; the canary gate decides.
+- Storage estimates use a 6 KB/page dictionary ratio that has not been measured on either site.
+- A Yuyu F1 batch, a capture batch and a new-source widen inside the same 48 h are separable only with S0.
