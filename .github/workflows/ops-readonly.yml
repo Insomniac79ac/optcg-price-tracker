@@ -35,6 +35,10 @@ on:
           - freshness-not-met
           - identity-capture-work
           - official-image-assets
+          - snkrdunk-coverage-gap
+          - snkrdunk-coverage-gap-discovery
+          - snkrdunk-coverage-gap-releases
+          - snkrdunk-coverage-gap-samples
           - storage-savings
           - table-sizes
           - work-by-state
