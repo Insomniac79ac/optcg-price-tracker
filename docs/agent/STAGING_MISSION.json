@@ -87,7 +87,7 @@
  },
  "diff_sha256": "67177177d49dae3ab1ea05898a17bf19fd42e23f0d8ec311f5f3ceaa9b0fad66",
  "operational_notes": [
-  "Identity-capture batches stay PAUSED (owner decision 2026-10-17 15:41Z, restated 2026-10-18 13:51Z) until the owner picks a storage option: no new capture work is enqueued (no enqueue-remaining-50 or yuyu_identity_capture_enqueue apply). The snkrdunk and yuyutei collector services are not stopped, redeployed or changed.",
-  "While paused, D9 F2 (about 220 prints waiting on capture intents or captures not yet enqueued) stalls."
+  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions) and are RESUMED as before (owner confirmed 2026-10-18 14:16Z): each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment.",
+  "This diagnostic only measures storage options B and D (official images already stored, or already in the R2 mirror); no option is built or chosen by this change."
  ]
 }
