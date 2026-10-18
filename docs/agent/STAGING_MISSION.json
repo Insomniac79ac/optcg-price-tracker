@@ -164,7 +164,7 @@
    "estimated_runtime_minutes": 150
   },
   "recovery": {
-   "artifact": "d80f937a049802a03018a29c35292229aa01983d",
+   "artifact": "93e3ed7c78699615274ce5697a66c1090d9a030c",
    "procedure": "Automatic during rollout: every touched shard restored newest-first to its recovery_deployment_id (the PR #103 a504e476 images, matched by fleet-vs-receipt 10/10 at 2026-10-17 15:53Z). After delivery: native revert PR of this change, delivered the same way; proposals written by the rule stay as pending history and the old code re-versions those listings back to ambiguous. Nothing is approved by this change, so no mapping or price needs undoing.",
    "trigger": "Any drop in approved exact or approved-with-proof counts versus pre-release staging-state; any stored proposal differs RuntimeError; any discovery failure; any 403/429/challenge; deployment failure; schedule or flag drift; more new proposal versions on the first full discovery cycle than about 1,000 (about 762 prints expected: 775 MEASURED in sizing run 39076525684, less 13 bare-P promo prints the rule now leaves to the special-rarity rule).",
    "backup": "No schema change. Railway Postgres daily backups continue; no row is rewritten, only new proposal versions appended.",
@@ -189,7 +189,9 @@
  },
  "diff_sha256": "9554208060e1b61784943675adeec653ed06ef7c9c036e0fc0bfdee89420c98e",
  "operational_notes": [
-  "Identity-capture batches are PAUSED from 2026-10-17 15:41Z (owner decision) until the F1 batches are live: no new capture work is enqueued (no enqueue-remaining-50 or yuyu_identity_capture_enqueue apply). Already-queued intents may finish. The snkrdunk and yuyutei collector services are not stopped, redeployed or changed.",
-  "While paused, D9 F2 (about 220 prints waiting on capture intents or captures not yet enqueued) stalls: prints whose intents are already queued may still complete, nothing new is added."
+  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
+  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
+  "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
+  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
  ]
 }
