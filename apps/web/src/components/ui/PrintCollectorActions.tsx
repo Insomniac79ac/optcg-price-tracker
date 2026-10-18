@@ -5,6 +5,9 @@ import { useId, useState, type FormEvent, type ReactNode } from "react";
 
 import { formatJpy } from "@/lib/format";
 import { meRequest, ShelfRequestError, type CollectorShelf } from "@/lib/collectorShelf";
+import { numberDigits } from "@/lib/groupedNumber";
+
+import { GroupedNumberInput } from "./GroupedNumberInput";
 
 import styles from "./PrintCollectorActions.module.css";
 
@@ -143,11 +146,12 @@ function ReadyActions({
 }
 
 /** Whole yen from a free-text field: blank is "not given" (null); anything
- * else must be a whole number in range or the form says so. */
+ * else must be a whole number in range or the form says so. Commas, ¥, 円 and
+ * full-width digits are read the way GroupedNumberInput reads them. */
 export function parseYen(raw: string, { allowZero }: { allowZero: boolean }): number | null | "invalid" {
-  const cleaned = raw.replace(/[¥,\s]/g, "");
+  const cleaned = numberDigits(raw);
   if (cleaned === "") return null;
-  if (!/^\d+$/.test(cleaned)) return "invalid";
+  if (cleaned === null) return "invalid";
   const value = Number(cleaned);
   if (!Number.isSafeInteger(value) || value > MAX_JPY || (!allowZero && value === 0)) return "invalid";
   return value;
@@ -196,8 +200,9 @@ export function CollectionForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const count = Number(quantity);
-    if (!/^\d+$/.test(quantity.trim()) || count < 1 || count > MAX_QUANTITY) {
+    const digits = numberDigits(quantity);
+    const count = Number(digits);
+    if (!digits || count < 1 || count > MAX_QUANTITY) {
       setProblem(`Enter how many you have, from 1 to ${MAX_QUANTITY.toLocaleString("en")}.`);
       return;
     }
@@ -243,26 +248,21 @@ export function CollectionForm({
       <div className={styles.fields}>
         <label htmlFor={`${id}-qty`} className={styles.label}>
           How many
-          <input
+          <GroupedNumberInput
             id={`${id}-qty`}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            onValueChange={setQuantity}
             className={styles.input}
             required
           />
         </label>
         <label htmlFor={`${id}-paid`} className={styles.label}>
           <span>What you paid per card <span className={styles.optional}>(¥, optional)</span></span>
-          <input
+          <GroupedNumberInput
             id={`${id}-paid`}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="e.g. 1200"
+            placeholder="e.g. 1,200"
             value={paid}
-            onChange={(e) => setPaid(e.target.value)}
+            onValueChange={setPaid}
             className={styles.input}
           />
         </label>
@@ -361,13 +361,11 @@ export function WatchForm({
       <div className={styles.fields}>
         <label htmlFor={`${id}-target`} className={styles.label}>
           <span>Target price <span className={styles.optional}>(¥, optional)</span></span>
-          <input
+          <GroupedNumberInput
             id={`${id}-target`}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="e.g. 5000"
+            placeholder="e.g. 5,000"
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            onValueChange={setTarget}
             className={styles.input}
           />
         </label>

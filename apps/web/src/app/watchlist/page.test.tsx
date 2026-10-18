@@ -171,8 +171,9 @@ describe("/watchlist (Collector v1 S8)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Edit target for Shanks/ }));
     const dialog = screen.getByRole("dialog", { name: "Edit your watch" });
     const target = within(dialog).getByLabelText(/Target price/) as HTMLInputElement;
-    expect(target.value).toBe("30000");
+    expect(target.value).toBe("30,000");
     fireEvent.change(target, { target: { value: "28000" } });
+    expect(target.value).toBe("28,000");
     fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     expect(fetchMock).toHaveBeenCalledWith("/api/me/watchlist/1", expect.objectContaining({ method: "PATCH" }));
