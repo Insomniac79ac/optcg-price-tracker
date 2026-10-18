@@ -164,7 +164,7 @@
    "estimated_runtime_minutes": 150
   },
   "recovery": {
-   "artifact": "93e3ed7c78699615274ce5697a66c1090d9a030c",
+   "artifact": "e6368332c186ed8481ed35360e8abc95e0175e9f",
    "procedure": "Automatic during rollout: every touched shard restored newest-first to its recovery_deployment_id (the PR #103 a504e476 images, matched by fleet-vs-receipt 10/10 at 2026-10-17 15:53Z). After delivery: native revert PR of this change, delivered the same way; proposals written by the rule stay as pending history and the old code re-versions those listings back to ambiguous. Nothing is approved by this change, so no mapping or price needs undoing.",
    "trigger": "Any drop in approved exact or approved-with-proof counts versus pre-release staging-state; any stored proposal differs RuntimeError; any discovery failure; any 403/429/challenge; deployment failure; schedule or flag drift; more new proposal versions on the first full discovery cycle than about 1,000 (about 762 prints expected: 775 MEASURED in sizing run 39076525684, less 13 bare-P promo prints the rule now leaves to the special-rarity rule).",
    "backup": "No schema change. Railway Postgres daily backups continue; no row is rewritten, only new proposal versions appended.",
