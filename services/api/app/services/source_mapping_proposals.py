@@ -55,6 +55,21 @@ _SNK_PRODUCT_LABEL = re.compile(r"\(([^()]+)\)\s*$")
 # multiple SP siblings must remain ambiguous. TR/P are literal official tokens.
 YUYU_SPECIAL_RARITIES = {"SP": frozenset({"SPカード", "SP P"}),
                        "TR": frozenset({"TR"}), "P": frozenset({"P"})}
+# Unique listing kind (owner decision 2026-10-17, D9 F1). Yuyu-Tei names its own
+# products with treatment annotations; inside one authoritative release a listing
+# is exact only when exactly one Yuyu-Tei listing and exactly one release sibling
+# share its kind, counting every stored listing of the card in that release.
+# A named foil treatment is its own kind, never plain, and matches only a print
+# whose catalogue treatment names a foil. Unknown tokens, variants or kinds
+# never take part, and a print approved for another listing is never selected.
+# A bare P (promo) token is left to the special-rarity rule: promo parallels
+# are not reliably marked, so P never decides a kind here.
+YUYU_ORDINARY_RARITIES = frozenset({"C", "UC", "R", "SR", "SEC", "L"})
+_YUYU_FOIL_TITLE = re.compile(r"ラメフォイル|海賊旗フォイル")
+_FOIL_TREATMENT = re.compile(r"foil|フォイル", re.IGNORECASE)
+_SPECIAL_OFFICIAL_RARITIES = frozenset({"SPカード", "SP P", "TR"})
+_PLAIN_VARIANT = re.compile(r"^(?:base|r[1-9][0-9]*)$")
+_PARALLEL_VARIANT = re.compile(r"^p[1-9][0-9]*$")
 
 
 def _norm(value: str | None) -> str | None:
@@ -62,6 +77,58 @@ def _norm(value: str | None) -> str | None:
         return None
     result = value.strip().upper().replace("-", "").replace("_", "").replace(" ", "")
     return result or None
+
+
+def yuyu_listing_kind(name_jp: str | None, rarity: str | None) -> str | None:
+    """foil, parallel or plain from a Yuyu-Tei listing title and rarity token; else None."""
+    if _YUYU_FOIL_TITLE.search(name_jp or ""):
+        return "foil"
+    token = (rarity or "").strip()
+    if token.startswith("P-") and token[2:] in YUYU_ORDINARY_RARITIES:
+        return "parallel"
+    if token in YUYU_ORDINARY_RARITIES:
+        return "parallel" if "パラレル" in (name_jp or "") else "plain"
+    return None
+
+
+def print_listing_kind(row: CardPrint) -> str | None:
+    """The listing kind a catalogue print can carry; None when it can't be told."""
+    if _FOIL_TREATMENT.search(row.treatment or ""):
+        return "foil"
+    if row.official_rarity in _SPECIAL_OFFICIAL_RARITIES:
+        return "special"
+    variant = row.official_asset_variant or ""
+    if _PLAIN_VARIANT.fullmatch(variant):
+        return "plain"
+    if _PARALLEL_VARIANT.fullmatch(variant):
+        return "parallel"
+    return None
+
+
+def _unique_listing_kind_match(
+    candidate: Any,
+    release: ReleaseProduct,
+    eligible: list[CardPrint],
+    listing_identity: str | None,
+    listings_by_kind: dict[tuple[str | None, int, str], set[int]],
+    yuyu_listings_by_print: dict[int, set[str]],
+) -> tuple[CardPrint, dict[str, Any]] | None:
+    kind = yuyu_listing_kind(candidate.name_jp, candidate.detected_rarity)
+    kinds = {row.id: print_listing_kind(row) for row in eligible}
+    if kind is None or None in kinds.values():
+        return None
+    same = [row for row in eligible if kinds[row.id] == kind]
+    listings = sorted(listings_by_kind.get((_norm(candidate.detected_card_code), release.id, kind), ()))
+    if len(same) != 1 or listings != [candidate.id]:
+        return None
+    if yuyu_listings_by_print.get(same[0].id, set()) - {listing_identity}:
+        return None
+    return same[0], {
+        "listing_kind": kind,
+        "release_listings_of_kind": listings,
+        "eligible_print_kinds": {str(print_id): value for print_id, value in sorted(kinds.items())},
+        "selected_print_treatment": same[0].treatment,
+    }
 
 
 def _digest(payload: dict[str, Any]) -> str:
@@ -364,6 +431,7 @@ def analyse_source_mapping_proposals(
     exact_mapping_by_listing: dict[tuple[str, str], list[SourceCardMapping]] = defaultdict(list)
     approved_mapping_prints: dict[str, set[int]] = defaultdict(set)
     exact_mapping_print_ids: dict[str, list[int]] = defaultdict(list)
+    yuyu_listings_by_print: dict[int, set[str]] = defaultdict(set)
     for mapping in mappings:
         if mapping.superseded_at is not None:
             continue
@@ -376,6 +444,25 @@ def analyse_source_mapping_proposals(
         if mapping.is_active and mapping.review_status == "approved":
             approved_mapping_prints[source_name].add(mapping.card_print_id)
             exact_mapping_print_ids[source_name].append(mapping.card_print_id)
+            if source_name == "yuyutei" and identity:
+                yuyu_listings_by_print[mapping.card_print_id].add(identity)
+
+    # Every stored listing counts towards uniqueness, whatever the candidate filter,
+    # under each release its category or a published product label could name.
+    listings_by_kind: dict[tuple[str | None, int, str], set[int]] = defaultdict(set)
+    if filters.source in ("all", "yuyutei"):
+        for row in db.execute(select(
+            YuyuteiCandidate.id, YuyuteiCandidate.set_slug, YuyuteiCandidate.detected_card_code,
+            YuyuteiCandidate.name_jp, YuyuteiCandidate.detected_rarity,
+        )).all():
+            kind = yuyu_listing_kind(row.name_jp, row.detected_rarity)
+            if kind is None:
+                continue
+            release_ids = {release.id for release in release_by_code.get(_norm(row.set_slug), [])}
+            release_ids.update(release.id for label in re.findall(r"\(([^()]+)\)", row.name_jp or "")
+                               for release in release_by_label.get(_norm(label), []))
+            for release_id in release_ids:
+                listings_by_kind[(_norm(row.detected_card_code), release_id, kind)].add(row.id)
 
     yuyu_runs = {row.id: row for row in db.scalars(select(YuyuteiDiscoveryRun)).all()}
     later_completed: dict[str, set[int]] = defaultdict(set)
@@ -570,6 +657,20 @@ def analyse_source_mapping_proposals(
                                              "unique_official_special_rarity_in_release"),
                     )]
                     reasons.append("positive_special_rarity_resolves_one_release_sibling")
+                elif source_name == "yuyutei" and len(eligible) > 1 and (
+                    kind_match := _unique_listing_kind_match(
+                        candidate, release, eligible, listing_identity,
+                        listings_by_kind, yuyu_listings_by_print,
+                    )
+                ) is not None:
+                    selected, payload["unique_listing_kind_match"] = kind_match
+                    status = "exact"
+                    alternatives = [AlternativePlan(
+                        selected.id, True,
+                        supporting_evidence=("canonical_card_family", "authoritative_release_product",
+                                             "unique_listing_kind_in_release", "unique_print_kind_in_release"),
+                    )]
+                    reasons.append("unique_listing_kind_resolves_one_release_sibling")
                 elif len(eligible) > 1:
                     status = "ambiguous"
                     alternatives = [AlternativePlan(
