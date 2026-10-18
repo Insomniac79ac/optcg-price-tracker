@@ -30,12 +30,18 @@ on:
         type: choice
         default: work-by-state
         options:
+          - capture-day-storage
           - degraded-signals
           - freshness-not-met
           - identity-capture-work
           - official-image-assets
+          - storage-savings
           - table-sizes
           - work-by-state
+          - yuyu-coverage-gap
+          - yuyu-coverage-gap-samples
+          - yuyu-f1-sizing
+          - yuyu-f3-aliases
       transients:
         description: "storage-rates: named transients to exclude (comma-separated; empty = all named)"
         type: string

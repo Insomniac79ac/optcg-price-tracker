@@ -630,6 +630,78 @@ def test_export_json_and_csv(client, db_session, enabled, prints):
     assert client.get("/me/export/users.csv").status_code == 422
 
 
+def test_export_covers_everything_delete_removes(client, db_session, enabled, prints):
+    # Security audit 2026-10-16, F5: delete_account also removes saved views,
+    # search history and file jobs, so the export must carry them too.
+    client.get("/me/preferences", headers=OTHER)
+    other = other_user_id(db_session)
+    db_session.add_all([
+        SavedView(name="mine", route_path="/cards", view_type="cards", user_id=1, filters_json={"q": "luffy"}),
+        SavedView(name="theirs", route_path="/cards", view_type="cards", user_id=other),
+        SearchHistory(query="zoro", result_count=3, user_id=1),
+        SearchHistory(query="nami", user_id=other),
+        FileJob(user_id=1, job_type="collection_export", status="success",
+                output_file_path="output/mine.csv", output_filename="collection.csv"),
+        FileJob(user_id=None, job_type="backup_export", status="success"),
+    ])
+    db_session.commit()
+
+    data = client.get("/me/export").json()
+
+    assert [(v["name"], v["filters_json"]) for v in data["saved_views"]] == [("mine", {"q": "luffy"})]
+    assert [(h["query"], h["result_count"]) for h in data["search_history"]] == [("zoro", 3)]
+    assert [(j["job_type"], j["output_filename"]) for j in data["file_jobs"]] == [("collection_export", "collection.csv")]
+    # Storage paths are internal and never leave the server.
+    assert "output/mine.csv" not in client.get("/me/export").text
+
+
+@pytest.mark.parametrize("bad", ["a\x00b", "bell\x07", "esc\x1b[31m", "\x0b"])
+def test_notes_refuse_control_characters(client, enabled, prints, bad):
+    # Security audit 2026-10-16, F11: NUL made Postgres raise (a 500).
+    card = prints["OP01-001"].id
+    assert client.post("/me/collection", json={"card_print_id": card, "note": bad}).status_code == 422
+    assert client.post("/me/watchlist", json={"card_print_id": card, "note": bad}).status_code == 422
+    entry = client.post("/me/collection", json={"card_print_id": card}).json()["id"]
+    watch = client.post("/me/watchlist", json={"card_print_id": card}).json()["id"]
+    assert client.patch(f"/me/collection/{entry}", json={"note": bad}).status_code == 422
+    assert client.patch(f"/me/watchlist/{watch}", json={"note": bad}).status_code == 422
+
+
+def test_notes_keep_tabs_line_breaks_and_unicode(client, enabled, prints):
+    note = "first line\r\nsecond\tcolumn ルフィ ✓"
+    created = client.post("/me/collection", json={"card_print_id": prints["OP01-001"].id, "note": note})
+    assert created.status_code == 201 and created.json()["note"] == note
+    assert client.patch(f"/me/collection/{created.json()['id']}", json={"note": None}).json()["note"] is None
+
+
+def test_acquired_on_is_bounded(client, enabled, prints):
+    card = prints["OP01-001"].id
+    today = datetime.now(timezone.utc).date()
+    for bad in ("1899-12-31", (today + timedelta(days=2)).isoformat(), "9999-12-31"):
+        assert client.post("/me/collection", json={"card_print_id": card, "acquired_on": bad}).status_code == 422
+    created = client.post("/me/collection", json={"card_print_id": card, "acquired_on": "2022-07-22"})
+    assert created.status_code == 201 and created.json()["acquired_on"] == "2022-07-22"
+    entry = created.json()["id"]
+    for good in ("1900-01-01", today.isoformat(), (today + timedelta(days=1)).isoformat()):
+        response = client.patch(f"/me/collection/{entry}", json={"acquired_on": good})
+        assert response.status_code == 200 and response.json()["acquired_on"] == good
+    assert client.patch(f"/me/collection/{entry}", json={"acquired_on": "0001-01-01"}).status_code == 422
+    assert client.patch(f"/me/collection/{entry}", json={"acquired_on": None}).status_code == 200
+
+
+def test_unchanged_out_of_range_date_does_not_block_an_edit(client, db_session, enabled, prints):
+    # A date copied from the legacy tables (migrate_legacy) was never range
+    # checked, and the website re-sends the stored date with every edit.
+    entry_id = client.post("/me/collection", json={"card_print_id": prints["OP01-001"].id}).json()["id"]
+    entry = db_session.get(CollectionEntry, entry_id)
+    entry.acquired_on = date(1850, 5, 1)
+    db_session.commit()
+
+    response = client.patch(f"/me/collection/{entry_id}", json={"quantity": 3, "acquired_on": "1850-05-01"})
+    assert response.status_code == 200 and response.json()["quantity"] == 3
+    assert client.patch(f"/me/collection/{entry_id}", json={"acquired_on": "1850-05-02"}).status_code == 422
+
+
 def test_delete_account_requires_confirmation_and_removes_everything(client, db_session, enabled, prints):
     client.post("/me/collection", json={"card_print_id": prints["OP01-001"].id})
     client.post("/me/watchlist", json={"card_print_id": prints["OP01-002"].id})
