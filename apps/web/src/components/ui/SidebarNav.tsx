@@ -2,60 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useMemo, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 
-interface NavItem {
-  href: string;
-  label: string;
-  children?: { href: string; label: string }[];
-}
-
-interface NavGroup {
-  key: string;
-  label: string;
-  items: NavItem[];
-  defaultCollapsed?: boolean;
-}
-
-// Public tier - visible to every visitor, signed in or not (collector-first
-// redesign audit, Phase 3). "Cards" now points at the real /cards catalogue
-// (image-led grid + Market Index) - /search still exists for the multi-type
-// command-center search, but is no longer the primary card-browsing surface
-// (see src/app/search/page.tsx's redirect). There is still no "Sets" entry -
-// see collector-blueprint.pdf.
-//
-// "Market Index" was removed here on 2026-08-19 (tranche 1A). It pointed at
-// /market/movers, which had become the same print catalogue as /cards under a
-// different sort - a second public catalogue surface, not a second
-// destination. The *metric* is untouched: every tile and every print page
-// still leads with its Market Index, and /market/movers now temporarily
-// redirects into /cards?sort=index_desc (see app/market/movers/page.tsx). The
-// route is expected back once there is enough history for real movement
-// analytics, which is when it will earn a nav entry again.
-// Exported so TopBar's desktop public nav renders exactly this list rather
-// than declaring a second one that could drift (or quietly gain an admin
-// entry) - see components/ui/TopBar.tsx.
-//
-// "Analytics" was added on 2026-09-06 (Analytics 1A-B). It points at
-// /analytics, the current market landscape - coverage, price distribution and
-// index composition over the whole catalogue. It is public because everything
-// on it is: the endpoints behind it (/analytics/market/bases, /filters,
-// /overview) are deliberately unauthenticated, and every number they return is
-// already served unauthenticated per-print through /prints.
-//
-// The seven LEGACY /analytics/* leaf pages (collection, wishlist, grading,
-// buy-decisions, sell-decisions, portfolio-risk, digest) are deliberately NOT
-// exposed here and gain no entry from this: they describe what one collector
-// owns, are gated by /analytics/:path* in proxyGuard, and remain the same
-// unlinked product-debt area they were. /market/movers is likewise untouched -
-// it is still a redirect into /cards?sort=index_desc, and this page is not its
-// replacement (it reports what prices ARE, not how they moved).
-export const PUBLIC_NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Home" },
-  { href: "/cards", label: "Card Prices" },
-  { href: "/analytics", label: "Market" },
-];
+import { PUBLIC_NAV_ITEMS, publicSectionActive, type NavItem } from "./publicNavigation";
+import styles from "./PublicDrawer.module.css";
 
 // Collector tier - only shown once a session exists. The old trading and
 // analytics pages (grading, activity, dashboard, search, signals, buy/sell
@@ -65,145 +15,67 @@ const COLLECTOR_ITEMS: NavItem[] = [
   { href: "/watchlist", label: "Watchlist" },
 ];
 
-// A role="admin" session gets exactly one entry here, not the full
-// operational route list - the detailed admin sub-navigation (Catalog Ops,
-// Cache, Job Locks, etc.) lives inside the admin area itself (see
-// app/admin/(protected)/layout.tsx's AdminSubNav), not the main
-// collector-facing sidebar. This keeps infrastructure-heavy navigation out
-// of the surface every visitor sees.
+// A role="admin" session gets exactly one entry here, not the operational
+// route list - admin sub-navigation lives inside the admin area itself
+// (components/admin/AdminNavigation), never in the drawer every visitor sees.
 const ADMIN_ITEMS: NavItem[] = [{ href: "/admin", label: "Admin" }];
 
-function buildGroups(isAuthenticated: boolean, isAdmin: boolean): NavGroup[] {
-  const groups: NavGroup[] = [{ key: "public", label: "Browse", items: PUBLIC_NAV_ITEMS }];
-  if (isAuthenticated) {
-    groups.push({ key: "collector", label: "Collector", items: COLLECTOR_ITEMS });
-  }
-  if (isAdmin) {
-    groups.push({ key: "admin", label: "Admin", items: ADMIN_ITEMS });
-  }
-  return groups;
-}
-
 function isActive(pathname: string, href: string): boolean {
+  if (href === "/" || href === "/cards" || href === "/analytics") return publicSectionActive(pathname, href);
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** The active treatment is teal-on-elevated with a teal edge, not just a
- * slightly lighter surface. `--bg-elevated` against the drawer's own
- * `--bg-surface` is a 4-value shift that is legible on a colour-managed
- * desktop panel and effectively invisible on a phone in daylight, which left
- * the mobile drawer with no clear indication of the current destination.
- * Teal is the design system's assigned navigation colour, so this reads the
- * same way in the drawer and in the header's PublicNav.
- *
- * `aria-current="page"` matches what TopBar's PublicNav already sets, so the
- * current destination is announced identically on both navigation surfaces. */
-function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+function Section({ label, items, pathname }: { label: string; items: NavItem[]; pathname: string }) {
   return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={`block truncate rounded-control border-l-2 px-2 py-1 text-[13px] transition-colors ${
-        active
-          ? "border-accent-teal bg-accent-teal/12 font-medium text-accent-teal-hover"
-          : "border-transparent text-text-secondary hover:bg-bg-elevated/60 hover:text-text-primary"
-      }`}
-    >
-      {label}
-    </Link>
+    <section className={styles.section} aria-label={label}>
+      <h2 className={styles.label}>{label}</h2>
+      <ul>
+        {items.map((item) => (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={isActive(pathname, item.href) ? "page" : undefined}
+              className={styles.row}
+            >
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
-function NavItemBlock({ item, pathname }: { item: NavItem; pathname: string }) {
-  const active = isActive(pathname, item.href);
-  const childActive = item.children?.some((c) => isActive(pathname, c.href)) ?? false;
-  const [open, setOpen] = useState(active || childActive);
-
-  if (!item.children) {
-    return <NavLink href={item.href} label={item.label} active={active} />;
-  }
-
-  return (
-    <div>
-      <div className="flex items-center gap-1">
-        <Link
-          href={item.href}
-          aria-current={active ? "page" : undefined}
-          className={`block flex-1 truncate rounded-control border-l-2 px-2 py-1 text-[13px] transition-colors ${
-            active
-              ? "border-accent-teal bg-accent-teal/12 font-medium text-accent-teal-hover"
-              : "border-transparent text-text-secondary hover:bg-bg-elevated/60 hover:text-text-primary"
-          }`}
-        >
-          {item.label}
-        </Link>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? `Collapse ${item.label}` : `Expand ${item.label}`}
-          className="shrink-0 rounded px-1 text-[10px] text-text-faint hover:text-text-secondary"
-        >
-          {open ? "▾" : "▸"}
-        </button>
-      </div>
-      {open && (
-        <div className="ml-2 mt-0.5 space-y-0.5 border-l border-border-muted pl-2">
-          {item.children.map((child) => (
-            <NavLink
-              key={child.href}
-              href={child.href}
-              label={child.label}
-              active={isActive(pathname, child.href)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function GroupBlock({ group, pathname }: { group: NavGroup; pathname: string }) {
-  const groupActive = group.items.some(
-    (i) => isActive(pathname, i.href) || i.children?.some((c) => isActive(pathname, c.href)),
-  );
-  const [open, setOpen] = useState(!group.defaultCollapsed || groupActive);
-
-  return (
-    <div className="px-2">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="mb-1 flex w-full items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-wide text-text-faint hover:text-text-muted"
-      >
-        <span>{group.label}</span>
-        <span className="text-[9px]">{open ? "▾" : "▸"}</span>
-      </button>
-      {open && (
-        <nav className="space-y-0.5 pb-3">
-          {group.items.map((item) => (
-            <NavItemBlock key={item.href} item={item} pathname={pathname} />
-          ))}
-        </nav>
-      )}
-    </div>
-  );
-}
-
+/** The mobile drawer (AppShell, below `md`), in the public shell's palette and
+ * type: flat sections, 48px rows, and the current destination marked with the
+ * same gold rule the header nav uses. Signed in, it also carries Account and
+ * Sign out, which leave the header below `sm` so the bar never wraps. */
 export function SidebarNav({ className = "" }: { className?: string }) {
   const pathname = usePathname() ?? "";
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const isAdmin = session?.user?.role === "admin";
-  const groups = useMemo(() => buildGroups(isAuthenticated, isAdmin), [isAuthenticated, isAdmin]);
+  const collectorItems = session?.sessionKind === "collector"
+    ? [...COLLECTOR_ITEMS, { href: "/account", label: "Account" }]
+    : COLLECTOR_ITEMS;
 
   return (
-    <div className={`overflow-y-auto py-3 ${className}`}>
-      {groups.map((group, idx) => (
-        <div key={group.key}>
-          {idx > 0 && <div className="mx-4 my-1 border-t border-border-muted" />}
-          <GroupBlock group={group} pathname={pathname} />
+    <nav aria-label="Site navigation" data-mobile-drawer="" className={`${styles.drawer} ${className}`}>
+      <Section label="Browse" items={PUBLIC_NAV_ITEMS} pathname={pathname} />
+      {isAuthenticated && <Section label="Collector" items={collectorItems} pathname={pathname} />}
+      {isAdmin && <Section label="Admin" items={ADMIN_ITEMS} pathname={pathname} />}
+      {isAuthenticated && (
+        <div className={styles.footer}>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/" })}
+            title={session?.user?.name || session?.user?.email || undefined}
+            className={styles.signOut}
+          >
+            Sign out
+          </button>
         </div>
-      ))}
-    </div>
+      )}
+    </nav>
   );
 }

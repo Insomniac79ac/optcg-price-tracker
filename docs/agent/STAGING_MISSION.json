@@ -43,27 +43,27 @@
     "impact": {
       "resources": [
         {
-          "name": "GitHub Actions: ops-readonly db-diagnostic (three new read-only SQL files)"
+          "name": "None: documentation only"
         }
       ],
       "routes": [
         "None"
       ],
       "dependencies": [
-        "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156 (unchanged)"
+        "security fixes already on staging: PR #159, #160, #161, #162, #165"
       ],
-      "deployment_impact": "Three read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes.",
+      "deployment_impact": "One Markdown file under docs/agent/security changes. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes.",
       "database_writes": 0,
       "source_requests": 0,
-      "estimated_runtime_minutes": 5
+      "estimated_runtime_minutes": 1
     },
     "recovery": {
-      "artifact": "a4edb7144c92ead2fdb0fbd2ce9ae53b4935cdd8",
-      "procedure": "Native revert of this PR removes the three diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
-      "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
+      "artifact": "602c47abf2cf97f39276b524fbeaa91eea6fc8e6",
+      "procedure": "Native revert of this PR restores the previous status cells. No data, schema, provider or service configuration to undo.",
+      "trigger": "A status cell that misstates what a merged PR fixed.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
       "validation": [
-        "scripts/tests/test_ops_runbooks.py"
+        "scripts/tests/test_staging_policy.py"
       ]
     },
     "verification": {
@@ -71,11 +71,9 @@
         "engineering-gate"
       ],
       "post_change": [
-        "scripts/diagnostics/yuyu-f1-sizing.sql",
-        "scripts/diagnostics/yuyu-f3-aliases.sql",
-        "scripts/diagnostics/storage-savings.sql"
+        "docs/agent/security/2026-10-16-accounts-audit.md"
       ],
-      "observation_window": "After merge: one ops-readonly db-diagnostic run per new file completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
+      "observation_window": "After merge: the audit doc on staging shows the updated status cells; Verify staging merge passes."
     }
   },
   "diff_sha256": "8b666e9ea7e9281158c36c36854f163c5bf748d39031eb42fa3e89235c4c8b4e"

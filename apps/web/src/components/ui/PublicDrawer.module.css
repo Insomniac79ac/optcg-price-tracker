@@ -1,0 +1,94 @@
+/* Mobile drawer in the public shell's palette (PublicShell.module.css) and the
+ * homepage's type: mono kicker labels, Manrope rows, gold current marker.
+ * Colours are literal so the drawer looks the same on routes that still fall
+ * back to the :root palette. */
+.panel {
+  position: relative;
+  height: 100%;
+  width: min(18rem, 84vw);
+  background: #101b20;
+  border-right: 1px solid #1d2b30;
+  box-shadow: 0 24px 48px rgb(0 0 0 / 0.45);
+}
+
+.drawer {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 0.75rem 0 calc(1rem + env(safe-area-inset-bottom));
+  color: #eef2f2;
+}
+
+.section + .section {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #1d2b30;
+}
+
+.label {
+  margin: 0;
+  padding: 0.25rem 1.25rem 0.375rem;
+  font: 500 0.6875rem/1.6 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #8dc9c4;
+}
+
+.section ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row,
+.signOut {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 1.25rem;
+  border-left: 2px solid transparent;
+  font: 600 0.9375rem/1.3 var(--font-sans);
+  color: #b4c3c6;
+  text-decoration: none;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.row:hover,
+.signOut:hover {
+  color: #a6d8d3;
+}
+
+.row[aria-current="page"] {
+  color: #eef2f2;
+  background: #152329;
+  border-left-color: #d6a84f;
+}
+
+.row:focus-visible,
+.signOut:focus-visible {
+  outline: 2px solid #a6d8d3;
+  outline-offset: -3px;
+}
+
+.footer {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #1d2b30;
+}
+
+.signOut {
+  background: transparent;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .signOut {
+    transition: none;
+  }
+}
