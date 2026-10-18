@@ -7,7 +7,8 @@ import { auth } from "@/lib/auth";
 import { collectorIdentity, type CollectorIdentity } from "@/lib/collectorApi";
 import { formatDate } from "@/lib/format";
 
-import { DeleteAccount, SignOutButton } from "./AccountActions";
+import { DeleteAccount } from "./AccountActions";
+import { OverviewStrip } from "./OverviewStrip";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,11 @@ const OTHER_CURRENCIES = ["USD", "EUR", "GBP"] as const;
 
 const LINK = "inline-flex min-h-11 items-center rounded-control border border-[#3e696a] px-4 text-sm font-medium text-[#8dc9c4] transition-colors hover:border-accent-teal hover:text-text-primary md:min-h-10";
 
-/** The signed-in collector's account (PLAN §D4): profile, preferences,
- * export, delete, sign out. src/proxy.ts already sends anyone who is not a
- * collector to /sign-in; this page checks the session again on the server
- * and never trusts the proxy alone. All API calls happen server-side or
+/** The signed-in collector's account (PLAN §D4): an overview of the
+ * collection and watchlist, then profile, preferences, export and delete.
+ * Sign out lives in the header (the drawer below 640px), not here.
+ * src/proxy.ts already sends anyone who is not a collector to /sign-in; this
+ * page checks the session again on the server and never trusts the proxy alone. All API calls happen server-side or
  * through /api/me; the page holds no token. */
 export default async function AccountPage() {
   const identity = collectorIdentity(await auth());
@@ -40,7 +42,14 @@ export default async function AccountPage() {
           </div>
         </AccountHero>
 
-        {overview.state === "ok" ? <AccountSections identity={identity} overview={overview} /> : <Unavailable state={overview.state} />}
+        {overview.state === "ok" ? (
+          <>
+            <OverviewStrip collection={overview.collection} watchlist={overview.watchlist} />
+            <AccountSections identity={identity} overview={overview} />
+          </>
+        ) : (
+          <Unavailable state={overview.state} />
+        )}
       </main>
     </div>
   );
@@ -110,11 +119,6 @@ function AccountSections({ identity, overview }: { identity: CollectorIdentity; 
           <DeleteAccount />
         </div>
       </section>
-
-      <section aria-labelledby="sign-out" className={`${styles.wide} border-t border-[#2b3d43] pt-6`}>
-        <h2 id="sign-out" className="sr-only">Sign out</h2>
-        <SignOutButton />
-      </section>
     </div>
   );
 }
@@ -127,7 +131,6 @@ function Unavailable({ state }: { state: "disabled" | "error" }) {
       ) : (
         <p role="alert">Your account details could not be loaded just now. Please try again in a moment.</p>
       )}
-      <SignOutButton />
     </div>
   );
 }

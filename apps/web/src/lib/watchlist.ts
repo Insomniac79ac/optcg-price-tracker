@@ -45,6 +45,28 @@ export function targetDistance(entry: Pick<WatchEntry, "target_jpy" | "target_ga
   return `${yen(Math.abs(entry.target_gap_jpy))} ${entry.target_gap_jpy > 0 ? "above" : "below"} your target`;
 }
 
+/** The watch whose value is nearest its target, in either direction: the
+ * smallest API gap measured against that target (|gap| / target), so a ¥500
+ * card ¥50 away does not beat a ¥30,000 card ¥600 away. Only orders; the words
+ * shown for it are targetDistance's, the same as its /watchlist row. null when
+ * no watch has both a target and a price. */
+export function closestToTarget<T extends Pick<WatchEntry, "id" | "target_jpy" | "target_gap_jpy">>(entries: readonly T[]): T | null {
+  let best: { entry: T; ratio: number } | null = null;
+  for (const entry of entries) {
+    if (entry.target_jpy === null || entry.target_jpy <= 0 || entry.target_gap_jpy === null) continue;
+    const ratio = Math.abs(entry.target_gap_jpy) / entry.target_jpy;
+    if (
+      !best ||
+      ratio < best.ratio ||
+      (ratio === best.ratio && Math.abs(entry.target_gap_jpy) < Math.abs(best.entry.target_gap_jpy as number)) ||
+      (ratio === best.ratio && Math.abs(entry.target_gap_jpy) === Math.abs(best.entry.target_gap_jpy as number) && entry.id < best.entry.id)
+    ) {
+      best = { entry, ratio };
+    }
+  }
+  return best?.entry ?? null;
+}
+
 /** "Checked 3 h ago", "Checked 2 days ago"; "Check time unknown" when the API
  * does not know. Never invents a time. */
 export function checkedAgo(iso: string | null | undefined, now: Date): string {

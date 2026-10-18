@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PUBLIC_NAV_ITEMS } from "./SidebarNav";
-import { publicSectionActive } from "./publicNavigation";
+import { publicSectionActive, PUBLIC_NAV_ITEMS } from "./publicNavigation";
 import styles from "./PublicShell.module.css";
 
 const ICON_PATHS: Record<string, string> = {

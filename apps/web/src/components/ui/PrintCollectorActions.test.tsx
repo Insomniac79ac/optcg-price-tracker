@@ -130,6 +130,47 @@ describe("PrintCollectorActions", () => {
     expect(lastCall()).toEqual({ url: "/api/me/watchlist", method: "POST", body: { card_print_id: 5, target_jpy: 5000 } });
   });
 
+  it("shows what is typed with commas and sends plain numbers", async () => {
+    const ready = shelf("ready");
+    render(<PrintCollectorActions cardPrintId={5} versionLabel={LABEL} shelf={ready} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add to collection" }));
+    const paid = screen.getByLabelText(/what you paid per card/i) as HTMLInputElement;
+    fireEvent.change(paid, { target: { value: "30000" } });
+    expect(paid.value).toBe("30,000");
+    fireEvent.change(screen.getByLabelText("How many"), { target: { value: "１２" } });
+    expect((screen.getByLabelText("How many") as HTMLInputElement).value).toBe("12");
+    fireEvent.click(screen.getByRole("button", { name: "Add to collection" }));
+    await waitFor(() => expect(ready.refresh).toHaveBeenCalled());
+    expect(lastCall().body).toEqual({ card_print_id: 5, quantity: 12, paid_jpy_per_card: 30000, acquired_on: null });
+  });
+
+  it("sends a grouped target as a plain number", async () => {
+    const ready = shelf("ready");
+    render(<PrintCollectorActions cardPrintId={5} versionLabel={LABEL} shelf={ready} />);
+    fireEvent.click(screen.getByRole("button", { name: "Watch" }));
+    const target = screen.getByLabelText(/target price/i) as HTMLInputElement;
+    fireEvent.change(target, { target: { value: "¥5,000" } });
+    expect(target.value).toBe("5,000");
+    fireEvent.click(screen.getByRole("button", { name: "Watch" }));
+    await waitFor(() => expect(ready.refresh).toHaveBeenCalled());
+    expect(lastCall().body).toEqual({ card_print_id: 5, target_jpy: 5000 });
+  });
+
+  it("keeps the quantity and yen limits", () => {
+    render(<PrintCollectorActions cardPrintId={5} versionLabel={LABEL} shelf={shelf("ready")} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add to collection" }));
+    const quantity = screen.getByLabelText("How many") as HTMLInputElement;
+    fireEvent.change(quantity, { target: { value: "10000" } });
+    expect(quantity.value).toBe("10,000");
+    fireEvent.click(screen.getByRole("button", { name: "Add to collection" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("from 1 to 9,999");
+    fireEvent.change(quantity, { target: { value: "9,999" } });
+    fireEvent.change(screen.getByLabelText(/what you paid per card/i), { target: { value: "100,000,001" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to collection" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/whole number of yen/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("refuses a zero target price", () => {
     render(<PrintCollectorActions cardPrintId={5} versionLabel={LABEL} shelf={shelf("ready")} />);
     fireEvent.click(screen.getByRole("button", { name: "Watch" }));
@@ -179,6 +220,7 @@ describe("parseYen", () => {
     ["  ", null],
     ["1200", 1200],
     ["¥1,200", 1200],
+    ["１，２００円", 1200],
     ["0", 0],
   ])("reads %j as %j", (raw, expected) => expect(parseYen(raw, { allowZero: true })).toBe(expected));
   it.each(["1.5", "-1", "1e3", "100000001", "abc"])("rejects %j", (raw) => expect(parseYen(raw, { allowZero: true })).toBe("invalid"));
