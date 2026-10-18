@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "SNKRDUNK coverage gap (owner task 2026-10-18, diagnostic only): add four reviewed read-only db-diagnostic files that classify every active verified high-rarity print (all but base C, UC, R and SR) without a fresh SNKRDUNK raw price into never discovered, discovered but unresolved (with listing kind: plain, parallel, SP, manga), mapped but not refreshed, probably not sold raw, and other; plus coverage by release, 14 days of discovery activity and first raw prices, and samples. Register them in ops-readonly. Staging only; PSA10 not read; no rule, alias, proposal, mapping, enqueue, collector, setting, price, identity, Market Value/Index, secret or Railway change; no runbook run in this PR.",
+ "mission": "D9 F1 approval runbook (owner ask 2026-10-18 23:11Z, step 2): add the ops-write runbook approve-f1-batch, which approves current exact Yuyu-Tei proposals made by the F1 listing-kind rule in batches of about 500 through the admin page's approve_exact_proposal. Each run waits for the owner in staging-ops; the dry run lists every proposal, a 20-row seeded random sample and storage room; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR (batch 1 only after merge, owner-approved).",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,24 +20,32 @@
  "impacts": [
   {
    "files": [
-    "scripts/diagnostics/snkrdunk-coverage-gap.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-discovery.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-releases.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-samples.sql"
+    "scripts/ops/f1_approve.py",
+    "scripts/ops/run.py"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Four SELECT/WITH-only diagnostics (11 statements) over card_prints, canonical_cards, release_products, sources, source_card_mappings, freshness_work, freshness_price_states, freshness_attempts, source_mapping_proposal_groups, snkrdunk_candidates, snkrdunk_discovery_runs and price_observations (raw floor only), run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. No write, no source request."
+   "reason": "New write runbook approve-f1-batch registered in RUNBOOKS as (write, collector-affecting). Selection is read-only (default_transaction_read_only session); an apply runs only in ops-write after the owner's staging-ops approval, refuses unless the rebuilt list hashes to the dry run's SHA-256, and calls approve_exact_proposal (every admin guard: exact, pending, current, same digest and resolver version, sole recommended print, candidate state, no rejected or conflicting mapping, print verified and not already monitored) once per proposal per transaction. Exact proposals only; ambiguous ones are never approved. run.py --count now defaults per runbook (enqueue-remaining-50 keeps 50)."
   },
   {
    "files": [
-    ".github/workflows/ops-readonly.yml"
+    ".github/workflows/ops-write.yml"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds snkrdunk-coverage-gap, snkrdunk-coverage-gap-discovery, snkrdunk-coverage-gap-releases and snkrdunk-coverage-gap-samples to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
+   "reason": "Adds approve-f1-batch to the runbook choice, makes count optional (empty uses the runbook default) and raises the runbook job timeout to 180 minutes (one fresh resolver run per approval). The owner-approval job, environments, permissions, secrets and triggers are unchanged."
+  },
+  {
+   "files": [
+    "scripts/tests/test_ops_runbooks.py",
+    "docs/agent/OPS_RUNBOOKS.md"
+   ],
+   "effects": [
+    "infrastructure"
+   ],
+   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation."
   }
  ],
  "deployment_verification": {
@@ -55,25 +63,25 @@
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-readonly db-diagnostic (four new read-only SQL files)"
+     "name": "GitHub Actions: ops-write approve-f1-batch (owner-approved runs only)"
     }
    ],
    "routes": [
     "None"
    ],
    "dependencies": [
-    "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156 and #166 (unchanged); D9 F1 delivery PR #173 (unchanged)"
+    "ops-write from PR #150; D9 F1 rule from PR #171 and its rollout PR #173 (unchanged); approve_exact_proposal (unchanged)"
    ],
-   "deployment_impact": "Four read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
+   "deployment_impact": "Runbook code and its workflow choice only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched. Merging writes nothing; each later batch is a separate owner-approved run.",
    "database_writes": 0,
    "source_requests": 0,
    "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-   "procedure": "Native revert of this PR removes the four diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
-   "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
-   "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+   "artifact": "99844c6fba7fe0ce621b835e8afc1227b4c41483",
+   "procedure": "Native revert of this PR removes the runbook and its workflow choice. No data, schema, provider or service configuration to undo. An approved batch is undone by the admin mapping endpoints (per mapping), not by this revert.",
+   "trigger": "A dry run that fails, selects a proposal that is not an exact pending F1 proposal, or a sample row the owner judges wrong.",
+   "backup": "Not applicable for this PR: no schema or row change. Railway Postgres daily backups continue.",
    "validation": [
     "scripts/tests/test_ops_runbooks.py"
    ]
@@ -91,11 +99,20 @@
    "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
- "diff_sha256": "416b5b855428c67e4c607edd6cfb3430c175347cfa0c94237432264c035be8fe",
+ "diff_sha256": "0b377a9a4f62d1bf6d8e092dfa4729f3f785799f8dd79e30c4ba175e5f3cc1c5",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
- ]
+  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write approve-f1-batch runs of about 500 (dry run first, apply pinned to its SHA-256), with a 48 h storage check after each."
+ ],
+ "verification": {
+  "required_checks": [
+   "engineering-gate"
+  ],
+  "post_change": [
+   "scripts/ops/f1_approve.py"
+  ],
+  "observation_window": "After merge: one approve-f1-batch dry run (owner-approved in staging-ops) completes with status ok, batch_size about 500 and no excluded reason the owner did not expect; batch 1 apply only after the owner reviews it, then a 48 h storage check."
+ }
 }
