@@ -35,6 +35,7 @@ on:
           - freshness-not-met
           - identity-capture-work
           - official-image-assets
+          - official-image-repeats
           - storage-savings
           - table-sizes
           - work-by-state
