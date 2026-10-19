@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -520,6 +520,82 @@ class F1Approve(unittest.TestCase):
             approved, stopped = f1_approve.approve(session, entries, run_label="x", now=lambda: utc(2026, 10, 19, 2, 1))
         fake.assert_not_called()
         self.assertEqual((approved, stopped["code"]), ([], "quiet_window"))
+
+
+class RefreshBackfill(unittest.TestCase):
+    def row(self, mid, source="yuyutei"):
+        return {"mapping_id": mid, "source": source, "card_print_id": mid + 5000,
+                "listing_identity": f"yuyutei:op01:{mid}", "source_url": f"https://yuyu-tei.jp/{mid}",
+                "card_code": "OP01-001", "rarity": "R", "variant": "base"}
+
+    def rates(self):
+        return {"variants": {"ex_steps": {"planning_mb_day_s9": 32.0}}, "room_to_reserve_mb_s9": 2800.0}
+
+    def test_list_is_pinned_on_decision_fields_only(self):
+        rows = [self.row(i) for i in range(1, 6)]
+        _, sha, doc = refresh_backfill.pinned_list(rows, 3)
+        self.assertEqual([e["mapping_id"] for e in doc["entries"]], [1, 2, 3])
+        self.assertEqual(set(doc["entries"][0]), set(refresh_backfill.LIST_KEYS))
+        moved = [dict(r, source_url="https://elsewhere") for r in rows]
+        self.assertEqual(refresh_backfill.pinned_list(moved, 3)[1], sha)  # display fields are not pinned
+        self.assertNotEqual(refresh_backfill.pinned_list(rows[1:], 3)[1], sha)  # a new row changes it
+        self.assertEqual(refresh_backfill.sample(rows, sha), refresh_backfill.sample(rows, sha))
+        with self.assertRaises(common.Refused):
+            refresh_backfill.pinned_list([], 3)
+
+    def test_apply_refuses_without_or_on_a_different_sha(self):
+        sha = refresh_backfill.pinned_list([self.row(1)], 5)[1]
+        refresh_backfill.check_apply(False, "", sha)
+        refresh_backfill.check_apply(True, sha, sha)
+        for bad in ("", "xyz", "0" * 64):
+            with self.assertRaises(common.Refused):
+                refresh_backfill.check_apply(True, bad, sha)
+
+    def test_sha_mismatch_refuses_before_any_write_session(self):
+        rows = [self.row(1), self.row(2, "snkrdunk")]
+        with tempfile.TemporaryDirectory() as out, \
+                mock.patch.object(refresh_backfill, "unplanned", return_value=(rows, 10)), \
+                mock.patch.object(refresh_backfill, "plan") as plan, \
+                mock.patch("ops.db.engine"), mock.patch("sqlalchemy.orm.Session"), \
+                mock.patch("yuyu_identity_capture_enqueue.staging_session") as writable:
+            with self.assertRaises(common.Refused):
+                refresh_backfill.run(out, apply=True, expected_sha256="0" * 64)
+            plan.assert_not_called()
+            writable.assert_not_called()
+
+    def test_dry_run_summary_and_storage_estimate(self):
+        rows = [self.row(1), self.row(2), self.row(3, "snkrdunk")]
+        with tempfile.TemporaryDirectory() as out, \
+                mock.patch.object(refresh_backfill, "unplanned", return_value=(rows, 2000)), \
+                mock.patch("ops.db.engine"), mock.patch("sqlalchemy.orm.Session"), \
+                mock.patch.object(storage_rates, "load_events", return_value={"window_start": "x"}), \
+                mock.patch.object(storage_rates, "fetch_series"), \
+                mock.patch.object(storage_rates, "compute", return_value=self.rates()):
+            summary = refresh_backfill.run(out, count=2)
+            self.assertTrue((Path(out) / "backfill-list.json").is_file())
+        self.assertEqual(summary["status"], "DRY_RUN_OK")
+        self.assertEqual((summary["batch_size"], summary["unplanned_total"], summary["written"]), (2, 3, 0))
+        self.assertEqual(summary["by_source"], {"yuyutei": 2})
+        storage = summary["storage"]
+        self.assertEqual(storage["label"], "ESTIMATE")
+        self.assertEqual(storage["mb_day_per_refresh_row"], 0.016)
+        self.assertEqual(storage["added_mb_day"], 0.03)
+        self.assertEqual(storage["days_to_reserve_now"], 87.5)
+
+    def test_count_limits_and_read_only_sql(self):
+        self.assertEqual(refresh_backfill.check_count(None), 500)
+        for bad in (0, 1001, "5"):
+            with self.assertRaises(common.Refused):
+                refresh_backfill.check_count(bad)
+        for sql in (refresh_backfill.UNPLANNED_SQL, refresh_backfill.PLANNED_SQL):
+            low = sql.lower()
+            self.assertTrue(low.strip().startswith("with"))
+            for word in ("insert", "update", "delete", "for update"):
+                self.assertNotIn(word, low)
+
+    def test_registered_as_collector_affecting_write(self):
+        self.assertEqual(run.RUNBOOKS["plan-refresh-backfill"][:2], ("write", True))
+        self.assertEqual(run.kind_of("plan-refresh-backfill", False), (False, False))
 
 
 class FleetAndImages(unittest.TestCase):
