@@ -51,12 +51,13 @@
    "files": [
     "scripts/tests/test_ops_runbooks.py",
     "docs/agent/OPS_RUNBOOKS.md",
-    "docs/agent/plans/rollout-receipt-publish/PLAN.md"
+    "docs/agent/plans/rollout-receipt-publish/PLAN.md",
+    "docs/agent/ROADMAP.md"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job."
+   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job. ROADMAP.md: item 1 and 11a/b point at this PR; new item 23 for the receipt plan."
   }
  ],
  "deployment_verification": {
@@ -110,7 +111,7 @@
    "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
- "diff_sha256": "531a24d94fd06c705160db3b2fe24fedcbb09f61ba09ac8ead34616fc18b1f7e",
+ "diff_sha256": "6f6a1e0b6d3613ad829f5ca01c8a4595851181e70ffcf3e48da0eeae4d67b2af",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
