@@ -46,7 +46,7 @@
    "scripts/verify_yuyu_raw_reader_component.py"
   ],
   "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
-  "yuyu_reader_component": "99844c6fba7fe0ce621b835e8afc1227b4c41483",
+  "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
   "yuyu_capacity_cadence": true
  },
  "safeguards": {
@@ -87,7 +87,7 @@
    "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
- "diff_sha256": "146d037d3c199ed803cb254d58f17f7afa8732796718ae053e940a51b63766e3",
+ "diff_sha256": "ff401893bdb8485bc6d0ddfa04b49d8f872fbbb79f84896190907d1deabf4d3c",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
