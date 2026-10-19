@@ -64,7 +64,7 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 
 | # | Item | Status | Class (next step) | Main blocker |
 |---|---|---|---|---|
-| 1 | RAW coverage to 75% | in progress (60.6% fresh) | AMBER | F1 approval runbook not built; owner approves each batch |
+| 1 | RAW coverage to 75% | in progress (60.6% fresh) | AMBER | F1 approval runbook in #176; owner approves each batch |
 | 2 | Freshness (24 h target, 23 h dispatch) | in progress (met outside quarantine) | AMBER | 67 SNKRDUNK items in identity quarantine |
 | 3 | Continuous discovery | in progress (Yuyu-Tei running, SNKRDUNK stalled) | AMBER | SNKRDUNK discovery fix not approved |
 | 4 | PSA10 (separate category, never in Index) | planned (OFF) | owner decision, then AMBER | owner switch-on; six build pieces missing |
@@ -197,10 +197,12 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 - **Status: in progress.** Runbooks (#139, #143, #150, #155, #157, #158), guardrails as code (#139),
   raw health with 0 actions, collector-token check (#130).
 - **Gaps found while writing this file:**
-  a. No `ops-write` runbook to approve F1 proposal batches (item 1).
-  b. `fleet-vs-receipt` still defaults to the PR #103 receipt, so it reports all nine yuyutei shards as
-     mismatched after #173 (run 39174128557, `records_after_receipt` 9). Commit the #173 rollout
-     receipt as the new baseline.
+  a. F1 approval runbook `approve-f1-batch` (ops-write, about 500 per owner-approved batch, dry run
+     first): #176.
+  b. #176 commits the #173 rollout receipt and makes `fleet-vs-receipt` compare each collector with
+     the newest receipt that deployed it (default chain PR #103 then PR #173: snkrdunk on a504e47,
+     the nine shards on 2bcbe90). Was: all nine shards mismatched against the PR #103 receipt (run
+     39174128557).
   c. `scripts/ops/storage_events.json` still lacks the remaining-50 step (session 15 item).
   d. The `staging-state` summary carries no coverage, dual-source, zero-source or Market Value
      numbers; the full `CURRENT_STATE.yaml` is only in the artifact, which cloud sessions cannot
@@ -354,6 +356,19 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
   every new branch fails closed, the evaluator rules are unchanged, the first delivery after it is a
   docs PR (scope skip) before any collector PR, recovery is a native revert. Needs hold-for-owner
   (touches `.github/`) and an `Independent security review:` line, since it is policy tooling.
+- **Blocker:** owner go. Not started.
+
+### 23. Rollout receipts readable by sessions
+
+- **Status: planned, plan only** (owner request 2026-10-18 23:43Z: plan, don't build).
+- **Problem.** A collector rollout receipt exists only in the `staging-delivery-<sha>` CI artifact,
+  which cloud sessions cannot download, so the #173 fleet check needed the owner to download and
+  upload it by hand.
+- **Plan:** [plans/rollout-receipt-publish/PLAN.md](plans/rollout-receipt-publish/PLAN.md). The
+  delivery job prints the receipt as `rollout-receipt` annotations (readable over REST), and
+  `fleet-vs-receipt` fetches receipts from recent delivery artifacts inside Actions. No commit to
+  `staging` from the job (needs a branch-rule bypass and starts a CI run per rollout).
+- **Effort:** S, about 150 lines (ESTIMATE). Class AMBER, `hold-for-owner` (touches `.github/`).
 - **Blocker:** owner go. Not started.
 
 ## 4. Done and not to repeat

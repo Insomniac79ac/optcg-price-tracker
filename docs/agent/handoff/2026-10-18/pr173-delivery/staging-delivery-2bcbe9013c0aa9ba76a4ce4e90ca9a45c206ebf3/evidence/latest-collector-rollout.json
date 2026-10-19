@@ -1,0 +1,217 @@
+{
+  "schema_version": 2,
+  "target": "staging",
+  "started_at": "2026-10-18T15:25:49.912315+00:00",
+  "completed_at": "2026-10-18T16:02:55.217652+00:00",
+  "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+  "sequential": true,
+  "github_trigger_preflight": {
+    "snkrdunk-collector": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-0": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-1": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-2": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-3": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-4-v2": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-5": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-6": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-7": "no trigger, auto-deploy disabled",
+    "yuyutei-collector-shard-8": "no trigger, auto-deploy disabled"
+  },
+  "before": {
+    "yuyutei-collector-shard-0": {
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "deployment_id": "0a3c7f35-d282-4e25-8197-70f8f3283bfa",
+      "schedule_utc": "0,30 * * * *",
+      "start_command_sha256": "e2fac55c87565739857a67cac1da4bd14e6ab1f292d063ff592e8500cd7627c4",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:fc8c991c49d40c851ee67c59d226f53bc04837c9691fd86439db28782bc15e13",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-1": {
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "deployment_id": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a",
+      "schedule_utc": "3,33 * * * *",
+      "start_command_sha256": "8f3d2eb2c515546c9aebb2a55deaa9c6f42672406a188a744ce839d9b8c0aa41",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:5f4a320fa136bd9cbe5be877ecfdc6cb610f1adfca2012eea63f1155b03121d9",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-2": {
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "deployment_id": "ac493f4b-bf25-4598-bd48-5f73c9d2c011",
+      "schedule_utc": "6,36 * * * *",
+      "start_command_sha256": "635aac2bcd3a6c4059182c7c67e2ce2a9f06a288b52b6a1f073856381502041d",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:8baef84c6f0e1eb0689cebf731a8f1a51d319458a2d0dd9f1c954e93e3252731",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-3": {
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "deployment_id": "e42e9c4a-b54d-495d-9010-072ecdaa3241",
+      "schedule_utc": "9,39 * * * *",
+      "start_command_sha256": "cca60cb052e9556a09ef5c82ffb561dbcf1e06e89cedd1288b064de67950027d",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:9a3247bd9c29b16e548013a27fd9c33926235cc0ff9310c7c886009dbd2f7244",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-4-v2": {
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "deployment_id": "548d1a23-9bc2-49d4-9d15-62a08edeca0d",
+      "schedule_utc": "12,42 * * * *",
+      "start_command_sha256": "c445cd8c3a088b6c4301595b321f23d34cf254e632450288620be87044af0dec",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:a8519de6ddcea4ed70871a79e28b874e0f50bdbe5571eee97ff9e0ad904e56c0",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-5": {
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "deployment_id": "06d64d9a-6bfa-4f27-b75a-732b446bedbf",
+      "schedule_utc": "15,45 * * * *",
+      "start_command_sha256": "47f35f535a1536f6b36ca6f832f488fbae45ebe4ebd790dd27e2e8de968a73f4",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:393a00a63f1cbf62c023c3c133c35ca30033d4cc55d9f012cc60b15ec03922bd",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-6": {
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "deployment_id": "5b4ff8a2-9465-4619-b321-8df037bcf925",
+      "schedule_utc": "18,48 * * * *",
+      "start_command_sha256": "85093ee9b6abbfb52ce62866e16cf9cab27fa35d2861bb441daa231ed3eb3cdd",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:6ddede32f78ed57ce5031d6aec1ca2152f6ea455a36b27978c034748f8cd56e7",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-7": {
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "deployment_id": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823",
+      "schedule_utc": "21,51 * * * *",
+      "start_command_sha256": "856bba9ff4f6473ac7c061839f2188e6d3b721fa8330e011db44d3ea8df447a0",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:0b6bb48cbc672aee4e520bbf8d2ac199c7e4f106a48f4c34b4c5bd816f51d0ca",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    },
+    "yuyutei-collector-shard-8": {
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "deployment_id": "ee64bf59-544e-47c3-a604-2fa2041f3baf",
+      "schedule_utc": "24,54 * * * *",
+      "start_command_sha256": "f700e31ca8f1c484d71aeb8d1dd79086d3052330da6571dd2b6e40446a3d439f",
+      "commit": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+      "image_digest": "sha256:a65534d459933229b524ea1d7a1b801d5c423aaeda2a1046763fb9eaa05ff247",
+      "variables": {
+        "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+        "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+        "APP_ENV": "staging"
+      }
+    }
+  },
+  "deployments": {
+    "yuyutei-collector-shard-0": {
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "deployment_id": "98e35121-b8b5-4401-b94a-dd311f33ef24",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "0,30 * * * *",
+      "image_digest": "sha256:31297d331c7765e69064d697b52d8940af03a819c1c27f51d6219b458b8e103b",
+      "verified_at": "2026-10-18T15:37:24.598716+00:00"
+    },
+    "yuyutei-collector-shard-1": {
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "deployment_id": "a1460818-cfa5-4384-bcb3-13881faa2446",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "3,33 * * * *",
+      "image_digest": "sha256:2faa1fe38d694de6147f5b23f48da16bfe5c94edcba8ddea1680c22f010459cb",
+      "verified_at": "2026-10-18T15:40:34.307113+00:00"
+    },
+    "yuyutei-collector-shard-2": {
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "deployment_id": "671ff3e7-3ff9-4bb5-a634-dfa16dabc02a",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "6,36 * * * *",
+      "image_digest": "sha256:09c6f76e3ac351f0d085f9f5d2f8b951f1aa64fb582e9456f4d84803ec3f9473",
+      "verified_at": "2026-10-18T15:47:48.855766+00:00"
+    },
+    "yuyutei-collector-shard-3": {
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "deployment_id": "f28b1aec-679b-4301-ba3a-7b2dbb2c09d9",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "9,39 * * * *",
+      "image_digest": "sha256:9defeea96a8c667cfb804b96a50471629f1e72028b3cfc800d4075248c094ee5",
+      "verified_at": "2026-10-18T15:50:17.470258+00:00"
+    },
+    "yuyutei-collector-shard-4-v2": {
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "deployment_id": "c666f377-35af-4793-80da-076d609cda2e",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "12,42 * * * *",
+      "image_digest": "sha256:c5aaee62bd540950f75f01395f8775e74b7b658c4596be69266a50178b132b0c",
+      "verified_at": "2026-10-18T15:52:16.136478+00:00"
+    },
+    "yuyutei-collector-shard-5": {
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "deployment_id": "2414e972-14b2-436d-b54c-2bfb5859d8f8",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "15,45 * * * *",
+      "image_digest": "sha256:a119ae726cc465205d2f0d305f9454b9aec5be50647ded2e7725e695277e3b11",
+      "verified_at": "2026-10-18T15:54:29.180908+00:00"
+    },
+    "yuyutei-collector-shard-6": {
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "deployment_id": "3305e65d-b016-4a07-8e3d-e37bfd922532",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "18,48 * * * *",
+      "image_digest": "sha256:f52c4145fa18321d38becf2d351be19d4997780e3337822aa8959d29b0259981",
+      "verified_at": "2026-10-18T15:57:28.262372+00:00"
+    },
+    "yuyutei-collector-shard-7": {
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "deployment_id": "ab9964d5-c89f-4a85-bc10-a6a1e4dbde1b",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "21,51 * * * *",
+      "image_digest": "sha256:a42ad81d43b2a4ca3b5dd6214c195b12bbb63b4166789706a1c2cc75d288aa40",
+      "verified_at": "2026-10-18T15:59:56.146333+00:00"
+    },
+    "yuyutei-collector-shard-8": {
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "deployment_id": "bb5a679e-7375-4816-bfa4-e7dc3e547ef8",
+      "source_sha": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "schedule_utc": "24,54 * * * *",
+      "image_digest": "sha256:a3ec8ac2bba3370df49377853ffb67010b7eece1bb283394fbe8baff6ae34d12",
+      "verified_at": "2026-10-18T16:02:55.217353+00:00"
+    }
+  },
+  "bounded_build_retries": {},
+  "watched_snapshot_redeploys": {},
+  "natural_runs_not_yet_verified": true,
+  "production_accessed": false
+}
