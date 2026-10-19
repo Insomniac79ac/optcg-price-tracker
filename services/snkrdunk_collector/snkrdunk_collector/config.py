@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     # Applies ONLY to an unscoped run. An explicit --mapping-ids or --limit
     # states the caller's own scope and is never silently truncated.
     BATCH_MAX_MAPPINGS_PER_RUN: int = 70
+    # Published discovery plans itself: at most one bounded intent (300
+    # requests, 20 product pages) per interval, under the guards in
+    # discovery_planner.py. Set SNKRDUNK_AUTO_DISCOVERY=false to stop planning;
+    # an intent already planned still runs or can be settled as before.
+    SNKRDUNK_AUTO_DISCOVERY: bool = True
+    SNKRDUNK_AUTO_DISCOVERY_INTERVAL_H: int = 6
 
     @field_validator("DATABASE_URL")
     @classmethod

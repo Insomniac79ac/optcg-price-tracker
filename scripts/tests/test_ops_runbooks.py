@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import common, diagnostic, enqueue_remaining, fleet, official_images, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -384,12 +384,164 @@ class ReplanAndEnqueue(unittest.TestCase):
             replan.load_plan("/etc/passwd")
 
 
+class CaptureBatch(unittest.TestCase):
+    def plan(self, status, prints, release=7):
+        return SimpleNamespace(resolution_status=status, release_product_id=release, card_code="OP01-001",
+                               evidence_digest="d", alternatives=[SimpleNamespace(card_print_id=i) for i in prints])
+
+    def test_shortlist_keeps_bounded_ambiguous_families_in_order(self):
+        plans = {1: self.plan("exact", [10]),                  # F1 resolves it now: no capture
+                 2: self.plan("ambiguous", [12, 11]),
+                 3: self.plan("ambiguous", list(range(20, 33))),  # 13 siblings
+                 4: self.plan("ambiguous", [40, 41], release=None),
+                 6: self.plan("ambiguous", [60, 61]),
+                 7: self.plan("ambiguous", [70, 71])}
+        records, dropped = capture_batch.shortlist([1, 2, 3, 4, 5, 6, 7], plans, 2)
+        self.assertEqual([r["candidate_id"] for r in records], [2, 6])
+        self.assertEqual(records[0]["considered_print_ids"], [11, 12])
+        self.assertEqual(dropped, {"not_ambiguous_now": 2, "unbounded_or_unreleased": 2})
+
+    def test_count_limits(self):
+        self.assertEqual(capture_batch.check_count(None), 50)
+        for bad in (0, 101, "50"):
+            with self.assertRaises(common.Refused):
+                capture_batch.check_count(bad)
+
+    def test_batch_label_is_in_the_pinned_list(self):
+        rows = [{"candidate_id": i, "evidence_digest": "d", "release_product_id": 3, "considered_print_ids": [2 * i, 2 * i + 1],
+                 "eligible": True} for i in range(1, 3)]
+        replanned = {"records": rows, "observed_at": "t", "resolver_version": "1.3"}
+        self.assertEqual(replan.approved_list(replanned, 2)[2]["batch"], "NEW2")  # enqueue-remaining-50 unchanged
+        _, sha, doc = replan.approved_list(replanned, 2, batch="capture-2")
+        self.assertEqual(doc["batch"], "capture-2")
+        self.assertNotEqual(sha, replan.approved_list(replanned, 2)[1])
+
+    def test_candidates_sql_is_read_only_and_excludes_captured(self):
+        sql = capture_batch.CANDIDATES_SQL.lower()
+        self.assertTrue(sql.strip().startswith("select"))
+        for word in ("insert", "update", "delete", "for update"):
+            self.assertNotIn(word, sql)
+        self.assertIn("yuyu-identity:", sql)
+        self.assertIn("reviewed_at is not null", sql)
+
+    def test_apply_respects_windows_and_ops_write(self):
+        args = SimpleNamespace(runbook="enqueue-capture-batch", workflow="ops-write", apply=True)
+        idle = lambda path: {"workflow_runs": []}  # noqa: E731
+        for hour, minute in ((2, 30), (19, 45)):
+            with self.assertRaises(common.Refused):
+                run.preflight(args, now=utc(2026, 10, 19, hour, minute), read=idle)
+        run.preflight(args, now=utc(2026, 10, 19, 12), read=idle)
+        with self.assertRaises(common.Refused):
+            run.preflight(SimpleNamespace(**(vars(args) | {"workflow": "ops-readonly"})), now=utc(2026, 10, 19, 12), read=idle)
+
+
+class F1Approve(unittest.TestCase):
+    def entry(self, gid, digest="d" * 64):
+        return {"proposal_group_id": gid, "selected_alternative_id": gid * 10, "source_candidate_id": gid + 1000,
+                "card_print_id": gid + 5000, "evidence_digest": digest, "resolver_version": "1.4",
+                "updated_at": "2026-10-18T14:00:00+00:00", "detail": {"listing_title": f"t{gid}"}}
+
+    def test_list_is_pinned_on_decision_fields_only(self):
+        rows = [self.entry(i) for i in range(1, 6)]
+        data, sha, doc = f1_approve.pinned_list(rows, 3)
+        import hashlib
+        self.assertEqual(hashlib.sha256(data).hexdigest(), sha)
+        self.assertEqual([e["proposal_group_id"] for e in doc["entries"]], [1, 2, 3])
+        self.assertEqual(doc["expected_count"], 3)
+        self.assertNotIn("detail", doc["entries"][0])
+        relabelled = [dict(r, detail={"listing_title": "other"}) for r in rows]
+        self.assertEqual(sha, f1_approve.pinned_list(relabelled, 3)[1])
+        moved = [rows[0], dict(rows[1], evidence_digest="e" * 64)] + rows[2:]
+        self.assertNotEqual(sha, f1_approve.pinned_list(moved, 3)[1])
+        # Fewer eligible than asked: the batch is what is there (the last batch is short).
+        self.assertEqual(f1_approve.pinned_list(rows, 500)[2]["expected_count"], 5)
+        with self.assertRaisesRegex(common.Refused, "no eligible"):
+            f1_approve.pinned_list([], 500)
+
+    def test_sample_is_reproducible(self):
+        rows = [self.entry(i) for i in range(1, 501)]
+        sha = f1_approve.pinned_list(rows, 500)[1]
+        picked = f1_approve.sample(rows, sha)
+        self.assertEqual(len(picked), 20)
+        self.assertEqual(picked, f1_approve.sample(rows, sha))
+        self.assertEqual(len({r["proposal_group_id"] for r in picked}), 20)
+        self.assertEqual(len(f1_approve.sample(rows[:7], sha)), 7)
+
+    def test_count_and_apply_guards(self):
+        self.assertEqual(f1_approve.check_count(None), 500)
+        for bad in (0, 601):
+            with self.assertRaises(common.Refused):
+                f1_approve.check_count(bad)
+        f1_approve.check_apply(False, "", "a" * 64)
+        with self.assertRaisesRegex(common.Refused, "expected_sha256"):
+            f1_approve.check_apply(True, "A" * 64, "a" * 64)
+        with self.assertRaisesRegex(common.Refused, "differs"):
+            f1_approve.check_apply(True, "b" * 64, "a" * 64)
+        f1_approve.check_apply(True, "a" * 64, "a" * 64)
+
+    def test_apply_respects_windows_and_ops_write(self):
+        args = SimpleNamespace(runbook="approve-f1-batch", workflow="ops-write", apply=True)
+        idle = lambda path: {"workflow_runs": []}  # noqa: E731
+        for hour in (2, 5):
+            with self.assertRaisesRegex(common.Refused, "collector quiet window"):
+                run.preflight(args, now=utc(2026, 10, 19, hour, 10), read=idle)
+        run.preflight(args, now=utc(2026, 10, 19, 12), read=idle)
+        with self.assertRaises(common.Refused):
+            run.preflight(SimpleNamespace(**(vars(args) | {"workflow": "ops-readonly"})), now=utc(2026, 10, 19, 12), read=idle)
+
+    def test_approve_one_transaction_each_and_stops_at_first_refusal(self):
+        from app.services.source_mapping_proposal_decision import ProposalDecisionError
+
+        calls = []
+
+        def fake(db, gid, request, actor):
+            calls.append((gid, request.selected_alternative_id, actor.email))
+            if gid == 3:
+                raise ProposalDecisionError("evidence_digest_changed", "moved")
+            return SimpleNamespace(proposal_group_id=gid, resulting_source_card_mapping_id=gid + 90,
+                                   card_print_id=gid + 5000, mapping_created=True)
+
+        session = mock.Mock()
+        entries = f1_approve.pinned_list([self.entry(i) for i in range(1, 6)], 5)[2]["entries"]
+        with mock.patch("app.services.source_mapping_proposal_decision.approve_exact_proposal", fake):
+            approved, stopped = f1_approve.approve(session, entries, run_label="ops-write:approve-f1-batch:1",
+                                                   now=lambda: utc(2026, 10, 19, 12))
+        self.assertEqual([a["proposal_group_id"] for a in approved], [1, 2])
+        self.assertEqual(stopped["code"], "evidence_digest_changed")
+        self.assertEqual([c[0] for c in calls], [1, 2, 3])
+        self.assertEqual(session.commit.call_count, 2)
+        self.assertEqual(session.rollback.call_count, 1)
+        self.assertEqual(calls[0][2], "ops-write:approve-f1-batch:1")
+
+    def test_approve_stops_before_the_collector_quiet_window(self):
+        session = mock.Mock()
+        entries = f1_approve.pinned_list([self.entry(1)], 1)[2]["entries"]
+        with mock.patch("app.services.source_mapping_proposal_decision.approve_exact_proposal") as fake:
+            approved, stopped = f1_approve.approve(session, entries, run_label="x", now=lambda: utc(2026, 10, 19, 2, 1))
+        fake.assert_not_called()
+        self.assertEqual((approved, stopped["code"]), ([], "quiet_window"))
+
+
 class FleetAndImages(unittest.TestCase):
     def test_receipt_path(self):
         self.assertTrue(fleet.receipt_path(None).is_file())
         for bad in ("../../etc/passwd", "docs/agent/STAGING_MISSION.json"):
             with self.assertRaises(common.Refused):
                 fleet.receipt_path(bad)
+
+    def test_default_receipt_chain(self):
+        receipts = fleet.load_receipts(None)
+        self.assertEqual([d["source_sha"][:7] for _, d in receipts], ["a504e47", "2bcbe90"])
+        owners = {n: fleet.receipt_for(n, receipts)[1]["source_sha"][:7]
+                  for n in receipts[0][1]["deployments"]}
+        self.assertEqual(len(owners), 10)
+        self.assertEqual(owners["snkrdunk-collector"], "a504e47")
+        self.assertEqual(sorted(n for n, c in owners.items() if c == "2bcbe90"),
+                         sorted(receipts[1][1]["deployments"]))
+        self.assertEqual(len(receipts[1][1]["deployments"]), 9)
+        self.assertIsNone(fleet.receipt_for("not-a-collector", receipts))
+        with self.assertRaises(common.Refused):
+            fleet.load_receipts(fleet.DEFAULT_RECEIPTS[0] + ",docs/agent/STAGING_MISSION.json")
 
     def test_compare(self):
         receipt = {"deployment_id": "d1", "image_digest": "sha256:x", "schedule_utc": "1 * * * *"}

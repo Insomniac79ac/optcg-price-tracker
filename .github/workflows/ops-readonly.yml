@@ -40,6 +40,8 @@ on:
           - snkrdunk-coverage-gap-discovery
           - snkrdunk-coverage-gap-releases
           - snkrdunk-coverage-gap-samples
+          - snkrdunk-discovery-state
+          - snkrdunk-quarantine
           - source-bytes-by-source
           - storage-savings
           - table-sizes
