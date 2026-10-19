@@ -130,8 +130,11 @@ or a public line. Turning graded on later is a separate RED decision.
   with no foil print in the catalogue they stay unmatched (today true for all PRB foils, MEASURED 162 Yuyu
   listings). A bare promo "P" token never decides a kind. The two-way-unique rule (one product of a kind, one
   print of that kind, inside one release) is the only absence-based rule allowed.
-- Listing identity: `packages/opcg_source_identity` gains `dorasuta.jp …product?pid=N` → `dorasuta:N` and
-  `www.cardrush-op.jp/product/N` → `cardrush:N`, with conformance vectors.
+- Listing identity: `dorasuta.jp …product?pid=N` → `dorasuta:N` and `www.cardrush-op.jp/product/N` →
+  `cardrush:N`, with conformance vectors, **in the collector kit, not in `packages/opcg_source_identity`**
+  (amended 2026-10-19: every file of that package is a runtime input of both existing collectors,
+  `scripts/collector_runtime_inputs.py` `counts()`, so editing it would redeploy all 10 Yuyu/SNKR services).
+  The hosts move into the shared package only inside an owner-approved Yuyu/SNKR redeploy (N13).
 
 ### 2.4 Collector kit and source etiquette
 
@@ -159,6 +162,18 @@ or a public line. Turning graded on later is a separate RED decision.
 Register each new source in `services/source_instruments.py` `SOURCE_INSTRUMENTS` **before any row exists**
 (today an unregistered source exposes every price_type, `source_instruments.py:99-103`). Hidden until its
 cutover; after cutover only `raw:A` asks are public, as an attributed per-source line (Q7).
+
+**Amended 2026-10-19 (read-path audit at 99844c6):** registration alone does not hide a source. These public
+paths pick sources from the data and would show a new source's rows the day they exist: `print_series`
+(`load_source_catalogue`, `default_series_requests`, `/prints/{id}/series` and `/analytics`),
+`print_pricing` (`/prints/{id}/prices`, latest and history), `latest_prices`, `api/cards` (`/cards/{id}/prices`),
+`market.get_market_movers` (`/market/movers`) and the worker's `check_alerts`. `customer_price_clause` only hides
+Yuyu-Tei sale rows. S2 therefore adds one shared `PRE_CUTOVER_SOURCES` gate (`dorasuta`, `cardrush`) to
+`customer_price_clause` (and the worker copy), the `print_series` source catalogue, `get_market_movers` and the
+three `check_alerts` reads, plus an invariant test that pre-cutover sources stay out of `SOURCE_INSTRUMENTS`,
+`INDEX_INPUT_PRICE_TYPES` and `AUXILIARY_ONLY_PRICE_TYPES` (Market Index, snapshots, analytics bases, Market Value,
+CPI and collection valuation are safe only because of that). None of these files is a collector runtime input.
+Cutover (D4/C4) removes the source from `PRE_CUTOVER_SOURCES`.
 
 ### 2.6 Splice at cutover (Q6: splice, not break; unchanged)
 
@@ -292,9 +307,9 @@ This may double-count if the 30 MB/day already averages in capture days, so the 
 |---|---|---|---|---|
 | P0 | Approve this plan and §7 | n/a | none | **Yes** |
 | S0 | Diagnostic `source-bytes-by-source` (bytes per source per UTC day, RAW and rows) and `new-source-coverage` (priced prints by rarity and source count) | Hold | none | Hand merge |
-| S1 | Additive migration: `grade_key`, generic source tables, splice tables, `sources` seeds, proposal CHECK widen; new-source ORM module outside `models/__init__`; §2.7 guard test | Plain | none | Runs `alembic upgrade head` (backup <24 h) |
-| S2 | Public-series guard registrations for `dorasuta`, `cardrush` (before any row) | Plain | none | n/a |
-| S3 | `opcg_source_identity` hosts + vectors; `source_product_resolver` + `dorasuta_rules` + `cardrush_rules`; foil/graded parsing; kit parser registry. Fixtures only | Plain | none | n/a |
+| S1 | Additive migration: `grade_key`, generic source tables, splice tables, `sources` seeds, proposal CHECK widen; new-source ORM module outside `models/__init__`; §2.7 guard test | **Hold** (amended 2026-10-19: the owner merges and then runs the migration, so the receipt is red only between the two) | none | Merges, then runs `alembic upgrade head` (backup <24 h) |
+| S2 | Pre-cutover gate on every public read path for `dorasuta`, `cardrush` (§2.5 amendment), before any row | Plain | none | n/a |
+| S3 | Listing identity + vectors in the kit (§2.3, not `opcg_source_identity`); `source_product_resolver` + `dorasuta_rules` + `cardrush_rules`; foil/graded parsing; kit parser registry. Fixtures only | Plain | none | n/a |
 | S4 | Splice machinery in MI snapshot, Market Value, CPI, inert; synthetic replay tests | Plain | none (worker/api only) | n/a |
 | D0 | `source_collector_kit` + `dorasuta_collector` + Dockerfile, tested on SV §2.1 fixtures (mock data first); not selected by the manifest | Plain | none | n/a |
 | D1 | Register `dorasuta` in deploy tooling (`COLLECTORS`, `NAMES`, cap 10 → 11, raw health) and select it in the manifest | **Rollout** | **Yes: `dorasuta-collector` only** | Before: creates the Railway service (cron off), variables incl. contact (N16), budget row. After: cron on for 3 sets |
