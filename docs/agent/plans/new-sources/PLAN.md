@@ -54,9 +54,7 @@ Labels: **MEASURED** (source given), **CARRIED FORWARD** (from a committed plan)
 5. **Coverage:** with Yuyu F1 live, about 78% of prints have a raw price. Dorasuta could take that to about 91%
    and CardRush to about 96% (ESTIMATE). Biggest gains are SEC (55% to about 93%) and SR (74% to about 97%).
    Prints with two or more shop prices go from 334 to about 3,300 (ESTIMATE).
-6. **You decided these on 2026-10-19 (§7.1)**; N3, N14 and N16 of revision 2 are still open. New in substance: N2 (CardRush permission
-   without an email), N3 (storage rule), N13 (no Yuyu/SNKR redeploy), N14 (order versus the SNKRDUNK fix),
-   N15 (stop rule) and N16 (contact address).
+6. **You decided these on 2026-10-19 (§7.1)**; N3, N14 and N16 of revision 2 are still open.
 
 ---
 
