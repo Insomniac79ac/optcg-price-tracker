@@ -41,6 +41,7 @@ from app.schemas import (
 )
 from app.services.app_logging import record_app_log
 from app.services.mapping_listing_report import mapping_listing_report
+from app.services.mapping_refresh import ensure_refresh_work
 from app.api._mapping_approval import (
     REFUSAL_MAPPING_IDENTITY_BROKEN,
     approval_http_error,
@@ -286,6 +287,11 @@ def bulk_update_mappings(body: BulkMappingUpdateIn, db: Session = Depends(get_db
                 continue
 
         _apply_bulk_action(mapping, body.action, body.review_notes)
+        if body.action in ("approve", "activate", "mark_verified"):
+            # Approved means collected: plan the raw refresh work in the same commit. It plans
+            # nothing for a row these actions leave unapproved, inactive or unverified.
+            db.flush()
+            ensure_refresh_work(db, mapping)
         any_applied = True
         results.append(BulkMappingUpdateResultOut(mapping_id=mapping_id, ok=True))
 
