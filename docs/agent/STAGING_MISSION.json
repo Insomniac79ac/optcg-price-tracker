@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Next identity-capture batch runbook (owner ask 2026-10-19 00:33Z, item 3): the NEW100 plan is finished and enqueue-remaining-50 only replays it, so add the ops-write runbook enqueue-capture-batch. It plans the next batch live (uncaptured ambiguous Yuyu-Tei listings that the live resolver, F1 included, still finds ambiguous; oldest candidate first; default 50, at most 100) and enqueues it through the unchanged PR #116 tool. Each run waits for the owner in staging-ops; the dry run lists the exact batch and its storage fit and writes nothing; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR.",
+ "mission": "New-sources plan step S0 (owner approved the plan 2026-10-19 00:34Z, diagnostic only): add two reviewed read-only db-diagnostic files. source-bytes-by-source reports bytes stored per source per UTC day (RAW, price observations, collection attempts) and a 48 h MB/day figure per source, for the Dorasuta 1.5 MB/day cap (N6) and storage checks that overlap Yuyu-Tei batches. new-source-coverage reports priced prints by rarity, variant and number of shop sources over 24 h and 7 days, plus latest Market Index coverage. Register both in ops-readonly. Staging only; PSA10 not read; no source, collector, setting, price, identity, mapping, Market Value/Index, secret or Railway change; no runbook run in this PR.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,34 +20,22 @@
  "impacts": [
   {
    "files": [
-    "scripts/ops/capture_batch.py",
-    "scripts/ops/enqueue_remaining.py",
-    "scripts/ops/replan.py",
-    "scripts/ops/run.py"
+    "scripts/diagnostics/new-source-coverage.sql",
+    "scripts/diagnostics/source-bytes-by-source.sql"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "New write runbook enqueue-capture-batch registered in RUNBOOKS as (write, collector-affecting). Planning is read-only (default_transaction_read_only session): one resolver run over the uncaptured ambiguous listings, then ops.replan's guards. Enqueue goes through scripts/yuyu_identity_capture_enqueue.py unchanged (all or nothing, every #116 guard), shared with enqueue-remaining-50 by moving its steps 2 to 4 into enqueue_list; enqueue-remaining-50's list and SHA are unchanged (batch label stays NEW<count>). Captures are claimed by ordinary scheduled Yuyu turns under the source budget; no source request, approval or mapping here."
+   "reason": "Two SELECT/WITH-only diagnostics (9 statements) over sources, raw_snapshots, raw_snapshot_dictionaries, price_observations, source_collection_attempts, card_prints, canonical_cards, source_card_mappings and market_index_snapshots, run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. Raw asks counted are yuyutei sell and snkrdunk floor only (no buy, sold or PSA10). No write, no source request."
   },
   {
    "files": [
-    ".github/workflows/ops-write.yml"
+    ".github/workflows/ops-readonly.yml"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds enqueue-capture-batch to the runbook choice and names its default in the count description. Jobs, environments, permissions, secrets and triggers unchanged."
-  },
-  {
-   "files": [
-    "scripts/tests/test_ops_runbooks.py",
-    "docs/agent/OPS_RUNBOOKS.md"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "Offline tests (shortlist order and drops, count limits, batch label in the pinned list, read-only candidate SQL, quiet windows) and runbook documentation."
+   "reason": "Adds new-source-coverage and source-bytes-by-source to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
   }
  ],
  "deployment_verification": {
@@ -57,7 +45,7 @@
    "scripts/verify_snkr_published_discovery_component.py",
    "scripts/verify_yuyu_raw_reader_component.py"
   ],
-  "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "snkr_component": "ff019569478f570af9e82018fc69e81853508e85",
   "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
   "yuyu_capacity_cadence": true
  },
@@ -65,25 +53,25 @@
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-write enqueue-capture-batch (owner-approved runs only)"
+     "name": "GitHub Actions: ops-readonly db-diagnostic (two new read-only SQL files)"
     }
    ],
    "routes": [
     "None"
    ],
    "dependencies": [
-    "ops-write from PR #150; PR #116 enqueue tool (unchanged); ops.replan guards (unchanged); live resolver incl. D9 F1 (PR #171/#173, unchanged)"
+    "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156, #166 and #174 (unchanged); new-sources plan on branch plan/new-sources (d0bd629)"
    ],
-   "deployment_impact": "Runbook code and its workflow choice only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes. Merging writes nothing; each batch is a separate owner-approved run.",
+   "deployment_impact": "Two read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
    "database_writes": 0,
    "source_requests": 0,
    "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "ff019569478f570af9e82018fc69e81853508e85",
-   "procedure": "Native revert of this PR removes the runbook and its workflow choice. No data, schema, provider or service configuration to undo. Enqueued intents from a later apply are listed by work id in its summary and are never replayed.",
-   "trigger": "A dry run that fails or selects a listing that is not an uncaptured, bounded ambiguous family.",
-   "backup": "Not applicable for this PR: no schema or row change. Railway Postgres daily backups continue.",
+   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+   "procedure": "Native revert of this PR removes the two diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
+   "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
+   "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
    "validation": [
     "scripts/tests/test_ops_runbooks.py"
    ]
@@ -93,25 +81,17 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/ops/capture_batch.py"
+    "scripts/diagnostics/new-source-coverage.sql",
+    "scripts/diagnostics/source-bytes-by-source.sql"
    ],
-   "observation_window": "After merge: one enqueue-capture-batch dry run (owner-approved in staging-ops) completes with status DRY_RUN_OK and a 50-row batch; the apply only after the owner reviews it, then identity-capture-work shows the new work ids."
+   "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
- "diff_sha256": "e4b9fc18de5d5ef533fb353e9bc25f9b65cd6a9d70f488352e565b7060b5109e",
+ "diff_sha256": "c4e9ee219bb2b5098250638c1d344815d36fdc2b1e64345a376568deed30278d",
  "operational_notes": [
-  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each identity-capture ops-write batch (enqueue-capture-batch; enqueue-remaining-50 only replays the finished NEW100 plan) is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 correction (MEASURED 2026-10-19 00:39Z, identity-capture-work run 39181696715): all 615 capture intents were attempted (0 never attempted, 3 blocked); a finished capture parks as pending 100 years out. The about 217 prints counted under b_capture_intent:pending were already captured and wait on evidence review, not on a new batch.",
+  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
+  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write approve-f1-batch runs of about 500 (dry run first, apply pinned to its SHA-256), with a 48 h storage check after each."
- ],
- "verification": {
-  "required_checks": [
-   "engineering-gate"
-  ],
-  "post_change": [
-   "scripts/ops/capture_batch.py"
-  ],
-  "observation_window": "After merge: one enqueue-capture-batch dry run (owner-approved in staging-ops) completes with status DRY_RUN_OK and a 50-row batch; the apply only after the owner reviews it, then identity-capture-work shows the new work ids."
- }
+  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
+ ]
 }
