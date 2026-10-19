@@ -146,7 +146,7 @@
    "observation_window": "After merge: plan-refresh-backfill dry run lists the 97 F1 mappings (degraded-signals yuyutei unplanned 97); after the owner-approved apply degraded-signals shows yuyutei unplanned 0, and after one full Yuyu-Tei cycle yuyu-coverage-gap fresh rises from 2,616."
   }
  },
- "diff_sha256": "0f9157f1d4c7646f41e0b9befd6c7f4da39722f879940d76fdb5fb3c45796ec5",
+ "diff_sha256": "6465664cb9373dff2e35b67f9b96983fc845d4f6d24be3f9c5e566d012c575b5",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
