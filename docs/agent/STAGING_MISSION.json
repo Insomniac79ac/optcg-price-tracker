@@ -179,7 +179,7 @@
       "observation_window": "Verify staging merge on this hand merge, then the next DATA PR's policy-gate on a mission file, then the first collector PR's staging-automerge (allowed collector window) with Deploy mission-scoped staging collectors and the delivery verification passing."
     }
   },
-  "diff_sha256": "pending",
+  "diff_sha256": "b0bb05e41fc61fdea2696defa230a038d2ba2c5dcaf6059bd5c136e97ac36bc9",
   "operational_notes": [
     "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
     "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
