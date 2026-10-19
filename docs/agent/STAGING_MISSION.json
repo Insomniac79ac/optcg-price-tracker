@@ -75,7 +75,7 @@
    "observation_window": "The delivery's component checks pass: snkrdunk-collector receipt on ff01956 (deployment 11cc2223) and all nine yuyutei shards on 2bcbe90."
   }
  },
- "diff_sha256": "e4b9fc18de5d5ef533fb353e9bc25f9b65cd6a9d70f488352e565b7060b5109e",
+ "diff_sha256": "b78ffd66b34a6e8d95fa1e67af4ee9188d28758efeed8d902907fc4c804a5d86",
  "operational_notes": [
   "SNKR verification pin (2026-10-19): deployment_verification.snkr_component is ff019569478f570af9e82018fc69e81853508e85 since PR #180's rollout. Keep it when resolving manifest conflicts; change it only in the PR that next redeploys snkrdunk-collector.",
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each identity-capture ops-write batch (enqueue-capture-batch; enqueue-remaining-50 only replays the finished NEW100 plan) is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
