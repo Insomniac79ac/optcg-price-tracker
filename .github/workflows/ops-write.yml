@@ -18,6 +18,7 @@ on:
           - enqueue-remaining-50
           - approve-f1-batch
           - enqueue-capture-batch
+          - plan-refresh-backfill
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
@@ -27,7 +28,7 @@ on:
         type: string
         default: ""
       count:
-        description: "Batch size (empty: 50 for enqueue-remaining-50 and enqueue-capture-batch, 500 for approve-f1-batch)"
+        description: "Batch size (empty: 50 for enqueue-remaining-50 and enqueue-capture-batch, 500 for approve-f1-batch and plan-refresh-backfill)"
         type: string
         default: ""
       request_id:

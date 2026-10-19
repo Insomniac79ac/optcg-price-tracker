@@ -91,7 +91,7 @@
    "estimated_runtime_minutes": 10
   },
   "recovery": {
-   "artifact": "0e3599b5622f1790c93524c282215581eb56be94",
+   "artifact": "35d457c639d525b1a7156d6937614fbc961b1f8d",
    "procedure": "Native revert of this PR restores the previous capture planner and removes the preview runbook. Nothing is written by the PR itself.",
    "trigger": "A capture dry run or preview reports an error, or a batch contains a candidate an earlier guard would have refused.",
    "backup": "Not applicable: no schema change and no write from this PR.",
@@ -114,7 +114,7 @@
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
   "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
-  "F1: batch 1 applied 2026-10-19 (97 of 97; proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after PR #189 merges.",
+  "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
   "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
  ]
 }
