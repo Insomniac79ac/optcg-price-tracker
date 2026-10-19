@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "New-sources plan step S0 (owner approved the plan 2026-10-19 00:34Z, diagnostic only): add two reviewed read-only db-diagnostic files. source-bytes-by-source reports bytes stored per source per UTC day (RAW, price observations, collection attempts) and a 48 h MB/day figure per source, for the Dorasuta 1.5 MB/day cap (N6) and storage checks that overlap Yuyu-Tei batches. new-source-coverage reports priced prints by rarity, variant and number of shop sources over 24 h and 7 days, plus latest Market Index coverage. Register both in ops-readonly. Staging only; PSA10 not read; no source, collector, setting, price, identity, mapping, Market Value/Index, secret or Railway change; no runbook run in this PR.",
+ "mission": "Watch the first SNKRDUNK automatic discovery runs after #180 (owner 2026-10-19 11:15Z, read-only): add one reviewed db-diagnostic, snkrdunk-discovery-guard, that recomputes the inputs of the auto-v1 planner's request_budget guard (spare window budget, pending RAW checks due within 40 minutes, highest RAW check request cost in 24 h), lists snkrdunk-due executions from their stored execution evidence, and the RAW check cost distribution, because the planner logs its skip reason only to stdout. Register it in ops-readonly. Staging only; PSA10 not read; no collector, setting, budget, price, identity, mapping, Market Value/Index, secret or Railway change.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,13 +20,12 @@
  "impacts": [
   {
    "files": [
-    "scripts/diagnostics/new-source-coverage.sql",
-    "scripts/diagnostics/source-bytes-by-source.sql"
+    "scripts/diagnostics/snkrdunk-discovery-guard.sql"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Two SELECT/WITH-only diagnostics (9 statements) over sources, raw_snapshots, raw_snapshot_dictionaries, price_observations, source_collection_attempts, card_prints, canonical_cards, source_card_mappings and market_index_snapshots, run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. Raw asks counted are yuyutei sell and snkrdunk floor only (no buy, sold or PSA10). No write, no source request."
+   "reason": "Four SELECT/WITH-only statements over app_log_events (snkrdunk-collector raw_execution_started/finished rows), source_dispatch_budgets, freshness_work, freshness_attempts and sources, run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. No write, no source request."
   },
   {
    "files": [
@@ -35,7 +34,7 @@
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds new-source-coverage and source-bytes-by-source to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
+   "reason": "Adds snkrdunk-discovery-guard to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
   }
  ],
  "deployment_verification": {
@@ -53,24 +52,24 @@
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-readonly db-diagnostic (two new read-only SQL files)"
+     "name": "GitHub Actions: ops-readonly db-diagnostic (one new read-only SQL file)"
     }
    ],
    "routes": [
     "None"
    ],
    "dependencies": [
-    "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156, #166 and #174 (unchanged); new-sources plan on branch plan/new-sources (d0bd629)"
+    "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156, #166, #174, #177 and #178 (unchanged); auto-v1 planner from PR #180 (unchanged)"
    ],
-   "deployment_impact": "Two read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
+   "deployment_impact": "One read-only diagnostic and its workflow choice entry. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
    "database_writes": 0,
    "source_requests": 0,
    "estimated_runtime_minutes": 5
   },
   "recovery": {
    "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-   "procedure": "Native revert of this PR removes the two diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
-   "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
+   "procedure": "Native revert of this PR removes the diagnostic and its workflow choice. No data, schema, provider or service configuration to undo.",
+   "trigger": "A db-diagnostic run of the new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
    "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
    "validation": [
     "scripts/tests/test_ops_runbooks.py"
@@ -81,10 +80,9 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/diagnostics/new-source-coverage.sql",
-    "scripts/diagnostics/source-bytes-by-source.sql"
+    "scripts/diagnostics/snkrdunk-discovery-guard.sql"
    ],
-   "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
+   "observation_window": "After merge: one ops-readonly db-diagnostic snkrdunk-discovery-guard run completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
  "diff_sha256": "c4e9ee219bb2b5098250638c1d344815d36fdc2b1e64345a376568deed30278d",
