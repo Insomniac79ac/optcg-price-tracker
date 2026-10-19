@@ -101,7 +101,7 @@ def replan(session, plan):
     return finish(records, meta, observed_at, RESOLVER_VERSION, evaluated)
 
 
-def approved_list(replanned, count):
+def approved_list(replanned, count, batch=None):
     """(bytes, sha256, doc): the first ``count`` eligible candidates in plan order. Refuses short."""
     eligible = [r for r in replanned["records"] if r["eligible"]]
     if type(count) is not int or not 1 <= count <= 100:
@@ -110,7 +110,7 @@ def approved_list(replanned, count):
         raise common.Refused(f"only {len(eligible)} eligible candidates; refusing a batch of {count}")
     # Content only: no re-plan timestamp, so an apply re-plan of an unchanged list hashes to the
     # dry run's SHA-256 (replan.json keeps observed_at). A moved digest still changes the SHA.
-    doc = {"batch": f"NEW{count}", "expected_count": count, "resolver_version": replanned["resolver_version"],
+    doc = {"batch": batch or f"NEW{count}", "expected_count": count, "resolver_version": replanned["resolver_version"],
            "entries": [{"candidate_id": r["candidate_id"], "evidence_digest": r["evidence_digest"],
                         "release_product_id": r["release_product_id"], "considered_print_ids": r["considered_print_ids"]}
                        for r in eligible[:count]]}

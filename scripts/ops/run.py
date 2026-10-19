@@ -80,6 +80,11 @@ def _enqueue(args, out):
     return enqueue_remaining.run(out, apply=args.apply, count=count, expected_sha256=args.expected_sha256)
 
 
+def _capture(args, out):
+    from ops import capture_batch
+    return capture_batch.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+
+
 def _approve_f1(args, out):
     from ops import f1_approve
     return f1_approve.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
@@ -96,6 +101,7 @@ RUNBOOKS = {
     "web-smoke": ("read", False, _web_smoke),
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
+    "enqueue-capture-batch": ("write", True, _capture),
 }
 
 
