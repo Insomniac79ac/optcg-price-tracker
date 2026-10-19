@@ -99,7 +99,7 @@
    "observation_window": "After the owner applies the migration: Verify staging merge passes on revision 7a52e9b48e8a, and the next yuyutei and snkrdunk collector runs and one staging-state run complete as before."
   }
  },
- "diff_sha256": "",
+ "diff_sha256": "f0a008df0db1fc69a458480398bd87b5c5a267c91e237b99e0e3120208839835",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
