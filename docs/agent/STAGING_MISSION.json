@@ -106,7 +106,7 @@
    "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; print detail pages show the same Yuyu-Tei and SNKRDUNK series as before."
   }
  },
- "diff_sha256": "14909849c414f5ae3d6627f6ab1509842426cf69a28a2716103ee24596788364",
+ "diff_sha256": "c9b2dc1ba1a6a44d5170244b07adc6ff3122af17effb8c490100227d240a25a8",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
