@@ -91,3 +91,14 @@ Shards retained by an earlier run within 7 days are re-read from their RAW
 snapshot (hash checked) instead of fetched again; robots and the index are
 always fetched. Stop planning with `SNKRDUNK_AUTO_DISCOVERY=false` or a revert.
 An intent already planned still runs, or is settled by the rollback above.
+
+## Verification pin after the auto-v1 rollout (2026-10-19)
+
+PR #180 delivered auto-v1 to the snkrdunk collector as `ff01956` (staging-automerge
+run 39229406547). Every later manifest must declare
+`deployment_verification.snkr_component` as
+`ff019569478f570af9e82018fc69e81853508e85` until the next snkrdunk rollout.
+PR #179 resolved its manifest conflict back to the old pin `a504e47`, so the
+"Verify staging merge" of its merge failed with "Adopted component source
+differs from expected runtime inputs" on the five files #180 changed. Nothing
+on the collector was wrong; only the pin was stale.
