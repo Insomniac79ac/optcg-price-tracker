@@ -54,7 +54,7 @@ Labels: **MEASURED** (source given), **CARRIED FORWARD** (from a committed plan)
 5. **Coverage:** with Yuyu F1 live, about 78% of prints have a raw price. Dorasuta could take that to about 91%
    and CardRush to about 96% (ESTIMATE). Biggest gains are SEC (55% to about 93%) and SR (74% to about 97%).
    Prints with two or more shop prices go from 334 to about 3,300 (ESTIMATE).
-6. **You decided these on 2026-10-19 (§7.1)**; N3, N14 and N16 of revision 2 are still open.
+6. **You decided all of N1 to N16 on 2026-10-19 (§7.1).** No build until the owner says go.
 
 ---
 
@@ -413,12 +413,15 @@ Also recorded:
 - **N13 (rev 2), no Yuyu/SNKR redeploy**: follows the standing rule that a Yuyu/SNKR redeploy needs the owner's
   go. The §2.7 guard test is built in S1.
 
-**Still open (not answered by the 2026-10-19 message):**
-1. **N3 (rev 2)**: storage admission rule "days to reserve stay 60 or more". Needed at C0, not before.
-2. **N14 (rev 2)**: CardRush before the SNKRDUNK discovery fix. Needed only if the owner approves that fix.
-3. **N16 (rev 2)**: the User-Agent contact address. The owner's message holds a placeholder, not an address.
-   Needed before D1 (it is a Railway variable, never committed). The repo is public, and the UA string is sent
-   to each site, so the address is visible to those sites.
+**Answered 2026-10-19 09:50Z (owner; nothing left open):**
+1. **N3 (rev 2): yes.** Admit a source only if days to reserve stay 60 or more after adding it; 45-day flag
+   unchanged.
+2. **N14 (rev 2): superseded.** The SNKRDUNK discovery fix (#180) is approved and delivering on 2026-10-19, so
+   SNKRDUNK goes first. At C0, re-measure storage with #180's real bytes and apply N3; if CardRush fails 60 days
+   at daily cadence, use the 48 h fallback (N7). The ordering question is closed.
+3. **N16 (rev 2): supplied** to the thread. The address is **never committed** (not in code, docs, fixtures or
+   PR text). The owner sets it as Railway variable `SOURCE_COLLECTOR_CONTACT` on the `dorasuta-collector`
+   service before D1 (and on `cardrush-collector` before C2). The kit refuses every request while it is unset.
 
 Notes:
 1. Nothing in S0 to D0 needs the open items.
