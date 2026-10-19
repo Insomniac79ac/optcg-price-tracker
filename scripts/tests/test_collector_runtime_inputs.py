@@ -1,6 +1,7 @@
 """Collector continuity narrows services/api to the real import graph, never weaker."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -265,12 +266,14 @@ class CollectorRuntimeInputTests(unittest.TestCase):
 
     def test_yuyu_verifier_refuses_changed_runtime_input(self):
         head = self.repo.commit({"services/api/app/services/helper.py": "value = 7\n"})
-        manifest = self.repo.root / "docs/agent/STAGING_MISSION.json"
-        manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(
+        fleet = self.repo.root / "docs/agent/STAGING_FLEET.json"
+        fleet.parent.mkdir(parents=True, exist_ok=True)
+        fleet.write_text(
             json.dumps({"deployment_verification": {"yuyu_reader_component": self.repo.base}})
         )
-        with patch.object(yuyu.state, "ROOT", self.repo.root), patch.object(
+        with patch.dict(os.environ, {"STAGING_MISSION_MANIFEST": ""}), patch.object(
+            yuyu.state, "ROOT", self.repo.root
+        ), patch.object(
             yuyu.subprocess, "check_output", side_effect=self.yuyu_git(head)
         ), patch.object(yuyu.state, "collect_live", side_effect=AssertionError("no live read")):
             with self.assertRaisesRegex(

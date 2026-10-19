@@ -66,6 +66,54 @@ mission establishes that implementation under explicit mission authority.
 Metadata is an accountable impact declaration, not a semantic proof that arbitrary
 application code is safe. Review remains necessary for truthful impact assessment.
 
+## Per-PR mission files (2026-10-19)
+
+Owner decision 2026-10-19 (ROADMAP item 22). The single shared
+`STAGING_MISSION.json` made every DATA-lane PR conflict with the one merged
+before it, and its hash covered a two-dot diff against the moving `staging` tip,
+so any merge made every open mission stale. It is retired; nothing reads it.
+
+- **Mission.** Each DATA-lane PR adds exactly one
+  `docs/agent/missions/<name>.json` (name: the branch with `/` as `-`). It holds
+  what describes this change: `mission`, `target`, `classification`,
+  `red_decisions`, `impacts`, `safeguards`, `diff_sha256`, and in
+  `deployment_verification` only `collector_services`,
+  `raw_dependency_migration` and, for its own delivery, `yuyu_reader_component`
+  / `snkr_component` (`merge` or a full SHA). No other mission file may be
+  changed or removed.
+- **Fleet state.** `docs/agent/STAGING_FLEET.json` holds what carries from one
+  delivery to the next: `deployment_verification` (`api_sha`, `revision`,
+  `checks`, components pinned to full SHAs, `yuyu_capacity_cadence`) and
+  `operational_notes`. It may never request a rollout or migration. Only PRs
+  that move the fleet edit it, and their impacts list it.
+- **Hash.** `diff_sha256` covers `git diff --binary --full-index` from the
+  merge-base to the PR head, excluding the PR's own mission
+  (`scripts/staging_mission.py digest`). Merging `staging` in does not change it
+  unless the merge changes the PR's own lines; full index lines make it
+  independent of the clone.
+- **Gate.** `policy-gate` still runs the base branch's `staging_policy.py`. It
+  finds the PR's one added mission, composes it with the fleet state at the PR
+  head (`staging_mission.compose`, the old manifest shape) and runs the same
+  `evaluate()`. Zero, two, changed or removed missions, a mission that sets
+  fleet expectations, or fleet state that requests work is RED.
+- **Delivery.** The scope step composes the merge's own mission
+  (`staging_mission.py compose --base merge^1 --head merge`) into a temporary
+  file that the RAW migration, collector rollout and verification steps read.
+  A full delivery without exactly one added mission refuses. A documentation or
+  PRODUCT merge with no mission uses the fleet state alone. The hand-merge
+  `Verify staging merge` composes the same way; verifier `--check` scripts read
+  `STAGING_MISSION_MANIFEST`, else the fleet state.
+- **After a collector delivery.** The fleet still pins the previous component,
+  so the next staging merge must be a small DATA PR that pins
+  `yuyu_reader_component` / `snkr_component` in `STAGING_FLEET.json` to the
+  merge SHA (the old flow did this in whichever PR came next).
+- **Bootstrap and rollback.** The PR that introduced this was evaluated by the
+  previous base policy and so carried one last `STAGING_MISSION.json`; the
+  workflow uses the legacy path only while the base branch has no
+  `scripts/staging_mission.py`. Rollback is a native revert PR plus one mission
+  file (the new gate admits it); after it merges, the previous single-manifest
+  flow is back and the next DATA PR regenerates `STAGING_MISSION.json`.
+
 ## Delivery lanes (2026-10-15)
 
 Lanes are defined in [AUTONOMY_POLICY.md](AUTONOMY_POLICY.md#delivery-lanes-owner-decision-2026-10-15).
@@ -74,7 +122,8 @@ Everything above is the DATA-lane contract and is unchanged.
 **Classification.** `policy-gate` runs the base branch's `staging_policy.py`,
 which first asks the base branch's `product_lane.py`. PRODUCT requires all of:
 
-- the PR does not edit `STAGING_MISSION.json`;
+- the PR adds no mission file and does not edit `STAGING_FLEET.json` or
+  `STAGING_MISSION.json`;
 - every path (merge-base to head) is under `apps/web/` (not `vercel.json`),
   `services/api/tests/`, `docs/` outside `docs/agent/` (plus
   `docs/agent/PRODUCT_LOG.md`), one new file in `services/api/alembic/versions/`,
@@ -94,14 +143,14 @@ which first asks the base branch's `product_lane.py`. PRODUCT requires all of:
   description.
 
 Anything else, or any error, runs today's mission checks unchanged against the
-PR's manifest.
+PR's mission.
 
 **Delivery.** A PRODUCT merge still takes the shared concurrency group, merges
 natively and verifies. `staging_delivery_scope.py` returns `product`, so collector
 rollout and RAW DDL never run. Verification expects the merged API (`api_sha=merge`)
-and the repository's single Alembic head. If a merge with an unchanged manifest
-is neither documentation nor PRODUCT, delivery fails instead of replaying the
-earlier mission's rollout or DDL. A product migration is applied by the existing
+and the repository's single Alembic head. If a merge that adds no mission is
+neither documentation nor PRODUCT, delivery fails instead of running a rollout
+or DDL nobody declared. A product migration is applied by the existing
 manual `railway run --service api alembic upgrade head` right after merge; until
 then the receipt fails on the revision, which is the intended signal. Before
 arming a PRODUCT PR with a migration, `staging-credential-presence` runs
@@ -221,15 +270,15 @@ Railway 5.62.1:
 
 Collector rollout and RAW DDL are already opt-in per PR: they act only on
 `deployment_verification.collector_services` / `raw_dependency_migration` in
-the PR's manifest. `scripts/staging_delivery_scope.py` adds a second, file-based
+the PR's mission. `scripts/staging_delivery_scope.py` adds a second, file-based
 guard that can only remove those two steps, never add work. It skips them only
 when every path changed by the merge (`merge^1..merge`, renames detected) is
 `docs/agent/handoff/**` or a `docs/**/*.md` file outside `docs/agent/evidence/`,
-plus the per-PR manifest declaration, and that manifest requests neither
-rollout nor migration. Paths read by delivery, migration, verification or state
-code (`STAGING_MISSION.json`, `CURRENT_STATE.yaml`, `docs/agent/evidence/**`)
-are never documentation. Renames crossing the allowlist, unknown statuses, an
-empty or undeterminable change set, or an unreadable manifest run the full
+plus one added per-PR mission file, and that mission requests neither rollout
+nor migration. Paths read by delivery, migration, verification or state code
+(`STAGING_FLEET.json`, `STAGING_MISSION.json`, a changed mission,
+`CURRENT_STATE.yaml`, `docs/agent/evidence/**`) are never documentation. Renames crossing the allowlist, unknown statuses, an
+empty or undeterminable change set, or an unreadable mission run the full
 delivery unchanged. Verification and state regeneration always run; the
 decision and file list are written to `latest-delivery-scope.json` and embedded
 as `delivery_scope` in `latest-staging-delivery.json`.

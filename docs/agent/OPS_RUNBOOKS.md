@@ -138,6 +138,10 @@ gh api $R/actions/runs/$RUN/artifacts --jq '.artifacts[] | {id, name, size_in_by
   `gh api "$R/actions/workflows/ci.yml/runs?status=in_progress" --jq '.workflow_runs[].id'`, then
   for each id `gh api $R/actions/runs/<id>/jobs --jq '.jobs[] | select(.name|test("staging-")) | {name,status}'`,
   plus `staging-verify.yml` runs with `status=in_progress`.
+- DATA-lane PR mission: `python scripts/staging_mission.py digest --base origin/staging` prints the
+  PR's one added mission file, the files its impacts must cover and the `diff_sha256` to write into
+  it. What a delivery will act on: `python scripts/staging_mission.py compose --base <merge>^1
+  --head <merge> --output /tmp/m.json` (add `--allow-none` for a PRODUCT-lane merge).
 
 ## Adding a runbook or diagnostic
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Fail-closed mission contract validation. No network, credentials or mutations."""
 import argparse
-import hashlib
 import json
 import re
 from pathlib import Path
 import subprocess
+
+import staging_mission
 
 RED = {
     "production", "pricing_methodology", "identity_weakening", "ambiguous_approval",
@@ -15,19 +16,15 @@ RED = {
 }
 AMBER = {"migration", "infrastructure", "service_cutover", "bulk_data", "source_envelope", "subsystem_activation"}
 GREEN = {"application", "tests", "documentation", "state_observation", "staging_deployment"}
-MANIFEST = "docs/agent/STAGING_MISSION.json"
 
 
 def git(*args):
     return subprocess.check_output(["git", *args], text=True).strip()
 
 
-def change_evidence(base, head):
-    # Manifest is data, never an executable policy override. It cannot hash itself.
-    args = [base, head, "--", ".", f":(exclude){MANIFEST}"]
-    patch = subprocess.check_output(["git", "diff", "--binary", "--no-ext-diff", *args])
-    files = git("diff", "--name-only", *args).splitlines()
-    return files, hashlib.sha256(patch).hexdigest()
+def change_evidence(base, head, mission_path):
+    # The mission is data, never an executable policy override. It cannot hash itself.
+    return staging_mission.change_evidence(base, head, mission_path)
 
 
 def evaluate(mission, files, digest):
@@ -94,7 +91,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", required=True)
     parser.add_argument("--head", default="HEAD")
-    parser.add_argument("--manifest", default=MANIFEST)
+    # Ignored: the mission is read from the PR head. Accepted so an older
+    # workflow (a revert PR's) can still run this policy and be refused by it.
+    parser.add_argument("--manifest", help=argparse.SUPPRESS)
     parser.add_argument("--output")
     parser.add_argument("--pr-body-file", help="PR description, for the security-review line")
     args = parser.parse_args()
@@ -106,9 +105,13 @@ def main():
         if args.output:
             Path(args.output).write_text(json.dumps(result) + "\n")
         return 0
-    files, digest = change_evidence(args.base, args.head)
     try:
-        mission = json.loads(Path(args.manifest).read_text())
+        # DATA lane: the PR adds exactly one mission file; the fleet state at the
+        # PR head supplies what carries over. Anything else is refused.
+        path = staging_mission.added_mission(staging_mission.mission_rows(args.base, args.head))
+        files, digest = change_evidence(args.base, args.head, path)
+        mission = staging_mission.compose(staging_mission.read_at(args.head, path),
+                                          staging_mission.read_at(args.head, staging_mission.FLEET))
         result = evaluate(mission, files, digest)
         if result["classification"] == "AMBER" and result["eligible"]:
             artifact = mission["safeguards"]["recovery"]["artifact"]
@@ -122,6 +125,8 @@ def main():
                     if Path(path).is_absolute() or ".." in Path(path).parts:
                         raise ValueError("Evidence must be repository-relative")
                     git("cat-file", "-e", args.head + ":" + path)
+    except staging_mission.MissionError as exc:
+        result = {"classification": "RED", "eligible": False, "errors": [f"Invalid mission: {exc}"]}
     except (ValueError, KeyError, OSError, subprocess.CalledProcessError) as exc:
         result = {"classification": "RED", "eligible": False,
                   "errors": [f"Missing or invalid policy/recovery evidence ({type(exc).__name__})"]}
