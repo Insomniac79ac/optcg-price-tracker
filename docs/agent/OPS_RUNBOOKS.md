@@ -101,7 +101,7 @@ batches of about 500 (`count`, default 500, at most 600), through the admin page
    each batch.
 
 `plan-refresh-backfill` (`scripts/ops/refresh_backfill.py`): raw refresh work for approved
-mappings that have none. A collector prices only a mapping with a `refresh` row; since #<this PR>
+mappings that have none. A collector prices only a mapping with a `refresh` row; since #189
 every approval path plans it (`app.services.mapping_refresh.ensure_refresh_work`, guarded by
 `scripts/tests/test_mapping_refresh_guard.py`), and this plans it once for mappings approved
 before (the 97 of F1 batch 1 among them).
