@@ -330,3 +330,85 @@ def test_transport_lost_admission_never_starts_http():
     freshness = SimpleNamespace(admit=stop)
     with pytest.raises(AdmissionStopped):
         retained_fetch(None, freshness, 1, INDEX)
+
+
+def _envelope(body):
+    import base64
+    import hashlib
+    import json
+
+    return json.dumps(
+        {
+            "encoding": "base64",
+            "body": base64.b64encode(body).decode(),
+            "body_sha256": hashlib.sha256(body).hexdigest(),
+        }
+    )
+
+
+def test_recent_retained_shard_is_reused_without_fetch(setup):
+    from snkrdunk_collector.discovery import PARSER_VERSION, retained_shard
+
+    session, claim, _, anchor = setup
+    body = documents()[SHARD][1]
+    prior = RawSnapshot(
+        source_id=anchor.source_id,
+        source_url=SHARD,
+        fetched_at=datetime.now(timezone.utc) - timedelta(days=2),
+        http_status=200,
+        content_hash="b" * 64,
+        raw_content=_envelope(body),
+        parser_version=PARSER_VERSION,
+    )
+    session.add(prior)
+    session.commit()
+    now = datetime.now(timezone.utc)
+    reused = retained_shard(session, anchor.source_id, SHARD, now)
+    assert reused.body == body and reused.raw_snapshot_id == prior.id
+    calls = []
+
+    def fetch(url):
+        calls.append(url)
+        status, payload = documents()[url]
+        return RetainedDocument(url, payload, len(calls), status)
+
+    fresh = SimpleNamespace(begin_result=lambda: None, clock=lambda: now)
+    result = consume(
+        session,
+        claim,
+        freshness=fresh,
+        fetch=fetch,
+        reuse=lambda url: retained_shard(session, anchor.source_id, url, now),
+    )
+    assert calls == [ROBOTS, INDEX, NEIGHBOUR]
+    shard_doc = result.resume_cursor["documents"][1]
+    assert shard_doc == {"url": SHARD, "raw_snapshot_id": prior.id, "reused": True}
+    assert len(result.resume_cursor["new_candidate_ids"]) == 1
+
+
+@pytest.mark.parametrize("problem", ["old", "tampered", "other_parser", "failed"])
+def test_unusable_retained_shard_is_fetched_again(setup, problem):
+    from snkrdunk_collector.discovery import PARSER_VERSION, retained_shard
+
+    session, _, _, anchor = setup
+    body = documents()[SHARD][1]
+    envelope = _envelope(body)
+    if problem == "tampered":
+        envelope = envelope.replace('"body_sha256": "', '"body_sha256": "0')
+    session.add(
+        RawSnapshot(
+            source_id=anchor.source_id,
+            source_url=SHARD,
+            fetched_at=datetime.now(timezone.utc)
+            - timedelta(days=8 if problem == "old" else 1),
+            http_status=500 if problem == "failed" else 200,
+            content_hash="c" * 64,
+            raw_content=envelope,
+            parser_version="mock-v1" if problem == "other_parser" else PARSER_VERSION,
+        )
+    )
+    session.commit()
+    assert (
+        retained_shard(session, anchor.source_id, SHARD, datetime.now(timezone.utc))
+        is None
+    )

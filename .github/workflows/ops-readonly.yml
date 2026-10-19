@@ -34,11 +34,15 @@ on:
           - degraded-signals
           - freshness-not-met
           - identity-capture-work
+          - new-source-coverage
           - official-image-assets
           - snkrdunk-coverage-gap
           - snkrdunk-coverage-gap-discovery
           - snkrdunk-coverage-gap-releases
           - snkrdunk-coverage-gap-samples
+          - snkrdunk-discovery-state
+          - snkrdunk-quarantine
+          - source-bytes-by-source
           - storage-savings
           - table-sizes
           - work-by-state
