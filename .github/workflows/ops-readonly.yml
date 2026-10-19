@@ -39,6 +39,8 @@ on:
           - snkrdunk-coverage-gap-discovery
           - snkrdunk-coverage-gap-releases
           - snkrdunk-coverage-gap-samples
+          - snkrdunk-discovery-state
+          - snkrdunk-quarantine
           - storage-savings
           - table-sizes
           - work-by-state
