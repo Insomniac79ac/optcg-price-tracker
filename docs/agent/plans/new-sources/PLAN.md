@@ -1,9 +1,9 @@
 # New price sources: combined plan (PLAN ONLY), revision 2
 
-Status: **PLAN ONLY**, awaiting owner approval before any build (step P0). Revision 2 written 2026-10-18 on
-branch `plan/new-sources`, against `origin/staging` 99844c6. Revision 1 (394608b, 2026-10-16) is in git history.
-STAGING ONLY. Production RED. PSA10 OFF. No code, migration, collector, setting, staging write, source request
-or PR was made for this revision.
+Status: **APPROVED (P0 done)** by the owner 2026-10-19 00:34Z in the project thread "New sources decisions and
+Dorasuta build"; decisions recorded in §7.1. Build starts with S0. Revision 2 written 2026-10-18 on branch
+`plan/new-sources`, against `origin/staging` 99844c6. Revision 1 (394608b, 2026-10-16) is in git history.
+STAGING ONLY. Production RED. PSA10 OFF.
 
 **Supersedes** `plan/cardrush-source` (history at `1c6a511`, keeps the MEASURED CardRush audit). Nothing from
 either plan has been built.
@@ -54,7 +54,7 @@ Labels: **MEASURED** (source given), **CARRIED FORWARD** (from a committed plan)
 5. **Coverage:** with Yuyu F1 live, about 78% of prints have a raw price. Dorasuta could take that to about 91%
    and CardRush to about 96% (ESTIMATE). Biggest gains are SEC (55% to about 93%) and SR (74% to about 97%).
    Prints with two or more shop prices go from 334 to about 3,300 (ESTIMATE).
-6. **You decide 16 things in §7**, each with a recommended answer. New in substance: N2 (CardRush permission
+6. **You decided these on 2026-10-19 (§7.1)**; N3, N14 and N16 of revision 2 are still open. New in substance: N2 (CardRush permission
    without an email), N3 (storage rule), N13 (no Yuyu/SNKR redeploy), N14 (order versus the SNKRDUNK fix),
    N15 (stop rule) and N16 (contact address).
 
@@ -371,6 +371,48 @@ Already decided and not repeated: CR Q1 plan default, Q2-Q5, Q7-Q13 accepted, Q6
 | N14 | Order versus the SNKRDUNK discovery fix (if you approve it): CardRush first, SNKRDUNK fix after | **CardRush first** | SNKRDUNK fix first would push CardRush below the 60-day rule (57 days). |
 | N15 | Stop rule: 403, 429, challenge, robots disallow or any site notice stops the source until you decide | **Yes** | Your instruction, made a hard rule in the kit. |
 | N16 | Contact in the user agent: a dedicated address you create (not your personal email), stored as an env variable | **Yes, you supply it before D1** | Honest identification without exposing a personal address or committing it. |
+
+### 7.1 Owner decisions recorded 2026-10-19
+
+The owner answered on 2026-10-19 00:34Z using the **revision 1 numbering** (394608b §6). Each answer is mapped
+to the revision 2 number below. Quoted text is the owner's.
+
+| Rev 1 # | Owner answer | Rev 2 # | Recorded decision |
+|---|---|---|---|
+| N1 | "yes" | N1 | Plan approved: foundations, then Dorasuta asks (light mode), then buyback, then CardRush. |
+| N2 | "Q4 rule" | N4 | Dorasuta out of stock follows the Q4 rule (eligible up to 7 days, stock recorded). |
+| N3 | "yes" | N5 | Dorasuta page 1 daily, the rest on a 6-day sweep (all rows 7 days old or newer). |
+| N4 | "yes (measure at C0, 48 h fallback, no paid storage)" | N7 | CardRush cadence chosen at C0 on measured numbers; 48 h if storage is short; no paid storage. |
+| N5 | "yes" | N6 | Dorasuta cap 1.5 MB/day measured over 48 h, else stop and re-plan. |
+| N6 | "yes" | N8 | `buy.dorasuta.jp` allowed for the 40-request audit; Fullahead stays skipped. See note 2. |
+| N7 | "no (no permission requests)" | (outreach) | No Aucfan or magi enquiry. Confirms outreach closed (owner 2026-10-16). |
+| N8 | "no email; owner accepts the CardRush clause in writing here, so Q1 is cleared" | N2 | **Q1 cleared** by the owner's written acceptance. No email is sent. CardRush still waits for C0 and runs under the §2.4 etiquette and stop rule. |
+| N9 | "yes (parked)" | (Suruga-ya) | Suruga-ya stays parked, no requests. |
+| N10 | "yes" | N11 | Collector service cap 10 to 11 at D1, 11 to 12 at C2. |
+| N11 | "yes" | N12 | One splice per source, 14 days or more apart, CPI `METHODOLOGY_VERSION` stays 1. |
+| N12 | "yes" | N9 | Dorasuta buyback is auxiliary-only (never Index, Market Value or public). |
+| N13 | "yes" | N10 | Graded rows from new sources: RAW and variants only, no observations, PSA10 OFF. |
+| N14 | "yes (separate thread)" | (none) | Separate check of the Yuyu-Tei base-print mapping gaps (SV §3, D9), in its own thread, outside this build. |
+
+Also recorded:
+- **N15 stop rule**: already the owner's standing instruction (2026-10-16: honest UA, robots.txt respected, stop
+  on any 403 or 429). Built as written in §2.4.
+- **N13 (rev 2), no Yuyu/SNKR redeploy**: follows the standing rule that a Yuyu/SNKR redeploy needs the owner's
+  go. The §2.7 guard test is built in S1.
+
+**Still open (not answered by the 2026-10-19 message):**
+1. **N3 (rev 2)**: storage admission rule "days to reserve stay 60 or more". Needed at C0, not before.
+2. **N14 (rev 2)**: CardRush before the SNKRDUNK discovery fix. Needed only if the owner approves that fix.
+3. **N16 (rev 2)**: the User-Agent contact address. The owner's message holds a placeholder, not an address.
+   Needed before D1 (it is a Railway variable, never committed). The repo is public, and the UA string is sent
+   to each site, so the address is visible to those sites.
+
+Notes:
+1. Nothing in S0 to D0 needs the open items.
+2. `buy.dorasuta.jp`, `dorasuta.jp` and `www.cardrush-op.jp` were all still refused by this cloud environment's
+   proxy on 2026-10-19 00:36Z (CONNECT 403, MEASURED). The owner said to run the buyback audit (B0) from a new
+   thread in the `cardpirate-data` project if this one is refused. S0 to D0 use committed fixtures and do not
+   need either host.
 
 ---
 
