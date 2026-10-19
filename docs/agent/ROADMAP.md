@@ -48,7 +48,7 @@ Population: 4,316 active verified JP prints (`yuyu-coverage-gap`). Coverage targ
 | Checks within 24 h | **100%** of non-quarantined items (2,902 of 2,902; oldest Yuyu-Tei 23.3 h, SNKRDUNK 18.8 h). 97.7% of all 2,969 eligible items. The `freshness-deadline-deficit` blocker is gone. | MEASURED: `freshness-not-met` 39173908861, `staging-state` 39173902607 |
 | Mappings older than 24 h | **67**, all SNKRDUNK and all quarantined by identity refusal (22 never checked, 45 last success over 24 h; oldest blocked since 2026-10-02). Plus 3 inactive Yuyu-Tei items. | MEASURED: `degraded-signals` 39174056368 |
 | Zero-source prints (no fresh price) | **1,650 to 1,700 (38.2% to 39.4%)**. Zero mapped sources: NOT MEASURED. | derived from the two coverage-gap runs |
-| Exact candidate backlog | Yuyu-Tei F1: **about 762** exact proposals accepted, waiting for owner-approved batches of about 500 (CARRIED FORWARD, `STAGING_MISSION.json` notes; F1 sizing 775 strict). SNKRDUNK: **82** exact candidates whose listing is not mapped. | `snkrdunk-coverage-gap-discovery` 39174490534 |
+| Exact candidate backlog | Yuyu-Tei F1: sized at 775 strict matches (about 762 accepted by the owner), but F1 proposals are written only when Yuyu-Tei discovery revisits a set, and 0 existed at 22:55Z; the approval dry run measures the real count. SNKRDUNK: **82** exact candidates whose listing is not mapped. | `snkrdunk-coverage-gap-discovery` 39174490534 |
 | Ambiguous backlog | Yuyu-Tei: **1,324** ambiguous candidates (1,293 prints); 830 more candidates whose release or card code does not resolve. SNKRDUNK: **218** ambiguous candidates (201 prints). | `yuyu-coverage-gap` 39174286814, SNKRDUNK runs above |
 | Discovery yield | Yuyu-Tei: 67 discovery runs in 24 h, all completed; every gap print already has a Yuyu-Tei candidate for its code (class a = 0). SNKRDUNK: **2 new candidates in 14 days, last discovery attempt 2026-10-07**; 1,085 of 1,451 high-rarity prints have no SNKRDUNK candidate. | `work-by-state` 39174132869, `snkrdunk-coverage-gap-discovery` 39174490534 |
 | Source failure rates (24 h) | Yuyu-Tei refresh: 2,763 captured, **0 failures**. SNKRDUNK refresh: 287 attempts, 50 captured, 236 no listing, 1 identity refusal, **0 denials or transient failures**. | `work-by-state` 39174132869 |
@@ -85,6 +85,7 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 | 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | F15 owner check; L1 needs a collector release |
 | 20 | Currency selector | planned (later) | RED (invariant amendment) | deferred |
 | 21 | English-edition catalogue | planned (later) | AMBER | deferred |
+| 22 | Per-PR mission files (stop manifest conflicts) | planned (plan only, owner 2026-10-19) | AMBER (policy tooling, `.github/`) | owner go; hold-for-owner |
 
 ### 1. RAW coverage to 75%
 
@@ -100,8 +101,10 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
   after each. ESTIMATE: Yuyu-Tei coverage 60.6% to about 78% if all are approved and refresh.
   No `ops-write` runbook for these approvals exists yet (`scripts/ops/run.py` lists only
   `enqueue-remaining-50`).
-- **Also:** identity-capture batches (resumed 2026-10-18; no batch has run since 2026-10-16 23:17Z;
-  217 prints wait on a pending capture intent, 6 on a blocked one); 176 prints listed only in
+- **Also:** identity-capture batches (resumed 2026-10-18; no batch has run since 2026-10-16 23:17Z).
+  The 217 prints in class `b_capture_intent:pending` are already captured (a finished capture parks
+  as `pending`); they wait on evidence review, not on a new batch. `enqueue-remaining-50` only
+  replays the finished NEW100 plan, so a new batch needs a new runbook. 176 prints are listed only in
   another Yuyu-Tei category.
 - **Blocker:** the F1 approval runbook; owner approval per batch.
 - **Owner decisions open:** approve each F1 batch and each capture batch (dry run first).
@@ -306,6 +309,53 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
   separate prints and denominator, no cross-language mapping. Default G2b: defer until an English price
   source is in sight.
 
+### 22. Per-PR mission files (stop manifest conflicts)
+
+- **Status: planned, plan only** (owner request 2026-10-19 04:03Z: plan, don't build).
+- **Problem.** Every DATA-lane PR edits the one shared `docs/agent/STAGING_MISSION.json`. After each
+  merge the next PR has a text conflict on it, and even without one its `diff_sha256` goes stale: the
+  hash covers a two-dot diff against the moving `staging` tip, so any merge to `staging` changes it.
+  Each PR then needs a thread to merge `staging`, regenerate the hash and wait for CI, so delivery is
+  serialized behind thread availability. A third cause: the hash covers git's abbreviated index
+  lines, so a long-lived checkout and CI's fresh clone can disagree.
+- **Plan (smallest safe change, one PR):**
+  1. Split the file in two. Per-PR mission `docs/agent/missions/<branch>.json` holds what describes
+     one change: mission, classification, red decisions, impacts, safeguards, `diff_sha256`, and the
+     deploy request (`collector_services`, `raw_dependency_migration`). Fleet state
+     `docs/agent/STAGING_FLEET.json` holds what carries forward: `deployment_verification`
+     (components, revision, checks) and `operational_notes`. Only PRs that move the fleet (collector
+     or migration PRs, already one at a time through staging-automerge) edit it.
+  2. `staging_policy.change_evidence` hashes the PR's own change set: `git diff --binary --full-index
+     $(git merge-base base head) head`, excluding only that PR's mission file. Merging `staging` into a
+     PR no longer changes the hash unless the merge itself edits the PR's files, and full index lines
+     remove the clone-size dependence.
+  3. policy-gate keeps running the base copy of the evaluator, unchanged in strictness: DATA lane needs
+     exactly one added mission file, no other file under `docs/agent/missions/` may change, impacts
+     must cover every changed file exactly once (the fleet file included), same RED, AMBER and
+     classification rules. `product_lane.py` treats `docs/agent/missions/**` and the fleet file as
+     DATA, as the manifest is today. The hook and lane checks are untouched.
+  4. Delivery (`ci.yml` staging-automerge, `staging-delivery.yml`) finds the one mission file the
+     merge added, builds the old manifest shape in a temp file (fleet state plus that mission) and
+     passes it with `--manifest`. The "full delivery with an unchanged manifest" refusal becomes "full
+     delivery without exactly one added mission file". Fails closed.
+  5. Verifiers (`staging-verify.yml`, `verify_yuyu_raw_reader_component.py`,
+     `verify_snkr_published_discovery_component.py`) read the fleet file.
+  6. Tests: `test_staging_policy`, `test_staging_delivery_scope`, `test_product_lane`,
+     `test_claude_guardrails`, `test_collector_runtime_inputs`, plus cases for zero, two and edited
+     mission files. Docs: CLAUDE.md, AUTONOMY_POLICY.md, OPS_RUNBOOKS.md.
+- **Bootstrap.** policy-gate runs the base copy, so the switch PR itself carries one last old-style
+  `STAGING_MISSION.json`; the next PR is the first on the new layout. Mission files are small and
+  stay as history.
+- **What it does not change.** Staging must still be up to date before a PR is marked ready, and CI
+  re-runs on the updated head. Updating is then a conflict-free merge (`update_pull_request_branch`)
+  with no hash regeneration, so the coordinator or any thread can do it.
+- **Effort:** M. One DATA-lane PR, about 300 to 500 lines with tests, plus a short docs follow-up if
+  split. **Risk:** AMBER. It changes the gate and the delivery path for collector rollouts. Mitigations:
+  every new branch fails closed, the evaluator rules are unchanged, the first delivery after it is a
+  docs PR (scope skip) before any collector PR, recovery is a native revert. Needs hold-for-owner
+  (touches `.github/`) and an `Independent security review:` line, since it is policy tooling.
+- **Blocker:** owner go. Not started.
+
 ## 4. Done and not to repeat
 
 Collector v1 S1 to S8 (#110 to #135); the 2026-10-16 security pass and follow-ups (#136 to #170);
@@ -320,14 +370,16 @@ production deletion (#107, #108). Never-replay list: session 14 handoff "Session
   (`identity-capture-work` 39174417652). Never replay either list.
 - **Identity:** no auto-approval; their proposals go through the resolver (now with F1) and the
   approval batches in item 1.
-- **After NEW100:** 615 capture work items exist in total (2766 to 3777, plus 3 blocked); 217 prints
-  still wait on a pending capture intent. Batches resumed by owner decision 2026-10-18, but none has
-  run since 2026-10-16 23:17Z.
+- **After NEW100:** 615 capture work items exist in total (2766 to 3777), all attempted; 3 blocked
+  (3018 to 3020). The 217 prints in class `b_capture_intent:pending` are already captured and wait on
+  evidence review. Batches resumed by owner decision 2026-10-18; none has run since 2026-10-16 23:17Z,
+  and the next one needs a runbook that plans uncaptured listings (`enqueue-remaining-50` only replays
+  NEW100).
 
 ## 6. Next 10 (highest value)
 
 1. F1 approval runbook and the first batch of about 500 (item 1). Biggest coverage step.
-2. Next identity-capture batch, dry run first (items 1 and 5).
+2. A runbook for the next identity-capture batch, then the batch, dry run first (items 1 and 5).
 3. Owner decisions on `plan/new-sources` N1 to N16, then build the foundations and Dorasuta asks
    (item 13).
 4. SNKRDUNK discovery fix decision and build (item 3).
@@ -339,6 +391,9 @@ production deletion (#107, #108). Never-replay list: session 14 handoff "Session
 8. Next.js 16.3 retry by the written plan, then restore share cards (items 9 and 19).
 9. Data service sandbox H-2 and the owner's reply to the requesting website (item 14).
 10. Domain and the public launch gate, the path to production (items 18 and 12).
+
+Delivery throughput: item 22 (per-PR mission files) removes the rebase-and-regenerate step between
+queued PRs. Do it before the next multi-PR queue.
 
 ## 7. Sources read for this revision
 
