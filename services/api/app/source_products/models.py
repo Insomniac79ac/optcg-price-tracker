@@ -27,6 +27,7 @@ from sqlalchemy import (
     false,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -219,6 +220,8 @@ class MarketIndexSpliceSnapshot(Base):
     index_version: Mapped[int] = mapped_column(Integer, nullable=False)
     source_semantics_version: Mapped[int] = mapped_column(Integer, nullable=False)
     calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Old-basis source_values, the same shape as market_index_snapshots.provenance.
+    provenance: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)
 
 
 # The new-source writer's view of price_observations: only the columns it sets, on a private
