@@ -109,7 +109,7 @@
    "observation_window": "After merge: capture-batch-preview reports the exclusion breakdown and min(count, eligible); a later dry run of the same count gives the same SHA-256 on unchanged state. Captures stay held until #189, the refresh backfill and F1 batch 2 (owner 2026-10-19 13:02Z)."
   }
  },
- "diff_sha256": "59d94b42c9a227cef2aa790fed7755e2490ff42a6a8b622aca3f7ec7dcb02d52",
+ "diff_sha256": "96ee4d2f41fa479830f597df4dbf418c82634f06f76420bcc557557ef142734b",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
