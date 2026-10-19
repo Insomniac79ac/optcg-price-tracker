@@ -87,7 +87,7 @@
    "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
- "diff_sha256": "b460ded13b38f2fed11eb52993b5f4e48bc533cbf14ee042e85400c50562342d",
+ "diff_sha256": "fffc6af07e0beb2b17e0b9f406fbf51da41019e479e021b1d18f02125cb56418",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
