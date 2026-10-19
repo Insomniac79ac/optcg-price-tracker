@@ -20,6 +20,7 @@ from app.services.exact_print_approval import (
     SourceEvidence,
     resolve_exact_print,
 )
+from app.services.mapping_refresh import ensure_refresh_work
 from app.services.snkrdunk_candidate_approval import (
     assert_mapping_may_be_approved,
     find_mapping_for_listing,
@@ -197,6 +198,10 @@ def match_candidate(
     mapping.review_status = "approved" if body.manual_verified else "needs_review"
 
     try:
+        db.flush()
+        # Approved means collected: plan the raw refresh work in the same commit. A
+        # needs_review row is not eligible, so this plans nothing for it.
+        ensure_refresh_work(db, mapping)
         db.commit()
     except IntegrityError as exc:
         from app.services.current_source_mapping import current_identity_conflict

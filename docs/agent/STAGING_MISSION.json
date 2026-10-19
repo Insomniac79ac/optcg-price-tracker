@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "New-sources plan step S0 (owner approved the plan 2026-10-19 00:34Z, diagnostic only): add two reviewed read-only db-diagnostic files. source-bytes-by-source reports bytes stored per source per UTC day (RAW, price observations, collection attempts) and a 48 h MB/day figure per source, for the Dorasuta 1.5 MB/day cap (N6) and storage checks that overlap Yuyu-Tei batches. new-source-coverage reports priced prints by rarity, variant and number of shop sources over 24 h and 7 days, plus latest Market Index coverage. Register both in ops-readonly. Staging only; PSA10 not read; no source, collector, setting, price, identity, mapping, Market Value/Index, secret or Railway change; no runbook run in this PR.",
+ "mission": "Approved means collected (owner go 2026-10-19 12:39Z). F1 batch 1 (2026-10-19, 97 approvals) left 97 approved Yuyu-Tei mappings with no refresh work in freshness_work, so no collector ever prices them (MEASURED: degraded-signals run 39253944074, yuyutei unplanned 97, snkrdunk 0). Nothing on staging plans refresh work; the existing rows came from a one-off raw seeding on an unmerged branch (2026-10-04). There is no single shared approval function, so this adds one: app.services.mapping_refresh.ensure_refresh_work plans the mapping's raw refresh work (Yuyu-Tei sell, SNKRDUNK floor; never PSA10) in the caller's transaction, leaves existing work untouched, and plans nothing for a not-yet-eligible row. Every approval path calls it right after its write (Yuyu-Tei candidate and exact-proposal approval, SNKRDUNK candidate approval and endpoint, admin source-mapping PATCH and approve, mapping-quality bulk approve/activate/verify), and a guard test fails if a new path approves a mapping without it. A new ops-write runbook plan-refresh-backfill plans the same rows once for mappings approved before: dry run lists them with a SHA-256, a 10-row sample and an MB/day storage ESTIMATE; apply needs that SHA and the owner's staging-ops approval. Not a collector change: no file in either collector's import graph changes, 0 collector rollouts.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,22 +20,67 @@
  "impacts": [
   {
    "files": [
-    "scripts/diagnostics/new-source-coverage.sql",
-    "scripts/diagnostics/source-bytes-by-source.sql"
+    "services/api/app/services/mapping_refresh.py"
    ],
    "effects": [
-    "infrastructure"
+    "application",
+    "staging_deployment"
    ],
-   "reason": "Two SELECT/WITH-only diagnostics (9 statements) over sources, raw_snapshots, raw_snapshot_dictionaries, price_observations, source_collection_attempts, card_prints, canonical_cards, source_card_mappings and market_index_snapshots, run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. Raw asks counted are yuyutei sell and snkrdunk floor only (no buy, sold or PSA10). No write, no source request."
+   "reason": "New shared function, outside both collector import graphs. ensure_refresh_work returns the mapping's existing refresh row unchanged, or plans one with the existing plan_refresh (raw category only: Yuyu-Tei sell, SNKRDUNK floor; never PSA10), high_interest false, request bound = the source's current maximum (30 when none). plan_refresh's own eligibility (active, current, approved, verified print, SNKRDUNK manual_verified, established listing identity) and lineage checks are unchanged; a refusal rolls back to a savepoint, writes nothing and leaves the approval standing. Never commits."
   },
   {
    "files": [
-    ".github/workflows/ops-readonly.yml"
+    "services/api/app/services/yuyutei_candidate_approval.py",
+    "services/api/app/services/snkrdunk_candidate_approval.py",
+    "services/api/app/api/snkrdunk_candidates.py",
+    "services/api/app/api/source_mappings.py",
+    "services/api/app/api/admin_source_mapping_quality.py"
+   ],
+   "effects": [
+    "application",
+    "staging_deployment"
+   ],
+   "reason": "Each approval write path calls ensure_refresh_work after its flush, in the same transaction. No guard, refusal, identity check or response changes; the SNKRDUNK endpoint and the admin PATCH flush before their existing commit so the new row commits with the approval. Approval (admin pages, approve-f1-batch) now creates one pending refresh row per newly approved mapping, which the collectors' existing schedule picks up."
+  },
+  {
+   "files": [
+    "scripts/ops/refresh_backfill.py",
+    "scripts/ops/run.py"
+   ],
+   "effects": [
+    "infrastructure",
+    "bulk_data"
+   ],
+   "reason": "New ops-write runbook plan-refresh-backfill (write, collector-affecting: quiet window 02:00-06:00 UTC, no delivery running). Dry run is read-only over the operational-health population (mappings with no refresh row), pins at most 1000 by SHA-256 (default 500). Apply rebuilds the list in the write session, refuses unless the SHA matches, and plans each through ensure_refresh_work in one transaction. Expected first apply: 97 rows plus their raw price-state rows. No source request."
+  },
+  {
+   "files": [
+    ".github/workflows/ops-write.yml"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds new-source-coverage and source-bytes-by-source to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
+   "reason": "Adds plan-refresh-backfill to the runbook choice list and its default to the count description. No permission, secret, environment or trigger change; every run still waits for the owner in staging-ops."
+  },
+  {
+   "files": [
+    "services/api/tests/test_mapping_refresh_postgres.py",
+    "scripts/tests/test_mapping_refresh_guard.py",
+    "scripts/tests/test_ops_runbooks.py"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Postgres: approval creates exactly one pending raw refresh row; re-approval and a repeated call add nothing and reset nothing; new work uses the source's existing request bound; SNKRDUNK without manual verification gets none, then raw floor only. Guard: every module under services/api/app that writes an approved mapping calls ensure_refresh_work. Runbook: list pinned on decision fields, apply refuses without or on a different SHA before any write session, dry-run summary and storage estimate, read-only SQL, registry kind."
+  },
+  {
+   "files": [
+    "docs/agent/OPS_RUNBOOKS.md"
+   ],
+   "effects": [
+    "documentation"
+   ],
+   "reason": "Documents plan-refresh-backfill and that approve-f1-batch approvals now plan refresh work."
   }
  ],
  "deployment_verification": {
@@ -53,26 +98,40 @@
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-readonly db-diagnostic (two new read-only SQL files)"
+     "name": "Staging API (GitHub build)"
+    },
+    {
+     "name": "Staging Postgres (no migration; freshness_work and freshness_price_states rows written by approvals and one backfill apply)"
+    },
+    {
+     "name": "GitHub Actions: ops-write plan-refresh-backfill"
     }
    ],
    "routes": [
-    "None"
+    "POST /admin/yuyutei-candidates/{id}/approve",
+    "POST /admin/source-mapping-proposals/review/groups/{id}/approve-exact",
+    "POST /snkrdunk/candidates/{id}/match",
+    "POST /admin/snkrdunk-candidates/{id}/approve-match",
+    "PATCH /admin/source-mappings/{id}",
+    "POST /admin/source-mappings/{id}/approve",
+    "POST /admin/source-mappings/bulk-update"
    ],
    "dependencies": [
-    "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156, #166 and #174 (unchanged); new-sources plan on branch plan/new-sources (d0bd629)"
+    "freshness_queue.plan_refresh (unchanged); operational_health_sql.ELIGIBLE (unchanged); ops runbooks from PR #139, #143, #150, #155, #176, #179"
    ],
-   "deployment_impact": "Two read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
-   "database_writes": 0,
+   "deployment_impact": "API redeploy through the normal staging delivery. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No file in either collector import graph changes (scripts/collector_runtime_inputs.py). New refresh rows join the existing yuyutei shard routing (mapping_id % 9) and source budgets; no budget, pacing, schedule or variable change.",
+   "database_writes": 300,
    "source_requests": 0,
-   "estimated_runtime_minutes": 5
+   "estimated_runtime_minutes": 10
   },
   "recovery": {
-   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-   "procedure": "Native revert of this PR removes the two diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
-   "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
-   "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+   "artifact": "0e3599b5622f1790c93524c282215581eb56be94",
+   "procedure": "Native revert of this PR removes the approval hook, the runbook and its workflow choice. Refresh rows already planned are ordinary pending work the collectors already handle; leaving them is the safe state (they only make approved mappings collectable).",
+   "trigger": "An approval endpoint or approve-f1-batch fails or slows because of the hook, or a backfill apply reports skipped mappings or not ok.",
+   "backup": "Not applicable: no schema change; rows are additive pending work. Railway Postgres daily backups continue.",
    "validation": [
+    "services/api/tests/test_mapping_refresh_postgres.py",
+    "scripts/tests/test_mapping_refresh_guard.py",
     "scripts/tests/test_ops_runbooks.py"
    ]
   },
@@ -81,17 +140,17 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/diagnostics/new-source-coverage.sql",
-    "scripts/diagnostics/source-bytes-by-source.sql"
+    "scripts/ops/refresh_backfill.py",
+    "services/api/app/services/mapping_refresh.py"
    ],
-   "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
+   "observation_window": "After merge: plan-refresh-backfill dry run lists the 97 F1 mappings (degraded-signals yuyutei unplanned 97); after the owner-approved apply degraded-signals shows yuyutei unplanned 0, and after one full Yuyu-Tei cycle yuyu-coverage-gap fresh rises from 2,616."
   }
  },
  "diff_sha256": "c4e9ee219bb2b5098250638c1d344815d36fdc2b1e64345a376568deed30278d",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
+  "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
+  "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges."
  ]
 }

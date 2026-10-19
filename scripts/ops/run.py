@@ -90,6 +90,11 @@ def _approve_f1(args, out):
     return f1_approve.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
 
 
+def _refresh_backfill(args, out):
+    from ops import refresh_backfill
+    return refresh_backfill.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+
+
 # name: (kind, collector_affecting, handler). A write runbook runs only in ops-write.
 RUNBOOKS = {
     "staging-state": ("read", False, _staging_state),
@@ -102,6 +107,7 @@ RUNBOOKS = {
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
     "enqueue-capture-batch": ("write", True, _capture),
+    "plan-refresh-backfill": ("write", True, _refresh_backfill),
 }
 
 

@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -95,8 +95,30 @@ batches of about 500 (`count`, default 500, at most 600), through the admin page
    does) under reviewer `ops-write:approve-f1-batch:<run id>`. It stops at the first refusal, or
    when the collector quiet window starts; what was approved stays approved and is listed in
    `approved_group_ids`. Approval is collector-affecting (new mappings join the collectors' own
-   schedule), so an apply never starts 02:00-06:00 UTC. It never fetches a source, enqueues work
-   or touches a collector service. The owner's rule: a 48 h storage check after each batch.
+   schedule), so an apply never starts 02:00-06:00 UTC. Each approval plans the new mapping's raw
+   refresh work through the shared approval path (`ensure_refresh_work`, below); the runbook never
+   fetches a source or touches a collector service. The owner's rule: a 48 h storage check after
+   each batch.
+
+`plan-refresh-backfill` (`scripts/ops/refresh_backfill.py`): raw refresh work for approved
+mappings that have none. A collector prices only a mapping with a `refresh` row; since #<this PR>
+every approval path plans it (`app.services.mapping_refresh.ensure_refresh_work`, guarded by
+`scripts/tests/test_mapping_refresh_guard.py`), and this plans it once for mappings approved
+before (the 97 of F1 batch 1 among them).
+
+1. Lists, read-only, every mapping in the operational-health population (active, current,
+   approved, verified print, SNKRDUNK manually verified) with no refresh work, oldest mapping
+   first; the first `count` (default 500, at most 1000) are pinned by SHA-256 over mapping id,
+   source, print and listing identity.
+2. Dry run by default: the summary carries `approved_list_sha256`, `by_source`, every
+   `mapping_ids`, a 10-row `sample` (seeded by the SHA) and `storage` (ESTIMATE: the measured
+   planning MB/day per existing refresh row times the new rows, and days to the reserve before and
+   after).
+3. `apply=true` rebuilds the list, refuses unless it hashes to `expected_sha256`, and plans each
+   mapping in one transaction: raw only (Yuyu-Tei `sell`, SNKRDUNK `floor`, never PSA10), existing
+   work untouched. A mapping it cannot plan (lineage conflict) is listed in `skipped_mapping_ids`
+   and the run reports not ok. No source request. Collector-affecting (the collectors pick the new
+   rows up), so an apply never starts 02:00-06:00 UTC.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
@@ -143,7 +165,7 @@ gh api $R/actions/runs/$RUN/artifacts --jq '.artifacts[] | {id, name, size_in_by
   into up to 9 notices), or the GitHub MCP `get_job_logs` tool, which prints the same summary
   JSON. The owner can download the artifact from the run page.
 - `ops-write`: dispatch the same way with `ops-write.yml`, `inputs[runbook]=enqueue-remaining-50`
-  (or `approve-f1-batch`, `enqueue-capture-batch`), `inputs[apply]=false`; `inputs[count]` is optional (empty is the
+  (or `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`), `inputs[apply]=false`; `inputs[count]` is optional (empty is the
   runbook's default). The run waits for the owner. Read `approved_list_sha256` from the dry run;
   for an apply the owner (or an agent the owner asked) dispatches again with `inputs[apply]=true`
   and `inputs[expected_sha256]=<that sha>`, and the owner approves it.
