@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -134,6 +134,40 @@ before (the 97 of F1 batch 1 among them).
    and the run reports not ok. No source request. Collector-affecting (the collectors pick the new
    rows up), so an apply never starts 02:00-06:00 UTC.
 
+`apply-migration` (`scripts/ops/apply_migration.py`): the only way a schema migration reaches
+staging. Nobody runs `alembic upgrade` against staging by hand, and agents never do.
+
+1. Inputs `revision` and `parent`. Only allowlisted pairs (`ALLOWED`, a reviewed code change)
+   are accepted: today exactly `7a52e9b48e8a` on parent `3b7d9c1a5e20` (new-sources S1, #181).
+   The checkout on `staging` must carry that migration as its single Alembic head on top of
+   `parent`, so dispatch it only after the migration's PR has merged. Anything else is refused at
+   dispatch (preflight) and again in the runbook job.
+2. Before any write, and on the dry run too: the newest Railway backup of the staging Postgres
+   volume must be younger than 24 h (`scripts/staging_backup_age.py`), the read-only staging
+   fingerprint must pass, and the live `alembic_version` must be exactly `parent`. Already
+   applied, any other live revision, no backup or a stale one: refused, nothing written. With no
+   backup the refusal names the Railway setting: staging project, Postgres service, its
+   `postgres-volume` volume, Backups (turn on a schedule or create one now).
+3. Dry run (default) writes nothing. The summary carries `sql_plan_sha256` (SHA-256 of the
+   offline Alembic SQL for that one step, saved as `migration-plan.sql` in the artifact),
+   `existing_tables_locked` (each existing table and the locks the plan takes on it),
+   `new_tables`, `row_counts` (MEASURED by `count(*)`, or the planner estimate labelled ESTIMATE
+   above 1,000,000 rows), `lock_budget` and the `backup` it checked.
+4. `apply=true` with `expected_sha256=<sql_plan_sha256 from the reviewed dry run>` rebuilds the
+   plan and refuses unless it hashes the same, re-checks backup, fingerprint and live revision,
+   then runs only that revision in one transaction with `lock_timeout` 5 s and
+   `statement_timeout` 120 s, holding the `alembic_version` row so a second run waits and then
+   refuses as already applied. Any error rolls the whole step back, `alembic_version` included.
+   It reads `alembic_version` back and records it in `migration-receipt.json`
+   (`alembic_version_after`). No source request.
+   - Locks are held until the one commit: a table under ACCESS EXCLUSIVE (for #181:
+     `price_observations`, through its CHECK VALIDATE scan) blocks its readers and writers for
+     the whole step. A lock not granted in 5 s, or a statement over 120 s, rolls everything back.
+   - Collector-affecting (collectors read these tables), so an apply never starts 02:00-06:00 UTC,
+     nor 19:30-20:30 UTC.
+5. After the apply, verify staging on its head (`staging-state`, or a `Verify staging merge`
+   re-run): until the migration is applied, verification fails on the revision by design.
+
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
 
@@ -180,10 +214,13 @@ gh api $R/actions/runs/$RUN/artifacts --jq '.artifacts[] | {id, name, size_in_by
   into up to 9 notices), or the GitHub MCP `get_job_logs` tool, which prints the same summary
   JSON. The owner can download the artifact from the run page.
 - `ops-write`: dispatch the same way with `ops-write.yml`, `inputs[runbook]=enqueue-remaining-50`
-  (or `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`), `inputs[apply]=false`; `inputs[count]` is optional (empty is the
+  (or `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`), `inputs[apply]=false`; `inputs[count]` is optional (empty is the
   runbook's default). The run waits for the owner. Read `approved_list_sha256` from the dry run;
   for an apply the owner (or an agent the owner asked) dispatches again with `inputs[apply]=true`
   and `inputs[expected_sha256]=<that sha>`, and the owner approves it.
+  `apply-migration` takes `inputs[revision]` and `inputs[parent]` instead of `count`, and its
+  sha is `sql_plan_sha256`:
+  `-f 'inputs[runbook]=apply-migration' -f 'inputs[revision]=7a52e9b48e8a' -f 'inputs[parent]=3b7d9c1a5e20'`.
 - Agents never approve a waiting run (`pending_deployments` is blocked by `.claude/hooks/guard.py`).
 - Is a staging delivery running? The same check the runbooks use:
   `gh api "$R/actions/workflows/ci.yml/runs?status=in_progress" --jq '.workflow_runs[].id'`, then
