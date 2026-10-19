@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "D9 F1 approval runbook and PR #173 rollout receipt (owner asks 2026-10-18 23:11Z and 23:43Z): commit the PR #173 rollout receipt the owner downloaded and let fleet-vs-receipt compare each collector with the newest receipt that deployed it (default chain PR #103 then PR #173); plan, not build, publishing receipts from the delivery job; and add the ops-write runbook approve-f1-batch, which approves current exact Yuyu-Tei proposals made by the F1 listing-kind rule in batches of about 500 through the admin page's approve_exact_proposal. Each run waits for the owner in staging-ops; the dry run lists every proposal, a 20-row seeded random sample and storage room; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR (batch 1 only after merge, owner-approved).",
+ "mission": "SNKRDUNK discovery restart (owner priority fix 2026-10-19; snkrdunk collector change allowed for this fix only, delivered by staging-automerge with a collector rollout outside 02:00-06:00 UTC, never hand-merged or native auto-merged). Discovery stopped after the 2026-10-07 canaries 3676/3677 because no code plans a next intent. Each scheduled SNKR turn now plans at most one guarded snkr-published:auto-v1 intent per 6h with the existing adapter bounds (300 requests, 20 products, 12 anchors, radius 1..48), and published discovery re-reads sitemap shards retained within 7 days instead of re-fetching and re-storing them. Staging only; PSA10 OFF; no identity, resolver, mapping, approval, price, Market Value/Index, schedule, budget, variable, schema or yuyutei change.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,44 +20,47 @@
  "impacts": [
   {
    "files": [
-    "scripts/ops/f1_approve.py",
-    "scripts/ops/run.py"
+    "services/snkrdunk_collector/snkrdunk_collector/discovery_planner.py",
+    "services/snkrdunk_collector/snkrdunk_collector/due.py",
+    "services/snkrdunk_collector/snkrdunk_collector/config.py"
    ],
    "effects": [
-    "infrastructure"
+    "application",
+    "staging_deployment",
+    "subsystem_activation"
    ],
-   "reason": "New write runbook approve-f1-batch registered in RUNBOOKS as (write, collector-affecting). Selection is read-only (default_transaction_read_only session); an apply runs only in ops-write after the owner's staging-ops approval, refuses unless the rebuilt list hashes to the dry run's SHA-256, and calls approve_exact_proposal (every admin guard: exact, pending, current, same digest and resolver version, sole recommended print, candidate state, no rejected or conflicting mapping, print verified and not already monitored) once per proposal per transaction. Exact proposals only; ambiguous ones are never approved. run.py --count now defaults per runbook (enqueue-remaining-50 keeps 50)."
+   "reason": "Re-enables the already-built published discovery lane by planning it: after recovery and before drain, one pending discovery row via plan_discovery_scope with the cursor the existing intent() validator requires; nothing else is written. Guards (any one skips the turn): an open snkr-published intent; last auto intent < SNKRDUNK_AUTO_DISCOVERY_INTERVAL_H (default 6) ago; 2 of last 3 auto intents not completed; budget disabled or paused; next-40-min RAW demand x 24h peak RAW request cost + 300 > unreserved window; no approved manual_verified anchor; last 3 auto intents inspected nothing with an unchanged anchor pool. Kill switch SNKRDUNK_AUTO_DISCOVERY (default true, no variable change needed). Planner errors are logged and the RAW turn continues; lock loss still propagates."
   },
   {
    "files": [
-    "scripts/ops/fleet.py",
-    "docs/agent/handoff/2026-10-18/pr173-delivery/staging-delivery-2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3/evidence/latest-collector-rollout.json"
+    "services/snkrdunk_collector/snkrdunk_collector/discovery.py"
    ],
    "effects": [
-    "infrastructure"
+    "application",
+    "staging_deployment"
    ],
-   "reason": "Commits the owner-supplied PR #173 rollout receipt (run 39139111207 artifact; service and deployment ids, digests, schedules, three non-secret flag values). fleet-vs-receipt takes comma-separated committed receipts and compares each collector with the newest one that deployed it, so the 9 yuyutei shards are checked against PR #173 (2bcbe90) and snkrdunk-collector against PR #103 (a504e47). Read-only Railway queries as before; no deploy."
+   "reason": "Shard reuse: an advertised shard whose 200 response this parser retained within 7 days is re-read from that raw_snapshot (base64 envelope, SHA-256 checked) and recorded in the cursor with reused=true; otherwise fetched and retained as before. Robots and the index are always fetched and robots still gates every shard. Same exclusions, neighbour order, product bounds, fences and candidate-only writes."
   },
   {
    "files": [
-    ".github/workflows/ops-write.yml"
+    "services/snkrdunk_collector/tests/test_discovery_planner_postgres.py",
+    "services/snkrdunk_collector/tests/test_discovery_runtime.py",
+    "services/snkrdunk_collector/tests/conftest.py",
+    "services/api/tests/conftest.py"
    ],
    "effects": [
-    "infrastructure"
+    "tests"
    ],
-   "reason": "Adds approve-f1-batch to the runbook choice, makes count optional (empty uses the runbook default) and raises the runbook job timeout to 180 minutes (one fresh resolver run per approval). The owner-approval job, environments, permissions, secrets and triggers are unchanged."
+   "reason": "Real-PostgreSQL planner tests (planned claim accepted by intent(), open intent, interval, rotation, closed/short budget, failures, exhausted neighbourhoods, kill switch, planner error); shard reuse and refusal of old/tampered/other-parser/failed shards. Test conftests default the kill switch off so existing scheduled-turn tests keep their behaviour."
   },
   {
    "files": [
-    "scripts/tests/test_ops_runbooks.py",
-    "docs/agent/OPS_RUNBOOKS.md",
-    "docs/agent/plans/rollout-receipt-publish/PLAN.md",
-    "docs/agent/ROADMAP.md"
+    "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md"
    ],
    "effects": [
-    "infrastructure"
+    "documentation"
    ],
-   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job. ROADMAP.md: item 1 and 11a/b point at this PR; new item 23 for the receipt plan."
+   "reason": "Documents automatic planning, its guards, shard reuse and how to stop it."
   }
  ],
  "deployment_verification": {
@@ -67,35 +70,50 @@
    "scripts/verify_snkr_published_discovery_component.py",
    "scripts/verify_yuyu_raw_reader_component.py"
   ],
-  "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "snkr_component": "merge",
   "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-  "yuyu_capacity_cadence": true
+  "yuyu_capacity_cadence": true,
+  "collector_services": [
+   {
+    "name": "snkrdunk-collector",
+    "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+    "recovery_deployment_id": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97"
+   }
+  ]
  },
  "safeguards": {
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-write approve-f1-batch (owner-approved runs only)"
+     "name": "snkrdunk-collector",
+     "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+     "recovery_deployment_id": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97"
+    },
+    {
+     "name": "Staging Postgres (no migration; freshness_work discovery rows, raw_snapshots and snkrdunk_candidates only)"
     }
    ],
    "routes": [
-    "None"
+    "Existing scheduled snkrdunk-due turns (27,57 * * * *) claim the planned intent under existing admission; no new endpoint, schedule or manual run"
    ],
    "dependencies": [
-    "ops-write from PR #150; D9 F1 rule from PR #171 and its rollout PR #173 (unchanged); approve_exact_proposal (unchanged)"
+    "published discovery adapter from PR #70 (unchanged bounds); freshness queue and admission unchanged; source_dispatch_budgets unchanged"
    ],
-   "deployment_impact": "Runbook code and its workflow choice only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched. Merging writes nothing; each later batch is a separate owner-approved run.",
-   "database_writes": 0,
-   "source_requests": 0,
-   "estimated_runtime_minutes": 5
+   "deployment_impact": "Only the snkrdunk collector is rolled out (yuyutei shards untouched). At most 4 intents/day, each reserved at 300 requests (MEASURED canaries: 199 requests for 2 intents). ESTIMATE about 100 requests and 0.2 MB stored per run after shards are retained once per 7 days (about 9 MB, MEASURED 18.4 MB for the 2 canaries), about 2 MB/day in total. New rows are unmatched candidates only; no mapping, price or approval.",
+   "database_writes": 100,
+   "source_requests": 1200,
+   "estimated_runtime_minutes": 30
   },
   "recovery": {
-   "artifact": "99844c6fba7fe0ce621b835e8afc1227b4c41483",
-   "procedure": "Native revert of this PR removes the runbook and its workflow choice. No data, schema, provider or service configuration to undo. An approved batch is undone by the admin mapping endpoints (per mapping), not by this revert.",
-   "trigger": "A dry run that fails, selects a proposal that is not an exact pending F1 proposal, or a sample row the owner judges wrong.",
-   "backup": "Not applicable for this PR: no schema or row change. Railway Postgres daily backups continue.",
+   "artifact": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+   "procedure": "Automatic during rollout: snkrdunk-collector restored to its verified a504e47 deployment (collector_services recovery_deployment_id). After delivery: a native revert PR delivered by staging-automerge with a snkrdunk rollout. An intent already planned is a normal bounded explicit intent that the previous code also runs, or is settled with the zero-request rollback in SNKR_PUBLISHED_DISCOVERY_RECOVERY.md. Retained RAW and unmatched candidates stay as evidence.",
+   "trigger": "any source denial, 403/429 or challenge on a discovery request; any price, mapping or approval write from discovery; more than 4 auto intents in 24h; a RAW refresh backlog caused by discovery reservations; storage growth above 5 MB/day attributable to snkr-published-discovery-v1; deployment failure; schedule, variable or budget drift.",
+   "backup": "Not applicable: no schema or existing-row change; additive rows only. Railway Postgres daily backups continue.",
    "validation": [
-    "scripts/tests/test_ops_runbooks.py"
+    "services/snkrdunk_collector/tests/test_discovery_planner_postgres.py",
+    "services/snkrdunk_collector/tests/test_discovery_runtime.py",
+    "services/snkrdunk_collector/tests/test_discovery_fences_postgres.py",
+    "scripts/tests/test_deploy_staging_collectors.py"
    ]
   },
   "verification": {
@@ -103,15 +121,15 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/diagnostics/snkrdunk-coverage-gap.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-discovery.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-releases.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-samples.sql"
+    "scripts/verify_staging_delivery.py",
+    "scripts/verify_snkr_published_discovery_component.py",
+    "scripts/verify_yuyu_raw_reader_component.py",
+    "scripts/generate_staging_state.py"
    ],
-   "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
+   "observation_window": "Delivery artifact, then the first scheduled snkrdunk-due turn on the merge plans one auto-v1 intent (or logs a skip reason) and the next turns claim and complete it. Over 24h: at most 4 auto intents, each completed with inspected identities and only unmatched candidates; 0 price/mapping writes; no source pause; RAW refresh not_blocked_deficit stays 0; snkr-published storage within estimate (snkrdunk-discovery-state diagnostic once PR #177 is merged)."
   }
  },
- "diff_sha256": "6f6a1e0b6d3613ad829f5ca01c8a4595851181e70ffcf3e48da0eeae4d67b2af",
+ "diff_sha256": "3c8394a95b18f504d693d95d29aac1dc1020434d39daca05053e2b6bcc664910",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",

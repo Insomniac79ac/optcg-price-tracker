@@ -1,14 +1,17 @@
 """Opt-in shared due-work adapter. Legacy batches never import this module."""
 
+from datetime import timedelta
 import functools
 
 from sqlalchemy import select
 
 from app.services.freshness_integration import CaptureResult, drain
+from app.services.freshness_policy import utc_now
 from snkrdunk_collector.config import settings
 from snkrdunk_collector.db import SessionLocal
 from snkrdunk_collector.models import Source
 from snkrdunk_collector.run_lock import (
+    LockLost,
     collection_lock,
     pinned_session,
     assert_lock_owned,
@@ -98,6 +101,36 @@ def _discovery_outside_turn(turn, run_discovery, *args, **kwargs):
     return run_discovery(*args, **kwargs)
 
 
+def plan_auto_discovery(session, source_id, *, clock=utc_now):
+    """Commit at most one guarded discovery intent before the turn drains."""
+    from snkrdunk_collector.browser import log_event
+    from snkrdunk_collector.discovery_planner import plan_next_discovery
+
+    if not settings.SNKRDUNK_AUTO_DISCOVERY:
+        return None
+    interval = timedelta(hours=max(1, settings.SNKRDUNK_AUTO_DISCOVERY_INTERVAL_H))
+    try:
+        work, reason = plan_next_discovery(
+            session, source_id, now=clock(), interval=interval
+        )
+        if work is None:
+            session.rollback()
+            log_event("auto_discovery_skipped", reason=reason)
+            return None
+        assert_lock_owned(session)
+        session.commit()
+    except LockLost:
+        session.rollback()
+        raise
+    except Exception as exc:
+        # Planning never blocks the RAW turn; nothing was committed.
+        session.rollback()
+        log_event("auto_discovery_failed", error=type(exc).__name__)
+        return None
+    log_event("auto_discovery_planned", work_id=work.id, scope_key=work.scope_key)
+    return work
+
+
 def run_due(
     *,
     chunk_size=70,
@@ -138,6 +171,7 @@ def run_due(
             recovery = consume_planned_recovery(session, source_id, runner=runner)
             if recovery is not None:
                 return [recovery]  # ordinary checks resume on the next scheduled turn
+            plan_auto_discovery(session, source_id)
             # One warmed browser per scheduled turn (unless a caller supplies
             # its own runner). Closed however the turn ends.
             turn = None
