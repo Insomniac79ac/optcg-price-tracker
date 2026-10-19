@@ -14,6 +14,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = "7a52e9b48e8a"
@@ -221,6 +222,9 @@ def upgrade() -> None:
         sa.Column("index_version", sa.Integer(), nullable=False),
         sa.Column("source_semantics_version", sa.Integer(), nullable=False),
         sa.Column("calculated_at", sa.DateTime(timezone=True), nullable=False),
+        # The old-basis source_values, same shape as market_index_snapshots.provenance, so the
+        # contributor-set guard can check the leg that ends on the splice day.
+        sa.Column("provenance", postgresql.JSONB(), nullable=False),
         sa.UniqueConstraint("splice_id", "card_print_id", name="uq_market_index_splice_snapshots_print"),
     )
     op.create_index(
