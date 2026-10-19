@@ -26,7 +26,7 @@
    "effects": [
     "infrastructure"
    ],
-   "reason": "New write runbook approve-f1-batch registered in RUNBOOKS as (write, collector-affecting). Selection is read-only (default_transaction_read_only session); an apply runs only in ops-write after the owner's staging-ops approval, refuses unless the rebuilt list hashes to the dry run's SHA-256, and calls approve_exact_proposal (every admin guard: exact, pending, current, same digest and resolver version, sole recommended print, candidate state, no rejected or conflicting mapping, print verified and not already monitored) once per proposal per transaction. Exact proposals only; ambiguous ones are never approved. run.py --count now defaults per runbook (enqueue-remaining-50 keeps 50)."
+   "reason": "New write runbook approve-f1-batch registered in RUNBOOKS as (write, collector-affecting). Selection is read-only (default_transaction_read_only session); an apply runs only in ops-write after the owner's staging-ops approval, refuses unless the rebuilt list hashes to the dry run's SHA-256, and calls approve_exact_proposal (every admin guard: exact, pending, current, same digest and resolver version, sole recommended print, candidate state, no rejected or conflicting mapping, print verified and not already monitored) once per proposal per transaction. Exact proposals only; ambiguous ones are never approved. run.py --count now defaults per runbook (enqueue-remaining-50 keeps 50). Also registers enqueue-capture-batch (write, collector-affecting)."
   },
   {
    "files": [
@@ -45,7 +45,7 @@
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds approve-f1-batch to the runbook choice, makes count optional (empty uses the runbook default) and raises the runbook job timeout to 180 minutes (one fresh resolver run per approval). The owner-approval job, environments, permissions, secrets and triggers are unchanged."
+   "reason": "Adds approve-f1-batch to the runbook choice, makes count optional (empty uses the runbook default) and raises the runbook job timeout to 180 minutes (one fresh resolver run per approval). The owner-approval job, environments, permissions, secrets and triggers are unchanged. Also adds enqueue-capture-batch to the runbook choice."
   },
   {
    "files": [
@@ -56,17 +56,13 @@
    "effects": [
     "infrastructure"
    ],
-   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job."
+   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job. Also offline tests for enqueue-capture-batch: shortlist order and drops, count limits, batch label in the pinned list, read-only candidate SQL, quiet windows. Also documents enqueue-capture-batch."
   },
   {
    "files": [
     "scripts/ops/capture_batch.py",
     "scripts/ops/enqueue_remaining.py",
-    "scripts/ops/replan.py",
-    "scripts/ops/run.py",
-    ".github/workflows/ops-write.yml",
-    "scripts/tests/test_ops_runbooks.py",
-    "docs/agent/OPS_RUNBOOKS.md"
+    "scripts/ops/replan.py"
    ],
    "effects": [
     "infrastructure"
