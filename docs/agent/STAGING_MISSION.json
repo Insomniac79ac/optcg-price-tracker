@@ -98,7 +98,7 @@
    "observation_window": "After merge: one enqueue-capture-batch dry run (owner-approved in staging-ops) completes with status DRY_RUN_OK and a 50-row batch; the apply only after the owner reviews it, then identity-capture-work shows the new work ids."
   }
  },
- "diff_sha256": "6f6a1e0b6d3613ad829f5ca01c8a4595851181e70ffcf3e48da0eeae4d67b2af",
+ "diff_sha256": "e4b9fc18de5d5ef533fb353e9bc25f9b65cd6a9d70f488352e565b7060b5109e",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each identity-capture ops-write batch (enqueue-capture-batch; enqueue-remaining-50 only replays the finished NEW100 plan) is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 correction (MEASURED 2026-10-19 00:39Z, identity-capture-work run 39181696715): all 615 capture intents were attempted (0 never attempted, 3 blocked); a finished capture parks as pending 100 years out. The about 217 prints counted under b_capture_intent:pending were already captured and wait on evidence review, not on a new batch.",
