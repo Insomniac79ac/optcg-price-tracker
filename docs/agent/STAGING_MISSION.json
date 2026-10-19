@@ -98,7 +98,7 @@
       "effects": [
         "infrastructure"
       ],
-      "reason": "New fleet state: deployment_verification and operational_notes copied from STAGING_MISSION.json at the base, no deployment requests."
+      "reason": "New fleet state: deployment_verification and operational_notes from STAGING_MISSION.json at the base, no deployment requests; snkr_component pinned to the #180 merge that delivered snkrdunk-collector."
     },
     {
       "files": [
@@ -135,7 +135,7 @@
       "scripts/verify_snkr_published_discovery_component.py",
       "scripts/verify_yuyu_raw_reader_component.py"
     ],
-    "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "snkr_component": "ff019569478f570af9e82018fc69e81853508e85",
     "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
     "yuyu_capacity_cadence": true
   },
@@ -148,7 +148,7 @@
         "None"
       ],
       "dependencies": [
-        "staging at df28a21; must merge after #180, #179, #178, #181 and #182 (owner order)"
+        "staging at ff01956 (after #180); must merge after #179, #178, #181 and #182 (owner order)"
       ],
       "deployment_impact": "No collector rollout and no RAW migration: collector_services and raw_dependency_migration are absent. Hand-merged (hold-for-owner); Verify staging merge then runs the new compose path with the fleet state only.",
       "database_writes": 0,
@@ -156,7 +156,7 @@
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "df28a211452a1f688cf5c2af4bbfec57ebc8fd5c",
+      "artifact": "ff019569478f570af9e82018fc69e81853508e85",
       "procedure": "Native revert PR of this merge plus one docs/agent/missions/<name>.json (the new base gate admits it). After it merges the single STAGING_MISSION.json flow is back; the next DATA PR regenerates STAGING_MISSION.json against staging as before.",
       "trigger": "policy-gate refuses a correct mission, Verify staging merge or staging-automerge fails in the compose step, or the first collector delivery on the new layout does not run Deploy mission-scoped staging collectors.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
@@ -179,7 +179,7 @@
       "observation_window": "Verify staging merge on this hand merge, then the next DATA PR's policy-gate on a mission file, then the first collector PR's staging-automerge (allowed collector window) with Deploy mission-scoped staging collectors and the delivery verification passing."
     }
   },
-  "diff_sha256": "b0bb05e41fc61fdea2696defa230a038d2ba2c5dcaf6059bd5c136e97ac36bc9",
+  "diff_sha256": "pending",
   "operational_notes": [
     "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
     "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
