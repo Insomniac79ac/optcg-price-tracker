@@ -129,11 +129,21 @@
    "observation_window": "Delivery artifact, then the first scheduled snkrdunk-due turn on the merge plans one auto-v1 intent (or logs a skip reason) and the next turns claim and complete it. Over 24h: at most 4 auto intents, each completed with inspected identities and only unmatched candidates; 0 price/mapping writes; no source pause; RAW refresh not_blocked_deficit stays 0; snkr-published storage within estimate (snkrdunk-discovery-state diagnostic once PR #177 is merged)."
   }
  },
- "diff_sha256": "3c8394a95b18f504d693d95d29aac1dc1020434d39daca05053e2b6bcc664910",
+ "diff_sha256": "6f6a1e0b6d3613ad829f5ca01c8a4595851181e70ffcf3e48da0eeae4d67b2af",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
- ]
+  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write approve-f1-batch runs of about 500 (dry run first, apply pinned to its SHA-256), with a 48 h storage check after each."
+ ],
+ "verification": {
+  "required_checks": [
+   "engineering-gate"
+  ],
+  "post_change": [
+   "scripts/ops/f1_approve.py",
+   "scripts/ops/fleet.py"
+  ],
+  "observation_window": "After merge: one fleet-vs-receipt run with the default chain reports all_match true for 10 collectors; one approve-f1-batch dry run (owner-approved in staging-ops) completes with status ok, batch_size about 500 and no excluded reason the owner did not expect; batch 1 apply only after the owner reviews it, then a 48 h storage check."
+ }
 }

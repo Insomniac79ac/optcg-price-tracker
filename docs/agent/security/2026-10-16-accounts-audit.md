@@ -187,6 +187,19 @@ GHSA-2xp9, GHSA-cjq9 and Next's nested sharp assumes Vercel serves `/_next/image
 its own optimiser, which is how Vercel documents it; that was not checked against the
 staging project's settings.
 
+Retry plan for the next 16.3 attempt (owner, 2026-10-16):
+
+- Test on a Vercel preview deployment watched live, not on staging.
+- Reproduce locally first: `next build && next start`, then request `/` and `/sign-in`
+  with the `RSC: 1` and `Next-Router-Prefetch: 1` headers and look for the prefetch
+  redirect (16.3 answers `/sign-in?callbackUrl=...` with a 307 to an `_rsc`-hashed URL;
+  16.2.12 does not).
+- Candidate fixes: `prefetch={false}` on the header's Sign in link, or the proxy passing
+  prefetch requests through instead of redirecting them.
+- No Vercel-logs runbook for now.
+- After the upgrade, restore the generated share cards (revert #153) and keep
+  `public/brand/share-fallback.png` until then.
+
 ## Fix PRs
 
 | PR | Fixes | Lane / receipt scope |
@@ -218,4 +231,6 @@ intersection empty.
   deployment between 14:00 and 14:02Z on 2026-10-16 (status, duration, any redirect
   loop), or open the `staging-delivery-1068d3c…` artifact of run 38909877498. This
   session cannot reach Vercel or the artifact store.
-- Decide whether `/share` images stay on while `next/og` is on 16.2.12 (GHSA-vcvr).
+- Decided 2026-10-16: `/share` serves the static fallback while `next/og` is on 16.2.12
+  (#153, run 38922562795), which closes our path to GHSA-vcvr. The advisory itself stays
+  open until Next.js 16.3.6+.

@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -31,7 +31,7 @@ file contains a known secret value.
 | `staging-state` | - | One live read feeds `generate_staging_state` and `check_raw_health` | `CURRENT_STATE.yaml`, `evidence/staging-state-*.json`, `raw-health.json` |
 | `verify-lossless` | `ledger_floor` (exclusive) | Every daily-v1 ledger row above the floor decoded twice (independent zstd + package decoder) | `verify-lossless-from-<floor>.json` (`next_floor_exclusive`) |
 | `storage-rates` | `transients` (comma list; empty = all named) | Planning and stress (worst rolling 24 h) since the current collector code, as observed, with named steps removed, and with named transients excluded (`scripts/ops/storage_events.json`) | `storage-rates.json`, `volume-series.json` |
-| `fleet-vs-receipt` | `receipt` (empty = PR #103 rollout) | All 10 collectors: live deployment, status, exact-commit marker, image digest, cron and deployment records after the receipt | `fleet-vs-receipt.json` |
+| `fleet-vs-receipt` | `receipt` (comma-separated committed receipts; empty = PR #103 then PR #173 rollouts) | All 10 collectors, each against the newest receipt that deployed it: live deployment, status, exact-commit marker, image digest, cron and deployment records after that receipt | `fleet-vs-receipt.json` |
 | `official-images-status` | - | Last 5 `official-images-mirror` runs and the `check_official_images` database check (no R2 or Bandai request) | `official-images-status.json` |
 | `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
 | `web-smoke` | - | Signed-out Playwright smoke of the staging site (`scripts/staging_web_smoke.py`); also runs after every delivery | `web-smoke.json` |
@@ -59,6 +59,30 @@ Nothing here is collector-affecting or a write, so no quiet window applies.
    and only when `expected_sha256` equals this run's list, i.e. the list from a dry run the owner
    reviewed. A moved digest changes the list, and the apply refuses. The summary lists
    `written_work_ids`.
+
+`approve-f1-batch` (D9 F1, `scripts/ops/f1_approve.py`): approves current exact Yuyu-Tei
+proposals made by the F1 rule (reason `unique_listing_kind_resolves_one_release_sibling`) in
+batches of about 500 (`count`, default 500, at most 600), through the admin page's own
+`approve_exact_proposal`, so every admin guard applies.
+
+1. Selects the batch read-only, oldest proposal first. Each proposal is re-checked against a fresh
+   resolver run (same evidence digest, resolver version and sole recommended print), the candidate
+   state it recorded, the listing's mapping (none or the same print, never rejected) and the print
+   (active, verified, no other current Yuyu-Tei mapping, claimed by no other proposal in the
+   batch). Failures are left out and counted under `excluded`.
+2. Pins the first `count` as the approved list (SHA-256) and writes `approved-list.json`,
+   `batch-detail.json` (every proposal with card code, print rarity/variant/kind, listing title,
+   rarity token, kind, price and URL) and `sample.json`. The summary carries every
+   `proposal_group_ids`, a 20-row random `sample` (seeded by the SHA, so the same list gives the
+   same sample), the listing-kind to print-kind counts, an apply-time estimate and the storage
+   room and days to the 3 GiB reserve now.
+3. Dry run by default: nothing is written. `apply=true` rebuilds the list, refuses unless it hashes
+   to `expected_sha256`, then approves each proposal in its own transaction (as the admin page
+   does) under reviewer `ops-write:approve-f1-batch:<run id>`. It stops at the first refusal, or
+   when the collector quiet window starts; what was approved stays approved and is listed in
+   `approved_group_ids`. Approval is collector-affecting (new mappings join the collectors' own
+   schedule), so an apply never starts 02:00-06:00 UTC. It never fetches a source, enqueues work
+   or touches a collector service. The owner's rule: a 48 h storage check after each batch.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
@@ -104,8 +128,9 @@ gh api $R/actions/runs/$RUN/artifacts --jq '.artifacts[] | {id, name, size_in_by
   storage, which the cloud-session proxy blocks. Use the annotations (the summary is chunked
   into up to 9 notices), or the GitHub MCP `get_job_logs` tool, which prints the same summary
   JSON. The owner can download the artifact from the run page.
-- `ops-write`: dispatch the same way with `ops-write.yml`, `inputs[runbook]=enqueue-remaining-50`,
-  `inputs[apply]=false`. The run waits for the owner. Read `approved_list_sha256` from the dry run;
+- `ops-write`: dispatch the same way with `ops-write.yml`, `inputs[runbook]=enqueue-remaining-50`
+  (or `approve-f1-batch`), `inputs[apply]=false`; `inputs[count]` is optional (empty is the
+  runbook's default). The run waits for the owner. Read `approved_list_sha256` from the dry run;
   for an apply the owner (or an agent the owner asked) dispatches again with `inputs[apply]=true`
   and `inputs[expected_sha256]=<that sha>`, and the owner approves it.
 - Agents never approve a waiting run (`pending_deployments` is blocked by `.claude/hooks/guard.py`).
