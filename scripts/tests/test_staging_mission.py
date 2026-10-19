@@ -258,6 +258,33 @@ class PolicyGitTests(unittest.TestCase):
         repo.seal(self.MISSION, ["app.py"], deployment_verification={"revision": "d" * 12})
         self.assertRefused(repo, "may not set fleet expectations")
 
+    def test_rename_must_cover_both_paths(self):
+        repo = Repo(self)
+        repo.run("checkout", "-qb", "feature")
+        repo.run("mv", "lib.py", "lib2.py")
+        repo.commit("rename")
+        repo.seal(self.MISSION, ["lib2.py"])
+        self.assertRefused(repo, "cover each changed file exactly once")
+        repo.seal(self.MISSION, ["lib.py", "lib2.py"])
+        self.assertEqual(repo.policy()[0], 0)
+
+    def test_legacy_manifest_requests_must_be_declared(self):
+        # A revert of the per-PR switch restores STAGING_MISSION.json, which the
+        # restored old delivery would act on.
+        repo = self.pr()
+        rollout = {"deployment_verification": {"collector_services": [{"name": "snkrdunk-collector"}]}}
+        repo.write({sm.LEGACY_MANIFEST: json.dumps(rollout)})
+        repo.commit("restore legacy manifest")
+        repo.seal(self.MISSION, ["app.py", sm.LEGACY_MANIFEST])
+        self.assertRefused(repo, "does not declare")
+        repo.seal(self.MISSION, ["app.py", sm.LEGACY_MANIFEST],
+                  deployment_verification=rollout["deployment_verification"])
+        self.assertEqual(repo.policy()[0], 0)
+        repo.write({sm.LEGACY_MANIFEST: json.dumps({"deployment_verification": {}})})
+        repo.commit("strip requests")
+        repo.seal(self.MISSION, ["app.py", sm.LEGACY_MANIFEST])
+        self.assertEqual(repo.policy()[0], 0)
+
     def test_compose_cli_for_delivery(self):
         repo = self.pr()
         repo.seal(self.MISSION, ["app.py"], deployment_verification={"collector_services": [{"name": "x"}]})

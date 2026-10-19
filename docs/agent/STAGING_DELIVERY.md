@@ -86,7 +86,7 @@ so any merge made every open mission stale. It is retired; nothing reads it.
   `checks`, components pinned to full SHAs, `yuyu_capacity_cadence`) and
   `operational_notes`. It may never request a rollout or migration. Only PRs
   that move the fleet edit it, and their impacts list it.
-- **Hash.** `diff_sha256` covers `git diff --binary --full-index` from the
+- **Hash.** `diff_sha256` covers `git diff --binary --full-index --no-renames` from the
   merge-base to the PR head, excluding the PR's own mission
   (`scripts/staging_mission.py digest`). Merging `staging` in does not change it
   unless the merge changes the PR's own lines; full index lines make it
@@ -103,16 +103,24 @@ so any merge made every open mission stale. It is retired; nothing reads it.
   PRODUCT merge with no mission uses the fleet state alone. The hand-merge
   `Verify staging merge` composes the same way; verifier `--check` scripts read
   `STAGING_MISSION_MANIFEST`, else the fleet state.
-- **After a collector delivery.** The fleet still pins the previous component,
-  so the next staging merge must be a small DATA PR that pins
-  `yuyu_reader_component` / `snkr_component` in `STAGING_FLEET.json` to the
-  merge SHA (the old flow did this in whichever PR came next).
+- **After a collector delivery or a migration.** The fleet still pins the
+  previous component and Alembic revision, so the next staging merge must be a
+  small DATA PR that pins `yuyu_reader_component` / `snkr_component` to the
+  merge SHA and `revision` to the new single Alembic head in
+  `STAGING_FLEET.json` (the old flow did this in whichever PR came next, with
+  the same gap for a PRODUCT merge in between). Nothing enforces it before the
+  merge; Verify staging merge fails on a stale pin.
 - **Bootstrap and rollback.** The PR that introduced this was evaluated by the
   previous base policy and so carried one last `STAGING_MISSION.json`; the
   workflow uses the legacy path only while the base branch has no
-  `scripts/staging_mission.py`. Rollback is a native revert PR plus one mission
-  file (the new gate admits it); after it merges, the previous single-manifest
-  flow is back and the next DATA PR regenerates `STAGING_MISSION.json`.
+  `scripts/staging_mission.py`. It also adds its own mission file, so a
+  delivery after its merge composes. Rollback is a native revert PR plus one
+  mission file (the new gate admits it). The revert restores the previous
+  `STAGING_MISSION.json`, which the restored old delivery acts on, so the gate
+  refuses it while that file requests a rollout or migration the mission does
+  not declare: strip those requests in the revert (or declare them on purpose).
+  After it merges, the previous single-manifest flow is back and the next DATA
+  PR regenerates `STAGING_MISSION.json`.
 
 ## Delivery lanes (2026-10-15)
 

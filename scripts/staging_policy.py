@@ -112,6 +112,13 @@ def main():
         files, digest = change_evidence(args.base, args.head, path)
         mission = staging_mission.compose(staging_mission.read_at(args.head, path),
                                           staging_mission.read_at(args.head, staging_mission.FLEET))
+        # A revert of the per-PR switch restores the legacy manifest and the old
+        # delivery, which would act on its requests: the mission must declare them.
+        legacy = staging_mission.legacy_requests(args.head)
+        declared = {key: mission["deployment_verification"].get(key) for key in legacy}
+        if legacy and declared != legacy:
+            raise staging_mission.MissionError(
+                f"{staging_mission.LEGACY_MANIFEST} requests {sorted(legacy)} that this mission does not declare")
         result = evaluate(mission, files, digest)
         if result["classification"] == "AMBER" and result["eligible"]:
             artifact = mission["safeguards"]["recovery"]["artifact"]

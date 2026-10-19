@@ -84,11 +84,28 @@ def added_mission(rows, allow_none=False):
 
 
 def change_evidence(base, head, mission_path):
-    """(files, sha256) of what the PR itself changes, excluding its own mission."""
-    args = [merge_base(base, head), head, "--", ".", f":(exclude){mission_path}"]
+    """(files, sha256) of what the PR itself changes, excluding its own mission.
+
+    No rename detection: a renamed file lists both paths, so impacts cover both.
+    """
+    args = ["--no-renames", merge_base(base, head), head, "--", ".", f":(exclude){mission_path}"]
     patch = subprocess.check_output(["git", "diff", "--binary", "--full-index", "--no-ext-diff", *args])
     files = git("diff", "--name-only", *args).splitlines()
     return files, hashlib.sha256(patch).hexdigest()
+
+
+def legacy_requests(rev):
+    """Deployment requests in the retired STAGING_MISSION.json at rev, or {}."""
+    try:
+        text = git("show", f"{rev}:{LEGACY_MANIFEST}")
+    except subprocess.CalledProcessError:
+        return {}
+    try:
+        verification = json.loads(text).get("deployment_verification", {})
+        return {key: verification[key] for key in DEPLOY_REQUEST_KEYS
+                if verification.get(key) not in (None, [], {})}
+    except (json.JSONDecodeError, AttributeError) as exc:
+        raise MissionError(f"{LEGACY_MANIFEST} is unreadable") from exc
 
 
 def read_at(rev, path):

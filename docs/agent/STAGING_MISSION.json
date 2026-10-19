@@ -111,7 +111,7 @@
       "effects": [
         "tests"
       ],
-      "reason": "Zero, two, changed and removed missions; hash survives merging staging in; full index; fleet and mission override rules; compose CLI; workflow wiring; updated fixtures."
+      "reason": "Zero, two, changed and removed missions; renames cover both paths; legacy manifest requests must be declared; hash survives merging staging in; full index; fleet and mission override rules; compose CLI; workflow wiring; updated fixtures."
     },
     {
       "files": [
@@ -126,6 +126,15 @@
         "documentation"
       ],
       "reason": "Describe per-PR missions, the fleet state, the post-collector pin, bootstrap and rollback; item 22 status."
+    },
+    {
+      "files": [
+        "docs/agent/missions/claude-per-pr-missions.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "This PR's own mission in the new layout, so a delivery after its merge composes (fleet state, no requests)."
     }
   ],
   "deployment_verification": {
@@ -179,7 +188,7 @@
       "observation_window": "Verify staging merge on this hand merge, then the next DATA PR's policy-gate on a mission file, then the first collector PR's staging-automerge (allowed collector window) with Deploy mission-scoped staging collectors and the delivery verification passing."
     }
   },
-  "diff_sha256": "750e4dc37be92815ea3ae7f1b1deefbebe01580ac4094675bc1b15b9c365ff1f",
+  "diff_sha256": "pending",
   "operational_notes": [
     "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
     "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
