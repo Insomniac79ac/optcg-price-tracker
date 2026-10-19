@@ -35,6 +35,7 @@ file contains a known secret value.
 | `official-images-status` | - | Last 5 `official-images-mirror` runs and the `check_official_images` database check (no R2 or Bandai request) | `official-images-status.json` |
 | `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
 | `web-smoke` | - | Signed-out Playwright smoke of the staging site (`scripts/staging_web_smoke.py`); also runs after every delivery | `web-smoke.json` |
+| `capture-batch-preview` | `count` (up to; empty = 50) | The `enqueue-capture-batch` plan with every candidate judged, read-only: exclusion breakdown, the batch, its SHA-256 and storage fit | `plan.json`, `replan.json`, `approved-list.json`, `storage-fit.json` |
 
 The `ops-summary` annotations carry what a check needs without the artifact: `staging-state`
 adds `quarantined_refresh_work` (count, oldest blocked-since), `official-images-status` adds
@@ -63,16 +64,29 @@ Nothing here is collector-affecting or a write, so no quiet window applies.
 `enqueue-capture-batch` (`scripts/ops/capture_batch.py`): the next identity-capture batch after
 NEW100 (work ids 3678 to 3777 are done and never replayed), planned live instead of from a file.
 
-1. Candidates, read-only: Yuyu-Tei listings whose current proposal is ambiguous, pending and
-   unreviewed, with no capture scope of any kind, oldest candidate first. One live resolver run
-   (F1 included) drops every listing it now resolves exactly, so no capture is spent on a listing
-   an `approve-f1-batch` run can map. The first `2 * count` bounded ambiguous families (2..12
-   siblings, authoritative release) form the plan.
-2. Then as `enqueue-remaining-50`: every #116 guard and the shared-print guard, the first `count`
-   eligible (default 50, at most 100) pinned by SHA-256, the storage fit, the #116 tool's checks.
-   The summary adds `candidates` (counts at each step) and `batch` (candidate id, card code,
-   official siblings) for the owner's review. `apply=true` needs the dry run's `expected_sha256`;
-   a new candidate or a moved digest changes the list and the apply refuses.
+1. Population, read-only: Yuyu-Tei listings whose current proposal is ambiguous and pending.
+   Each is excluded for one reason, first match wins: `reviewed_decision`, `capture_blocked`,
+   `already_captured` (a capture scope with an attempt), `capture_queued` (a scope never
+   attempted). The rest are uncaptured, oldest candidate first.
+2. One live resolver run (F1 included) over every uncaptured listing. A listing it now resolves
+   exactly (`exact_now:<rule>`) or otherwise (`resolved_since:<status>`) drops out, so no capture
+   is spent on a listing an `approve-f1-batch` run can map; so do `unbounded_siblings` (outside
+   2..12) and `no_release`. Every remaining bounded ambiguous family is planned.
+3. Every #116 guard per planned candidate, then the shared-print guard in plan order (eligible
+   candidates never share a print). `count` means up to (default 50, at most 100): the batch is
+   the first min(count, eligible) eligible, pinned by SHA-256, with the storage fit and the #116
+   tool's checks. The dry run and apply judge candidates until `count` are eligible, which gives
+   the same batch as judging all of them.
+4. It refuses only when nothing is eligible (`status` REFUSED, the breakdown kept). `apply=true`
+   needs `expected_sha256` and refuses only when its re-planned list differs from it.
+
+The summary carries `requested`, `batch_size`, `breakdown` (the counts above plus
+`first_failed_guard`, one line per reason) and `batch` (candidate id, card code, official
+siblings). Until 2026-10-19 the batch size also bounded who was judged (the first `2 * count`),
+so a smaller count found fewer eligible: 12 of 100 at count 50, then 9 of 24 at count 12 (dry
+run 39255746139). `capture-batch-preview` (ops-readonly, no approval) is the same plan with every
+candidate judged; its SHA-256 equals a dry run's on unchanged state, and the apply still needs the
+owner's approval in `staging-ops`.
 
 `approve-f1-batch` (D9 F1, `scripts/ops/f1_approve.py`): approves current exact Yuyu-Tei
 proposals made by the F1 rule (reason `unique_listing_kind_resolves_one_release_sibling`) in
@@ -120,6 +134,7 @@ gh api -X POST $R/actions/workflows/ops-readonly.yml/dispatches -f ref=staging \
   -f 'inputs[runbook]=staging-state' -f "inputs[request_id]=$ID"
 #   verify-lossless:  -f 'inputs[ledger_floor]=59328'
 #   db-diagnostic:    -f 'inputs[diagnostic]=freshness-not-met'
+#   capture-batch-preview: -f 'inputs[count]=50'
 #   storage-rates:    -f 'inputs[transients]=2026-10-14-04z'
 
 # 2. Find the run by its name

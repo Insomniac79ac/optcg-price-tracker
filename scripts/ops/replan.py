@@ -78,6 +78,11 @@ def finish(records, plan_meta, observed_at, resolver_version, evaluated):
     for row in evaluated:
         row["guards"]["no_shared_print_with_other_planned"] = all(shared[i] == 1 for i in row.get("considered_print_ids", []))
         row["eligible"] = all(row["guards"].values())
+    return summarize(records, plan_meta, observed_at, resolver_version, evaluated)
+
+
+def summarize(records, plan_meta, observed_at, resolver_version, evaluated):
+    """The re-plan document over rows whose guards and eligibility are already set (pure)."""
     eligible = [r for r in evaluated if r["eligible"]]
     return {"read_only": True, "source_requests": 0, "database_writes": 0, "resolver_version": resolver_version,
             "plan": plan_meta, "observed_at": observed_at, "records": evaluated,

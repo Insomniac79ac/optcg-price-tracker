@@ -85,6 +85,11 @@ def _capture(args, out):
     return capture_batch.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
 
 
+def _capture_preview(args, out):
+    from ops import capture_batch
+    return capture_batch.preview(out, count=args.count)
+
+
 def _approve_f1(args, out):
     from ops import f1_approve
     return f1_approve.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
@@ -99,6 +104,7 @@ RUNBOOKS = {
     "official-images-status": ("read", False, _official),
     "db-diagnostic": ("read", False, _diagnostic),
     "web-smoke": ("read", False, _web_smoke),
+    "capture-batch-preview": ("read", False, _capture_preview),
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
     "enqueue-capture-batch": ("write", True, _capture),
