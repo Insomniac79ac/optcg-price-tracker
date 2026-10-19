@@ -64,7 +64,7 @@ def pg():
         postgres_unavailable(f"Disposable PostgreSQL unavailable at {server_label()}")
     engine = create_engine(postgres_url(name))
     try:
-        result = alembic(postgres_url(name), "upgrade", "head")
+        result = alembic(postgres_url(name), "upgrade", REVISION)
         assert result.returncode == 0, result.stdout + result.stderr
         yield engine, postgres_url(name)
     finally:
@@ -130,7 +130,7 @@ def test_downgrade_drops_only_the_empty_new_tables_then_upgrade_restores(pg):
     after = set(inspect(engine).get_table_names())
     assert before - after == set(ACCOUNT_TABLES)
     assert after - before == set()
-    result = alembic(url, "upgrade", "head")
+    result = alembic(url, "upgrade", REVISION)
     assert result.returncode == 0, result.stdout + result.stderr
     assert set(inspect(engine).get_table_names()) == before
 
