@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "New-sources plan step S1 (owner approved the plan 2026-10-19 00:34Z): one additive migration 7a52e9b48e8a on 3b7d9c1a5e20. Adds nullable price_observations.grade_key with a vocabulary CHECK and a raw-only CHECK (PSA10 OFF, decision N10), both NOT VALID then validated; widens the proposal-group candidate-type CHECK with source_product; creates empty source_product_groups, source_products, source_product_variants, source_variant_renderings, market_index_splices and market_index_splice_snapshots; seeds inert dorasuta and cardrush source rows. ORM for the new tables lives in app.source_products, which nothing in app.models imports, so neither existing collector loads it. Staging only; no collector, rollout, source request, price, identity, mapping, Market Value/Index, secret or Railway change. The owner applies the migration by hand after merging (alembic upgrade head, backup under 24 h).",
+ "mission": "New-sources plan step S1 (owner approved the plan 2026-10-19 00:34Z): one additive migration 7a52e9b48e8a on 3b7d9c1a5e20. Adds nullable price_observations.grade_key with a vocabulary CHECK and a raw-only CHECK (PSA10 OFF, decision N10), both NOT VALID then validated; widens the proposal-group candidate-type CHECK with source_product; creates empty source_product_groups, source_products, source_product_variants, source_variant_renderings, market_index_splices and market_index_splice_snapshots; seeds inert dorasuta and cardrush source rows. ORM for the new tables lives in app.source_products, which nothing in app.models imports, so neither existing collector loads it. Staging only; no collector, rollout, source request, price, identity, mapping, Market Value/Index, secret or Railway change. After merge the migration is applied only by the ops-write runbook apply-migration (#191): a dry run first, then apply with the owner's staging-ops click; it requires a backup under 24 h and live revision 3b7d9c1a5e20.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -74,7 +74,7 @@
    "dependencies": [
     "Alembic head 3b7d9c1a5e20 (collector account tables); new-sources plan on branch plan/new-sources (d0bd629); S0 diagnostics PR #178 independent"
    ],
-   "deployment_impact": "API and worker redeploy with an unused new package; no code path reads it. collector_services is empty and no raw_dependency_migration: 0 collector rollouts. The receipt fails on the migration revision until the owner runs alembic upgrade head, the documented signal.",
+   "deployment_impact": "API and worker redeploy with an unused new package; no code path reads it. collector_services is empty and no raw_dependency_migration: 0 collector rollouts. The receipt fails on the migration revision until the apply-migration runbook applies it, the documented signal.",
    "database_writes": 2,
    "source_requests": 0,
    "estimated_runtime_minutes": 15
@@ -83,7 +83,7 @@
    "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
    "procedure": "While the new tables and grade_key are empty: alembic downgrade 3b7d9c1a5e20 (it refuses otherwise), then a native revert of this PR. The two inert sources rows stay.",
    "trigger": "Migration fails or exceeds its lock budget, API or worker fails to start, or any existing collector or diagnostic errors on the changed schema.",
-   "backup": "Railway Postgres backup younger than 24 h before the owner runs the migration (scripts/staging_backup_age.py).",
+   "backup": "Railway Postgres backup younger than 24 h, checked by the apply-migration runbook before it writes (scripts/staging_backup_age.py).",
    "validation": [
     "services/api/tests/test_new_source_records_migration_postgres.py",
     "scripts/tests/test_collector_runtime_inputs.py"
@@ -99,11 +99,12 @@
    "observation_window": "After the owner applies the migration: Verify staging merge passes on revision 7a52e9b48e8a, and the next yuyutei and snkrdunk collector runs and one staging-state run complete as before."
   }
  },
- "diff_sha256": "f0a008df0db1fc69a458480398bd87b5c5a267c91e237b99e0e3120208839835",
+ "diff_sha256": "",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
+  "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
+  "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
+  "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
  ]
 }

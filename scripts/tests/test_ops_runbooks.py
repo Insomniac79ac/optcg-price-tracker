@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -285,6 +285,12 @@ class DiagnosticsOnPostgres(unittest.TestCase):
             with self.assertRaises(psycopg.errors.ReadOnlySqlTransaction):
                 conn.execute("create table ops_write_probe (i int)")
 
+    def test_capture_population_sql_runs_read_only(self):
+        import psycopg
+
+        with psycopg.connect(self.dsn, options=ops_db.options()) as conn:
+            self.assertEqual(conn.execute(capture_batch.POPULATION_SQL).fetchall(), [])
+
 
 class Lossless(unittest.TestCase):
     def rows(self):
@@ -385,21 +391,97 @@ class ReplanAndEnqueue(unittest.TestCase):
 
 
 class CaptureBatch(unittest.TestCase):
-    def plan(self, status, prints, release=7):
+    def plan(self, status, prints, release=7, reasons=()):
         return SimpleNamespace(resolution_status=status, release_product_id=release, card_code="OP01-001",
-                               evidence_digest="d", alternatives=[SimpleNamespace(card_print_id=i) for i in prints])
+                               evidence_digest="d", resolution_reasons=reasons,
+                               alternatives=[SimpleNamespace(card_print_id=i) for i in prints])
 
-    def test_shortlist_keeps_bounded_ambiguous_families_in_order(self):
-        plans = {1: self.plan("exact", [10]),                  # F1 resolves it now: no capture
+    def test_shortlist_keeps_every_bounded_ambiguous_family_in_order(self):
+        plans = {1: self.plan("exact", [10], reasons=("unique_listing_kind_resolves_one_release_sibling",)),
                  2: self.plan("ambiguous", [12, 11]),
                  3: self.plan("ambiguous", list(range(20, 33))),  # 13 siblings
                  4: self.plan("ambiguous", [40, 41], release=None),
                  6: self.plan("ambiguous", [60, 61]),
-                 7: self.plan("ambiguous", [70, 71])}
-        records, dropped = capture_batch.shortlist([1, 2, 3, 4, 5, 6, 7], plans, 2)
-        self.assertEqual([r["candidate_id"] for r in records], [2, 6])
+                 7: self.plan("ambiguous", [70, 71]),
+                 8: self.plan("release_unresolved", [])}
+        records, dropped = capture_batch.shortlist([1, 2, 3, 4, 5, 6, 7, 8], plans)
+        self.assertEqual([r["candidate_id"] for r in records], [2, 6, 7])  # not cut off by any batch size
         self.assertEqual(records[0]["considered_print_ids"], [11, 12])
-        self.assertEqual(dropped, {"not_ambiguous_now": 2, "unbounded_or_unreleased": 2})
+        self.assertEqual(dropped, {"exact_now:unique_listing_kind_resolves_one_release_sibling": 1, "no_current_plan": 1,
+                                   "unbounded_siblings": 1, "no_release": 1, "resolved_since:release_unresolved": 1})
+
+    def row(self, cid, prints, **failed):
+        guards = {"current_plan": True, "no_active_yuyu_mapping": True, **{k: False for k in failed}}
+        return {"candidate_id": cid, "evidence_digest": "d", "old_digest": "d", "release_product_id": 3,
+                "considered_print_ids": prints, "guards": guards}
+
+    def test_shared_print_guard_runs_in_plan_order(self):
+        rows = capture_batch.choose([self.row(1, [1, 2]), self.row(2, [2, 3]), self.row(3, [4, 5], no_active_yuyu_mapping=1),
+                                     self.row(4, [5, 6]), self.row(5, [7, 8])])
+        self.assertEqual([r["eligible"] for r in rows], [True, False, False, True, True])
+        # Row 4 shares print 5 only with row 3, which is ineligible, so it is not held.
+        self.assertEqual(capture_batch.first_failed_guards(rows), {capture_batch.SHARED: 1, "no_active_yuyu_mapping": 1})
+
+    def judged(self, rows, limit):
+        """replan_all over rows standing in for evaluate_candidate, without a database."""
+        session = SimpleNamespace(execute=lambda *a, **k: SimpleNamespace(scalar=lambda: utc(2026, 10, 19, 13)),
+                                  rollback=lambda: None)
+        by_id = {r["candidate_id"]: r for r in rows}
+        plan = {"observed_at": "t", "records": [{"candidate_id": r["candidate_id"]} for r in rows]}
+        with mock.patch.object(replan, "evaluate_candidate", lambda s, rec: json.loads(json.dumps(by_id[rec["candidate_id"]]))):
+            return capture_batch.replan_all(session, plan, limit=limit, resolver_version="t")
+
+    def test_stopping_at_count_gives_the_same_batch_as_judging_all(self):
+        rows = [self.row(1, [1, 2]), self.row(2, [2, 3]), self.row(3, [4]), self.row(4, [5], current_plan=1),
+                self.row(5, [6]), self.row(6, [7])]
+        full, early = self.judged(rows, None), self.judged(rows, 2)
+        self.assertEqual(full["summary"]["eligible"], 4)
+        self.assertEqual(early["summary"]["eligible"], 2)
+        self.assertEqual(early["plan"]["judged"], 3)
+        for size in (1, 2):
+            self.assertEqual(replan.approved_list(full, size, batch=f"capture-{size}")[1],
+                             replan.approved_list(early, size, batch=f"capture-{size}")[1])
+
+    def deliver(self, eligible, count, **kw):
+        rows = capture_batch.choose([self.row(i, [2 * i, 2 * i + 1]) for i in range(1, eligible + 1)]
+                                    + [self.row(99, [990], no_active_yuyu_mapping=1)])
+        replanned = replan.summarize(rows, {}, "t", "1.3", rows)
+        plan = {"records": [{"candidate_id": r["candidate_id"], "card_code": f"C{r['candidate_id']}"} for r in rows]}
+        seen = {}
+
+        def enqueue_list(out, replanned, size, *, apply, expected_sha256, batch):
+            data, sha, doc = replan.approved_list(replanned, size, batch=batch)
+            (out / "approved-list.json").write_bytes(data)
+            enqueue_remaining.check_apply(apply, expected_sha256, sha)
+            seen.update(size=size, batch=batch)
+            return {"status": "DRY_RUN_OK", "approved_list_sha256": sha}
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(enqueue_remaining, "enqueue_list", enqueue_list):
+            result = capture_batch.deliver(Path(tmp), plan, replanned, {"eligible": eligible}, count, **kw)
+        return result, seen
+
+    def test_count_means_up_to(self):
+        result, seen = self.deliver(9, 12, apply=False, expected_sha256="")
+        self.assertEqual((result["requested"], result["batch_size"], seen["batch"]), (12, 9, "capture-9"))
+        self.assertEqual([b[0] for b in result["batch"]], list(range(1, 10)))
+        result, seen = self.deliver(30, 12, apply=False, expected_sha256="")
+        self.assertEqual((result["batch_size"], seen["size"]), (12, 12))
+
+    def test_refuses_only_when_nothing_is_eligible(self):
+        result, seen = self.deliver(0, 12, apply=False, expected_sha256="")
+        self.assertEqual((result["status"], result["batch_size"], seen), ("REFUSED", 0, {}))
+        self.assertIn("breakdown", result)  # the refusal keeps the reasons
+        for eligible in (1, 5):
+            self.assertEqual(self.deliver(eligible, 50, apply=False, expected_sha256="")[0]["batch_size"], eligible)
+
+    def test_apply_refuses_only_on_sha_mismatch(self):
+        dry, _ = self.deliver(9, 12, apply=False, expected_sha256="")
+        applied, _ = self.deliver(9, 12, apply=True, expected_sha256=dry["approved_list_sha256"])
+        self.assertEqual(applied["batch_size"], 9)
+        with self.assertRaisesRegex(common.Refused, "differs from the dry run"):
+            self.deliver(8, 12, apply=True, expected_sha256=dry["approved_list_sha256"])  # one candidate gone
+        with self.assertRaisesRegex(common.Refused, "differs from the dry run"):
+            self.deliver(9, 12, apply=True, expected_sha256="0" * 64)
 
     def test_count_limits(self):
         self.assertEqual(capture_batch.check_count(None), 50)
@@ -416,13 +498,22 @@ class CaptureBatch(unittest.TestCase):
         self.assertEqual(doc["batch"], "capture-2")
         self.assertNotEqual(sha, replan.approved_list(replanned, 2)[1])
 
-    def test_candidates_sql_is_read_only_and_excludes_captured(self):
-        sql = capture_batch.CANDIDATES_SQL.lower()
+    def test_population_sql_is_read_only_and_names_each_exclusion(self):
+        sql = capture_batch.POPULATION_SQL.lower()
         self.assertTrue(sql.strip().startswith("select"))
         for word in ("insert", "update", "delete", "for update"):
             self.assertNotIn(word, sql)
         self.assertIn("yuyu-identity:", sql)
         self.assertIn("reviewed_at is not null", sql)
+        for reason in ("reviewed_decision", "capture_blocked", "already_captured", "capture_queued", "uncaptured"):
+            self.assertIn(f"'{reason}'", sql)
+
+    def test_preview_is_a_read_runbook_in_ops_readonly(self):
+        self.assertEqual(run.RUNBOOKS["capture-batch-preview"][:2], ("read", False))
+        args = SimpleNamespace(runbook="capture-batch-preview", workflow="ops-readonly", apply=False)
+        run.preflight(args, now=utc(2026, 10, 19, 3), read=lambda path: {"workflow_runs": []})
+        with self.assertRaises(common.Refused):
+            run.preflight(SimpleNamespace(**(vars(args) | {"apply": True})), now=utc(2026, 10, 19, 12), read=None)
 
     def test_apply_respects_windows_and_ops_write(self):
         args = SimpleNamespace(runbook="enqueue-capture-batch", workflow="ops-write", apply=True)
@@ -520,6 +611,82 @@ class F1Approve(unittest.TestCase):
             approved, stopped = f1_approve.approve(session, entries, run_label="x", now=lambda: utc(2026, 10, 19, 2, 1))
         fake.assert_not_called()
         self.assertEqual((approved, stopped["code"]), ([], "quiet_window"))
+
+
+class RefreshBackfill(unittest.TestCase):
+    def row(self, mid, source="yuyutei"):
+        return {"mapping_id": mid, "source": source, "card_print_id": mid + 5000,
+                "listing_identity": f"yuyutei:op01:{mid}", "source_url": f"https://yuyu-tei.jp/{mid}",
+                "card_code": "OP01-001", "rarity": "R", "variant": "base"}
+
+    def rates(self):
+        return {"variants": {"ex_steps": {"planning_mb_day_s9": 32.0}}, "room_to_reserve_mb_s9": 2800.0}
+
+    def test_list_is_pinned_on_decision_fields_only(self):
+        rows = [self.row(i) for i in range(1, 6)]
+        _, sha, doc = refresh_backfill.pinned_list(rows, 3)
+        self.assertEqual([e["mapping_id"] for e in doc["entries"]], [1, 2, 3])
+        self.assertEqual(set(doc["entries"][0]), set(refresh_backfill.LIST_KEYS))
+        moved = [dict(r, source_url="https://elsewhere") for r in rows]
+        self.assertEqual(refresh_backfill.pinned_list(moved, 3)[1], sha)  # display fields are not pinned
+        self.assertNotEqual(refresh_backfill.pinned_list(rows[1:], 3)[1], sha)  # a new row changes it
+        self.assertEqual(refresh_backfill.sample(rows, sha), refresh_backfill.sample(rows, sha))
+        with self.assertRaises(common.Refused):
+            refresh_backfill.pinned_list([], 3)
+
+    def test_apply_refuses_without_or_on_a_different_sha(self):
+        sha = refresh_backfill.pinned_list([self.row(1)], 5)[1]
+        refresh_backfill.check_apply(False, "", sha)
+        refresh_backfill.check_apply(True, sha, sha)
+        for bad in ("", "xyz", "0" * 64):
+            with self.assertRaises(common.Refused):
+                refresh_backfill.check_apply(True, bad, sha)
+
+    def test_sha_mismatch_refuses_before_any_write_session(self):
+        rows = [self.row(1), self.row(2, "snkrdunk")]
+        with tempfile.TemporaryDirectory() as out, \
+                mock.patch.object(refresh_backfill, "unplanned", return_value=(rows, 10)), \
+                mock.patch.object(refresh_backfill, "plan") as plan, \
+                mock.patch("ops.db.engine"), mock.patch("sqlalchemy.orm.Session"), \
+                mock.patch("yuyu_identity_capture_enqueue.staging_session") as writable:
+            with self.assertRaises(common.Refused):
+                refresh_backfill.run(out, apply=True, expected_sha256="0" * 64)
+            plan.assert_not_called()
+            writable.assert_not_called()
+
+    def test_dry_run_summary_and_storage_estimate(self):
+        rows = [self.row(1), self.row(2), self.row(3, "snkrdunk")]
+        with tempfile.TemporaryDirectory() as out, \
+                mock.patch.object(refresh_backfill, "unplanned", return_value=(rows, 2000)), \
+                mock.patch("ops.db.engine"), mock.patch("sqlalchemy.orm.Session"), \
+                mock.patch.object(storage_rates, "load_events", return_value={"window_start": "x"}), \
+                mock.patch.object(storage_rates, "fetch_series"), \
+                mock.patch.object(storage_rates, "compute", return_value=self.rates()):
+            summary = refresh_backfill.run(out, count=2)
+            self.assertTrue((Path(out) / "backfill-list.json").is_file())
+        self.assertEqual(summary["status"], "DRY_RUN_OK")
+        self.assertEqual((summary["batch_size"], summary["unplanned_total"], summary["written"]), (2, 3, 0))
+        self.assertEqual(summary["by_source"], {"yuyutei": 2})
+        storage = summary["storage"]
+        self.assertEqual(storage["label"], "ESTIMATE")
+        self.assertEqual(storage["mb_day_per_refresh_row"], 0.016)
+        self.assertEqual(storage["added_mb_day"], 0.03)
+        self.assertEqual(storage["days_to_reserve_now"], 87.5)
+
+    def test_count_limits_and_read_only_sql(self):
+        self.assertEqual(refresh_backfill.check_count(None), 500)
+        for bad in (0, 1001, "5"):
+            with self.assertRaises(common.Refused):
+                refresh_backfill.check_count(bad)
+        for sql in (refresh_backfill.UNPLANNED_SQL, refresh_backfill.PLANNED_SQL):
+            low = sql.lower()
+            self.assertTrue(low.strip().startswith("with"))
+            for word in ("insert", "update", "delete", "for update"):
+                self.assertNotIn(word, low)
+
+    def test_registered_as_collector_affecting_write(self):
+        self.assertEqual(run.RUNBOOKS["plan-refresh-backfill"][:2], ("write", True))
+        self.assertEqual(run.kind_of("plan-refresh-backfill", False), (False, False))
 
 
 class FleetAndImages(unittest.TestCase):
