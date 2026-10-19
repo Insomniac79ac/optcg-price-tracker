@@ -1,8 +1,6 @@
 {
  "schema_version": 1,
- "mission": "New-sources plan step S1 (owner approved the plan 2026-10-19 00:34Z): one additive migration 7a52e9b48e8a on 3b7d9c1a5e20. Adds nullable price_observations.grade_key with a vocabulary CHECK and a raw-only CHECK (PSA10 OFF, decision N10), both NOT VALID then validated; widens the proposal-group candidate-type CHECK with source_product; creates empty source_product_groups, source_products, source_product_variants, source_variant_renderings, market_index_splices and market_index_splice_snapshots; seeds inert dorasuta and cardrush source rows. ORM for the new tables lives in app.source_products, which nothing in app.models imports, so neither existing collector loads it. Staging only; no collector, rollout, source request, price, identity, mapping, Market Value/Index, secret or Railway change. The owner applies the migration by hand after merging (alembic upgrade head, backup under 24 h).",
  "target": "staging",
- "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -17,39 +15,6 @@
   "significant_recurring_cost": false,
   "yuyu_sale_policy": false
  },
- "impacts": [
-  {
-   "files": [
-    "services/api/alembic/versions/7a52e9b48e8a_add_new_source_records.py"
-   ],
-   "effects": [
-    "migration"
-   ],
-   "reason": "Additive DDL: six new empty tables, one nullable column on price_observations (metadata-only in PostgreSQL 16), two CHECKs added NOT VALID then VALIDATE (a scan under SHARE UPDATE EXCLUSIVE, which does not block reads or writes; every existing row is NULL), one CHECK widened, two sources rows inserted if absent. Downgrade refuses while any new table or grade_key holds data."
-  },
-  {
-   "files": [
-    "services/api/app/source_products/__init__.py",
-    "services/api/app/source_products/grade_keys.py",
-    "services/api/app/source_products/models.py"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "New package with the grade_key vocabulary and ORM for the new tables. Not imported by app.models or any existing module, so no API, worker or collector code path changes; verified outside both collector runtime inputs (scripts/collector_runtime_inputs.py)."
-  },
-  {
-   "files": [
-    "services/api/tests/test_new_source_records_migration_postgres.py",
-    "services/api/tests/test_accounts_postgres.py",
-    "scripts/tests/test_collector_runtime_inputs.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Migration upgrade, constraint, model-parity and refusing-downgrade tests; the accounts migration test now pins its own revision instead of head; plan §2.7 guard that new-source paths stay outside the Yuyu-Tei and SNKRDUNK runtime inputs."
-  }
- ],
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "7a52e9b48e8a",
@@ -61,32 +26,76 @@
   "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
   "yuyu_capacity_cadence": true
  },
+ "operational_notes": [
+  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
+  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
+  "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
+  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
+ ],
+ "classification": "GREEN",
+ "mission": "New-sources plan step S4 (owner approved the plan 2026-10-19 00:34Z; Q6 splice, not break; N12 CPI methodology stays 1), stacked on S1 (#181): splice machinery for a source cutover, inert. On a day with an approved market_index_splices row the snapshot job also archives each print's old-basis Market Index (same source values without the added source, combined by the unchanged _compute_index_fields). The per-print 7D change, the print analytics headline, the Card Pirate Index chain and Market Value windows and replay then step across exactly one source_semantics_version change through two legs, each passing the unchanged comparability guards. No splice row exists and creating one is a RED owner decision (D4, C4), so every number is unchanged; readers query the splice table only when the two ends of a comparison already disagree on source_semantics_version. Staging only; no collector, rollout, migration, source request, price, identity, mapping, secret or Railway change; INDEX_VERSION, SOURCE_SEMANTICS_VERSION and CPI METHODOLOGY_VERSION unchanged.",
+ "impacts": [
+  {
+   "files": [
+    "services/api/app/services/market_index_splice.py",
+    "services/api/app/snapshot_market_index.py"
+   ],
+   "effects": [
+    "application"
+   ],
+   "reason": "Splice rules, the old-basis archive and the chained two-leg comparison. The snapshot job reads market_index_splices once per run (empty) and writes nothing without a row for today."
+  },
+  {
+   "files": [
+    "services/api/app/services/market_index_change.py",
+    "services/api/app/services/print_analytics.py",
+    "services/api/app/services/card_pirate_index.py",
+    "services/api/app/services/market_value.py"
+   ],
+   "effects": [
+    "application"
+   ],
+   "reason": "Splice-aware steps behind an optional splice_days argument (CPI, Market Value; no caller passes it yet) and a fallback reached only after a source_semantics_version refusal (7D change, analytics headline). Same results when no splice exists. None is a collector runtime input."
+  },
+  {
+   "files": [
+    "services/api/tests/test_market_index_splice.py",
+    "services/api/tests/test_snapshot_market_index.py",
+    "scripts/tests/test_collector_runtime_inputs.py"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Synthetic replays with and without a splice for the 7D change, CPI and Market Value; splice rules; old-basis archive through the real snapshot job; plan §2.7 guard extended."
+  }
+ ],
  "safeguards": {
   "impact": {
    "resources": [
     {
-     "name": "Staging Postgres: migration 7a52e9b48e8a (additive)"
+     "name": "API (Market Index snapshot job and read paths, inert)"
     }
    ],
    "routes": [
-    "None"
+    "GET /prints/{id}/analytics",
+    "Market Index 7D change on print reads"
    ],
    "dependencies": [
-    "Alembic head 3b7d9c1a5e20 (collector account tables); new-sources plan on branch plan/new-sources (d0bd629); S0 diagnostics PR #178 independent"
+    "Stacked on S1 #181 (needs market_index_splices tables); retargeted to staging after S1 merges. Plan on branch plan/new-sources (9b8ff76)."
    ],
-   "deployment_impact": "API and worker redeploy with an unused new package; no code path reads it. collector_services is empty and no raw_dependency_migration: 0 collector rollouts. The receipt fails on the migration revision until the owner runs alembic upgrade head, the documented signal.",
-   "database_writes": 2,
+   "deployment_impact": "API and worker redeploy. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. With no splice row every response and snapshot is unchanged.",
+   "database_writes": 0,
    "source_requests": 0,
-   "estimated_runtime_minutes": 15
+   "estimated_runtime_minutes": 10
   },
   "recovery": {
    "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-   "procedure": "While the new tables and grade_key are empty: alembic downgrade 3b7d9c1a5e20 (it refuses otherwise), then a native revert of this PR. The two inert sources rows stay.",
-   "trigger": "Migration fails or exceeds its lock budget, API or worker fails to start, or any existing collector or diagnostic errors on the changed schema.",
-   "backup": "Railway Postgres backup younger than 24 h before the owner runs the migration (scripts/staging_backup_age.py).",
+   "procedure": "Native revert of this PR. No data, schema or configuration to undo while no splice row exists.",
+   "trigger": "The 19:30-20:30 UTC Market Index snapshot fails or its receipt changes, or any 7D change, analytics headline, CPI or Market Value number differs from before the merge.",
+   "backup": "Not applicable: no schema or row change.",
    "validation": [
-    "services/api/tests/test_new_source_records_migration_postgres.py",
-    "scripts/tests/test_collector_runtime_inputs.py"
+    "services/api/tests/test_market_index_splice.py",
+    "services/api/tests/test_snapshot_market_index.py"
    ]
   },
   "verification": {
@@ -94,16 +103,10 @@
     "engineering-gate"
    ],
    "post_change": [
-    "services/api/tests/test_new_source_records_migration_postgres.py"
+    "scripts/staging_web_smoke.py"
    ],
-   "observation_window": "After the owner applies the migration: Verify staging merge passes on revision 7a52e9b48e8a, and the next yuyutei and snkrdunk collector runs and one staging-state run complete as before."
+   "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; the next Market Index snapshot completes with a verified receipt and market_index_splice_snapshots stays empty."
   }
  },
- "diff_sha256": "491e846986ff87c18d3ffa88dc5d72121cbe37c9b69ccc2c15039dd815afe877",
- "operational_notes": [
-  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
-  "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
- ]
+ "diff_sha256": "1cdddfad78a2bb314e6c43b70ea524db82a7d0467ac06b43ae668a58b9ed6fcb"
 }
