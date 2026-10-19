@@ -492,7 +492,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        collector: [snkrdunk_collector, yuyutei_collector]
+        collector: [snkrdunk_collector, yuyutei_collector, source_collector_kit, dorasuta_collector]
     services:
       postgres:
         image: postgres:16-alpine

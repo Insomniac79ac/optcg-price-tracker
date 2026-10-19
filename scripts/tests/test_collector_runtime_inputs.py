@@ -415,6 +415,8 @@ NEW_SOURCE_ROOTS = (
     "services/api/tests/test_new_source_records_migration_postgres.py",
     "services/api/tests/test_source_product_titles.py",
     "services/api/tests/test_source_product_resolver.py",
+    "services/source_collector_kit/",
+    "services/dorasuta_collector/",
 )
 
 
