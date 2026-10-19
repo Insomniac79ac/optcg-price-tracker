@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "SNKRDUNK coverage gap (owner task 2026-10-18, diagnostic only): add four reviewed read-only db-diagnostic files that classify every active verified high-rarity print (all but base C, UC, R and SR) without a fresh SNKRDUNK raw price into never discovered, discovered but unresolved (with listing kind: plain, parallel, SP, manga), mapped but not refreshed, probably not sold raw, and other; plus coverage by release, 14 days of discovery activity and first raw prices, and samples. Register them in ops-readonly. Staging only; PSA10 not read; no rule, alias, proposal, mapping, enqueue, collector, setting, price, identity, Market Value/Index, secret or Railway change; no runbook run in this PR.",
+ "mission": "SNKRDUNK discovery stop and quarantine review (owner task 2026-10-19, diagnostic only): add two reviewed read-only db-diagnostic files. snkrdunk-quarantine lists every blocked SNKRDUNK freshness item with print, listing and block reason; snkrdunk-discovery-state lists every SNKRDUNK discovery intent with bounds and result, attempts, legacy discovery runs, anchors per release and the dispatch budget. Register them in ops-readonly. Staging only; PSA10 not read; no rule, alias, proposal, mapping, enqueue, collector, setting, price, identity, Market Value/Index, secret or Railway change; no runbook run in this PR.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,15 +20,13 @@
  "impacts": [
   {
    "files": [
-    "scripts/diagnostics/snkrdunk-coverage-gap.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-discovery.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-releases.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-samples.sql"
+    "scripts/diagnostics/snkrdunk-discovery-state.sql",
+    "scripts/diagnostics/snkrdunk-quarantine.sql"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Four SELECT/WITH-only diagnostics (11 statements) over card_prints, canonical_cards, release_products, sources, source_card_mappings, freshness_work, freshness_price_states, freshness_attempts, source_mapping_proposal_groups, snkrdunk_candidates, snkrdunk_discovery_runs and price_observations (raw floor only), run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. No write, no source request."
+   "reason": "Two SELECT/WITH-only diagnostics (8 statements) over freshness_work, freshness_attempts, freshness_price_states, source_card_mappings, card_prints, canonical_cards, release_products, sources, snkrdunk_candidates, snkrdunk_discovery_runs and source_dispatch_budgets, run only in the existing default_transaction_read_only db-diagnostic session with its statement timeout. No write, no source request."
   },
   {
    "files": [
@@ -37,7 +35,7 @@
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds snkrdunk-coverage-gap, snkrdunk-coverage-gap-discovery, snkrdunk-coverage-gap-releases and snkrdunk-coverage-gap-samples to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
+   "reason": "Adds snkrdunk-discovery-state and snkrdunk-quarantine to the diagnostic choice list (the test keeps it equal to scripts/diagnostics). No permission, secret, environment or trigger change."
   }
  ],
  "deployment_verification": {
@@ -48,30 +46,30 @@
    "scripts/verify_yuyu_raw_reader_component.py"
   ],
   "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
-  "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+  "yuyu_reader_component": "99844c6fba7fe0ce621b835e8afc1227b4c41483",
   "yuyu_capacity_cadence": true
  },
  "safeguards": {
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-readonly db-diagnostic (four new read-only SQL files)"
+     "name": "GitHub Actions: ops-readonly db-diagnostic (two new read-only SQL files)"
     }
    ],
    "routes": [
     "None"
    ],
    "dependencies": [
-    "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156 and #166 (unchanged); D9 F1 delivery PR #173 (unchanged)"
+    "ops runbooks from PR #139, #143, #150, #155, #157, #158; diagnostics from PR #156, #166 and #174 (unchanged)"
    ],
-   "deployment_impact": "Four read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
+   "deployment_impact": "Two read-only diagnostics and their workflow choice entries. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
    "database_writes": 0,
    "source_requests": 0,
-   "estimated_runtime_minutes": 5
+   "estimated_runtime_minutes": 3
   },
   "recovery": {
-   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-   "procedure": "Native revert of this PR removes the four diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
+   "artifact": "99844c6fba7fe0ce621b835e8afc1227b4c41483",
+   "procedure": "Native revert of this PR removes the two diagnostics and their workflow choices. No data, schema, provider or service configuration to undo.",
    "trigger": "A db-diagnostic run of a new file that fails the read-only check, exceeds its statement timeout, or returns anything but query rows.",
    "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
    "validation": [
@@ -83,15 +81,13 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/diagnostics/snkrdunk-coverage-gap.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-discovery.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-releases.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-samples.sql"
+    "scripts/diagnostics/snkrdunk-discovery-state.sql",
+    "scripts/diagnostics/snkrdunk-quarantine.sql"
    ],
    "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
   }
  },
- "diff_sha256": "416b5b855428c67e4c607edd6cfb3430c175347cfa0c94237432264c035be8fe",
+ "diff_sha256": "146d037d3c199ed803cb254d58f17f7afa8732796718ae053e940a51b63766e3",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
