@@ -1,131 +1,189 @@
 {
- "schema_version": 1,
- "mission": "D9 F1 approval runbook and PR #173 rollout receipt (owner asks 2026-10-18 23:11Z and 23:43Z): commit the PR #173 rollout receipt the owner downloaded and let fleet-vs-receipt compare each collector with the newest receipt that deployed it (default chain PR #103 then PR #173); plan, not build, publishing receipts from the delivery job; and add the ops-write runbook approve-f1-batch, which approves current exact Yuyu-Tei proposals made by the F1 listing-kind rule in batches of about 500 through the admin page's approve_exact_proposal. Each run waits for the owner in staging-ops; the dry run lists every proposal, a 20-row seeded random sample and storage room; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR (batch 1 only after merge, owner-approved).",
- "target": "staging",
- "classification": "AMBER",
- "red_decisions": {
-  "ambiguous_approval": false,
-  "destructive_migration": false,
-  "identity_weakening": false,
-  "legal_compliance": false,
-  "major_product_or_brand": false,
-  "pricing_methodology": false,
-  "private_data_exposure": false,
-  "production": false,
-  "published_history_rewrite": false,
-  "security_or_secrets_policy": false,
-  "significant_recurring_cost": false,
-  "yuyu_sale_policy": false
- },
- "impacts": [
-  {
-   "files": [
-    "scripts/ops/f1_approve.py",
-    "scripts/ops/run.py"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "New write runbook approve-f1-batch registered in RUNBOOKS as (write, collector-affecting). Selection is read-only (default_transaction_read_only session); an apply runs only in ops-write after the owner's staging-ops approval, refuses unless the rebuilt list hashes to the dry run's SHA-256, and calls approve_exact_proposal (every admin guard: exact, pending, current, same digest and resolver version, sole recommended print, candidate state, no rejected or conflicting mapping, print verified and not already monitored) once per proposal per transaction. Exact proposals only; ambiguous ones are never approved. run.py --count now defaults per runbook (enqueue-remaining-50 keeps 50)."
+  "schema_version": 1,
+  "mission": "Per-PR mission files (ROADMAP item 22, owner GO 2026-10-19 09:24Z): each DATA-lane PR adds one docs/agent/missions/<name>.json, carried state moves to docs/agent/STAGING_FLEET.json, the diff hash covers the PR's own change (merge-base to head, full index). policy-gate still runs the base policy with unchanged evaluate() rules; delivery and verification compose fleet state plus the merge's own mission and fail closed. This is the last PR evaluated against STAGING_MISSION.json (bootstrap).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
   },
-  {
-   "files": [
-    "scripts/ops/fleet.py",
-    "docs/agent/handoff/2026-10-18/pr173-delivery/staging-delivery-2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3/evidence/latest-collector-rollout.json"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "Commits the owner-supplied PR #173 rollout receipt (run 39139111207 artifact; service and deployment ids, digests, schedules, three non-secret flag values). fleet-vs-receipt takes comma-separated committed receipts and compares each collector with the newest one that deployed it, so the 9 yuyutei shards are checked against PR #173 (2bcbe90) and snkrdunk-collector against PR #103 (a504e47). Read-only Railway queries as before; no deploy."
-  },
-  {
-   "files": [
-    ".github/workflows/ops-write.yml"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "Adds approve-f1-batch to the runbook choice, makes count optional (empty uses the runbook default) and raises the runbook job timeout to 180 minutes (one fresh resolver run per approval). The owner-approval job, environments, permissions, secrets and triggers are unchanged."
-  },
-  {
-   "files": [
-    "scripts/tests/test_ops_runbooks.py",
-    "docs/agent/OPS_RUNBOOKS.md",
-    "docs/agent/plans/rollout-receipt-publish/PLAN.md",
-    "docs/agent/ROADMAP.md"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job. ROADMAP.md: item 1 and 11a/b point at this PR; new item 23 for the receipt plan."
-  }
- ],
- "deployment_verification": {
-  "api_sha": "merge",
-  "revision": "3b7d9c1a5e20",
-  "checks": [
-   "scripts/verify_snkr_published_discovery_component.py",
-   "scripts/verify_yuyu_raw_reader_component.py"
-  ],
-  "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
-  "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-  "yuyu_capacity_cadence": true
- },
- "safeguards": {
-  "impact": {
-   "resources": [
+  "impacts": [
     {
-     "name": "GitHub Actions: ops-write approve-f1-batch (owner-approved runs only)"
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "policy-gate: the base policy finds the PR's mission itself; the legacy manifest path runs only while the base has no scripts/staging_mission.py. staging-automerge: the scope step composes the merge's own mission into a temp file that the RAW migration, collector rollout and verification steps read; a full delivery without exactly one added mission refuses. Registers test_staging_mission.py."
+    },
+    {
+      "files": [
+        ".github/workflows/staging-delivery.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Same delivery-step changes as the staging-automerge job (reusable copy)."
+    },
+    {
+      "files": [
+        ".github/workflows/staging-verify.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Hand-merge verification composes fleet state plus the merge's mission (if any) instead of reading STAGING_MISSION.json; fails on a changed, removed or duplicated mission."
+    },
+    {
+      "files": [
+        "scripts/staging_mission.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New: find the PR's one added mission, merge-base full-index diff hash, compose fleet plus mission into the old manifest shape, digest/compose CLI. Read-only, local Git only."
+    },
+    {
+      "files": [
+        "scripts/staging_policy.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "DATA lane reads the mission and fleet state from the PR head via staging_mission; evaluate() is unchanged. --manifest is accepted and ignored."
+    },
+    {
+      "files": [
+        "scripts/staging_delivery_scope.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Skip decision keys on one added mission file instead of the shared manifest; changed, removed, duplicated or unreadable missions run full (which then refuses)."
+    },
+    {
+      "files": [
+        "scripts/product_lane.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Mission files and the fleet state classify as DATA, like the manifest."
+    },
+    {
+      "files": [
+        "scripts/verify_yuyu_raw_reader_component.py",
+        "scripts/verify_snkr_published_discovery_component.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Component expectations come from STAGING_MISSION_MANIFEST (the delivery's composed manifest), else the fleet state."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New fleet state: deployment_verification and operational_notes copied from STAGING_MISSION.json at the base, no deployment requests."
+    },
+    {
+      "files": [
+        "scripts/tests/test_staging_mission.py",
+        "scripts/tests/test_staging_delivery_scope.py",
+        "scripts/tests/test_product_lane.py",
+        "scripts/tests/test_claude_guardrails.py",
+        "scripts/tests/test_collector_runtime_inputs.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Zero, two, changed and removed missions; hash survives merging staging in; full index; fleet and mission override rules; compose CLI; workflow wiring; updated fixtures."
+    },
+    {
+      "files": [
+        "CLAUDE.md",
+        "docs/agent/AUTONOMY_POLICY.md",
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/STAGING_DELIVERY.md",
+        "docs/agent/ROADMAP.md",
+        ".github/pull_request_template.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Describe per-PR missions, the fleet state, the post-collector pin, bootstrap and rollback; item 22 status."
     }
-   ],
-   "routes": [
-    "None"
-   ],
-   "dependencies": [
-    "ops-write from PR #150; D9 F1 rule from PR #171 and its rollout PR #173 (unchanged); approve_exact_proposal (unchanged)"
-   ],
-   "deployment_impact": "Runbook code and its workflow choice only. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched. Merging writes nothing; each later batch is a separate owner-approved run.",
-   "database_writes": 0,
-   "source_requests": 0,
-   "estimated_runtime_minutes": 5
-  },
-  "recovery": {
-   "artifact": "99844c6fba7fe0ce621b835e8afc1227b4c41483",
-   "procedure": "Native revert of this PR removes the runbook and its workflow choice. No data, schema, provider or service configuration to undo. An approved batch is undone by the admin mapping endpoints (per mapping), not by this revert.",
-   "trigger": "A dry run that fails, selects a proposal that is not an exact pending F1 proposal, or a sample row the owner judges wrong.",
-   "backup": "Not applicable for this PR: no schema or row change. Railway Postgres daily backups continue.",
-   "validation": [
-    "scripts/tests/test_ops_runbooks.py"
-   ]
-  },
-  "verification": {
-   "required_checks": [
-    "engineering-gate"
-   ],
-   "post_change": [
-    "scripts/diagnostics/snkrdunk-coverage-gap.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-discovery.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-releases.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-samples.sql"
-   ],
-   "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
-  }
- },
- "diff_sha256": "6f6a1e0b6d3613ad829f5ca01c8a4595851181e70ffcf3e48da0eeae4d67b2af",
- "operational_notes": [
-  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
-  "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write approve-f1-batch runs of about 500 (dry run first, apply pinned to its SHA-256), with a 48 h storage check after each."
- ],
- "verification": {
-  "required_checks": [
-   "engineering-gate"
   ],
-  "post_change": [
-   "scripts/ops/f1_approve.py",
-   "scripts/ops/fleet.py"
-  ],
-  "observation_window": "After merge: one fleet-vs-receipt run with the default chain reports all_match true for 10 collectors; one approve-f1-batch dry run (owner-approved in staging-ops) completes with status ok, batch_size about 500 and no excluded reason the owner did not expect; batch 1 apply only after the owner reviews it, then a 48 h storage check."
- }
+  "deployment_verification": {
+    "api_sha": "merge",
+    "revision": "3b7d9c1a5e20",
+    "checks": [
+      "scripts/verify_snkr_published_discovery_component.py",
+      "scripts/verify_yuyu_raw_reader_component.py"
+    ],
+    "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+    "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+    "yuyu_capacity_cadence": true
+  },
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub Actions policy-gate, staging-automerge, Serialized staging delivery and Verify staging merge"
+      ],
+      "routes": [
+        "None"
+      ],
+      "dependencies": [
+        "staging at df28a21; must merge after #180, #179, #178, #181 and #182 (owner order)"
+      ],
+      "deployment_impact": "No collector rollout and no RAW migration: collector_services and raw_dependency_migration are absent. Hand-merged (hold-for-owner); Verify staging merge then runs the new compose path with the fleet state only.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "df28a211452a1f688cf5c2af4bbfec57ebc8fd5c",
+      "procedure": "Native revert PR of this merge plus one docs/agent/missions/<name>.json (the new base gate admits it). After it merges the single STAGING_MISSION.json flow is back; the next DATA PR regenerates STAGING_MISSION.json against staging as before.",
+      "trigger": "policy-gate refuses a correct mission, Verify staging merge or staging-automerge fails in the compose step, or the first collector delivery on the new layout does not run Deploy mission-scoped staging collectors.",
+      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py",
+        "scripts/tests/test_staging_delivery_scope.py",
+        "scripts/tests/test_staging_policy.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/staging_mission.py",
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "observation_window": "Verify staging merge on this hand merge, then the next DATA PR's policy-gate on a mission file, then the first collector PR's staging-automerge (allowed collector window) with Deploy mission-scoped staging collectors and the delivery verification passing."
+    }
+  },
+  "diff_sha256": "pending",
+  "operational_notes": [
+    "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
+    "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
+    "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
+    "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write approve-f1-batch runs of about 500 (dry run first, apply pinned to its SHA-256), with a 48 h storage check after each."
+  ]
 }
