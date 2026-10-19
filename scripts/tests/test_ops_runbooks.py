@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -382,6 +382,57 @@ class ReplanAndEnqueue(unittest.TestCase):
         self.assertEqual(len(replan.load_plan()["records"]), 100)
         with self.assertRaises(common.Refused):
             replan.load_plan("/etc/passwd")
+
+
+class CaptureBatch(unittest.TestCase):
+    def plan(self, status, prints, release=7):
+        return SimpleNamespace(resolution_status=status, release_product_id=release, card_code="OP01-001",
+                               evidence_digest="d", alternatives=[SimpleNamespace(card_print_id=i) for i in prints])
+
+    def test_shortlist_keeps_bounded_ambiguous_families_in_order(self):
+        plans = {1: self.plan("exact", [10]),                  # F1 resolves it now: no capture
+                 2: self.plan("ambiguous", [12, 11]),
+                 3: self.plan("ambiguous", list(range(20, 33))),  # 13 siblings
+                 4: self.plan("ambiguous", [40, 41], release=None),
+                 6: self.plan("ambiguous", [60, 61]),
+                 7: self.plan("ambiguous", [70, 71])}
+        records, dropped = capture_batch.shortlist([1, 2, 3, 4, 5, 6, 7], plans, 2)
+        self.assertEqual([r["candidate_id"] for r in records], [2, 6])
+        self.assertEqual(records[0]["considered_print_ids"], [11, 12])
+        self.assertEqual(dropped, {"not_ambiguous_now": 2, "unbounded_or_unreleased": 2})
+
+    def test_count_limits(self):
+        self.assertEqual(capture_batch.check_count(None), 50)
+        for bad in (0, 101, "50"):
+            with self.assertRaises(common.Refused):
+                capture_batch.check_count(bad)
+
+    def test_batch_label_is_in_the_pinned_list(self):
+        rows = [{"candidate_id": i, "evidence_digest": "d", "release_product_id": 3, "considered_print_ids": [2 * i, 2 * i + 1],
+                 "eligible": True} for i in range(1, 3)]
+        replanned = {"records": rows, "observed_at": "t", "resolver_version": "1.3"}
+        self.assertEqual(replan.approved_list(replanned, 2)[2]["batch"], "NEW2")  # enqueue-remaining-50 unchanged
+        _, sha, doc = replan.approved_list(replanned, 2, batch="capture-2")
+        self.assertEqual(doc["batch"], "capture-2")
+        self.assertNotEqual(sha, replan.approved_list(replanned, 2)[1])
+
+    def test_candidates_sql_is_read_only_and_excludes_captured(self):
+        sql = capture_batch.CANDIDATES_SQL.lower()
+        self.assertTrue(sql.strip().startswith("select"))
+        for word in ("insert", "update", "delete", "for update"):
+            self.assertNotIn(word, sql)
+        self.assertIn("yuyu-identity:", sql)
+        self.assertIn("reviewed_at is not null", sql)
+
+    def test_apply_respects_windows_and_ops_write(self):
+        args = SimpleNamespace(runbook="enqueue-capture-batch", workflow="ops-write", apply=True)
+        idle = lambda path: {"workflow_runs": []}  # noqa: E731
+        for hour, minute in ((2, 30), (19, 45)):
+            with self.assertRaises(common.Refused):
+                run.preflight(args, now=utc(2026, 10, 19, hour, minute), read=idle)
+        run.preflight(args, now=utc(2026, 10, 19, 12), read=idle)
+        with self.assertRaises(common.Refused):
+            run.preflight(SimpleNamespace(**(vars(args) | {"workflow": "ops-readonly"})), now=utc(2026, 10, 19, 12), read=idle)
 
 
 class F1Approve(unittest.TestCase):

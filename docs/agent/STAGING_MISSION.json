@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "D9 F1 approval runbook and PR #173 rollout receipt (owner asks 2026-10-18 23:11Z and 23:43Z): commit the PR #173 rollout receipt the owner downloaded and let fleet-vs-receipt compare each collector with the newest receipt that deployed it (default chain PR #103 then PR #173); plan, not build, publishing receipts from the delivery job; and add the ops-write runbook approve-f1-batch, which approves current exact Yuyu-Tei proposals made by the F1 listing-kind rule in batches of about 500 through the admin page's approve_exact_proposal. Each run waits for the owner in staging-ops; the dry run lists every proposal, a 20-row seeded random sample and storage room; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR (batch 1 only after merge, owner-approved).",
+ "mission": "Next identity-capture batch runbook, stacked on PR #176 (owner ask 2026-10-19 00:33Z, item 3): the NEW100 plan is finished, so add the ops-write runbook enqueue-capture-batch, which plans the next batch live (uncaptured ambiguous Yuyu-Tei listings the live resolver, F1 included, still finds ambiguous) and enqueues it through the unchanged PR #116 tool. Owner-approved in staging-ops; dry run first; apply pinned to the dry run's SHA-256. Carries PR #176 unchanged until it merges: D9 F1 approval runbook and PR #173 rollout receipt (owner asks 2026-10-18 23:11Z and 23:43Z): commit the PR #173 rollout receipt the owner downloaded and let fleet-vs-receipt compare each collector with the newest receipt that deployed it (default chain PR #103 then PR #173); plan, not build, publishing receipts from the delivery job; and add the ops-write runbook approve-f1-batch, which approves current exact Yuyu-Tei proposals made by the F1 listing-kind rule in batches of about 500 through the admin page's approve_exact_proposal. Each run waits for the owner in staging-ops; the dry run lists every proposal, a 20-row seeded random sample and storage room; an apply needs the dry run's approved-list SHA-256. Staging only; PSA10 not read; no resolver, alias, collector, setting, price, Market Value/Index, secret or Railway change; no runbook run in this PR (batch 1 only after merge, owner-approved).",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -57,6 +57,21 @@
     "infrastructure"
    ],
    "reason": "Offline tests for the list pin, seeded sample, count and apply guards, quiet windows and stop-at-first-refusal; runbook documentation. Plan (not built) for publishing rollout receipts from the delivery job."
+  },
+  {
+   "files": [
+    "scripts/ops/capture_batch.py",
+    "scripts/ops/enqueue_remaining.py",
+    "scripts/ops/replan.py",
+    "scripts/ops/run.py",
+    ".github/workflows/ops-write.yml",
+    "scripts/tests/test_ops_runbooks.py",
+    "docs/agent/OPS_RUNBOOKS.md"
+   ],
+   "effects": [
+    "infrastructure"
+   ],
+   "reason": "New write runbook enqueue-capture-batch registered in RUNBOOKS as (write, collector-affecting) and in the ops-write choice. Planning is read-only (default_transaction_read_only session): one resolver run over the uncaptured ambiguous listings, then ops.replan's guards. Enqueue goes through scripts/yuyu_identity_capture_enqueue.py unchanged (all or nothing, every #116 guard), shared with enqueue-remaining-50 by moving its steps 2 to 4 into enqueue_list; enqueue-remaining-50's list and SHA are unchanged (batch label stays NEW<count>). Captures are claimed by ordinary scheduled Yuyu turns under the source budget; no source request, approval or mapping here."
   }
  ],
  "deployment_verification": {
@@ -75,6 +90,9 @@
    "resources": [
     {
      "name": "GitHub Actions: ops-write approve-f1-batch (owner-approved runs only)"
+    },
+    {
+     "name": "GitHub Actions: ops-write enqueue-capture-batch (owner-approved runs only)"
     }
    ],
    "routes": [
@@ -91,7 +109,7 @@
   "recovery": {
    "artifact": "99844c6fba7fe0ce621b835e8afc1227b4c41483",
    "procedure": "Native revert of this PR removes the runbook and its workflow choice. No data, schema, provider or service configuration to undo. An approved batch is undone by the admin mapping endpoints (per mapping), not by this revert.",
-   "trigger": "A dry run that fails, selects a proposal that is not an exact pending F1 proposal, or a sample row the owner judges wrong.",
+   "trigger": "A dry run that fails, selects a proposal that is not an exact pending F1 proposal, or a sample row the owner judges wrong. For enqueue-capture-batch: a dry run that selects a listing that is not an uncaptured ambiguous family.",
    "backup": "Not applicable for this PR: no schema or row change. Railway Postgres daily backups continue.",
    "validation": [
     "scripts/tests/test_ops_runbooks.py"
@@ -105,9 +123,10 @@
     "scripts/diagnostics/snkrdunk-coverage-gap.sql",
     "scripts/diagnostics/snkrdunk-coverage-gap-discovery.sql",
     "scripts/diagnostics/snkrdunk-coverage-gap-releases.sql",
-    "scripts/diagnostics/snkrdunk-coverage-gap-samples.sql"
+    "scripts/diagnostics/snkrdunk-coverage-gap-samples.sql",
+    "scripts/ops/capture_batch.py"
    ],
-   "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted."
+   "observation_window": "After merge: one ops-readonly db-diagnostic run per new file, dispatched one at a time, completes with status ok, and its ops-summary carries rows or names them in rows_omitted. enqueue-capture-batch: one dry run (owner-approved in staging-ops) completes with status DRY_RUN_OK and a 50-row batch; the apply only after the owner reviews it, then identity-capture-work shows the new work ids."
   }
  },
  "diff_sha256": "531a24d94fd06c705160db3b2fe24fedcbb09f61ba09ac8ead34616fc18b1f7e",
@@ -123,7 +142,8 @@
   ],
   "post_change": [
    "scripts/ops/f1_approve.py",
-   "scripts/ops/fleet.py"
+   "scripts/ops/fleet.py",
+   "scripts/ops/capture_batch.py"
   ],
   "observation_window": "After merge: one fleet-vs-receipt run with the default chain reports all_match true for 10 collectors; one approve-f1-batch dry run (owner-approved in staging-ops) completes with status ok, batch_size about 500 and no excluded reason the owner did not expect; batch 1 apply only after the owner reviews it, then a 48 h storage check."
  }

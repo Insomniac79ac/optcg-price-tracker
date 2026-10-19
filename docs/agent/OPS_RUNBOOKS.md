@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -59,6 +59,20 @@ Nothing here is collector-affecting or a write, so no quiet window applies.
    and only when `expected_sha256` equals this run's list, i.e. the list from a dry run the owner
    reviewed. A moved digest changes the list, and the apply refuses. The summary lists
    `written_work_ids`.
+
+`enqueue-capture-batch` (`scripts/ops/capture_batch.py`): the next identity-capture batch after
+NEW100 (work ids 3678 to 3777 are done and never replayed), planned live instead of from a file.
+
+1. Candidates, read-only: Yuyu-Tei listings whose current proposal is ambiguous, pending and
+   unreviewed, with no capture scope of any kind, oldest candidate first. One live resolver run
+   (F1 included) drops every listing it now resolves exactly, so no capture is spent on a listing
+   an `approve-f1-batch` run can map. The first `2 * count` bounded ambiguous families (2..12
+   siblings, authoritative release) form the plan.
+2. Then as `enqueue-remaining-50`: every #116 guard and the shared-print guard, the first `count`
+   eligible (default 50, at most 100) pinned by SHA-256, the storage fit, the #116 tool's checks.
+   The summary adds `candidates` (counts at each step) and `batch` (candidate id, card code,
+   official siblings) for the owner's review. `apply=true` needs the dry run's `expected_sha256`;
+   a new candidate or a moved digest changes the list and the apply refuses.
 
 `approve-f1-batch` (D9 F1, `scripts/ops/f1_approve.py`): approves current exact Yuyu-Tei
 proposals made by the F1 rule (reason `unique_listing_kind_resolves_one_release_sibling`) in
@@ -129,7 +143,7 @@ gh api $R/actions/runs/$RUN/artifacts --jq '.artifacts[] | {id, name, size_in_by
   into up to 9 notices), or the GitHub MCP `get_job_logs` tool, which prints the same summary
   JSON. The owner can download the artifact from the run page.
 - `ops-write`: dispatch the same way with `ops-write.yml`, `inputs[runbook]=enqueue-remaining-50`
-  (or `approve-f1-batch`), `inputs[apply]=false`; `inputs[count]` is optional (empty is the
+  (or `approve-f1-batch`, `enqueue-capture-batch`), `inputs[apply]=false`; `inputs[count]` is optional (empty is the
   runbook's default). The run waits for the owner. Read `approved_list_sha256` from the dry run;
   for an apply the owner (or an agent the owner asked) dispatches again with `inputs[apply]=true`
   and `inputs[expected_sha256]=<that sha>`, and the owner approves it.
