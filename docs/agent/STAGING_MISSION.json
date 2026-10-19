@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Capture batch count means 'up to' (owner 2026-10-19 13:02Z). enqueue-capture-batch judged only the oldest 2 * count candidates, so a smaller count judged fewer and found fewer eligible (MEASURED: 12 of 100 at count 50, 9 of 24 at count 12, dry run 39255746139), and it refused whenever eligible < count, dropping the guard counts. Now every bounded ambiguous family is planned, the shared-print guard runs in plan order, the batch is min(count, eligible), it refuses only when nothing is eligible (with the breakdown kept), and an apply refuses only on a SHA-256 mismatch. A new read-only runbook capture-batch-preview (ops-readonly, no approval) gives the full exclusion breakdown (reviewed, blocked, captured, queued, exact now per rule, resolved since, unbounded, no release, first failed guard), the batch, its SHA-256 and storage fit. No application, collector or schema change; no capture is dispatched by this PR.",
+ "mission": "Owner decision 2026-10-19 14:48Z: add the ops-write runbook apply-migration, the only path for a schema migration to reach staging (owner click per run in staging-ops; agents never approve). It allowlists exactly revision 7a52e9b48e8a on parent 3b7d9c1a5e20 and refuses anything else; before any write it requires a Railway Postgres backup younger than 24 h (scripts/staging_backup_age.py), a passing read-only fingerprint and live alembic_version equal to the parent. A dry run (default) writes nothing and reports the SQL plan and its SHA-256, the lock budget and row counts; apply needs that SHA and runs only that revision in one transaction with lock_timeout 5 s and statement_timeout 120 s, then records the new revision. This PR applies no migration and changes no schema, collector, source, price, identity, mapping, Market Value/Index, secret or Railway setting. Staging only; PSA10 untouched.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,42 +20,41 @@
  "impacts": [
   {
    "files": [
-    "scripts/ops/capture_batch.py",
-    "scripts/ops/replan.py",
+    "scripts/ops/apply_migration.py",
     "scripts/ops/run.py"
-   ],
-   "effects": [
-    "infrastructure",
-    "bulk_data"
-   ],
-   "reason": "enqueue-capture-batch (ops-write, owner-gated, collector-affecting on apply) plans every uncaptured bounded ambiguous family instead of the first 2 * count, applies the shared-print guard greedily in plan order, takes min(count, eligible), and refuses only on zero eligible; apply still re-plans and refuses on a different SHA-256. Every #116 guard and the #116 tool's checks are unchanged. replan.finish is split so its summary is reusable; enqueue-remaining-50 behaves as before. New read runbook capture-batch-preview: the same plan over the read-only ops session (default_transaction_read_only=on), writes nothing."
-  },
-  {
-   "files": [
-    ".github/workflows/ops-readonly.yml"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds capture-batch-preview to the runbook choice list and an optional count input passed only to it. No permission, secret, environment or trigger change."
+   "reason": "New write runbook apply-migration registered in RUNBOOKS as write and collector-affecting (quiet windows 02:00-06:00 and 19:30-20:30 UTC apply to an apply). Preflight refuses any revision/parent pair outside ALLOWED. The runbook refuses unless this checkout has the migration as its only head, the backup is under 24 h, the fingerprint passes and live alembic_version is the parent; the dry run opens only the default_transaction_read_only session. Nothing runs in this PR."
   },
   {
    "files": [
-    "scripts/tests/test_ops_runbooks.py"
+    ".github/workflows/ops-write.yml"
+   ],
+   "effects": [
+    "infrastructure"
+   ],
+   "reason": "Adds apply-migration to the runbook choice and two string inputs, revision and parent, passed through env to both jobs. No permission, secret, environment, trigger or approval change; the owner-approval job still holds no credential."
+  },
+  {
+   "files": [
+    "scripts/tests/test_ops_apply_migration.py"
    ],
    "effects": [
     "tests"
    ],
-   "reason": "Shortlist keeps every bounded family with a reason per drop; greedy shared-print guard; stopping at count gives the same batch and SHA as judging all; count means up to (9 eligible of 12 requested gives 9); refusal only on zero eligible keeps the breakdown; apply refuses on a SHA mismatch and passes on the dry run's SHA; population SQL read-only on the real schema; preview is a read runbook."
+   "reason": "Refuse paths (wrong revision, wrong parent, missing from checkout, extra head, no backup, stale backup, already applied, live not parent, SHA mismatch), lock parsing, the writable-engine option, workflow wiring, and on Postgres in a throwaway schema: dry run writes nothing, apply then already applied, failure rolls back everything, lock_timeout bounds the wait."
   },
   {
    "files": [
-    "docs/agent/OPS_RUNBOOKS.md"
+    "docs/agent/OPS_RUNBOOKS.md",
+    "docs/agent/STAGING_DELIVERY.md"
    ],
    "effects": [
     "documentation"
    ],
-   "reason": "Documents the up-to-N semantics, the exclusion reasons and capture-batch-preview."
+   "reason": "Documents apply-migration and its dispatch inputs; the delivery doc now points migrations at the runbook instead of a manual railway run."
   }
  ],
  "deployment_verification": {
@@ -73,29 +72,27 @@
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-readonly capture-batch-preview, ops-write enqueue-capture-batch"
-    },
-    {
-     "name": "Staging Postgres (read-only plan; freshness_work identity intents only on an owner-approved apply)"
+     "name": "GitHub Actions: ops-write apply-migration (owner-approved per run in staging-ops; dry run by default)"
     }
    ],
    "routes": [
     "None"
    ],
    "dependencies": [
-    "PR #116 enqueue tool (unchanged); ops runbooks from PR #139, #143, #179; app.services.source_mapping_proposals resolver (unchanged)"
+    "ops runbooks from PR #139, #143, #150, #155, #157, #158, #189, #190; scripts/staging_backup_age.py; scripts/staging_db_read_check.py; migration 7a52e9b48e8a in PR #181 (not merged; the runbook refuses until it is)"
    ],
-   "deployment_impact": "No API, worker or collector code changes and nothing deploys; 0 collector rollouts, no DDL. Runbooks run from staging after merge.",
-   "database_writes": 100,
+   "deployment_impact": "Runbook code, its workflow choice and docs. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL, alembic_version stays 3b7d9c1a5e20. No path under services/, packages/ or apps/ changes; snkrdunk and yuyutei collectors untouched.",
+   "database_writes": 0,
    "source_requests": 0,
-   "estimated_runtime_minutes": 10
+   "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "35d457c639d525b1a7156d6937614fbc961b1f8d",
-   "procedure": "Native revert of this PR restores the previous capture planner and removes the preview runbook. Nothing is written by the PR itself.",
-   "trigger": "A capture dry run or preview reports an error, or a batch contains a candidate an earlier guard would have refused.",
-   "backup": "Not applicable: no schema change and no write from this PR.",
+   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+   "procedure": "Native revert of this PR removes the runbook and its workflow choice. No data, schema, provider or service configuration to undo.",
+   "trigger": "An apply-migration run that writes on a dry run, accepts a pair outside ALLOWED, or runs without a fresh backup.",
+   "backup": "Not applicable to this PR: no schema or row change. A later apply requires a Railway Postgres backup under 24 h before it writes.",
    "validation": [
+    "scripts/tests/test_ops_apply_migration.py",
     "scripts/tests/test_ops_runbooks.py"
    ]
   },
@@ -104,12 +101,12 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/ops/capture_batch.py"
+    "scripts/ops/apply_migration.py"
    ],
-   "observation_window": "After merge: capture-batch-preview reports the exclusion breakdown and min(count, eligible); a later dry run of the same count gives the same SHA-256 on unchanged state. Captures stay held until #189, the refresh backfill and F1 batch 2 (owner 2026-10-19 13:02Z)."
+   "observation_window": "After merge, ops-write lists apply-migration. Its first run is a dry run after #181 merges, approved by the owner; it must report DRY_RUN_OK with written 0, or refuse with a stated reason."
   }
  },
- "diff_sha256": "96ee4d2f41fa479830f597df4dbf418c82634f06f76420bcc557557ef142734b",
+ "diff_sha256": "503ec33a7c04e78f7004aaec25a44f951f6ee10da4143a3a18ffc82edc8a735c",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
