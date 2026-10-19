@@ -86,7 +86,7 @@
    "observation_window": "After merge: both files on staging; the delivery receipt shows scope skip and 0 collector deployments."
   }
  },
- "diff_sha256": "23e4c3a575afe4b403d6867566ef83a10aa680422e14213f501c3e8c2d51d875",
+ "diff_sha256": "ff401893bdb8485bc6d0ddfa04b49d8f872fbbb79f84896190907d1deabf4d3c",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
