@@ -129,15 +129,17 @@ import graph (`scripts/collector_runtime_inputs.py`); identity, mappings,
 proposals; price observations, raw evidence, Market Value, Card Pirate Index;
 migrations touching those tables; Railway services, infrastructure and secrets;
 CI, delivery and policy tooling; production. Everything above in this contract
-applies as written, including the mission manifest.
+applies as written, including the mission manifest: since 2026-10-19 one added
+file per PR under `docs/agent/missions/` plus, when the fleet moves,
+`docs/agent/STAGING_FLEET.json` ([STAGING_DELIVERY.md](STAGING_DELIVERY.md#per-pr-mission-files-2026-10-19)).
 
 **PRODUCT lane**: `apps/web`; API code outside the collector import graph that
 does not touch price, identity, Market Value or Index (for example `app/accounts`);
 tests; docs outside `docs/agent/`. The exact allowlists live in
 [STAGING_DELIVERY.md](STAGING_DELIVERY.md#delivery-lanes-2026-10-15).
 
-- No mission manifest and no separate handoff PR. Do not hand-edit
-  `STAGING_MISSION.json` or diff hashes; editing it puts the PR in the DATA lane.
+- No mission manifest and no separate handoff PR. Do not add a mission file or
+  edit `STAGING_FLEET.json`; either puts the PR in the DATA lane.
   The PR description carries the summary, tests and screenshots; CI artifacts
   are the delivery receipt. Each product PR appends a few lines to
   [PRODUCT_LOG.md](PRODUCT_LOG.md).

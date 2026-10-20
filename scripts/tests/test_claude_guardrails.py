@@ -105,7 +105,8 @@ class BashGuard(unittest.TestCase):
 class LaneGuard(unittest.TestCase):
     DATA = [".github/workflows/ci.yml", ".claude/settings.json", "scripts/ops/run.py", "docs/agent/AUTONOMY_POLICY.md",
             "services/api/app/main.py", "services/snkrdunk_collector/snkrdunk_collector/cli.py",
-            "docs/agent/STAGING_MISSION.json", "CLAUDE.md", "apps/web/vercel.json"]
+            "docs/agent/STAGING_MISSION.json", "docs/agent/missions/claude-x.json",
+            "docs/agent/STAGING_FLEET.json", "CLAUDE.md", "apps/web/vercel.json"]
     PRODUCT = ["apps/web/src/app/page.tsx", "services/api/tests/test_x.py", "docs/operations.md",
                "docs/agent/PRODUCT_LOG.md", "services/api/app/accounts/router.py"]
 

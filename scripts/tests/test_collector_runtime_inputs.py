@@ -1,6 +1,7 @@
 """Collector continuity narrows services/api to the real import graph, never weaker."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -265,12 +266,14 @@ class CollectorRuntimeInputTests(unittest.TestCase):
 
     def test_yuyu_verifier_refuses_changed_runtime_input(self):
         head = self.repo.commit({"services/api/app/services/helper.py": "value = 7\n"})
-        manifest = self.repo.root / "docs/agent/STAGING_MISSION.json"
-        manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(
+        fleet = self.repo.root / "docs/agent/STAGING_FLEET.json"
+        fleet.parent.mkdir(parents=True, exist_ok=True)
+        fleet.write_text(
             json.dumps({"deployment_verification": {"yuyu_reader_component": self.repo.base}})
         )
-        with patch.object(yuyu.state, "ROOT", self.repo.root), patch.object(
+        with patch.dict(os.environ, {"STAGING_MISSION_MANIFEST": ""}), patch.object(
+            yuyu.state, "ROOT", self.repo.root
+        ), patch.object(
             yuyu.subprocess, "check_output", side_effect=self.yuyu_git(head)
         ), patch.object(yuyu.state, "collect_live", side_effect=AssertionError("no live read")):
             with self.assertRaisesRegex(
@@ -415,6 +418,10 @@ NEW_SOURCE_ROOTS = (
     "services/api/tests/test_new_source_records_migration_postgres.py",
     "services/api/tests/test_source_product_titles.py",
     "services/api/tests/test_source_product_resolver.py",
+    "services/api/app/services/market_index_splice.py",
+    "services/api/tests/test_market_index_splice.py",
+    "services/source_collector_kit/",
+    "services/dorasuta_collector/",
 )
 
 

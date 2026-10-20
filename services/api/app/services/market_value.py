@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal, localcontext
 from enum import Enum
-from typing import Iterable
+from typing import Iterable, Mapping
 
 METHODOLOGY_VERSION = 1
 SUPPORTED_WINDOW_DAYS = (7, 30)
@@ -627,8 +627,12 @@ def evaluate_market_value_window(
     scope: MarketValueScope,
     window_days: int,
     end_date: date | None = None,
+    splice_days: Mapping[date, MarketValueDay] | None = None,
 ) -> MarketValueWindow:
-    """Evaluate every daily step in an exact 7D or 30D UTC window."""
+    """Evaluate every daily step in an exact 7D or 30D UTC window.
+
+    `splice_days`: old-basis days on source cutover dates (see `_step_current`).
+    """
     if window_days not in SUPPORTED_WINDOW_DAYS:
         raise ValueError(f"window_days must be one of {SUPPORTED_WINDOW_DAYS}")
     ordered = sorted(days, key=lambda day: day.point_date)
@@ -662,7 +666,11 @@ def evaluate_market_value_window(
     steps = tuple(
         compute_monetary_step(
             by_date[expected_dates[offset - 1]],
-            by_date[expected_dates[offset]],
+            _step_current(
+                by_date[expected_dates[offset - 1]],
+                by_date[expected_dates[offset]],
+                splice_days,
+            ),
             scope=scope,
         )
         for offset in range(1, len(expected_dates))
@@ -725,8 +733,42 @@ def evaluate_market_value_window(
     )
 
 
+def _step_current(
+    prior: MarketValueDay,
+    current: MarketValueDay,
+    splice_days: Mapping[date, MarketValueDay] | None,
+) -> MarketValueDay:
+    """The day a step into `current` is measured against.
+
+    A source cutover splice (app.services.market_index_splice; new-sources plan
+    §2.6) supplies an old-basis day for its date. When the step moves by exactly
+    one source_semantics_version, it is measured against that old-basis day, so
+    the version guards see one version on both sides; the next step starts from
+    the ordinary new-basis day. With no splice day this returns `current`.
+    """
+    if not splice_days:
+        return current
+    spliced = splice_days.get(current.point_date)
+    if spliced is None:
+        return current
+    prior_pairs = _version_pairs(prior.observations)
+    current_pairs = _version_pairs(current.observations)
+    if len(prior_pairs) != 1 or len(current_pairs) != 1:
+        return current
+    (prior_index, prior_semantics), = prior_pairs
+    (current_index, current_semantics), = current_pairs
+    if (current_index, current_semantics) != (prior_index, prior_semantics + 1):
+        return current
+    if _version_pairs(spliced.observations) != prior_pairs:
+        return current
+    return spliced
+
+
 def replay_market_value(
-    days: Iterable[MarketValueDay], *, scope: MarketValueScope
+    days: Iterable[MarketValueDay],
+    *,
+    scope: MarketValueScope,
+    splice_days: Mapping[date, MarketValueDay] | None = None,
 ) -> tuple[MarketValueReplayPoint, ...]:
     """Build deterministic in-memory segments; never persist or fill a date."""
     ordered = sorted(days, key=lambda day: day.point_date)
@@ -757,7 +799,11 @@ def replay_market_value(
             )
             continue
 
-        step = compute_monetary_step(ordered[index - 1], day, scope=scope)
+        step = compute_monetary_step(
+            ordered[index - 1],
+            _step_current(ordered[index - 1], day, splice_days),
+            scope=scope,
+        )
         publication = evaluate_market_value_publication(step, scope=scope)
         if publication.publishable:
             factor_numerator *= step.comparable_current_value_jpy

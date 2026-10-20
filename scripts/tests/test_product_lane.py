@@ -103,7 +103,8 @@ class ProductLaneDirections(unittest.TestCase):
         for path in ("services/snkrdunk_collector/README.md", "packages/opcg_source_identity/README.md",
                      "deploy/railway/api.Dockerfile", ".github/workflows/fixture.yml",
                      "scripts/fixture.py", "apps/web/vercel.json", "services/api/requirements.txt",
-                     "docs/agent/STAGING_MISSION.json", "docs/agent/AUTONOMY_POLICY.md"):
+                     "docs/agent/STAGING_MISSION.json", "docs/agent/AUTONOMY_POLICY.md",
+                     "docs/agent/missions/claude-x.json", "docs/agent/STAGING_FLEET.json"):
             with self.subTest(path=path):
                 self.assertEqual(self.lane({path: "{}\n"})["lane"], "data")
 

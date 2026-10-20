@@ -4,30 +4,29 @@
 Read-only: inspects local Git only. No network, credentials or mutations.
 
 A change skips ONLY when every changed path is on a narrow documentation
-allowlist. The per-PR mission manifest is not documentation: it may change only
-as the policy declaration every staging PR must carry, and it must request no
-collector rollout and no RAW dependency migration. Anything else, or any change
-set that cannot be determined, runs the full delivery exactly as before.
-Verification and state regeneration always run.
+allowlist. A per-PR mission file (scripts/staging_mission.py) is not
+documentation: the merge may add exactly one, as the policy declaration every
+DATA-lane PR carries, and it must request no collector rollout and no RAW
+dependency migration. Anything else, or any change set that cannot be
+determined, runs the full delivery exactly as before. Verification and state
+regeneration always run.
 
 A PRODUCT-lane merge (scripts/product_lane.py; the policy gate already admitted
-it) also skips collector rollout and RAW DDL: the unchanged manifest may still
-carry an earlier data-lane mission's requests, which a product merge must never
-replay. Its verification expects the merged API and the repository's single
-Alembic head instead of the earlier mission's declarations.
+it) also skips collector rollout and RAW DDL. It adds no mission, so it can
+never replay an earlier mission's requests. Its verification expects the merged
+API and the repository's single Alembic head instead of the fleet state's.
 """
 import argparse
 import json
 from pathlib import Path, PurePosixPath
 import subprocess
 
-MANIFEST = "docs/agent/STAGING_MISSION.json"
+from staging_mission import DEPLOY_REQUEST_KEYS, FLEET, LEGACY_MANIFEST, MISSIONS_DIR, is_mission
+
 # docs/ inputs read by delivery, migration, verification or state scripts.
 # These are never documentation, whatever their extension.
-OPERATIONAL_PREFIXES = ("docs/agent/evidence/",)
-OPERATIONAL_FILES = {MANIFEST, "docs/agent/CURRENT_STATE.yaml"}
-# Manifest keys that request a mutation from the delivery job.
-DEPLOY_REQUEST_KEYS = ("collector_services", "raw_dependency_migration")
+OPERATIONAL_PREFIXES = ("docs/agent/evidence/", MISSIONS_DIR)
+OPERATIONAL_FILES = {FLEET, LEGACY_MANIFEST, "docs/agent/CURRENT_STATE.yaml"}
 
 
 def allowlisted(path):
@@ -60,16 +59,19 @@ def parse_name_status(text):
     return rows
 
 
-def deploy_requests(manifest):
-    verification = manifest.get("deployment_verification")
+def deploy_requests(mission):
+    verification = mission.get("deployment_verification", {})
     if not isinstance(verification, dict):
-        raise ValueError("Manifest has no deployment_verification")
+        raise ValueError("Mission deployment_verification is not an object")
     return {key: verification[key] for key in DEPLOY_REQUEST_KEYS
             if verification.get(key) not in (None, [], {})}
 
 
-def decide(rows, head_manifest):
-    """Return the scope decision for parsed change rows. Fail closed."""
+def decide(rows, mission):
+    """Return the scope decision for parsed change rows. Fail closed.
+
+    `mission` is the merge's one added mission file, or None.
+    """
     files = sorted({path for _, paths in rows for path in paths})
     result = {"decision": "full", "files": files}
     if not rows:
@@ -82,22 +84,25 @@ def decide(rows, head_manifest):
                 return {**result, "reason": f"Rename/copy crosses the documentation allowlist: {paths}"}
         elif status[0] not in "AMD":
             return {**result, "reason": f"Unsupported change status {status}: {paths}"}
-        outside.extend(p for p in paths if p != MANIFEST and not allowlisted(p))
+        outside.extend(p for p in paths if not (status == "A" and is_mission(p)) and not allowlisted(p))
     if outside:
         return {**result, "reason": "Non-documentation change", "outside_allowlist": sorted(set(outside))}
-    if not any(p != MANIFEST for p in files):
-        return {**result, "reason": "Manifest-only change is operational"}
-    if MANIFEST in files:
-        if head_manifest is None:
-            return {**result, "reason": "Manifest changed but cannot be read"}
+    missions = [p for p in files if is_mission(p)]
+    if missions and len(missions) == len(files):
+        return {**result, "reason": "Mission-only change is operational"}
+    if len(missions) > 1:
+        return {**result, "reason": f"More than one mission file: {missions}"}
+    if missions:
+        if mission is None:
+            return {**result, "reason": "Mission added but cannot be read"}
         try:
-            requested = deploy_requests(head_manifest)
+            requested = deploy_requests(mission)
         except (ValueError, AttributeError) as exc:
-            return {**result, "reason": f"Manifest unreadable: {exc}"}
+            return {**result, "reason": f"Mission unreadable: {exc}"}
         if requested:
-            return {**result, "reason": "Manifest requests deployment", "requested": sorted(requested)}
+            return {**result, "reason": "Mission requests deployment", "requested": sorted(requested)}
     return {"decision": "skip", "files": files,
-            "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"}
+            "reason": "Every changed path is allowlisted documentation; the mission requests no rollout or migration"}
 
 
 def product_decision(base, merge):
@@ -130,11 +135,14 @@ def main(argv=None):
     try:
         base = git("rev-parse", "--verify", args.merge + "^1").strip()
         rows = parse_name_status(git("diff", "--name-status", "-M", "-z", base, args.merge))
-        try:
-            head_manifest = json.loads(git("show", f"{args.merge}:{MANIFEST}"))
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
-            head_manifest = None
-        result = {"base": base, "merge": args.merge, **decide(rows, head_manifest)}
+        added = [paths[0] for status, paths in rows if status == "A" and is_mission(paths[0])]
+        mission = None
+        if len(added) == 1:
+            try:
+                mission = json.loads(git("show", f"{args.merge}:{added[0]}"))
+            except (subprocess.CalledProcessError, json.JSONDecodeError):
+                mission = None
+        result = {"base": base, "merge": args.merge, **decide(rows, mission)}
         if result["decision"] == "full":
             result = {**result, **product_decision(base, args.merge)}
     except (subprocess.CalledProcessError, ValueError, OSError) as exc:

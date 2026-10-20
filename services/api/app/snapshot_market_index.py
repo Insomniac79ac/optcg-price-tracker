@@ -53,6 +53,7 @@ from app.services.market_index_completion import (
     selected_print_ids_digest,
     verify_pending_snapshot_completion,
 )
+from app.services.market_index_splice import load_splices, splice_on, write_splice_snapshots
 from app.services.print_market_index import (
     INDEX_EVIDENCE_PRICE_TYPES,
     get_market_index_for_prints,
@@ -431,6 +432,11 @@ def _snapshot_market_index_locked(
         )
 
     _insert_ignoring_existing(db, rows)
+    # A source cutover splice for today (new-sources plan §2.6) also archives every
+    # print's old-basis index, in this transaction. No splice row, no write.
+    splice = splice_on(load_splices(db), snapshot_date)
+    if splice is not None:
+        write_splice_snapshots(db, splice, (indexes[print_id] for print_id in print_ids))
     insert_atomic_completion(
         db,
         rows=rows,
