@@ -5,6 +5,7 @@ import json
 import subprocess
 import time
 import generate_staging_state as state
+import staging_mission
 from verify_snkr_published_discovery_component import (
     AdoptionPending,
     collector_continuity,
@@ -99,12 +100,10 @@ def main():
     head = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=state.ROOT, text=True
     ).strip()
-    manifest = json.loads((state.ROOT / "docs/agent/STAGING_MISSION.json").read_text())
-    declared = manifest["deployment_verification"].get("yuyu_reader_component", "merge")
+    expected = staging_mission.deployment_verification(state.ROOT)
+    declared = expected.get("yuyu_reader_component", "merge")
     component = head if declared == "merge" else declared
-    capacity_cadence = manifest["deployment_verification"].get(
-        "yuyu_capacity_cadence", False
-    )
+    capacity_cadence = expected.get("yuyu_capacity_cadence", False)
     if capacity_cadence:
         installed = subprocess.check_output(
             [
