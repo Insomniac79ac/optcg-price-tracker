@@ -49,6 +49,7 @@ on:
           - work-by-state
           - yuyu-coverage-gap
           - yuyu-coverage-gap-samples
+          - yuyu-f1-parallel-check
           - yuyu-f1-sizing
           - yuyu-f3-aliases
       transients:
