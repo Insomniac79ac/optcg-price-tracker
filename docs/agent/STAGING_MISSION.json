@@ -1,8 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Read-only diagnostic yuyu-f1-approval-receipt (owner questions 2026-10-20 09:46Z on F1 batch-2 apply 39386848341): per approve-f1-batch run, approvals that created versus reused a mapping (with the reused mappings' history), and whether every approved mapping has its raw refresh row (#189), with refresh state and last successful check. Staging only; no write, collector, rollout, migration, source request, price, identity, mapping, Market Value/Index, secret or Railway change.",
  "target": "staging",
- "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -17,26 +15,6 @@
   "significant_recurring_cost": false,
   "yuyu_sale_policy": false
  },
- "impacts": [
-  {
-   "files": [
-    "scripts/diagnostics/yuyu-f1-approval-receipt.sql"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "New named read-only diagnostic (SELECT/WITH only, run under default_transaction_read_only=on by db-diagnostic). Reads proposal groups, mappings and freshness_work; changes nothing."
-  },
-  {
-   "files": [
-    ".github/workflows/ops-readonly.yml"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "Adds yuyu-f1-approval-receipt to the diagnostic choice list. No permission, secret, environment or trigger change."
-  }
- ],
  "deployment_verification": {
   "api_sha": "merge",
   "revision": "7a52e9b48e8a",
@@ -48,34 +26,77 @@
   "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
   "yuyu_capacity_cadence": true
  },
+ "operational_notes": [
+  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
+  "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
+  "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
+  "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
+  "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
+ ],
+ "classification": "GREEN",
+ "mission": "New-sources plan step S4 (owner approved the plan 2026-10-19 00:34Z; Q6 splice, not break; N12 CPI methodology stays 1), on staging after S1 (#181), S2 (#182) and S3 (#183) merged: splice machinery for a source cutover, inert. On a day with an approved market_index_splices row the snapshot job also archives each print's old-basis Market Index (same source values without the added source, combined by the unchanged _compute_index_fields). The per-print 7D change, the print analytics headline, the Card Pirate Index chain and Market Value windows and replay then step across exactly one source_semantics_version change through two legs, each passing the unchanged comparability guards. No splice row exists and creating one is a RED owner decision (D4, C4), so every number is unchanged; readers query the splice table only when the two ends of a comparison already disagree on source_semantics_version. Staging only; no collector, rollout, migration, source request, price, identity, mapping, secret or Railway change; INDEX_VERSION, SOURCE_SEMANTICS_VERSION and CPI METHODOLOGY_VERSION unchanged.",
+ "impacts": [
+  {
+   "files": [
+    "services/api/app/services/market_index_splice.py",
+    "services/api/app/snapshot_market_index.py"
+   ],
+   "effects": [
+    "application"
+   ],
+   "reason": "Splice rules, the old-basis archive and the chained two-leg comparison. The snapshot job reads market_index_splices once per run (empty) and writes nothing without a row for today."
+  },
+  {
+   "files": [
+    "services/api/app/services/market_index_change.py",
+    "services/api/app/services/print_analytics.py",
+    "services/api/app/services/card_pirate_index.py",
+    "services/api/app/services/market_value.py"
+   ],
+   "effects": [
+    "application"
+   ],
+   "reason": "Splice-aware steps behind an optional splice_days argument (CPI, Market Value; no caller passes it yet) and a fallback reached only after a source_semantics_version refusal (7D change, analytics headline). Same results when no splice exists. None is a collector runtime input."
+  },
+  {
+   "files": [
+    "services/api/tests/test_market_index_splice.py",
+    "services/api/tests/test_snapshot_market_index.py",
+    "scripts/tests/test_collector_runtime_inputs.py"
+   ],
+   "effects": [
+    "tests"
+   ],
+   "reason": "Synthetic replays with and without a splice for the 7D change, CPI and Market Value; splice rules; old-basis archive through the real snapshot job; plan §2.7 guard extended."
+  }
+ ],
  "safeguards": {
   "impact": {
    "resources": [
     {
-     "name": "GitHub Actions: ops-readonly db-diagnostic"
-    },
-    {
-     "name": "Staging Postgres (read-only session)"
+     "name": "API (Market Index snapshot job and read paths, inert)"
     }
    ],
    "routes": [
-    "None"
+    "GET /prints/{id}/analytics",
+    "Market Index 7D change on print reads"
    ],
    "dependencies": [
-    "scripts/ops/diagnostic.py (unchanged); app.services.mapping_refresh (unchanged)"
+    "Stacked on S1 #181 (needs market_index_splices tables); retargeted to staging after S1 merges. Plan on branch plan/new-sources (9b8ff76)."
    ],
-   "deployment_impact": "No API, worker or collector code changes and nothing deploys; 0 collector rollouts, no DDL.",
+   "deployment_impact": "API and worker redeploy. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. With no splice row every response and snapshot is unchanged.",
    "database_writes": 0,
    "source_requests": 0,
-   "estimated_runtime_minutes": 5
+   "estimated_runtime_minutes": 10
   },
   "recovery": {
-   "artifact": "e62572d5e124421600b4663ddfc54f14b6747765",
-   "procedure": "Native revert of this PR removes the diagnostic. Nothing is written by it.",
-   "trigger": "The diagnostic errors or a read takes locks it should not.",
-   "backup": "Not applicable: no schema change and no write.",
+   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+   "procedure": "Native revert of this PR. No data, schema or configuration to undo while no splice row exists.",
+   "trigger": "The 19:30-20:30 UTC Market Index snapshot fails or its receipt changes, or any 7D change, analytics headline, CPI or Market Value number differs from before the merge.",
+   "backup": "Not applicable: no schema or row change.",
    "validation": [
-    "scripts/tests/test_ops_runbooks.py"
+    "services/api/tests/test_market_index_splice.py",
+    "services/api/tests/test_snapshot_market_index.py"
    ]
   },
   "verification": {
@@ -83,17 +104,10 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/diagnostics/yuyu-f1-approval-receipt.sql"
+    "scripts/staging_web_smoke.py"
    ],
-   "observation_window": "After merge: db-diagnostic yuyu-f1-approval-receipt reports created vs reused per F1 run and lists any approved mapping without refresh work. No backfill without the owner."
+   "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; the next Market Index snapshot completes with a verified receipt and market_index_splice_snapshots stays empty."
   }
  },
- "diff_sha256": "8ae9e65fa01128662712f1a6575b1126063732e8e834f543a6a834a746c16f5c",
- "operational_notes": [
-  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
-  "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
-  "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
- ]
+ "diff_sha256": "28119bc4ed88078dbd3266fab1d45e25c0c54fe3b3aa3b81e863d2cc928243e8"
 }

@@ -44,6 +44,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
+from fractions import Fraction
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -56,6 +57,7 @@ from app.services.card_pirate_index_read import (
     resolve_default_window,
 )
 from app.services.market_index_change import (
+    NOT_COMPARABLE_SOURCE_SEMANTICS_VERSION,
     comparability_refusal,
     snapshot_source_values,
 )
@@ -282,6 +284,38 @@ def _change(
         },
         None,
     )
+
+
+def _with_spliced_change(
+    db: Session, print_id: int, snapshots: list[MarketIndexSnapshot], headline: dict
+) -> dict:
+    """The headline change across a source cutover splice (app.services.market_index_splice).
+
+    Reached only when the guards refused on source_semantics_version alone. Both legs of
+    the splice pass `comparability_refusal` on their own; with no splice row the refusal
+    stands. The yen figure is the chained movement in starting-value yen, not end minus
+    start, because those two ends were computed on different bases.
+    """
+    from app.services.market_index_splice import spliced_ratio_between
+
+    valued = _valued(snapshots)
+    start, end = valued[0], valued[-1]
+    ratio = spliced_ratio_between(db, print_id, start, end)
+    if ratio is None:
+        return headline
+    assert start.index_value_jpy is not None
+    movement = start.index_value_jpy * (ratio - 1)
+    return {
+        **headline,
+        "change": {
+            "absolute_jpy": int(movement + (1 if movement >= 0 else -1) * Fraction(1, 2)),
+            "pct": float((ratio - 1) * 100),
+            "from_date": start.snapshot_date,
+            "to_date": end.snapshot_date,
+            "spans_break": True,
+        },
+        "change_unavailable_reason": None,
+    }
 
 
 def _headline(snapshots: list[MarketIndexSnapshot]) -> dict:
@@ -637,6 +671,8 @@ def get_print_analytics(
     ]
 
     headline = _headline(snapshots)
+    if headline["change_unavailable_reason"] == NOT_COMPARABLE_SOURCE_SEMANTICS_VERSION:
+        headline = _with_spliced_change(db, print_id, snapshots, headline)
     # The shipped series builder, over exactly this window. Segments, breaks,
     # gaps, instrument semantics, eligibility and per-series coverage all
     # arrive as `/prints/{id}/series` produces them - and the payload below is
