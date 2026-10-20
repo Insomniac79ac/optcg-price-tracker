@@ -18,16 +18,26 @@ on:
           - enqueue-remaining-50
           - approve-f1-batch
           - enqueue-capture-batch
+          - plan-refresh-backfill
+          - apply-migration
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
         default: false
       expected_sha256:
-        description: "apply only: approved-list SHA-256 from the dry run the owner reviewed"
+        description: "apply only: approved-list (apply-migration: SQL plan) SHA-256 from the dry run the owner reviewed"
         type: string
         default: ""
       count:
-        description: "Batch size (empty: 50 for enqueue-remaining-50 and enqueue-capture-batch, 500 for approve-f1-batch)"
+        description: "Batch size (empty: 50 for enqueue-remaining-50 and enqueue-capture-batch, 500 for approve-f1-batch and plan-refresh-backfill)"
+        type: string
+        default: ""
+      revision:
+        description: "apply-migration only: Alembic revision to apply (allowlisted)"
+        type: string
+        default: ""
+      parent:
+        description: "apply-migration only: the live revision it applies on"
         type: string
         default: ""
       request_id:
@@ -66,6 +76,8 @@ jobs:
       APPLY: ${{ inputs.apply }}
       EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
       COUNT: ${{ inputs.count }}
+      REVISION: ${{ inputs.revision }}
+      PARENT: ${{ inputs.parent }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,6 +90,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           args=(--preflight --workflow ops-write --expected-sha256 "$EXPECTED_SHA256")
+          if [ -n "$REVISION" ]; then args+=(--revision "$REVISION"); fi
+          if [ -n "$PARENT" ]; then args+=(--parent "$PARENT"); fi
           if [ -n "$COUNT" ]; then args+=(--count "$COUNT"); fi
           if [ "$APPLY" = true ]; then args+=(--apply); fi
           python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
@@ -96,6 +110,8 @@ jobs:
       APPLY: ${{ inputs.apply }}
       EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
       COUNT: ${{ inputs.count }}
+      REVISION: ${{ inputs.revision }}
+      PARENT: ${{ inputs.parent }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,6 +134,8 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
         run: |
           args=(--out ops-out --workflow ops-write --expected-sha256 "$EXPECTED_SHA256")
+          if [ -n "$REVISION" ]; then args+=(--revision "$REVISION"); fi
+          if [ -n "$PARENT" ]; then args+=(--parent "$PARENT"); fi
           if [ -n "$COUNT" ]; then args+=(--count "$COUNT"); fi
           if [ "$APPLY" = true ]; then args+=(--apply); fi
           python scripts/ops/run.py "$RUNBOOK" "${args[@]}"

@@ -22,9 +22,17 @@ CI decides the lane from the diff (`scripts/product_lane.py`, run by `policy-gat
   migrations. No mission manifest; append a line to `docs/agent/PRODUCT_LOG.md`. Auth/security paths
   need an `Independent security review: ...` line in the PR description.
 - **DATA**: everything else, including collectors and their import graph, identity, prices, Market
-  Value/Index, `scripts/`, `docs/agent/`, `.github/`, `.claude/` and this file. Needs
-  `docs/agent/STAGING_MISSION.json` regenerated for the exact diff (`diff_sha256` from
-  `scripts/staging_policy.change_evidence(base, HEAD)`).
+  Value/Index, `scripts/`, `docs/agent/`, `.github/`, `.claude/` and this file. Adds exactly one
+  mission file `docs/agent/missions/<branch, / as ->.json` for the PR's own diff
+  (`python scripts/staging_mission.py digest --base origin/staging` prints `diff_sha256`). Never edit
+  another mission file. Merging `staging` in keeps the hash valid unless the merge changes the PR's
+  own files. Carried state (API and Alembic expectations, pinned collector components, checks,
+  operational notes) is `docs/agent/STAGING_FLEET.json`; edit it only when the PR moves the fleet,
+  and list it in the mission's impacts. `docs/agent/STAGING_MISSION.json` is retired: nothing reads it.
+- Collector PRs: the mission may set `yuyu_reader_component`/`snkr_component` to `merge` for its own
+  delivery. After a collector delivery or a migration, the next staging merge must be a small PR that
+  pins those keys to the merge SHA and `revision` to the new Alembic head in `STAGING_FLEET.json`,
+  or Verify staging merge fails on the old pin.
 - Split a change that spans both lanes into two PRs.
 - The committed hook `.claude/hooks/guard.py` blocks Edit/Write on DATA paths unless the session has
   `CARDPIRATE_LANE=data` (the message says "Data lane. Split it into its own PR or open an issue for the owner.").

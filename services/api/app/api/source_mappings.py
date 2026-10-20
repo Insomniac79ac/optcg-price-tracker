@@ -24,6 +24,7 @@ from app.api._mapping_approval import (
 )
 from app.services.cache import delete_cache_prefix
 from app.services.exact_print_approval import ExactPrintApprovalError
+from app.services.mapping_refresh import ensure_refresh_work
 from app.services.source_mapping_identity import EXACT, load_source_mapping_identity
 
 router = APIRouter(
@@ -244,6 +245,9 @@ def update_source_mapping(
         setattr(mapping, field, value)
 
     try:
+        db.flush()
+        # A PATCH that leaves the row approved, active and verified must leave it collected.
+        ensure_refresh_work(db, mapping)
         db.commit()
     except IntegrityError as exc:
         from app.services.current_source_mapping import current_identity_conflict
@@ -284,6 +288,8 @@ def approve_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
     mapping.is_active = True
     mapping.review_status = "approved"
     mapping.last_verified_at = datetime.now(timezone.utc)
+    # Approved means collected: plan the raw refresh work in the same commit.
+    ensure_refresh_work(db, mapping)
     db.commit()
     db.refresh(mapping)
     delete_cache_prefix("admin/catalog_coverage")

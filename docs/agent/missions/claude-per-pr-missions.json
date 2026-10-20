@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "mission": "Per-PR mission files (ROADMAP item 22, owner GO 2026-10-19 09:24Z): each DATA-lane PR adds one docs/agent/missions/<name>.json, carried state moves to docs/agent/STAGING_FLEET.json, the diff hash covers the PR's own change (merge-base to head, full index). policy-gate still runs the base policy with unchanged evaluate() rules; delivery and verification compose fleet state plus the merge's own mission and fail closed. This is the last PR evaluated against STAGING_MISSION.json (bootstrap).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "policy-gate: the base policy finds the PR's mission itself; the legacy manifest path runs only while the base has no scripts/staging_mission.py. staging-automerge: the scope step composes the merge's own mission into a temp file that the RAW migration, collector rollout and verification steps read; a full delivery without exactly one added mission refuses. Registers test_staging_mission.py."
+    },
+    {
+      "files": [
+        ".github/workflows/staging-delivery.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Same delivery-step changes as the staging-automerge job (reusable copy)."
+    },
+    {
+      "files": [
+        ".github/workflows/staging-verify.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Hand-merge verification composes fleet state plus the merge's mission (if any) instead of reading STAGING_MISSION.json; fails on a changed, removed or duplicated mission."
+    },
+    {
+      "files": [
+        "scripts/staging_mission.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New: find the PR's one added mission, merge-base full-index diff hash, compose fleet plus mission into the old manifest shape, digest/compose CLI. Read-only, local Git only."
+    },
+    {
+      "files": [
+        "scripts/staging_policy.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "DATA lane reads the mission and fleet state from the PR head via staging_mission; evaluate() is unchanged. --manifest is accepted and ignored."
+    },
+    {
+      "files": [
+        "scripts/staging_delivery_scope.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Skip decision keys on one added mission file instead of the shared manifest; changed, removed, duplicated or unreadable missions run full (which then refuses)."
+    },
+    {
+      "files": [
+        "scripts/product_lane.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Mission files and the fleet state classify as DATA, like the manifest."
+    },
+    {
+      "files": [
+        "scripts/verify_yuyu_raw_reader_component.py",
+        "scripts/verify_snkr_published_discovery_component.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Component expectations come from STAGING_MISSION_MANIFEST (the delivery's composed manifest), else the fleet state."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New fleet state: deployment_verification and operational_notes from STAGING_MISSION.json at the base, no deployment requests; snkr_component pinned to the #180 merge that delivered snkrdunk-collector."
+    },
+    {
+      "files": [
+        "scripts/tests/test_staging_mission.py",
+        "scripts/tests/test_staging_delivery_scope.py",
+        "scripts/tests/test_product_lane.py",
+        "scripts/tests/test_claude_guardrails.py",
+        "scripts/tests/test_collector_runtime_inputs.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Zero, two, changed and removed missions; hash survives merging staging in; full index; fleet and mission override rules; compose CLI; workflow wiring; updated fixtures."
+    },
+    {
+      "files": [
+        "CLAUDE.md",
+        "docs/agent/AUTONOMY_POLICY.md",
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/STAGING_DELIVERY.md",
+        "docs/agent/ROADMAP.md",
+        ".github/pull_request_template.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Describe per-PR missions, the fleet state, the post-collector pin, bootstrap and rollback; item 22 status."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_MISSION.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Last legacy manifest (bootstrap): the previous base policy evaluates this PR from it."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub Actions policy-gate, staging-automerge, Serialized staging delivery and Verify staging merge"
+      ],
+      "routes": [
+        "None"
+      ],
+      "dependencies": [
+        "staging at ff01956 (after #180); must merge after #179, #178, #181 and #182 (owner order)"
+      ],
+      "deployment_impact": "No collector rollout and no RAW migration: collector_services and raw_dependency_migration are absent. Hand-merged (hold-for-owner); Verify staging merge then runs the new compose path with the fleet state only.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "ff019569478f570af9e82018fc69e81853508e85",
+      "procedure": "Native revert PR of this merge plus one docs/agent/missions/<name>.json (the new base gate admits it). After it merges the single STAGING_MISSION.json flow is back; the next DATA PR regenerates STAGING_MISSION.json against staging as before.",
+      "trigger": "policy-gate refuses a correct mission, Verify staging merge or staging-automerge fails in the compose step, or the first collector delivery on the new layout does not run Deploy mission-scoped staging collectors.",
+      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py",
+        "scripts/tests/test_staging_delivery_scope.py",
+        "scripts/tests/test_staging_policy.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/staging_mission.py",
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "observation_window": "Verify staging merge on this hand merge, then the next DATA PR's policy-gate on a mission file, then the first collector PR's staging-automerge (allowed collector window) with Deploy mission-scoped staging collectors and the delivery verification passing."
+    }
+  },
+  "diff_sha256": "bootstrap: this PR is evaluated by the previous base policy from docs/agent/STAGING_MISSION.json"
+}

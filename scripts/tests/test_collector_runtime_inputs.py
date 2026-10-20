@@ -1,6 +1,7 @@
 """Collector continuity narrows services/api to the real import graph, never weaker."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -265,12 +266,14 @@ class CollectorRuntimeInputTests(unittest.TestCase):
 
     def test_yuyu_verifier_refuses_changed_runtime_input(self):
         head = self.repo.commit({"services/api/app/services/helper.py": "value = 7\n"})
-        manifest = self.repo.root / "docs/agent/STAGING_MISSION.json"
-        manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(
+        fleet = self.repo.root / "docs/agent/STAGING_FLEET.json"
+        fleet.parent.mkdir(parents=True, exist_ok=True)
+        fleet.write_text(
             json.dumps({"deployment_verification": {"yuyu_reader_component": self.repo.base}})
         )
-        with patch.object(yuyu.state, "ROOT", self.repo.root), patch.object(
+        with patch.dict(os.environ, {"STAGING_MISSION_MANIFEST": ""}), patch.object(
+            yuyu.state, "ROOT", self.repo.root
+        ), patch.object(
             yuyu.subprocess, "check_output", side_effect=self.yuyu_git(head)
         ), patch.object(yuyu.state, "collect_live", side_effect=AssertionError("no live read")):
             with self.assertRaisesRegex(
@@ -405,6 +408,63 @@ class CollectorV1S1ImportGraphTests(unittest.TestCase):
                     self.assertEqual(touched, [])
                     for protected in ("services/api/app/models/__init__.py", "services/api/app/settings.py"):
                         self.assertNotIn(protected, COLLECTOR_V1_S1_API_PATHS)
+
+
+# New-sources plan §2.7 (docs/agent/plans/new-sources/PLAN.md): every new-source file stays outside
+# the Yuyu-Tei and SNKRDUNK runtime inputs, so no new-source PR redeploys either collector.
+NEW_SOURCE_ROOTS = (
+    "services/api/app/source_products/",
+    "services/api/alembic/versions/7a52e9b48e8a_add_new_source_records.py",
+    "services/api/tests/test_new_source_records_migration_postgres.py",
+    "services/api/tests/test_source_product_titles.py",
+    "services/api/tests/test_source_product_resolver.py",
+    "services/api/app/services/market_index_splice.py",
+    "services/api/tests/test_market_index_splice.py",
+)
+
+
+class NewSourcesGuardTests(unittest.TestCase):
+    def _head(self):
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
+
+    def test_new_source_paths_are_outside_both_collector_runtime_inputs(self):
+        head = self._head()
+        listed = subprocess.check_output(
+            ["git", "ls-tree", "-r", "--name-only", head, "--", *NEW_SOURCE_ROOTS], cwd=REPO, text=True
+        ).split()
+        self.assertTrue(listed)
+        with patch.object(inputs.state, "ROOT", REPO):
+            for collector in ("snkrdunk", "yuyutei"):
+                with self.subTest(collector=collector):
+                    found = inputs.runtime_inputs(head, collector)
+                    scope = inputs.full_paths(collector)
+                    touched = [p for p in listed
+                               if any(p == s or p.startswith(s + "/") for s in scope) and inputs.counts(p, found)]
+                    self.assertEqual(touched, [])
+
+    def test_a_new_source_diff_changes_no_collector_runtime_input(self):
+        """When the base is available (local runs, NEW_SOURCES_GUARD_BASE), a diff that touches a
+        new-source path must change no Yuyu-Tei or SNKRDUNK runtime input."""
+        import os
+
+        base = os.environ.get("NEW_SOURCES_GUARD_BASE") or "origin/staging"
+        try:
+            base_sha = subprocess.check_output(
+                ["git", "merge-base", base, "HEAD"], cwd=REPO, text=True, stderr=subprocess.DEVNULL
+            ).strip()
+        except subprocess.CalledProcessError:
+            self.skipTest(f"{base} is not available in this checkout")
+        head = self._head()
+        changed = subprocess.check_output(
+            ["git", "diff", "--name-only", base_sha, head, "--", *NEW_SOURCE_ROOTS], cwd=REPO, text=True
+        ).split()
+        if not changed:
+            self.skipTest("this diff touches no new-source path")
+        with patch.object(inputs.state, "ROOT", REPO):
+            for collector in ("snkrdunk", "yuyutei"):
+                with self.subTest(collector=collector):
+                    runtime, basis = inputs.changed_runtime_inputs(base_sha, head, collector)
+                    self.assertEqual(runtime, [], basis)
 
 
 if __name__ == "__main__":

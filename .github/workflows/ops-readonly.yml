@@ -21,6 +21,7 @@ on:
           - official-images-status
           - db-diagnostic
           - web-smoke
+          - capture-batch-preview
       ledger_floor:
         description: "verify-lossless: exclusive ledger id floor"
         type: string
@@ -49,6 +50,8 @@ on:
           - work-by-state
           - yuyu-coverage-gap
           - yuyu-coverage-gap-samples
+          - yuyu-f1-approval-receipt
+          - yuyu-f1-parallel-check
           - yuyu-f1-sizing
           - yuyu-f3-aliases
       transients:
@@ -57,6 +60,10 @@ on:
         default: ""
       receipt:
         description: "fleet-vs-receipt: committed latest-collector-rollout.json under docs/agent (empty = latest rollout)"
+        type: string
+        default: ""
+      count:
+        description: "capture-batch-preview: batch size, up to (empty: 50)"
         type: string
         default: ""
       request_id:
@@ -95,6 +102,7 @@ jobs:
       DIAGNOSTIC: ${{ inputs.diagnostic }}
       TRANSIENTS: ${{ inputs.transients }}
       RECEIPT: ${{ inputs.receipt }}
+      COUNT: ${{ inputs.count }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -129,6 +137,7 @@ jobs:
             db-diagnostic) args+=(--diagnostic "$DIAGNOSTIC") ;;
             storage-rates) args+=(--transients "$TRANSIENTS") ;;
             fleet-vs-receipt) args+=(--receipt "$RECEIPT") ;;
+            capture-batch-preview) if [ -n "$COUNT" ]; then args+=(--count "$COUNT"); fi ;;
           esac
           python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
       - uses: actions/upload-artifact@v4
