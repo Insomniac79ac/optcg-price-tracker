@@ -70,6 +70,7 @@ from app.services.exact_print_approval import (
     assert_print_is_priceable,
     resolve_exact_print,
 )
+from app.services.mapping_refresh import ensure_refresh_work
 from app.services.yuyutei_urls import canonical_listing_url, listing_identity
 
 APPROVED = "approved"
@@ -427,6 +428,8 @@ def approve_candidate(
         if conflict is not None:
             raise conflict from exc
         raise
+    # Approved means collected: plan the mapping's raw refresh work in the same transaction.
+    ensure_refresh_work(db, mapping)
 
     return YuyuteiApprovalResult(
         candidate=candidate,
@@ -570,6 +573,8 @@ def approve_candidate_from_exact_proposal(
         if conflict is not None:
             raise conflict from exc
         raise
+    # Approved means collected: plan the mapping's raw refresh work in the same transaction.
+    ensure_refresh_work(db, mapping)
     return YuyuteiApprovalResult(
         candidate=candidate,
         mapping=mapping,

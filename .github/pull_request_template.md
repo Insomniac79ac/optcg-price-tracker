@@ -5,7 +5,7 @@
 ## Lane
 
 <!-- PRODUCT or DATA. CI's policy-gate decides (scripts/product_lane.py); any doubt is DATA.
-DATA needs docs/agent/STAGING_MISSION.json for this diff. Auth/security paths need an
+DATA adds one docs/agent/missions/<name>.json for this diff. Auth/security paths need an
 "Independent security review: ..." line. -->
 
 ## What was verified

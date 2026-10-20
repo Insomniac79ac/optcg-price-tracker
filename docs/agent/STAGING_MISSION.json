@@ -1,135 +1,199 @@
 {
- "schema_version": 1,
- "target": "staging",
- "red_decisions": {
-  "ambiguous_approval": false,
-  "destructive_migration": false,
-  "identity_weakening": false,
-  "legal_compliance": false,
-  "major_product_or_brand": false,
-  "pricing_methodology": false,
-  "private_data_exposure": false,
-  "production": false,
-  "published_history_rewrite": false,
-  "security_or_secrets_policy": false,
-  "significant_recurring_cost": false,
-  "yuyu_sale_policy": false
- },
- "deployment_verification": {
-  "api_sha": "merge",
-  "revision": "7a52e9b48e8a",
-  "checks": [
-   "scripts/verify_snkr_published_discovery_component.py",
-   "scripts/verify_yuyu_raw_reader_component.py"
-  ],
-  "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
-  "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-  "yuyu_capacity_cadence": true
- },
- "operational_notes": [
-  "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
-  "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
- ],
- "classification": "AMBER",
- "mission": "New-sources plan step D0 (owner approved the plan 2026-10-19 00:34Z; N7 no permission requests, honest UA, robots.txt, stop on 403/429), stacked on S3 (#183): the shared new-shop collector kit and the Dorasuta collector package, minus the HTML list-page parser, which waits for real fixtures. Kit: CardPirateBot User-Agent with the contact read from SOURCE_COLLECTOR_CONTACT (never committed; placeholders refused), robots.txt gate that fails closed, 5 s spacing plus jitter, same-host redirects only, stop on 403/429 or a challenge page, per-run request cap, source_dispatch_budgets reserve/settle and indefinite pause on denial, RAW-first storage with its own dictionary-encoder admission for registered new-source parsers. Dorasuta: series/page planner (page 1 daily, full sweep in 6 days, 150 requests cap), writer for source products, groups and condition variants, observations only for raw:A rows of exact or manual products with exactly one approved current mapping, and a resolver pass after each run. Nothing is deployed: there is no Dockerfile, Railway service or schedule, and run.main refuses before any request without a contact, a registered parser and a series list. Staging only; no change to the yuyutei or snkrdunk collectors, their runtime inputs, rollouts, prices, identity guards, mappings, secrets or Railway.",
- "impacts": [
-  {
-   "files": [
-    "services/source_collector_kit/pyproject.toml",
-    "services/source_collector_kit/pytest.ini",
-    "services/source_collector_kit/requirements.txt",
-    "services/source_collector_kit/source_collector_kit/__init__.py",
-    "services/source_collector_kit/source_collector_kit/budget.py",
-    "services/source_collector_kit/source_collector_kit/etiquette.py",
-    "services/source_collector_kit/source_collector_kit/fetch.py",
-    "services/source_collector_kit/source_collector_kit/health.py",
-    "services/source_collector_kit/source_collector_kit/listing_run.py",
-    "services/source_collector_kit/source_collector_kit/raw.py",
-    "services/source_collector_kit/source_collector_kit/registry.py",
-    "services/source_collector_kit/source_collector_kit/robots.py",
-    "services/source_collector_kit/tests/conftest.py",
-    "services/source_collector_kit/tests/test_kit.py"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "New package, not imported by any deployed service. Fetch etiquette, robots gate, budget, RAW write and run loop for new shops."
+  "schema_version": 1,
+  "mission": "Per-PR mission files (ROADMAP item 22, owner GO 2026-10-19 09:24Z): each DATA-lane PR adds one docs/agent/missions/<name>.json, carried state moves to docs/agent/STAGING_FLEET.json, the diff hash covers the PR's own change (merge-base to head, full index). policy-gate still runs the base policy with unchanged evaluate() rules; delivery and verification compose fleet state plus the merge's own mission and fail closed. This is the last PR evaluated against STAGING_MISSION.json (bootstrap).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
   },
-  {
-   "files": [
-    "services/dorasuta_collector/dorasuta_collector/__init__.py",
-    "services/dorasuta_collector/dorasuta_collector/config.py",
-    "services/dorasuta_collector/dorasuta_collector/resolve.py",
-    "services/dorasuta_collector/dorasuta_collector/run.py",
-    "services/dorasuta_collector/dorasuta_collector/writer.py",
-    "services/dorasuta_collector/pytest.ini",
-    "services/dorasuta_collector/requirements.txt",
-    "services/dorasuta_collector/tests/conftest.py",
-    "services/dorasuta_collector/tests/test_dorasuta_collector.py"
-   ],
-   "effects": [
-    "application"
-   ],
-   "reason": "New package, not deployed (no Dockerfile or service). Planner, writer, resolver pass and a run entry point that refuses until D0b (parser) and D1 (contact variable, service) land."
-  },
-  {
-   "files": [
-    ".github/workflows/ci.yml"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Adds source_collector_kit and dorasuta_collector to the existing collector-tests matrix so their tests run on every PR. No other job, trigger or permission changes."
-  },
-  {
-   "files": [
-    "scripts/tests/test_collector_runtime_inputs.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Plan §2.7 guard extended to both new packages: neither may be a Yuyu-Tei or SNKRDUNK collector runtime input."
-  }
- ],
- "safeguards": {
-  "impact": {
-   "resources": [
+  "impacts": [
     {
-     "name": "None deployed (new packages and CI test matrix only)"
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "policy-gate: the base policy finds the PR's mission itself; the legacy manifest path runs only while the base has no scripts/staging_mission.py. staging-automerge: the scope step composes the merge's own mission into a temp file that the RAW migration, collector rollout and verification steps read; a full delivery without exactly one added mission refuses. Registers test_staging_mission.py."
+    },
+    {
+      "files": [
+        ".github/workflows/staging-delivery.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Same delivery-step changes as the staging-automerge job (reusable copy)."
+    },
+    {
+      "files": [
+        ".github/workflows/staging-verify.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Hand-merge verification composes fleet state plus the merge's mission (if any) instead of reading STAGING_MISSION.json; fails on a changed, removed or duplicated mission."
+    },
+    {
+      "files": [
+        "scripts/staging_mission.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New: find the PR's one added mission, merge-base full-index diff hash, compose fleet plus mission into the old manifest shape, digest/compose CLI. Read-only, local Git only."
+    },
+    {
+      "files": [
+        "scripts/staging_policy.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "DATA lane reads the mission and fleet state from the PR head via staging_mission; evaluate() is unchanged. --manifest is accepted and ignored."
+    },
+    {
+      "files": [
+        "scripts/staging_delivery_scope.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Skip decision keys on one added mission file instead of the shared manifest; changed, removed, duplicated or unreadable missions run full (which then refuses)."
+    },
+    {
+      "files": [
+        "scripts/product_lane.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Mission files and the fleet state classify as DATA, like the manifest."
+    },
+    {
+      "files": [
+        "scripts/verify_yuyu_raw_reader_component.py",
+        "scripts/verify_snkr_published_discovery_component.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Component expectations come from STAGING_MISSION_MANIFEST (the delivery's composed manifest), else the fleet state."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New fleet state: deployment_verification and operational_notes from STAGING_MISSION.json at the base, no deployment requests; snkr_component pinned to the #180 merge that delivered snkrdunk-collector."
+    },
+    {
+      "files": [
+        "scripts/tests/test_staging_mission.py",
+        "scripts/tests/test_staging_delivery_scope.py",
+        "scripts/tests/test_product_lane.py",
+        "scripts/tests/test_claude_guardrails.py",
+        "scripts/tests/test_collector_runtime_inputs.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Zero, two, changed and removed missions; renames cover both paths; legacy manifest requests must be declared; hash survives merging staging in; full index; fleet and mission override rules; compose CLI; workflow wiring; updated fixtures."
+    },
+    {
+      "files": [
+        "CLAUDE.md",
+        "docs/agent/AUTONOMY_POLICY.md",
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/STAGING_DELIVERY.md",
+        "docs/agent/ROADMAP.md",
+        ".github/pull_request_template.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Describe per-PR missions, the fleet state, the post-collector pin, bootstrap and rollback; item 22 status."
+    },
+    {
+      "files": [
+        "docs/agent/missions/claude-per-pr-missions.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "This PR's own mission in the new layout, so a delivery after its merge composes (fleet state, no requests)."
     }
-   ],
-   "routes": [
-    "None: no API route, page or read changes. AMBER only because .github/workflows/ci.yml gains two collector-tests matrix entries."
-   ],
-   "dependencies": [
-    "Stacked on S3 #183 and S1 #181 (source_products tables and grade_key column); retargeted to staging after they merge. Plan on branch plan/new-sources."
-   ],
-   "deployment_impact": "API and worker redeploy with no code change for them. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL, no new service.",
-   "database_writes": 0,
-   "source_requests": 0,
-   "estimated_runtime_minutes": 10
+  ],
+  "deployment_verification": {
+    "api_sha": "merge",
+    "revision": "7a52e9b48e8a",
+    "checks": [
+      "scripts/verify_snkr_published_discovery_component.py",
+      "scripts/verify_yuyu_raw_reader_component.py"
+    ],
+    "snkr_component": "ff019569478f570af9e82018fc69e81853508e85",
+    "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+    "yuyu_capacity_cadence": true
   },
-  "recovery": {
-   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-   "procedure": "Native revert of this PR. Nothing runs, so no data, schema or configuration to undo.",
-   "trigger": "Any CI job other than the new matrix entries changes behaviour, or a Yuyu-Tei or SNKRDUNK collector check reports a changed runtime input.",
-   "backup": "Not applicable: no schema or row change.",
-   "validation": [
-    "services/source_collector_kit/tests/test_kit.py",
-    "services/dorasuta_collector/tests/test_dorasuta_collector.py"
-   ]
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub Actions policy-gate, staging-automerge, Serialized staging delivery and Verify staging merge"
+      ],
+      "routes": [
+        "None"
+      ],
+      "dependencies": [
+        "staging at 90545c6 (after #194); the owner queue #180, #179, #178, #181, #182 and the later #192, #183, #193, #184 and #194 merged first"
+      ],
+      "deployment_impact": "No collector rollout and no RAW migration: collector_services and raw_dependency_migration are absent. Hand-merged (hold-for-owner); Verify staging merge then runs the new compose path with the fleet state only.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "90545c6346abc5dcf7482db667536ba59f9b4987",
+      "procedure": "Native revert PR of this merge plus one docs/agent/missions/<name>.json (the new base gate admits it). After it merges the single STAGING_MISSION.json flow is back; the next DATA PR regenerates STAGING_MISSION.json against staging as before.",
+      "trigger": "policy-gate refuses a correct mission, Verify staging merge or staging-automerge fails in the compose step, or the first collector delivery on the new layout does not run Deploy mission-scoped staging collectors.",
+      "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py",
+        "scripts/tests/test_staging_delivery_scope.py",
+        "scripts/tests/test_staging_policy.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/staging_mission.py",
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "observation_window": "Verify staging merge on this hand merge, then the next DATA PR's policy-gate on a mission file, then the first collector PR's staging-automerge (allowed collector window) with Deploy mission-scoped staging collectors and the delivery verification passing."
+    }
   },
-  "verification": {
-   "required_checks": [
-    "engineering-gate"
-   ],
-   "post_change": [
-    "scripts/staging_web_smoke.py"
-   ],
-   "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; no collector rollout runs and every yuyutei and snkrdunk service stays on its current source commit."
-  }
- },
- "diff_sha256": "d58335f0a61dd21ee7e256f9eff969bc733c478cdbf0b3a2feae5eda7de5c0d4"
+  "diff_sha256": "cc6e76760bc5faf4b007bba7dbb972ffd9e979c5fa121af9f8d958e001e12a6c",
+  "operational_notes": [
+    "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
+    "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
+    "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
+    "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
+    "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
+  ]
 }
