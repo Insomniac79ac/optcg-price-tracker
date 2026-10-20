@@ -2,7 +2,7 @@
  "schema_version": 1,
  "mission": "Read-only diagnostic yuyu-f1-parallel-check (owner question 2026-10-20 06:41Z on F1 batch-2 sample row 8, OP14-118): lists every print and every stored Yuyu-Tei listing of OP14-118 in any release, category or status, and for every pending F1 proposal counts same-kind prints and listings of the card code across all releases plus prints or listings the F1 rule cannot type, to find a second parallel (manga, super or reprint parallel) the same-release rule could miss. Staging only; no write, collector, rollout, migration, source request, price, identity, mapping, Market Value/Index, secret or Railway change.",
  "target": "staging",
- "classification": "GREEN",
+ "classification": "AMBER",
  "red_decisions": {
   "ambiguous_approval": false,
   "destructive_migration": false,
@@ -88,7 +88,7 @@
    "observation_window": "After merge: db-diagnostic yuyu-f1-parallel-check returns OP14-118 prints and listings and the F1 multi-parallel counts. F1 batch-2 apply waits on its answer and the owner's go."
   }
  },
- "diff_sha256": "",
+ "diff_sha256": "6e2ca163403121bbc6d8603b9c828e409a078c378cc9c088bc5133f7c5bbac77",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
