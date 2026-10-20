@@ -416,6 +416,10 @@ NEW_SOURCE_ROOTS = (
     "services/api/app/source_products/",
     "services/api/alembic/versions/7a52e9b48e8a_add_new_source_records.py",
     "services/api/tests/test_new_source_records_migration_postgres.py",
+    "services/api/tests/test_source_product_titles.py",
+    "services/api/tests/test_source_product_resolver.py",
+    "services/api/app/services/market_index_splice.py",
+    "services/api/tests/test_market_index_splice.py",
 )
 
 

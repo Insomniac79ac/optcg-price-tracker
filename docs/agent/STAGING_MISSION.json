@@ -157,7 +157,7 @@
         "None"
       ],
       "dependencies": [
-        "staging at 170df77 (after #182); the owner queue #180, #179, #178, #181 and #182 has fully merged"
+        "staging at 90545c6 (after #194); the owner queue #180, #179, #178, #181, #182 and the later #192, #183, #193, #184 and #194 merged first"
       ],
       "deployment_impact": "No collector rollout and no RAW migration: collector_services and raw_dependency_migration are absent. Hand-merged (hold-for-owner); Verify staging merge then runs the new compose path with the fleet state only.",
       "database_writes": 0,
@@ -165,7 +165,7 @@
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "170df77d315c1e7e7898534e1d780ec0a972350e",
+      "artifact": "90545c6346abc5dcf7482db667536ba59f9b4987",
       "procedure": "Native revert PR of this merge plus one docs/agent/missions/<name>.json (the new base gate admits it). After it merges the single STAGING_MISSION.json flow is back; the next DATA PR regenerates STAGING_MISSION.json against staging as before.",
       "trigger": "policy-gate refuses a correct mission, Verify staging merge or staging-automerge fails in the compose step, or the first collector delivery on the new layout does not run Deploy mission-scoped staging collectors.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
