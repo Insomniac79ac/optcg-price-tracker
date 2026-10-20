@@ -70,7 +70,7 @@
    "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "a9cd37259e2e72d562a0ef0ae01b9ec0e6fbbbd9",
+   "artifact": "e62572d5e124421600b4663ddfc54f14b6747765",
    "procedure": "Native revert of this PR removes the diagnostic. Nothing is written by it.",
    "trigger": "The diagnostic errors or a read takes locks it should not.",
    "backup": "Not applicable: no schema change and no write.",
@@ -88,7 +88,7 @@
    "observation_window": "After merge: db-diagnostic yuyu-f1-approval-receipt reports created vs reused per F1 run and lists any approved mapping without refresh work. No backfill without the owner."
   }
  },
- "diff_sha256": "8ae9e65fa01128662712f1a6575b1126063732e8e834f543a6a834a746c16f5c",
+ "diff_sha256": "",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
