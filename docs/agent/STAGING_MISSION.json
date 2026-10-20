@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "New-sources plan step S2 (owner approved the plan 2026-10-19 00:34Z): a pre-cutover visibility gate so dorasuta and cardrush rows, once collected in shadow, never reach a customer before each source's RED cutover. One shared set (app.services.source_publication.PRE_CUTOVER_SOURCES, restated in the worker) is consulted by customer_price_clause, source_semantics.is_customer_price, print_series.load_source_catalogue and the worker's alert reads; an invariant test keeps both sources out of SOURCE_INSTRUMENTS, the Market Index inputs and SOURCE_SEMANTICS. No behaviour changes for yuyutei or snkrdunk; no rows exist for the new sources today. Staging only; no collector, rollout, migration, source request, price, identity, mapping, Market Value/Index methodology, secret or Railway change.",
+ "mission": "Read-only diagnostic yuyu-f1-parallel-check (owner question 2026-10-20 06:41Z on F1 batch-2 sample row 8, OP14-118): lists every print and every stored Yuyu-Tei listing of OP14-118 in any release, category or status, and for every pending F1 proposal counts same-kind prints and listings of the card code across all releases plus prints or listings the F1 rule cannot type, to find a second parallel (manga, super or reprint parallel) the same-release rule could miss. Staging only; no write, collector, rollout, migration, source request, price, identity, mapping, Market Value/Index, secret or Railway change.",
  "target": "staging",
  "classification": "GREEN",
  "red_decisions": {
@@ -20,37 +20,21 @@
  "impacts": [
   {
    "files": [
-    "services/api/app/services/source_publication.py",
-    "services/api/app/services/customer_prices.py",
-    "services/api/app/services/source_semantics.py",
-    "services/api/app/services/print_series.py"
+    "scripts/diagnostics/yuyu-f1-parallel-check.sql"
    ],
    "effects": [
-    "application"
+    "infrastructure"
    ],
-   "reason": "Customer-visible reads (print prices and history, card latest prices, print series and analytics, market movers) drop rows of a pre-cutover source. SOURCE_SEMANTICS and SOURCE_SEMANTICS_VERSION are unchanged; is_customer_price is visibility, not index eligibility. None of these files is a yuyutei or snkrdunk collector runtime input (changed_runtime_inputs empty for both)."
+   "reason": "New named read-only diagnostic (SELECT/WITH only, run under default_transaction_read_only=on by db-diagnostic). Listing and print kinds mirror source_mapping_proposals.yuyu_listing_kind and print_listing_kind; the F1 rule itself is unchanged."
   },
   {
    "files": [
-    "services/worker/worker/customer_prices.py",
-    "services/worker/worker/jobs/check_alerts.py"
+    ".github/workflows/ops-readonly.yml"
    ],
    "effects": [
-    "application"
+    "infrastructure"
    ],
-   "reason": "Worker alerts (price change, stock change, owned-card value) skip pre-cutover sources, matching the API gate."
-  },
-  {
-   "files": [
-    "services/api/tests/test_source_publication.py",
-    "services/api/tests/test_print_series.py",
-    "services/api/tests/test_prints.py",
-    "services/worker/tests/test_check_alerts.py"
-   ],
-   "effects": [
-    "tests"
-   ],
-   "reason": "Gate tests on every covered read and the worker alert job, the worker/API set parity, and the no-registry invariant. The generic unconfigured-source tests now use the hypothetical name mercado, since cardrush is now deliberately hidden."
+   "reason": "Adds yuyu-f1-parallel-check to the diagnostic choice list. No permission, secret, environment or trigger change."
   }
  ],
  "deployment_verification": {
@@ -68,32 +52,30 @@
   "impact": {
    "resources": [
     {
-     "name": "API and worker services (read filters only)"
+     "name": "GitHub Actions: ops-readonly db-diagnostic"
+    },
+    {
+     "name": "Staging Postgres (read-only session)"
     }
    ],
    "routes": [
-    "GET /prints/{id}/prices",
-    "GET /prints/{id}/series",
-    "GET /prints/{id}/analytics",
-    "GET /cards/{id}/prices",
-    "GET /market/movers"
+    "None"
    ],
    "dependencies": [
-    "new-sources plan on branch plan/new-sources (9b8ff76); independent of S0 (#178) and S1"
+    "scripts/ops/diagnostic.py (unchanged); app.services.source_mapping_proposals F1 rule (unchanged)"
    ],
-   "deployment_impact": "API and worker redeploy. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL. Today no dorasuta or cardrush observation exists, so every response is unchanged.",
+   "deployment_impact": "No API, worker or collector code changes and nothing deploys; 0 collector rollouts, no DDL.",
    "database_writes": 0,
    "source_requests": 0,
-   "estimated_runtime_minutes": 10
+   "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
-   "procedure": "Native revert of this PR. No data, schema or service configuration to undo.",
-   "trigger": "Any yuyutei or snkrdunk price, series, mover or alert response differs from before the merge, or the signed-out web smoke fails.",
-   "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
+   "artifact": "170df77d315c1e7e7898534e1d780ec0a972350e",
+   "procedure": "Native revert of this PR removes the diagnostic. Nothing is written by it.",
+   "trigger": "The diagnostic errors or a read takes locks it should not.",
+   "backup": "Not applicable: no schema change and no write.",
    "validation": [
-    "services/api/tests/test_source_publication.py",
-    "services/worker/tests/test_check_alerts.py"
+    "scripts/tests/test_ops_runbooks.py"
    ]
   },
   "verification": {
@@ -101,12 +83,12 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/staging_web_smoke.py"
+    "scripts/diagnostics/yuyu-f1-parallel-check.sql"
    ],
-   "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; print detail pages show the same Yuyu-Tei and SNKRDUNK series as before."
+   "observation_window": "After merge: db-diagnostic yuyu-f1-parallel-check returns OP14-118 prints and listings and the F1 multi-parallel counts. F1 batch-2 apply waits on its answer and the owner's go."
   }
  },
- "diff_sha256": "c9b2dc1ba1a6a44d5170244b07adc6ff3122af17effb8c490100227d240a25a8",
+ "diff_sha256": "",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
