@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "mission": "Delivery verify waits for the frontend runtime SHA (owner GO 2026-10-19 14:18Z): #189 and #190 failed 'Frontend runtime SHA disagrees with platform' 1-2 min after merge (Vercel READY before the alias served the build); poll web /api/version until it equals the merge, bounded at 10 minutes, then fail. Verify staging merge gains workflow_dispatch with expected_sha, which must equal the current staging head or the run exits as obsolete.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/verify_staging_delivery.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "wait_for_frontend_runtime polls web /api/version every 15 s until source_commit equals the merge, at most 600 s, then raises the same 'Frontend runtime SHA disagrees with platform'. Receipt adds frontend_runtime_wait_seconds. Shared by staging-automerge, the reusable delivery workflow and Verify staging merge. Read-only, same staging-pinned GET."
+    },
+    {
+      "files": [
+        ".github/workflows/staging-verify.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "workflow_dispatch with required expected_sha; job runs on push or a dispatch from staging only; checkout, EXPECTED and artifact name use expected_sha else github.sha; head check moves to scripts/staging_verify_head.py; timeout 30 -> 45 min to cover the 900 s platform wait plus the 600 s runtime wait."
+    },
+    {
+      "files": [
+        "scripts/staging_verify_head.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New: refuses a malformed sha before any read, reads the staging head via gh api, writes current=true/false to GITHUB_OUTPUT; obsolete exits 0 with the old message."
+    },
+    {
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "agent-state-tests registers test_staging_verify_head.py. No delivery step changes."
+    },
+    {
+      "files": [
+        "scripts/tests/test_verify_staging_delivery.py",
+        "scripts/tests/test_staging_verify_head.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Lag then match, immediate match, mismatch past the 600 s bound, match at the bound; current head, stale dispatch (obsolete), malformed sha, unreadable head; workflow wiring."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_DELIVERY.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Frontend runtime lag paragraph and the re-verify dispatch command."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub Actions staging-automerge, Serialized staging delivery and Verify staging merge"
+      ],
+      "routes": [
+        "GET https://optcg-price-tracker-staging.vercel.app/api/version (polled every 15 s, at most 41 reads)"
+      ],
+      "dependencies": [
+        "staging at 5c0d8bd (after #186, per-PR missions)"
+      ],
+      "deployment_impact": "No collector rollout, no RAW migration, no fleet change. Hand-merged (hold-for-owner); Verify staging merge then runs the new code on its own merge.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "5c0d8bd1c8df5313e51626a846503994cd4a1707",
+      "procedure": "Native revert PR of this merge with its own docs/agent/missions/<name>.json; the verifier returns to a single immediate runtime SHA read and Verify staging merge to push-only.",
+      "trigger": "A delivery verify passes with a frontend that never served the merge, Verify staging merge refuses a current push, or a dispatch for a non-head sha verifies.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_verify_staging_delivery.py",
+        "scripts/tests/test_staging_verify_head.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/verify_staging_delivery.py",
+        "scripts/staging_verify_head.py"
+      ],
+      "observation_window": "Verify staging merge on this hand merge (receipt shows frontend_runtime_wait_seconds), then the next staging-automerge delivery."
+    }
+  },
+  "diff_sha256": "23bccc746d5f5cd9cdadc31a9f98c6a9ff7ec1f85a6913eaeb022475dd9a94c2"
+}

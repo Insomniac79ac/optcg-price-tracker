@@ -181,6 +181,17 @@ owner merges by hand. After a hand merge, `Verify staging merge` (push to `stagi
 head and regenerates state as usual. Agents may add the label, never remove it
 (`.claude/hooks/guard.py`).
 
+**Frontend runtime lag (2026-10-20).** Vercel can report the merge READY before the staging alias
+serves it (#189 and #190 failed "Frontend runtime SHA disagrees with platform" 1-2 minutes after
+merge; a later Verify staging merge passed). The verifier now polls web `/api/version` every 15 s
+until `source_commit` equals the merge, for at most 10 minutes, then fails for real; the receipt
+records `frontend_runtime_wait_seconds`. This applies to `staging-automerge`, the reusable delivery
+workflow and `Verify staging merge`. To re-verify a merge after a lag failure, dispatch
+`Verify staging merge` on `staging` with `expected_sha` = the full merge SHA
+(`gh api -X POST repos/{o}/{r}/actions/workflows/staging-verify.yml/dispatches -f ref=staging
+-f 'inputs[expected_sha]=<sha>'`). It verifies only while that SHA is still the staging head; an
+older SHA exits as obsolete (`scripts/staging_verify_head.py`).
+
 **Web smoke (2026-10-15).** After the delivery verification, `staging-automerge`, the reusable
 delivery workflow and `Verify staging merge` run `scripts/staging_web_smoke.py`: signed out, `/`,
 `/cards`, `/prints/5661` and `/sign-in` render; `/account`, `/collection` and `/watchlist` land on
