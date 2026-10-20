@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Read-only diagnostic yuyu-f1-parallel-check (owner question 2026-10-20 06:41Z on F1 batch-2 sample row 8, OP14-118): lists every print and every stored Yuyu-Tei listing of OP14-118 in any release, category or status, and for every pending F1 proposal counts same-kind prints and listings of the card code across all releases plus prints or listings the F1 rule cannot type, to find a second parallel (manga, super or reprint parallel) the same-release rule could miss. Staging only; no write, collector, rollout, migration, source request, price, identity, mapping, Market Value/Index, secret or Railway change.",
+ "mission": "Read-only diagnostic yuyu-f1-approval-receipt (owner questions 2026-10-20 09:46Z on F1 batch-2 apply 39386848341): per approve-f1-batch run, approvals that created versus reused a mapping (with the reused mappings' history), and whether every approved mapping has its raw refresh row (#189), with refresh state and last successful check. Staging only; no write, collector, rollout, migration, source request, price, identity, mapping, Market Value/Index, secret or Railway change.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -20,12 +20,12 @@
  "impacts": [
   {
    "files": [
-    "scripts/diagnostics/yuyu-f1-parallel-check.sql"
+    "scripts/diagnostics/yuyu-f1-approval-receipt.sql"
    ],
    "effects": [
     "infrastructure"
    ],
-   "reason": "New named read-only diagnostic (SELECT/WITH only, run under default_transaction_read_only=on by db-diagnostic). Listing and print kinds mirror source_mapping_proposals.yuyu_listing_kind and print_listing_kind; the F1 rule itself is unchanged."
+   "reason": "New named read-only diagnostic (SELECT/WITH only, run under default_transaction_read_only=on by db-diagnostic). Reads proposal groups, mappings and freshness_work; changes nothing."
   },
   {
    "files": [
@@ -34,7 +34,7 @@
    "effects": [
     "infrastructure"
    ],
-   "reason": "Adds yuyu-f1-parallel-check to the diagnostic choice list. No permission, secret, environment or trigger change."
+   "reason": "Adds yuyu-f1-approval-receipt to the diagnostic choice list. No permission, secret, environment or trigger change."
   }
  ],
  "deployment_verification": {
@@ -62,7 +62,7 @@
     "None"
    ],
    "dependencies": [
-    "scripts/ops/diagnostic.py (unchanged); app.services.source_mapping_proposals F1 rule (unchanged)"
+    "scripts/ops/diagnostic.py (unchanged); app.services.mapping_refresh (unchanged)"
    ],
    "deployment_impact": "No API, worker or collector code changes and nothing deploys; 0 collector rollouts, no DDL.",
    "database_writes": 0,
@@ -70,7 +70,7 @@
    "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "170df77d315c1e7e7898534e1d780ec0a972350e",
+   "artifact": "a9cd37259e2e72d562a0ef0ae01b9ec0e6fbbbd9",
    "procedure": "Native revert of this PR removes the diagnostic. Nothing is written by it.",
    "trigger": "The diagnostic errors or a read takes locks it should not.",
    "backup": "Not applicable: no schema change and no write.",
@@ -83,12 +83,12 @@
     "engineering-gate"
    ],
    "post_change": [
-    "scripts/diagnostics/yuyu-f1-parallel-check.sql"
+    "scripts/diagnostics/yuyu-f1-approval-receipt.sql"
    ],
-   "observation_window": "After merge: db-diagnostic yuyu-f1-parallel-check returns OP14-118 prints and listings and the F1 multi-parallel counts. F1 batch-2 apply waits on its answer and the owner's go."
+   "observation_window": "After merge: db-diagnostic yuyu-f1-approval-receipt reports created vs reused per F1 run and lists any approved mapping without refresh work. No backfill without the owner."
   }
  },
- "diff_sha256": "6e2ca163403121bbc6d8603b9c828e409a078c378cc9c088bc5133f7c5bbac77",
+ "diff_sha256": "",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
