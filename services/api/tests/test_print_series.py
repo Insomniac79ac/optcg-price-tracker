@@ -228,19 +228,19 @@ class TestSourceSemanticsArePreservedNotReimplemented:
 # ---------------------------------------------------------------------- F ---
 class TestGenericSourceResolution:
     def test_a_future_source_charts_with_no_code_change(self, db_session, world):
-        # F + M. "cardrush" appears in no registry, no enum and no allowlist.
+        # F + M. "mercado" appears in no registry, no enum and no allowlist.
         # It gets a real series the moment it has a sources row and an
         # observation - unlabelled, because Atlas has no instrument rule for
         # it, but with every real number intact.
-        cardrush = make_source(db_session, "cardrush")
-        mapping = make_mapping(db_session, world["legacy"], cardrush, world["base"])
+        mercado = make_source(db_session, "mercado")
+        mapping = make_mapping(db_session, world["legacy"], mercado, world["base"])
         make_observation(
-            db_session, world["legacy"], cardrush, mapping, world["base"],
+            db_session, world["legacy"], mercado, mapping, world["base"],
             price_type="listing", price_jpy=4200, observed_at=day(1),
         )
-        entry = series_by_key(fetch(db_session, world["base"].id))["source:cardrush"]
+        entry = series_by_key(fetch(db_session, world["base"].id))["source:mercado"]
         assert entry["available"] is True
-        assert entry["source"] == "cardrush"
+        assert entry["source"] == "mercado"
         assert entry["role"] == ROLE_PRIMARY
         point = all_points(entry)[0]
         assert point["value_jpy"] == 4200
@@ -306,16 +306,16 @@ class TestGenericSourceResolution:
         # sold line and draws one stroke through the change - the exact error
         # this module exists to prevent, arriving through the generic path
         # rather than the configured one.
-        cardrush = make_source(db_session, "cardrush")
-        mapping = make_mapping(db_session, world["legacy"], cardrush, world["base"])
+        mercado = make_source(db_session, "mercado")
+        mapping = make_mapping(db_session, world["legacy"], mercado, world["base"])
         for offset, price_type, price in (
             (4, "listing", 4200), (3, "listing", 4300), (2, "sold", 3100)
         ):
             make_observation(
-                db_session, world["legacy"], cardrush, mapping, world["base"],
+                db_session, world["legacy"], mercado, mapping, world["base"],
                 price_type=price_type, price_jpy=price, observed_at=day(offset),
             )
-        entry = series_by_key(fetch(db_session, world["base"].id))["source:cardrush"]
+        entry = series_by_key(fetch(db_session, world["base"].id))["source:mercado"]
 
         assert len(entry["segments"]) == 2, "two instruments, two strokes"
         assert [p["value_jpy"] for p in entry["segments"][0]["points"]] == [4200, 4300]
@@ -336,14 +336,14 @@ class TestGenericSourceResolution:
         # The other half: splitting per stored instrument must not break an
         # unknown series at every point. One price_type is one segment, which
         # is every source that exists today.
-        cardrush = make_source(db_session, "cardrush")
-        mapping = make_mapping(db_session, world["legacy"], cardrush, world["base"])
+        mercado = make_source(db_session, "mercado")
+        mapping = make_mapping(db_session, world["legacy"], mercado, world["base"])
         for offset in (3, 2, 1):
             make_observation(
-                db_session, world["legacy"], cardrush, mapping, world["base"],
+                db_session, world["legacy"], mercado, mapping, world["base"],
                 price_type="listing", price_jpy=4200 + offset, observed_at=day(offset),
             )
-        entry = series_by_key(fetch(db_session, world["base"].id))["source:cardrush"]
+        entry = series_by_key(fetch(db_session, world["base"].id))["source:mercado"]
         assert len(entry["segments"]) == 1
         assert len(entry["segments"][0]["points"]) == 3
         assert entry["breaks"] == []

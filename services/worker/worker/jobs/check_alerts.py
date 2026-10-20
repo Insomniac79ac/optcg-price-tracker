@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from worker.alerts.telegram import TelegramSendError, send_telegram_message
 from worker.db import SessionLocal
-from worker.customer_prices import customer_latest_prices, is_customer_price
+from worker.customer_prices import PRE_CUTOVER_SOURCES, customer_latest_prices, is_customer_price
 from worker.models import (
     AlertEvent,
     AlertRule,
@@ -182,6 +182,9 @@ def _stock_status_pairs(
             .all()
         )
         if len(rows) < 2:
+            continue
+        source = db.get(Source, source_id)
+        if source is None or source.name in PRE_CUTOVER_SOURCES:
             continue
         yield card_id, source_id, rows[0], rows[1]
 
