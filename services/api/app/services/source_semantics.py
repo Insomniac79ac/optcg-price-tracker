@@ -82,6 +82,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.services.source_publication import is_public_source
+
 # Identifies the SOURCE_SEMANTICS ruleset a derived Market Index was computed
 # under, so a stored index value can later be traced back to the rules that
 # produced it.
@@ -282,7 +284,12 @@ def classify_observation(
 
 
 def is_customer_price(source: str, observation) -> bool:
-    """Visibility differs from index eligibility (e.g. platform floors stay visible)."""
+    """Visibility differs from index eligibility (e.g. platform floors stay visible).
+
+    A source before its cutover is never customer-visible (app.services.source_publication).
+    """
+    if not is_public_source(source):
+        return False
     return not (source == YUYUTEI and observation.promotion_state == PROMOTION_SALE)
 
 

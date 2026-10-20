@@ -158,9 +158,9 @@ natively and verifies. `staging_delivery_scope.py` returns `product`, so collect
 rollout and RAW DDL never run. Verification expects the merged API (`api_sha=merge`)
 and the repository's single Alembic head. If a merge that adds no mission is
 neither documentation nor PRODUCT, delivery fails instead of running a rollout
-or DDL nobody declared. A product migration is applied by the existing
-manual `railway run --service api alembic upgrade head` right after merge; until
-then the receipt fails on the revision, which is the intended signal. Before
+or DDL nobody declared. A product migration is applied after merge by the
+owner-approved `apply-migration` ops-write runbook (docs/agent/OPS_RUNBOOKS.md), never
+by hand; until then the receipt fails on the revision, which is the intended signal. Before
 arming a PRODUCT PR with a migration, `staging-credential-presence` runs
 `scripts/staging_backup_age.py` (read-only) and refuses without a staging
 Postgres backup younger than 24 h. Railway's backup record has no status

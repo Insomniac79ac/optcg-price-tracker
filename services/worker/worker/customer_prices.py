@@ -1,7 +1,13 @@
 """Worker counterpart to API customer-price visibility; retain all stored evidence."""
 
+# Restated from app.services.source_publication (the worker image has no API package);
+# services/api/tests/test_source_publication.py holds the two equal.
+PRE_CUTOVER_SOURCES = frozenset({"dorasuta", "cardrush"})
+
 
 def is_customer_price(source, observation):
+    if source in PRE_CUTOVER_SOURCES:
+        return False
     return not (source == "yuyutei" and observation.promotion_state == "sale")
 
 

@@ -139,7 +139,7 @@
   ],
   "deployment_verification": {
     "api_sha": "merge",
-    "revision": "3b7d9c1a5e20",
+    "revision": "7a52e9b48e8a",
     "checks": [
       "scripts/verify_snkr_published_discovery_component.py",
       "scripts/verify_yuyu_raw_reader_component.py"
@@ -157,7 +157,7 @@
         "None"
       ],
       "dependencies": [
-        "staging at ff01956 (after #180); must merge after #179, #178, #181 and #182 (owner order)"
+        "staging at 170df77 (after #182); the owner queue #180, #179, #178, #181 and #182 has fully merged"
       ],
       "deployment_impact": "No collector rollout and no RAW migration: collector_services and raw_dependency_migration are absent. Hand-merged (hold-for-owner); Verify staging merge then runs the new compose path with the fleet state only.",
       "database_writes": 0,
@@ -165,7 +165,7 @@
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "ff019569478f570af9e82018fc69e81853508e85",
+      "artifact": "170df77d315c1e7e7898534e1d780ec0a972350e",
       "procedure": "Native revert PR of this merge plus one docs/agent/missions/<name>.json (the new base gate admits it). After it merges the single STAGING_MISSION.json flow is back; the next DATA PR regenerates STAGING_MISSION.json against staging as before.",
       "trigger": "policy-gate refuses a correct mission, Verify staging merge or staging-automerge fails in the compose step, or the first collector delivery on the new layout does not run Deploy mission-scoped staging collectors.",
       "backup": "Not applicable: no schema or row change. Railway Postgres daily backups continue.",
@@ -191,8 +191,9 @@
   "diff_sha256": "4ee713871e47b1d7d9d0465f3df94abf8b4f531569bcc38f8849447c604e5139",
   "operational_notes": [
     "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-    "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
     "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-    "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write approve-f1-batch runs of about 500 (dry run first, apply pinned to its SHA-256), with a 48 h storage check after each."
+    "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
+    "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
+    "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
   ]
 }

@@ -80,9 +80,30 @@ def _enqueue(args, out):
     return enqueue_remaining.run(out, apply=args.apply, count=count, expected_sha256=args.expected_sha256)
 
 
+def _capture(args, out):
+    from ops import capture_batch
+    return capture_batch.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+
+
+def _capture_preview(args, out):
+    from ops import capture_batch
+    return capture_batch.preview(out, count=args.count)
+
+
 def _approve_f1(args, out):
     from ops import f1_approve
     return f1_approve.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+
+
+def _refresh_backfill(args, out):
+    from ops import refresh_backfill
+    return refresh_backfill.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+
+
+def _apply_migration(args, out):
+    from ops import apply_migration
+    return apply_migration.run(out, apply=args.apply, revision=args.revision, parent=args.parent,
+                               expected_sha256=args.expected_sha256)
 
 
 # name: (kind, collector_affecting, handler). A write runbook runs only in ops-write.
@@ -94,8 +115,13 @@ RUNBOOKS = {
     "official-images-status": ("read", False, _official),
     "db-diagnostic": ("read", False, _diagnostic),
     "web-smoke": ("read", False, _web_smoke),
+    "capture-batch-preview": ("read", False, _capture_preview),
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
+    "enqueue-capture-batch": ("write", True, _capture),
+    "plan-refresh-backfill": ("write", True, _refresh_backfill),
+    # Schema step: collectors read these tables, so it keeps the collector quiet windows.
+    "apply-migration": ("write", True, _apply_migration),
 }
 
 
@@ -137,6 +163,9 @@ def preflight(args, now=None, read=gh_json):
         raise common.Refused("write runbooks run only in the owner-gated ops-write workflow")
     if kind == "read" and args.apply:
         raise common.Refused("--apply is only for write runbooks")
+    if args.runbook == "apply-migration":
+        from ops import apply_migration
+        apply_migration.check_pair(args.revision, args.parent)
     writes, collector = kind_of(args.runbook, args.apply)
     reason = common.quiet_window_refusal(now or common.now_utc(), collector_affecting=collector, write=writes)
     if reason:
@@ -170,6 +199,8 @@ def main(argv=None):
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--count", type=int, help="batch size (runbook default when omitted)")
     parser.add_argument("--expected-sha256", default="")
+    parser.add_argument("--revision", default="", help="apply-migration: Alembic revision to apply")
+    parser.add_argument("--parent", default="", help="apply-migration: live revision it must apply on")
     args = parser.parse_args(argv)
     summary = {"runbook": args.runbook, "workflow": args.workflow, "apply": args.apply,
                "started_at": common.now_utc().isoformat()}

@@ -512,7 +512,7 @@ def test_unconfigured_source_history_is_unnamed_rather_than_guessed(
     """
     print_row = five_prints["sanji_base"]
     legacy = five_prints["sanji_legacy"]
-    future_source = make_source(db_session, name="cardrush")
+    future_source = make_source(db_session, name="mercado")
     mapping = make_mapping(
         db_session, legacy, future_source, print_row, source_card_id="cr-OP01-013"
     )
@@ -522,7 +522,7 @@ def test_unconfigured_source_history_is_unnamed_rather_than_guessed(
     )
 
     observations = client.get(f"/prints/{print_row.id}/prices").json()["observations"]
-    future = next(obs for obs in observations if obs["source"] == "cardrush")
+    future = next(obs for obs in observations if obs["source"] == "mercado")
 
     assert future["price_jpy"] == 880
     assert future["price_type"] == "shop_asking"

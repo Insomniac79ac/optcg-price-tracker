@@ -255,3 +255,21 @@ def test_missing_telegram_env_vars_marks_event_failed_not_crash(db_session, monk
     stored = db_session.query(AlertEvent).one()
     assert stored.status == "failed"
     assert stored.error_message is not None
+
+
+def test_pre_cutover_source_raises_no_price_or_stock_alert(db_session, stub_telegram):
+    """New-sources plan §2.5: a source before its cutover has no customer-visible life."""
+    source, card = seed_source_and_card(db_session, "dorasuta")
+    add_rule(
+        db_session, name="Dorasuta price up", rule_type="price_change_pct",
+        source_name="dorasuta", price_type="sell", threshold_pct=10.0,
+    )
+    add_rule(db_session, name="Any stock change", rule_type="stock_status_change")
+
+    now = datetime.now(timezone.utc)
+    add_observation(db_session, card, source, "sell", 1000, now - timedelta(hours=1), stock_status="in_stock")
+    add_observation(db_session, card, source, "sell", 1300, now, stock_status="sold_out")
+
+    assert check_alerts(db_session, dry_run=False) == []
+    assert stub_telegram == []
+    assert list(check_alerts_module._stock_status_pairs(db_session)) == []
