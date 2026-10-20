@@ -109,5 +109,5 @@
    "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; the next Market Index snapshot completes with a verified receipt and market_index_splice_snapshots stays empty."
   }
  },
- "diff_sha256": ""
+ "diff_sha256": "28119bc4ed88078dbd3266fab1d45e25c0c54fe3b3aa3b81e863d2cc928243e8"
 }
