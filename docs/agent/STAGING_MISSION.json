@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "mission": "Read-only diagnostic yuyu-f1-approval-receipt (owner questions 2026-10-20 09:46Z on F1 batch-2 apply 39386848341): per approve-f1-batch run, approvals that created versus reused a mapping (with the reused mappings' history), and whether every approved mapping has its raw refresh row (#189), with refresh state and last successful check. Staging only; no write, collector, rollout, migration, source request, price, identity, mapping, Market Value/Index, secret or Railway change.",
+ "mission": "Fix read-only diagnostic yuyu-f1-approval-receipt (owner questions 2026-10-20 09:46Z): it counted a mapping as reused when created more than 5 s before its group's review, but a new mapping's created_at is its approval transaction's start, about 7 s before reviewed_at in the batch-2 apply, so all 500 read as reused. Reused now means created before the run's first approval, or resolved to by another approved group too (two candidates of one listing). Staging only; no write, collector, rollout, migration, source request, price, identity, mapping, Market Value/Index, secret or Railway change.",
  "target": "staging",
  "classification": "AMBER",
  "red_decisions": {
@@ -25,16 +25,7 @@
    "effects": [
     "infrastructure"
    ],
-   "reason": "New named read-only diagnostic (SELECT/WITH only, run under default_transaction_read_only=on by db-diagnostic). Reads proposal groups, mappings and freshness_work; changes nothing."
-  },
-  {
-   "files": [
-    ".github/workflows/ops-readonly.yml"
-   ],
-   "effects": [
-    "infrastructure"
-   ],
-   "reason": "Adds yuyu-f1-approval-receipt to the diagnostic choice list. No permission, secret, environment or trigger change."
+   "reason": "Read-only diagnostic (SELECT/WITH only, default_transaction_read_only=on): corrected reused-mapping test and a shared-mapping count. Changes nothing."
   }
  ],
  "deployment_verification": {
@@ -62,7 +53,7 @@
     "None"
    ],
    "dependencies": [
-    "scripts/ops/diagnostic.py (unchanged); app.services.mapping_refresh (unchanged)"
+    "scripts/ops/diagnostic.py (unchanged)"
    ],
    "deployment_impact": "No API, worker or collector code changes and nothing deploys; 0 collector rollouts, no DDL.",
    "database_writes": 0,
@@ -70,9 +61,9 @@
    "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "e62572d5e124421600b4663ddfc54f14b6747765",
-   "procedure": "Native revert of this PR removes the diagnostic. Nothing is written by it.",
-   "trigger": "The diagnostic errors or a read takes locks it should not.",
+   "artifact": "30ae88573ea732179c8ba5e68daebecb3e5bf54d",
+   "procedure": "Native revert of this PR restores the previous query. Nothing is written by it.",
+   "trigger": "The diagnostic errors.",
    "backup": "Not applicable: no schema change and no write.",
    "validation": [
     "scripts/tests/test_ops_runbooks.py"
@@ -85,10 +76,10 @@
    "post_change": [
     "scripts/diagnostics/yuyu-f1-approval-receipt.sql"
    ],
-   "observation_window": "After merge: db-diagnostic yuyu-f1-approval-receipt reports created vs reused per F1 run and lists any approved mapping without refresh work. No backfill without the owner."
+   "observation_window": "After merge: the batch-2 run shows 498 created and 2 reused, matching the apply summary, and lists the 2."
   }
  },
- "diff_sha256": "8ae9e65fa01128662712f1a6575b1126063732e8e834f543a6a834a746c16f5c",
+ "diff_sha256": "",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
