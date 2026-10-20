@@ -61,7 +61,7 @@
    "estimated_runtime_minutes": 5
   },
   "recovery": {
-   "artifact": "30ae88573ea732179c8ba5e68daebecb3e5bf54d",
+   "artifact": "8693ff8c854ed4af566f9c7dd65e654cd1af60df",
    "procedure": "Native revert of this PR restores the previous query. Nothing is written by it.",
    "trigger": "The diagnostic errors.",
    "backup": "Not applicable: no schema change and no write.",
@@ -79,7 +79,7 @@
    "observation_window": "After merge: the batch-2 run shows 498 created and 2 reused, matching the apply summary, and lists the 2."
   }
  },
- "diff_sha256": "d7a814f58a3b346dc369b17c47608450749acf12187dbd27dd0bd1a2621d7fcd",
+ "diff_sha256": "",
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
