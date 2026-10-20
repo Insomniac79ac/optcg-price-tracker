@@ -137,6 +137,7 @@ from app.services.source_instruments import (
     describe_instrument,
     primary_price_types,
 )
+from app.services.source_publication import PRE_CUTOVER_SOURCES
 from app.services.source_semantics import classify_observation, is_customer_price
 
 # The windows this endpoint offers. 90d is deliberately ABSENT rather than
@@ -770,7 +771,12 @@ def load_source_catalogue(db: Session, print_id: int) -> tuple[dict[str, int], l
         )
         .exists()
     )
-    rows = db.execute(select(Source.id, Source.name, observed.label("observed"))).all()
+    # A source before its cutover is not a platform a chart can name (source_publication).
+    rows = db.execute(
+        select(Source.id, Source.name, observed.label("observed")).where(
+            Source.name.not_in(sorted(PRE_CUTOVER_SOURCES))
+        )
+    ).all()
     return (
         {name: source_id for source_id, name, _ in rows},
         sorted(name for _, name, has_history in rows if has_history),

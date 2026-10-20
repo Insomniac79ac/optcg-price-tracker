@@ -30,6 +30,9 @@ from snkrdunk_collector.published_discovery import (
 PARSER_VERSION = "snkr-published-discovery-v1"
 ROBOTS = "https://snkrdunk.com/robots.txt"
 MAX_TOTAL_LOCATIONS = 400_000
+# Shards are most of a run's stored bytes (two 2026-10-07 intents retained
+# 18.4 MB). A shard retained this recently is re-read, not fetched again.
+SHARD_REUSE = timedelta(days=7)
 
 
 @dataclass(frozen=True)
@@ -80,7 +83,38 @@ def intent(session, claim):
     return work, source, cursor, anchors
 
 
-def consume(session, claim, *, freshness, fetch, settle=lambda: None):
+def retained_shard(session, source_id, url, now):
+    """The newest verified shard response retained by an earlier run, or None."""
+    row = session.scalars(
+        select(RawSnapshot)
+        .where(
+            RawSnapshot.source_id == source_id,
+            RawSnapshot.source_url == url,
+            RawSnapshot.parser_version == PARSER_VERSION,
+            RawSnapshot.http_status == 200,
+            RawSnapshot.fetched_at >= now - SHARD_REUSE,
+        )
+        .order_by(RawSnapshot.id.desc())
+        .limit(1)
+    ).first()
+    if row is None:
+        return None
+    try:
+        envelope = json.loads(row.raw_content)
+        body = base64.b64decode(envelope["body"], validate=True)
+    except (ValueError, KeyError, TypeError):
+        return None
+    if (
+        envelope.get("encoding") != "base64"
+        or hashlib.sha256(body).hexdigest() != envelope.get("body_sha256")
+    ):
+        return None
+    return RetainedDocument(url, body, row.id, 200)
+
+
+def consume(
+    session, claim, *, freshness, fetch, settle=lambda: None, reuse=lambda url: None
+):
     work, source, cursor, anchors = intent(session, claim)
     # Previously retained pages and candidate rows are evidence, not re-fetch targets.
     known = set(session.scalars(select(SnkrdunkCandidate.source_url)))
@@ -127,14 +161,20 @@ def consume(session, claim, *, freshness, fetch, settle=lambda: None):
     for url in shard_urls:
         if not policy.can_fetch("*", url):
             raise ValueError("published shard denied by source robots policy")
-        document = fetch(url)
+        document = reuse(url)
+        reused = document is not None
+        if not reused:
+            document = fetch(url)
         if document.http_status != 200:
             raise ValueError("complete advertised shard response required")
         shards[url] = locations(document.body, index=False)
         total += len(shards[url])
         if total > MAX_TOTAL_LOCATIONS:
             raise ValueError("aggregate published URL bound exceeded")
-        documents.append({"url": url, "raw_snapshot_id": document.raw_snapshot_id})
+        documents.append(
+            {"url": url, "raw_snapshot_id": document.raw_snapshot_id}
+            | ({"reused": True} if reused else {})
+        )
     targets = neighbours(
         shards,
         anchors,
@@ -335,6 +375,9 @@ def run_discovery(session, claim, *, freshness):
                             page, freshness, source.id, url
                         ),
                         settle=lambda: freshness.settle_browser(page),
+                        reuse=lambda url: retained_shard(
+                            session, source.id, url, freshness.clock()
+                        ),
                     )
                     freshness.result = result
                     return result

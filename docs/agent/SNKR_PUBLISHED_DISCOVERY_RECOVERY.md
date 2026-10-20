@@ -71,3 +71,23 @@ identities, actual request costs and runtime, zero price/mapping/freshness write
 unchanged source schedule/budget and preserved existing evidence. Mapping and
 operational gains are zero until separately reviewed exact proofs and natural
 RAW checks exist. Production RED; PSA10 OFF.
+
+## Automatic planning (auto-v1, 2026-10-19)
+
+Discovery stopped after the two 2026-10-07 canaries because nothing planned a
+next intent. Each scheduled SNKR turn now calls `discovery_planner.py` after
+recovery and before drain. It plans at most one `snkr-published:auto-v1-<UTC>`
+intent with the bounds above (300 requests, 20 products, 12 anchors, radius
+1..48) and commits nothing else. It skips the turn when any of these hold:
+a published intent is open; the last auto intent is under
+`SNKRDUNK_AUTO_DISCOVERY_INTERVAL_H` (default 6) old; 2 of the last 3 auto
+intents did not complete; the source is paused or disabled; the next 40 min of
+RAW demand at the 24h peak request cost plus 300 does not fit the unreserved
+window; there is no eligible anchor; or the last 3 auto intents inspected
+nothing and no anchor was added since. Anchors rotate least used first.
+A planner error is logged and the RAW turn continues.
+
+Shards retained by an earlier run within 7 days are re-read from their RAW
+snapshot (hash checked) instead of fetched again; robots and the index are
+always fetched. Stop planning with `SNKRDUNK_AUTO_DISCOVERY=false` or a revert.
+An intent already planned still runs, or is settled by the rollback above.

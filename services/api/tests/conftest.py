@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,8 @@ from tests._source_identity_guard import check_source_identity_package
 # Before anything imports app.* (which imports opcg_source_identity): a stale
 # copy from another worktree must stop the session, not fail tests randomly.
 check_source_identity_package(Path(__file__).parent)
+# SNKRDUNK scheduled-turn tests must not plan published discovery by default.
+os.environ.setdefault("SNKRDUNK_AUTO_DISCOVERY", "false")
 
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import create_engine

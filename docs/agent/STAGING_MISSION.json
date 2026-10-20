@@ -22,18 +22,19 @@
    "scripts/verify_snkr_published_discovery_component.py",
    "scripts/verify_yuyu_raw_reader_component.py"
   ],
-  "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "snkr_component": "ff019569478f570af9e82018fc69e81853508e85",
   "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
   "yuyu_capacity_cadence": true
  },
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
+  "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
+  "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
+  "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
  ],
  "classification": "GREEN",
- "mission": "New-sources plan step S4 (owner approved the plan 2026-10-19 00:34Z; Q6 splice, not break; N12 CPI methodology stays 1), stacked on S1 (#181): splice machinery for a source cutover, inert. On a day with an approved market_index_splices row the snapshot job also archives each print's old-basis Market Index (same source values without the added source, combined by the unchanged _compute_index_fields). The per-print 7D change, the print analytics headline, the Card Pirate Index chain and Market Value windows and replay then step across exactly one source_semantics_version change through two legs, each passing the unchanged comparability guards. No splice row exists and creating one is a RED owner decision (D4, C4), so every number is unchanged; readers query the splice table only when the two ends of a comparison already disagree on source_semantics_version. Staging only; no collector, rollout, migration, source request, price, identity, mapping, secret or Railway change; INDEX_VERSION, SOURCE_SEMANTICS_VERSION and CPI METHODOLOGY_VERSION unchanged.",
+ "mission": "New-sources plan step S4 (owner approved the plan 2026-10-19 00:34Z; Q6 splice, not break; N12 CPI methodology stays 1), on staging after S1 (#181), S2 (#182) and S3 (#183) merged: splice machinery for a source cutover, inert. On a day with an approved market_index_splices row the snapshot job also archives each print's old-basis Market Index (same source values without the added source, combined by the unchanged _compute_index_fields). The per-print 7D change, the print analytics headline, the Card Pirate Index chain and Market Value windows and replay then step across exactly one source_semantics_version change through two legs, each passing the unchanged comparability guards. No splice row exists and creating one is a RED owner decision (D4, C4), so every number is unchanged; readers query the splice table only when the two ends of a comparison already disagree on source_semantics_version. Staging only; no collector, rollout, migration, source request, price, identity, mapping, secret or Railway change; INDEX_VERSION, SOURCE_SEMANTICS_VERSION and CPI METHODOLOGY_VERSION unchanged.",
  "impacts": [
   {
    "files": [
@@ -108,5 +109,5 @@
    "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; the next Market Index snapshot completes with a verified receipt and market_index_splice_snapshots stays empty."
   }
  },
- "diff_sha256": "1cdddfad78a2bb314e6c43b70ea524db82a7d0467ac06b43ae668a58b9ed6fcb"
+ "diff_sha256": ""
 }
