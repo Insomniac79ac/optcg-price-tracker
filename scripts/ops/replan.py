@@ -78,6 +78,11 @@ def finish(records, plan_meta, observed_at, resolver_version, evaluated):
     for row in evaluated:
         row["guards"]["no_shared_print_with_other_planned"] = all(shared[i] == 1 for i in row.get("considered_print_ids", []))
         row["eligible"] = all(row["guards"].values())
+    return summarize(records, plan_meta, observed_at, resolver_version, evaluated)
+
+
+def summarize(records, plan_meta, observed_at, resolver_version, evaluated):
+    """The re-plan document over rows whose guards and eligibility are already set (pure)."""
     eligible = [r for r in evaluated if r["eligible"]]
     return {"read_only": True, "source_requests": 0, "database_writes": 0, "resolver_version": resolver_version,
             "plan": plan_meta, "observed_at": observed_at, "records": evaluated,
@@ -101,7 +106,7 @@ def replan(session, plan):
     return finish(records, meta, observed_at, RESOLVER_VERSION, evaluated)
 
 
-def approved_list(replanned, count):
+def approved_list(replanned, count, batch=None):
     """(bytes, sha256, doc): the first ``count`` eligible candidates in plan order. Refuses short."""
     eligible = [r for r in replanned["records"] if r["eligible"]]
     if type(count) is not int or not 1 <= count <= 100:
@@ -110,7 +115,7 @@ def approved_list(replanned, count):
         raise common.Refused(f"only {len(eligible)} eligible candidates; refusing a batch of {count}")
     # Content only: no re-plan timestamp, so an apply re-plan of an unchanged list hashes to the
     # dry run's SHA-256 (replan.json keeps observed_at). A moved digest still changes the SHA.
-    doc = {"batch": f"NEW{count}", "expected_count": count, "resolver_version": replanned["resolver_version"],
+    doc = {"batch": batch or f"NEW{count}", "expected_count": count, "resolver_version": replanned["resolver_version"],
            "entries": [{"candidate_id": r["candidate_id"], "evidence_digest": r["evidence_digest"],
                         "release_product_id": r["release_product_id"], "considered_print_ids": r["considered_print_ids"]}
                        for r in eligible[:count]]}

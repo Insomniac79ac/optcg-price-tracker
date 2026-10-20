@@ -53,6 +53,7 @@ from app.services.exact_print_approval import (
     SourceEvidence,
     resolve_exact_print,
 )
+from app.services.mapping_refresh import ensure_refresh_work
 from app.services.snkrdunk_urls import canonical_listing_url, listing_id
 
 APPROVED = "approved"
@@ -292,6 +293,8 @@ def approve_candidate_onto_print(
         if conflict is not None:
             raise conflict from exc
         raise
+    # Approved means collected: plan the mapping's raw refresh work in the same transaction.
+    ensure_refresh_work(db, mapping)
 
     return CandidateApprovalResult(
         candidate=candidate,

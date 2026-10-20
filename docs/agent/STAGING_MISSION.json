@@ -22,17 +22,18 @@
    "scripts/verify_snkr_published_discovery_component.py",
    "scripts/verify_yuyu_raw_reader_component.py"
   ],
-  "snkr_component": "a504e476d98ab49ad7773a0c8c6b71e9d927b125",
+  "snkr_component": "ff019569478f570af9e82018fc69e81853508e85",
   "yuyu_reader_component": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
   "yuyu_capacity_cadence": true
  },
  "operational_notes": [
   "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
-  "D9 F2 (about 220 prints waiting on capture intents or captures) is no longer stalled; it proceeds with the resumed batches.",
   "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
-  "F1 go-live: about 762 exact proposals from this rule go live only in owner-approved ops-write batches of about 500, with a 48 h storage check after each."
+  "D9 F2: the 217 'capture intent pending' prints are already captured (a finished capture parks as pending); they wait on identity review, not on a capture batch (MEASURED 2026-10-19, identity-capture-work run 39181696715).",
+  "F1: batch 1 applied 2026-10-19 (97 of 97; the rule has proposed 97 so far, not about 762: proposals appear only when discovery revisits a category). Its 97 mappings get refresh work from plan-refresh-backfill after this merges.",
+  "Capture order (owner 2026-10-19 13:02Z): #189, then refresh backfill, then F1 batch 2, then captures."
  ],
- "mission": "New-sources plan step S3 (owner approved the plan 2026-10-19 00:34Z), stacked on S1 (#181): parsing and identity only, fixtures only. Dorasuta and CardRush title grammars (MEASURED in the source surveys), canonical listing identity dorasuta:<pid> and cardrush:<id> kept in app.source_products rather than packages/opcg_source_identity (plan §2.3 amended 2026-10-19), and a resolver whose every outcome comes from exact_print_approval.resolve_exact_print, called unchanged, plus the Yuyu-Tei F1 two-way-unique kind rule (owner 2026-10-17). Release from the list-page group, never the code prefix; a product in two releases or sealed is refused; markers count only through reviewed source_variant_renderings; foil matches only a foil print; every other non-exact outcome is quarantined; manual always wins. Nothing calls the resolver yet. Staging only; no collector, rollout, migration, source request, price, mapping, Market Value/Index, secret or Railway change.",
+ "mission": "New-sources plan step S3 (owner approved the plan 2026-10-19 00:34Z), on staging after S1 (#181) and S2 (#182) merged: parsing and identity only, fixtures only. Dorasuta and CardRush title grammars (MEASURED in the source surveys), canonical listing identity dorasuta:<pid> and cardrush:<id> kept in app.source_products rather than packages/opcg_source_identity (plan §2.3 amended 2026-10-19), and a resolver whose every outcome comes from exact_print_approval.resolve_exact_print, called unchanged, plus the Yuyu-Tei F1 two-way-unique kind rule (owner 2026-10-17). Release from the list-page group, never the code prefix; a product in two releases or sealed is refused; markers count only through reviewed source_variant_renderings; foil matches only a foil print; every other non-exact outcome is quarantined; manual always wins. Nothing calls the resolver yet. Staging only; no collector, rollout, migration, source request, price, mapping, Market Value/Index, secret or Railway change.",
  "classification": "GREEN",
  "impacts": [
   {
@@ -98,5 +99,5 @@
    "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; nothing else should change."
   }
  },
- "diff_sha256": "503aa90d820abe02c52f3d4af9578076598b8fb56d66059d887cc81d8bc2628f"
+ "diff_sha256": ""
 }

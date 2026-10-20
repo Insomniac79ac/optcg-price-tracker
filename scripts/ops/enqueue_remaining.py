@@ -60,15 +60,21 @@ def check_apply(apply, expected_sha256, sha):
 
 def run(out_dir, *, apply=False, count=50, expected_sha256=""):
     from sqlalchemy.orm import Session
-    from ops import db as ops_db, replan, storage_rates
-    import yuyu_identity_capture_enqueue as tool
+    from ops import db as ops_db, replan
 
-    out = Path(out_dir)
     plan = replan.load_plan()
     with Session(ops_db.engine()) as session:
         replanned = replan.replan(session, plan)
+    return enqueue_list(Path(out_dir), replanned, count, apply=apply, expected_sha256=expected_sha256)
+
+
+def enqueue_list(out, replanned, count, *, apply, expected_sha256, batch=None):
+    """Steps 2 to 4 for a re-planned set (shared with enqueue-capture-batch)."""
+    from ops import db as ops_db, replan, storage_rates
+    import yuyu_identity_capture_enqueue as tool
+
     common.write_json(out / "replan.json", replanned)
-    data, sha, doc = replan.approved_list(replanned, count)
+    data, sha, doc = replan.approved_list(replanned, count, batch=batch)
     list_path = out / "approved-list.json"
     list_path.write_bytes(data)
     check_apply(apply, expected_sha256, sha)
