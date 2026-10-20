@@ -188,7 +188,7 @@
       "observation_window": "Verify staging merge on this hand merge, then the next DATA PR's policy-gate on a mission file, then the first collector PR's staging-automerge (allowed collector window) with Deploy mission-scoped staging collectors and the delivery verification passing."
     }
   },
-  "diff_sha256": "4ee713871e47b1d7d9d0465f3df94abf8b4f531569bcc38f8849447c604e5139",
+  "diff_sha256": "e8c3cc6c010c5ebec3bb605735039f8741c0f86c964b39d05b0a6e63cc3814b3",
   "operational_notes": [
     "Identity-capture batches were paused 2026-10-17 15:41Z to 2026-10-18 13:57Z (owner decisions). They are RESUMED as before: each enqueue-remaining-50 ops-write batch is still dispatched as a dry run first and approved by the owner in the staging-ops Environment. Capture-day storage cuts (options A to G) are not built: the remaining backlog is about 300 MB one-off against 2,825 MB room.",
     "Storage watch (owner 2026-10-18): every storage check reports days until the 3 GiB reserve (room_to_reserve_mb_s9 divided by the current growth rate) and flags the owner when it drops below 45 days, to plan retention or a bigger volume.",
