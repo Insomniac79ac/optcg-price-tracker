@@ -34,8 +34,7 @@ def resolve():
         "{ domain proxyPort applicationPort } }")["tcpProxies"]
     if len(proxies) != 1 or proxies[0]["applicationPort"] != 5432:
         raise common.Refused("staging Postgres proxy is not uniquely identified")
-    variables = state.command_json(["railway", "variable", "list", "-p", state.PROJECT,
-                                    "-e", state.ENVIRONMENT, "-s", state.POSTGRES, "--json"])
+    variables = state.service_variables(state.POSTGRES)
     common.register_secret(variables.get("PGPASSWORD"))
     return proxies[0], variables
 

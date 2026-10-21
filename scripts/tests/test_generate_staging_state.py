@@ -386,5 +386,70 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual(generator.sanitize(evidence)["railway"]["services"][0]["provenance"], "unknown")
 
 
+class VariableReadTests(unittest.TestCase):
+    """2026-10-21: `railway variable list` on Postgres failed while `railway api` worked."""
+
+    SECRET = "pg-secret-value"
+
+    def completed(self, code, stdout="", stderr=""):
+        return unittest.mock.Mock(returncode=code, stdout=stdout, stderr=stderr)
+
+    def test_cli_failure_reports_exit_and_class_never_output(self):
+        failed = self.completed(1, stderr=f"Unauthorized. password={self.SECRET}")
+        with patch.object(generator.subprocess, "run", return_value=failed):
+            with self.assertRaises(generator.VerificationError) as caught:
+                generator.command_json(["railway", "variable", "list", "--json"])
+        message = str(caught.exception)
+        self.assertIn("exit 1, unauthorized", message)
+        self.assertIn("railway variable read failed", message)
+        self.assertNotIn(self.SECRET, message)
+
+    def test_failure_classes(self):
+        self.assertEqual(generator.failure_class("Too Many Requests"), "rate_limited")
+        self.assertEqual(generator.failure_class("Service not found"), "not_found")
+        self.assertEqual(generator.failure_class("error: unexpected argument '-s'"), "usage")
+        self.assertEqual(generator.failure_class("502 Bad Gateway"), "server")
+        self.assertEqual(generator.failure_class("something else"), "unclassified")
+        self.assertEqual(generator.failure_class(""), "silent")
+
+    def test_cli_success_is_used_directly(self):
+        ok = self.completed(0, stdout=json.dumps({"PGUSER": "u"}))
+        with patch.object(generator.subprocess, "run", return_value=ok) as run:
+            self.assertEqual(generator.service_variables("svc"), {"PGUSER": "u"})
+        self.assertEqual(run.call_args[0][0][:3], ["railway", "variable", "list"])
+
+    def test_cli_failure_falls_back_to_api_query(self):
+        api = {"data": {"variables": {"PGUSER": "u", "PGPASSWORD": self.SECRET}}}
+        calls = []
+
+        def run(args, **kwargs):
+            calls.append(args)
+            if args[1] == "variable":
+                return self.completed(1, stderr="boom")
+            return self.completed(0, stdout=json.dumps(api))
+
+        stderr = io.StringIO()
+        with patch.object(generator.subprocess, "run", side_effect=run), contextlib.redirect_stderr(stderr):
+            values = generator.service_variables("svc")
+        self.assertEqual(values["PGUSER"], "u")
+        self.assertEqual(calls[1][:2], ["railway", "api"])
+        self.assertIn('serviceId:"svc"', calls[1][2])
+        self.assertIn(f'projectId:"{generator.PROJECT}"', calls[1][2])
+        self.assertIn("exit 1, unclassified", stderr.getvalue())
+        self.assertNotIn(self.SECRET, stderr.getvalue())
+
+    def test_both_paths_failing_raises_classified(self):
+        def run(args, **kwargs):
+            if args[1] == "variable":
+                return self.completed(1, stderr="Unauthorized")
+            return self.completed(0, stdout=json.dumps({"errors": [{"message": "Not Authorized"}]}))
+
+        with patch.object(generator.subprocess, "run", side_effect=run), \
+                contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(generator.VerificationError) as caught:
+                generator.service_variables("svc")
+        self.assertEqual(str(caught.exception), "Railway query failed (unauthorized)")
+
+
 if __name__ == "__main__":
     unittest.main()
