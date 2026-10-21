@@ -41,8 +41,16 @@ def _staging_state(args, out):
 def _lossless(args, out):
     from ops import lossless
     if args.ledger_floor is None:
-        raise common.Refused("verify-lossless needs --ledger-floor (exclusive ledger id)")
-    return lossless.run(out, args.ledger_floor)
+        raise common.Refused("verify-lossless needs --ledger-floor (exclusive ledger id, or sample)")
+    if args.ledger_floor == "sample":
+        # The sibling-encoding gate (scripts/ops/encoding_sample.py), read-only like the check.
+        from ops import encoding_sample
+        return encoding_sample.run(out)
+    try:
+        floor = int(args.ledger_floor)
+    except ValueError:
+        raise common.Refused("ledger floor must be a non-negative integer or sample") from None
+    return lossless.run(out, floor)
 
 
 def _storage(args, out):
@@ -192,7 +200,7 @@ def main(argv=None):
     parser.add_argument("--out", type=Path, default=Path("ops-out"))
     parser.add_argument("--preflight", action="store_true", help="validate inputs and windows only")
     parser.add_argument("--workflow", choices=["ops-readonly", "ops-write"], default="ops-readonly")
-    parser.add_argument("--ledger-floor", type=int)
+    parser.add_argument("--ledger-floor", help="verify-lossless: exclusive ledger id, or sample")
     parser.add_argument("--diagnostic")
     parser.add_argument("--transients")
     parser.add_argument("--receipt")

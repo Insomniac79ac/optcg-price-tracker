@@ -85,3 +85,33 @@ envelope as source HTML. Existing ORM readers reconstruct automatically. The
 one-shot exact artwork evidence parsers remain plaintext. Future source volume
 still needs its own exact identity, deadline, request, storage and rollback
 safeguards; this storage release grants none of those approvals.
+
+## Sibling and anchor dictionaries (switch `RAW_DICTIONARY_SIBLING`, default false)
+
+The writer also accepts parsers `yuyutei-recurring-discovery-v1` and
+`snkr-published-discovery-v1` (same-URL dictionaries, active once collectors
+run this code). With `RAW_DICTIONARY_SIBLING=true` on a collector:
+
+- A page with no usable same-URL base may use a *sibling*: the newest retained
+  plaintext 200 row of the same source and parser at another URL of the same
+  URL class (scheme, host, path with digit runs folded, sorted query keys).
+  Candidates are the newest 64 rows of the last 50,000 IDs plus the bases of
+  this family's ledger rows from the last 2 days; only ID, URL and the ledger
+  are read until one exact row is locked with the plaintext guard.
+- A URL whose oldest retained row is encoded (its first check, encoded on a
+  sibling) uses that row as an *anchor*, only if the anchor's own ledger base
+  is plaintext. The savings rule then uses the plaintext bottom's stored size.
+
+Readers accept a plaintext base of the same source and parser at any URL, or
+an encoded base at the identical URL whose own base is plaintext: at most two
+levels, plaintext at the bottom, every level hash-checked, fail closed.
+Portable backups still carry complete plaintext; their dictionary validation
+requires the same source and parser. `verify-lossless` rebuilds an anchor
+independently before checking the row on top of it.
+
+Readers ship before the switch: every collector, API, worker and beat must run
+this code before any collector sets `RAW_DICTIONARY_SIBLING=true`. The flip is
+gated by the read-only encoding sample (`verify-lossless`, `ledger_floor=sample`)
+and made with `scripts/collector_variables.py` (allowed values `true`/`false`).
+Turning it off stops new sibling and anchor encodings; existing ones stay
+readable and verifiable.

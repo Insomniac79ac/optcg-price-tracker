@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "mission": "Storage efficiency for unencoded RAW pages, pragmatist option (owner decisions 2026-10-21 09:00Z): the RAW writer also encodes Yuyu category discovery and SNKRDUNK published discovery pages against same-URL dictionaries; behind a new switch RAW_DICTIONARY_SIBLING (default false, no variable change in this PR) it may use a plaintext sibling page of the same source, parser and URL class, and one bounded anchor level for later checks of a sibling-encoded URL (max two levels, plaintext bottom, hash-checked, fail closed). Readers (package opcg_source_identity) ship to all nine Yuyu shards and SNKRDUNK first; the owner flips the switch only after the read-only encoding sample (verify-lossless ledger_floor=sample) passes (Yuyu sibling median <=10 KB, SNKR <=16 KB). Delivered only by staging-automerge with all ten collectors rolled out, before 18:30Z or 20:30-22:00Z, never 02:00-06:00Z. Staging only; PSA10 OFF; no identity, mapping, approval, price, Market Value/Index, schedule, budget, cadence, schema or source-request change.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "packages/opcg_source_identity/src/opcg_source_identity/raw_payload.py"
+      ],
+      "effects": [
+        "application",
+        "staging_deployment"
+      ],
+      "reason": "Reader: a dictionary may be a plaintext row of the same source and parser at any URL (sibling), or an encoded row at the identical URL whose own dictionary is plaintext (anchor). Two levels at most, every level hash-checked, any other shape refuses. Output bytes are still checked against the snapshot content_hash, so evidence is byte-identical or refused."
+    },
+    {
+      "files": [
+        "services/api/app/services/raw_dictionary_storage.py"
+      ],
+      "effects": [
+        "application",
+        "staging_deployment",
+        "subsystem_activation"
+      ],
+      "reason": "Writer: parsers yuyutei-recurring-discovery-v1 and snkr-published-discovery-v1 join the allowlist (same-URL dictionaries, active on rollout under the existing daily-v1 caps). RAW_DICTIONARY_SIBLING=true (default false) adds sibling and anchor bases; candidate selection reads IDs, URLs and the ledger only, then locks one exact row with the plaintext guard. Same 25% savings rule, admission caps, try-lock, single-INSERT and reconstruction-before-write guards."
+    },
+    {
+      "files": [
+        "services/api/app/services/raw_dictionary_backup.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Portable backup validation keeps source_id and parser_version equality but no longer requires the same URL, so a sibling dictionary validates. Bodies stay complete plaintext."
+    },
+    {
+      "files": [
+        "scripts/ops/lossless.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "verify-lossless accepts a sibling base and a bounded anchor (same URL, its own ledger base plaintext and older, same source and parser), rebuilding the anchor independently and with the package decoder before checking the row."
+    },
+    {
+      "files": [
+        "scripts/ops/encoding_sample.py",
+        "scripts/ops/run.py"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Read-only encoding sample behind verify-lossless ledger_floor=sample (no workflow change): pairs recent plaintext rows the way the writer would and encodes them in memory; reports median/p90 encoded bytes and gate_pass. No writes, no source requests."
+    },
+    {
+      "files": [
+        "scripts/collector_variables.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "RAW_DICTIONARY_SIBLING (true/false, default false) joins the allowed writer keys, so the owner flips it through the verified redeploy path that keeps the exact-commit marker."
+    },
+    {
+      "files": [
+        "services/api/tests/test_raw_payload_reader.py",
+        "services/api/tests/test_raw_dictionary_storage_postgres.py",
+        "services/api/tests/test_raw_dictionary_backup.py",
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_collector_variables.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Sibling and two-level anchor reconstruction, three levels and moved anchors refused; writer switch off keeps same-URL only, sibling first check then anchors on the first check, family and URL class guards, encoded rows never siblings, discovery parsers encode; backup sibling validity; lossless anchor checks; encoding sample pairing and gate; variable allowlist."
+    },
+    {
+      "files": [
+        "docs/agent/RAW_STORAGE_WRITER.md",
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Documents sibling and anchor dictionaries, the switch, readers-before-writers order and the encoding-sample runbook input."
+    }
+  ],
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "0a3c7f35-d282-4e25-8197-70f8f3283bfa"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "ac493f4b-bf25-4598-bd48-5f73c9d2c011"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "e42e9c4a-b54d-495d-9010-072ecdaa3241"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "548d1a23-9bc2-49d4-9d15-62a08edeca0d"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "06d64d9a-6bfa-4f27-b75a-732b446bedbf"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "5b4ff8a2-9465-4619-b321-8df037bcf925"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "ee64bf59-544e-47c3-a604-2fa2041f3baf"
+      },
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97"
+      }
+    ]
+  },
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "yuyutei-collector-shard-0",
+          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+          "recovery_deployment_id": "0a3c7f35-d282-4e25-8197-70f8f3283bfa"
+        },
+        {
+          "name": "yuyutei-collector-shard-1",
+          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+          "recovery_deployment_id": "ef57061d-cf9d-4b2b-9630-13aa391f0b0a"
+        },
+        {
+          "name": "yuyutei-collector-shard-2",
+          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+          "recovery_deployment_id": "ac493f4b-bf25-4598-bd48-5f73c9d2c011"
+        },
+        {
+          "name": "yuyutei-collector-shard-3",
+          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+          "recovery_deployment_id": "e42e9c4a-b54d-495d-9010-072ecdaa3241"
+        },
+        {
+          "name": "yuyutei-collector-shard-4-v2",
+          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+          "recovery_deployment_id": "548d1a23-9bc2-49d4-9d15-62a08edeca0d"
+        },
+        {
+          "name": "yuyutei-collector-shard-5",
+          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+          "recovery_deployment_id": "06d64d9a-6bfa-4f27-b75a-732b446bedbf"
+        },
+        {
+          "name": "yuyutei-collector-shard-6",
+          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+          "recovery_deployment_id": "5b4ff8a2-9465-4619-b321-8df037bcf925"
+        },
+        {
+          "name": "yuyutei-collector-shard-7",
+          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+          "recovery_deployment_id": "fd0c2ac5-80d4-48e4-8529-e3dd943fe823"
+        },
+        {
+          "name": "yuyutei-collector-shard-8",
+          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+          "recovery_deployment_id": "ee64bf59-544e-47c3-a604-2fa2041f3baf"
+        },
+        {
+          "name": "snkrdunk-collector",
+          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+          "recovery_deployment_id": "a8fa2cca-0c8e-4050-a67b-8c6e50485f97"
+        },
+        {
+          "name": "Staging Postgres (no migration; new raw_snapshots rows and raw_snapshot_dictionaries ledger rows only)"
+        }
+      ],
+      "routes": [
+        "Existing scheduled collector turns only; no new endpoint, schedule, manual run or source request"
+      ],
+      "dependencies": [
+        "#196 (railway variable read fallback) merged first: delivery verify and the collector rollout read Postgres variables",
+        "daily-v1 RAW writer already enabled on staging collectors (RAW_DICTIONARY_STORAGE_ENABLED=true); unchanged"
+      ],
+      "deployment_impact": "All nine Yuyu shards and SNKRDUNK are rolled out to the merge (staging-automerge only). With the switch off, the only storage change is discovery pages encoding on their own URL (ESTIMATE about 4 MB/day saved). Sibling and anchor encodings start only when the owner sets RAW_DICTIONARY_SIBLING=true after the encoding sample passes.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 70
+    },
+    "recovery": {
+      "artifact": "ea2bfa0cc48d2a10959b8bbe9b13743397e3c51e",
+      "procedure": "During rollout: automatic restore of every released collector to its captured verified image (deploy_staging_collectors roll_back). After delivery: set RAW_DICTIONARY_SIBLING=false with scripts/collector_variables.py if it was flipped; then, if needed, a native revert PR delivered by staging-automerge with a ten-collector rollout. Never roll collectors back to a reader without sibling/anchor support while sibling or anchor encodings exist: expand them first (expand_snapshot) or keep this reader.",
+      "trigger": "Any RAW reconstruction failure, a verify-lossless failure on a ledger row written after this merge, a collector run failing on RAW persistence, or any source, identity or price change.",
+      "backup": "Not applicable: no schema change and no existing row is rewritten; portable backups export complete plaintext.",
+      "validation": [
+        "services/api/tests/test_raw_payload_reader.py",
+        "services/api/tests/test_raw_dictionary_storage_postgres.py",
+        "services/api/tests/test_raw_dictionary_backup.py",
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "backend-tests",
+        "collector-tests",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/verify_yuyu_raw_reader_component.py",
+        "scripts/verify_snkr_published_discovery_component.py",
+        "scripts/ops/lossless.py"
+      ],
+      "observation_window": "staging-automerge delivery receipt (all ten collectors at the merge), then verify-lossless from the pre-merge ledger max and the encoding sample within 24 h."
+    }
+  },
+  "diff_sha256": "23584bf0c36bffcb3ad7f4174134f3dc505450f681575d38fb3066f7d26430ff"
+}

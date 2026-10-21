@@ -30,6 +30,7 @@ import generate_staging_state as state
 ALLOWED = {
     "RAW_DICTIONARY_STORAGE_ENABLED": {"true", "false"},
     "RAW_DICTIONARY_STORAGE_MODE": {"canary", "daily-v1"},
+    "RAW_DICTIONARY_SIBLING": {"true", "false"},
     "APP_ENV": {"staging"},
 }
 MARKER = "Structured RAW health exact commit "
@@ -185,10 +186,10 @@ def await_success(clone, node, commit, read, clock, sleep, wait_seconds):
 
 def effective(previous, keys):
     """Values to restore on rollback. Unset writer keys become their code defaults
-    (ENABLED=false, MODE=canary); an unset APP_ENV is left as staging, which every
+    (ENABLED=false, MODE=canary, SIBLING=false); an unset APP_ENV is left as staging, which every
     collector requires and which changes no behaviour while the writer is OFF."""
     defaults = {"RAW_DICTIONARY_STORAGE_ENABLED": "false", "RAW_DICTIONARY_STORAGE_MODE": "canary",
-                "APP_ENV": "staging"}
+                "RAW_DICTIONARY_SIBLING": "false", "APP_ENV": "staging"}
     return {k: previous.get(k) or defaults[k] for k in keys}
 
 
