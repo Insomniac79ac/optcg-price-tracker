@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 from io import StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from verify_staging_delivery import validate_state, get, state, wait_for_delivery, run_component_checks, decide_api, resolve_api_sha, collector_token_check
+from verify_staging_delivery import validate_state, get, state, wait_for_delivery, run_component_checks, decide_api, resolve_api_sha, collector_token_check, wait_for_frontend_runtime, RUNTIME_SHA_WAIT_SECONDS
 
 
 class VerificationTests(unittest.TestCase):
@@ -242,6 +242,53 @@ class SkippedApiBuildTests(unittest.TestCase):
                                      patterns=lambda: self.patterns, changed=lambda m: self.docs,
                                      unchanged=lambda m, w: (lambda s: True), clock=lambda: 1, sleep=Mock())
         self.assertEqual((result["mode"], result["sha"], result["watched_changes"]), ("skip", "b" * 40, []))
+
+
+class FrontendRuntimeWaitTests(unittest.TestCase):
+    expected, old = "a" * 40, "b" * 40
+
+    def clocked(self):
+        now = [0]
+        def sleep(seconds):
+            now[0] += seconds
+        return (lambda: now[0]), sleep
+
+    def reader(self, *shas):
+        seen = []
+        def read(url):
+            seen.append(url)
+            return {"web": {"source_commit": shas[min(len(seen), len(shas)) - 1]}}
+        return read, seen
+
+    def test_bound_is_ten_minutes(self):
+        self.assertEqual(RUNTIME_SHA_WAIT_SECONDS, 600)
+
+    def test_deploy_lag_then_match_passes_and_reports_the_wait(self):
+        clock, sleep = self.clocked()
+        read, seen = self.reader(self.old, self.old, self.expected)
+        waited = wait_for_frontend_runtime(self.expected, read=read, clock=clock, sleep=sleep)
+        self.assertEqual(waited, 30)
+        self.assertEqual(len(seen), 3)
+        self.assertEqual(set(seen), {"https://optcg-price-tracker-staging.vercel.app/api/version"})
+
+    def test_immediate_match_does_not_sleep(self):
+        sleep = Mock()
+        read, _ = self.reader(self.expected)
+        self.assertEqual(wait_for_frontend_runtime(self.expected, read=read, clock=lambda: 0, sleep=sleep), 0)
+        sleep.assert_not_called()
+
+    def test_mismatch_past_the_bound_fails_for_real(self):
+        clock, sleep = self.clocked()
+        read, seen = self.reader(self.old)
+        with self.assertRaisesRegex(state.VerificationError, "Frontend runtime SHA disagrees with platform"):
+            wait_for_frontend_runtime(self.expected, read=read, clock=clock, sleep=sleep)
+        self.assertEqual(clock(), 600)
+        self.assertEqual(len(seen), 600 // 15 + 1)
+
+    def test_match_at_the_bound_still_passes(self):
+        clock, sleep = self.clocked()
+        read, _ = self.reader(*([self.old] * 40 + [self.expected]))
+        self.assertEqual(wait_for_frontend_runtime(self.expected, read=read, clock=clock, sleep=sleep), 600)
 
 
 class ComponentEnvTests(unittest.TestCase):

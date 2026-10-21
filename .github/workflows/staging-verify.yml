@@ -3,6 +3,15 @@ name: Verify staging merge
 on:
   push:
     branches: [staging]
+  # Re-verify a merge whose verification failed on deploy lag. Dispatch from
+  # staging; expected_sha must still be the staging head, else the run exits
+  # as obsolete.
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full 40-hex staging commit to re-verify (must be the current staging head)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -13,13 +22,17 @@ concurrency:
 
 jobs:
   verify:
-    if: github.repository == 'Insomniac79ac/optcg-price-tracker' && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    if: >-
+      github.repository == 'Insomniac79ac/optcg-price-tracker' && vars.STAGING_AUTONOMY_ENABLED == 'true'
+      && (github.event_name == 'push' || github.ref == 'refs/heads/staging')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Platform wait (900 s) plus the frontend runtime SHA wait (600 s) plus the checks.
+    timeout-minutes: 45
     environment: staging-delivery
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.expected_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -38,17 +51,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
           STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
-          EXPECTED: ${{ github.sha }}
+          EXPECTED: ${{ inputs.expected_sha || github.sha }}
         run: |
           test -n "$RAILWAY_TOKEN"
           test -n "$STAGING_VERCEL_READ_TOKEN"
-          current=$(gh api repos/Insomniac79ac/optcg-price-tracker/branches/staging --jq '.commit.sha')
-          if [ "$current" != "$EXPECTED" ]; then
-            echo 'Obsolete queued verification; newer staging commit owns verification.'
-            echo "current=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "current=true" >> "$GITHUB_OUTPUT"
+          # Push: this merge. Dispatch: expected_sha, only while it is the staging head.
+          python scripts/staging_verify_head.py --expected "$EXPECTED"
+          if ! grep -qx 'current=true' "$GITHUB_OUTPUT"; then exit 0; fi
           # Fleet state plus the merge's own mission, if it added one. A changed,
           # removed or duplicated mission, or unreadable fleet state, fails.
           export STAGING_MISSION_MANIFEST="$RUNNER_TEMP/staging-mission.json"
@@ -68,7 +77,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: staging-verification-${{ github.sha }}
+          name: staging-verification-${{ inputs.expected_sha || github.sha }}
           path: |
             docs/agent/evidence/latest-web-smoke.json
             docs/agent/CURRENT_STATE.yaml

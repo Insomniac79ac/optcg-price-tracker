@@ -17,6 +17,9 @@ import generate_staging_state as state
 
 WEB = "https://optcg-price-tracker-staging.vercel.app"
 API = "https://optcg-price-tracker-staging.up.railway.app"
+# Vercel can report the merge READY before the alias serves it: #189 and #190
+# failed the runtime SHA check 1-2 minutes after merge, a later Verify passed.
+RUNTIME_SHA_WAIT_SECONDS = 600
 
 
 def require(condition, message):
@@ -377,6 +380,20 @@ def wait_for_delivery(expected, api_sha, deadline, *, collect=None, clock=time.m
         sleep(min(15, max(0, deadline-clock())))
 
 
+def wait_for_frontend_runtime(expected, *, read=None, wait_seconds=RUNTIME_SHA_WAIT_SECONDS,
+                              clock=time.monotonic, sleep=time.sleep):
+    """Poll web /api/version until it serves the merge, bounded; then fail for real.
+    Returns the seconds waited."""
+    read = read or get
+    start = clock()
+    deadline = start + wait_seconds
+    while True:
+        if read(WEB + "/api/version")["web"].get("source_commit") == expected:
+            return round(clock() - start)
+        require(clock() < deadline, "Frontend runtime SHA disagrees with platform")
+        sleep(min(15, max(0, deadline - clock())))
+
+
 def collector_token_check(read=None):
     """The API must accept a pass the website signs: both hold API_JWT_SECRET
     and the copies diverged once unnoticed (2026-10-15). The website route
@@ -412,9 +429,7 @@ def main():
     step("native deployments ready")
     evidence = wait_for_delivery(args.expected, args.api_sha, deadline)
     step("web /api/version")
-    version = get(WEB + "/api/version")
-    require(version["web"].get("source_commit") == args.expected,
-            "Frontend runtime SHA disagrees with platform")
+    runtime_wait = wait_for_frontend_runtime(args.expected)
     step("API /health and /version")
     health, api_version = get(API + "/health"), get(API + "/version")
     require(health.get("app_env") == "staging" and health.get("status") == "ok"
@@ -447,7 +462,8 @@ def main():
     require(get(WEB + "/api/version")["web"].get("source_commit") == args.expected, "Frontend changed during verification")
     snapshot = state.write_snapshot(evidence, state.CANONICAL_OUTPUT)
     result = {"verified_at": state.timestamp(), "expected_commit": args.expected,
-              "frontend": evidence["frontend"], "api": api_version,
+              "frontend": evidence["frontend"], "frontend_runtime_wait_seconds": runtime_wait,
+              "api": api_version,
               "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
               "migration_revision": args.revision, "routes": routes, "sale_invariant": sale,
               "collector_token_check": token_check,
