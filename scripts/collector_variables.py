@@ -153,8 +153,7 @@ def redeploy(source, node, commit, railway=None, read=delivery.read_deployment):
 
 
 def read_variables(service_id):
-    values = state.command_json(["railway", "variable", "list", "-p", state.PROJECT,
-                                 "-e", state.ENVIRONMENT, "-s", service_id, "--json"])
+    values = state.service_variables(service_id)
     try:
         if (values.get("RAILWAY_PROJECT_ID"), values.get("RAILWAY_ENVIRONMENT_ID")) != (
                 state.PROJECT, state.ENVIRONMENT):

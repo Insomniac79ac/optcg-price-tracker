@@ -150,8 +150,7 @@ def sale_audit():
     from psycopg.rows import dict_row
     proxies = state.railway(f'query {{ tcpProxies(environmentId:"{state.ENVIRONMENT}", serviceId:"{state.POSTGRES}") {{ domain proxyPort applicationPort }} }}')["tcpProxies"]
     require(len(proxies) == 1 and proxies[0]["applicationPort"] == 5432, "Ambiguous staging DB proxy")
-    variables = state.command_json(["railway", "variable", "list", "-p", state.PROJECT,
-                                    "-e", state.ENVIRONMENT, "-s", state.POSTGRES, "--json"])
+    variables = state.service_variables(state.POSTGRES)
     try:
         with psycopg.connect(host=proxies[0]["domain"], port=proxies[0]["proxyPort"],
                             user=variables["PGUSER"], password=variables["PGPASSWORD"],

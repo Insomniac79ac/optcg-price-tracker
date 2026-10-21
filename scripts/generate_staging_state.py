@@ -51,13 +51,38 @@ def json_default(value):
     raise TypeError(type(value).__name__)
 
 
+# Failure classes for CLI/API error text. Only the class name is ever reported: the text
+# itself may quote request context, so it is matched in memory and dropped.
+FAILURE_CLASSES = (
+    ("unauthorized", r"unauthori[sz]ed|not authori[sz]ed|forbidden|permission|not signed in|log ?in|"
+                     r"token.{0,20}(invalid|expired|not found)|(invalid|expired).{0,20}token"),
+    ("rate_limited", r"rate.?limit|too many requests|\b429\b"),
+    ("not_found", r"not found|no such|does not exist|\b404\b"),
+    ("server", r"\b5\d\d\b|internal server|bad gateway|service unavailable"),
+    ("network", r"timed? ?out|connection|dns|network|tls|certificate|resolve"),
+    ("usage", r"unexpected argument|unrecognized|usage:|invalid value|unknown (command|flag)"),
+)
+
+
+def failure_class(text):
+    for name, pattern in FAILURE_CLASSES:
+        if re.search(pattern, text or "", re.I):
+            return name
+    return "unclassified" if (text or "").strip() else "silent"
+
+
 def command_json(args):
     if args[0] == "vercel" and os.environ.get("STAGING_VERCEL_READ_TOKEN"):
         args = [*args, "--token", os.environ["STAGING_VERCEL_READ_TOKEN"]]
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=60)
         if result.returncode:
-            raise VerificationError(f"{args[0]} read failed; no snapshot replaced")
+            # Exit code and class only; never the output.
+            raise VerificationError(
+                f"{args[0]} {args[1] if len(args) > 1 else ''} read failed "
+                f"(exit {result.returncode}, {failure_class(result.stderr + result.stdout)}); "
+                "no snapshot replaced"
+            )
         return json.loads(result.stdout)
     except (subprocess.TimeoutExpired, OSError, ValueError):
         raise VerificationError(
@@ -68,8 +93,30 @@ def command_json(args):
 def railway(query):
     response = command_json(["railway", "api", query])
     if response.get("errors") or not response.get("data"):
-        raise VerificationError("Railway query failed")
+        messages = " ".join(str(e.get("message", "")) for e in response.get("errors") or [] if isinstance(e, dict))
+        raise VerificationError(f"Railway query failed ({failure_class(messages)})")
     return response["data"]
+
+
+def service_variables(service_id):
+    """Rendered variables of one pinned staging service, in memory only; caller clears them.
+
+    `railway variable list` first. If the CLI read fails, the same token reads the documented
+    `variables` GraphQL query through `railway api`, the path every other Railway read here
+    uses. The CLI's failure class goes to stderr (never its output) so a run log shows why.
+    """
+    try:
+        return command_json(["railway", "variable", "list", "-p", PROJECT, "-e", ENVIRONMENT,
+                             "-s", service_id, "--json"])
+    except VerificationError as exc:
+        print(f"{exc}; reading variables through railway api instead", file=sys.stderr, flush=True)
+    values = railway(
+        f'query {{ variables(projectId:"{PROJECT}", environmentId:"{ENVIRONMENT}", '
+        f'serviceId:"{service_id}") }}'
+    )["variables"]
+    if not isinstance(values, dict):
+        raise VerificationError("Railway variables read returned no object")
+    return values
 
 
 def load_queries():
@@ -95,20 +142,7 @@ def database_snapshot(expected_revisions=None):
     if len(proxies) != 1 or proxies[0]["applicationPort"] != 5432:
         raise VerificationError("Staging database endpoint is ambiguous")
     # Fetch freshly scoped credentials into memory; never log or save this response.
-    variables = command_json(
-        [
-            "railway",
-            "variable",
-            "list",
-            "-p",
-            PROJECT,
-            "-e",
-            ENVIRONMENT,
-            "-s",
-            POSTGRES,
-            "--json",
-        ]
-    )
+    variables = service_variables(POSTGRES)
     try:
         with psycopg.connect(
             host=proxies[0]["domain"],

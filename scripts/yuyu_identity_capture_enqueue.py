@@ -213,9 +213,7 @@ def staging_session(*, writable):
     )["tcpProxies"]
     if len(proxy) != 1 or proxy[0]["applicationPort"] != 5432:
         raise Refused("staging Postgres proxy not uniquely identified")
-    variables = state.command_json(
-        ["railway", "variable", "list", "-p", state.PROJECT, "-e", state.ENVIRONMENT, "-s", state.POSTGRES, "--json"]
-    )
+    variables = state.service_variables(state.POSTGRES)
     options = "-c statement_timeout=60000 -c lock_timeout=10000"
     if not writable:
         options += " -c default_transaction_read_only=on"
