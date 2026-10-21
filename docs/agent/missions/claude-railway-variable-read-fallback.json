@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "mission": "Restore staging DB reads (owner 2026-10-21 09:00Z, first priority): since 07:14Z every ops-readonly db-diagnostic and staging-state run failed at `railway variable list -s <postgres> --json` (exit non-zero) while `railway status` and `railway api` reads kept working with the same token. Report the CLI exit code and a failure class (never its output), and read service variables through the documented `variables` GraphQL query via `railway api` when the CLI read fails. Every delivery verify and the collector rollout read Postgres variables the same way, so this lands before the next delivery.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/generate_staging_state.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "command_json failure text gains '<cmd> <sub> read failed (exit N, <class>)'; the class comes from a fixed regex list matched in memory, the output is never reported. railway() names the GraphQL error class. New service_variables(service_id): CLI first, then `railway api` query variables(projectId, environmentId, serviceId) on the same pinned staging ids; the CLI failure line goes to stderr. database_snapshot uses it."
+    },
+    {
+      "files": [
+        "scripts/ops/db.py",
+        "scripts/verify_staging_delivery.py",
+        "scripts/deploy_staging_collectors.py",
+        "scripts/collector_variables.py",
+        "scripts/yuyu_identity_capture_enqueue.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Postgres (and collector) variable reads call state.service_variables instead of the CLI directly. Same values, same in-memory handling, same read-only connections; no new destination."
+    },
+    {
+      "files": [
+        "scripts/tests/test_generate_staging_state.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Exit/class reported without output or secret, failure classes, CLI success used directly, CLI failure falls back to the API query with pinned ids, both failing raises a classified error."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub Actions ops-readonly, ops-write, staging-automerge, Verify staging merge"
+      ],
+      "routes": [
+        "Railway GraphQL via `railway api` (variables query, staging project/environment only)"
+      ],
+      "dependencies": [
+        "staging at ea2bfa0c (after #195)"
+      ],
+      "deployment_impact": "No collector rollout, no RAW migration, no fleet change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "ea2bfa0cc48d2a10959b8bbe9b13743397e3c51e",
+      "procedure": "Native revert PR of this merge with its own docs/agent/missions/<name>.json; reads return to the CLI-only path.",
+      "trigger": "The fallback reads a different destination, or any run output shows a variable value.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_generate_staging_state.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/verify_staging_delivery.py",
+        "scripts/ops/db.py"
+      ],
+      "observation_window": "This PR's own delivery verify (reads Postgres variables through the new path), then one ops-readonly db-diagnostic; its log names the CLI failure class."
+    }
+  },
+  "diff_sha256": "9fb9456363d6c21054035d5b8227486e6cc0b314bee54784fceaecd9ef21fcc8"
+}

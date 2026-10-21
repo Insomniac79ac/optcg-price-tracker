@@ -260,10 +260,7 @@ def open_attempts(prefix):
     )["tcpProxies"]
     if len(proxies) != 1 or proxies[0]["applicationPort"] != 5432:
         raise state.VerificationError("Staging database endpoint is ambiguous")
-    variables = state.command_json(
-        ["railway", "variable", "list", "-p", state.PROJECT, "-e", state.ENVIRONMENT,
-         "-s", state.POSTGRES, "--json"]
-    )
+    variables = state.service_variables(state.POSTGRES)
     try:
         with psycopg.connect(
             host=proxies[0]["domain"], port=proxies[0]["proxyPort"],
