@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "mission": "Record the owner's merge-policy decision (2026-10-23 05:00 MYT, 'merge owner approved queue please'): the coordinating session may merge PRs the owner approved in the queue, one at a time, when they change nothing under .github/** or .claude/** and are not collector releases, checks are green, the PR is current and mergeable, inside the merge window with no delivery running, and the previous merge's Verify staging merge passed. hold-for-owner, ops-write approvals and collector delivery rules are unchanged.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/AUTONOMY_POLICY.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "New 'Coordinator merges' paragraph before 'Still the owner's'. No change to hold-for-owner, ops-write approval, collector delivery or quiet windows."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Agent operating policy for staging merges"
+      ],
+      "routes": [
+        "Documentation only; no runtime route"
+      ],
+      "dependencies": [
+        "staging after #201"
+      ],
+      "deployment_impact": "Documentation only: no service, collector, fleet or schema change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "6657bc864e4b7416cf743ec63b7917e5be20286e",
+      "procedure": "Native revert PR with its own mission file; the owner hand-merges every queue PR again.",
+      "trigger": "The owner withdraws the decision, or a coordinator merge breaks a listed condition.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/AUTONOMY_POLICY.md"
+      ],
+      "observation_window": "The next queue merges and their Verify staging merge runs."
+    }
+  },
+  "diff_sha256": "7f79e4d37f26615a139e45404a5f796cd3241afb22e7f45c616c05db2cd5d323"
+}
