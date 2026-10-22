@@ -168,6 +168,27 @@ staging. Nobody runs `alembic upgrade` against staging by hand, and agents never
 5. After the apply, verify staging on its head (`staging-state`, or a `Verify staging merge`
    re-run): until the migration is applied, verification fails on the revision by design.
 
+`collector-redeploy` (`scripts/ops/collector_redeploy.py`): a new deployment of every staging
+collector on its own verified image, so it picks up rotated shared variables (added 2026-10-22,
+after the Postgres password was rotated following Railway's security incident). A restart or a
+cron run keeps the variables of the deployment it runs, and Railway's dashboard offers only
+"Deploy latest commit" on a collector, which builds from the branch and loses the verified upload.
+
+1. For each of the 10 collectors, in name order, the newest committed rollout receipt that
+   deployed it (the `fleet-vs-receipt` default chain) gives the commit and image digest.
+2. Dry run (default): the live deployment and the redeploy source each collector would use: the
+   newest redeployable deployment with that exact-commit marker and byte-identical image. The
+   summary carries `plan_sha256` over service, commit, digest and live deployment, so any
+   deployment in between refuses the apply. A collector with no source fails the dry run.
+3. `apply=true` with `expected_sha256=<plan_sha256>` runs `collector_variables.restore` per
+   collector: stages `APP_ENV=staging` with `--skip-deploys` (a value every collector already
+   carries), redeploys the source with the previous image tag, waits for SUCCESS and checks
+   digest, cron schedule, start command and read-back. Stops at the first failure and before
+   02:00 UTC. The summary lists each new deployment id and digest. No build, no code change, no
+   source job.
+4. Afterwards `fleet-vs-receipt` reports the new deployment ids as records after the receipts,
+   by design; the image digests are unchanged.
+
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
 
@@ -177,7 +198,8 @@ dispatch and again right before the runbook runs:
   `Verify staging merge`). `Serialized staging delivery` is `workflow_call` only and has no runs
   of its own; a workflow that calls it is the one to list.
 
-Collector releases are not runbooks: they stay on the CI delivery path.
+Collector releases are not runbooks: they stay on the CI delivery path. `collector-redeploy` is
+not a release: it puts each collector back on the image it already runs.
 
 ## Commands (cloud session, REST only)
 

@@ -100,6 +100,13 @@ def _refresh_backfill(args, out):
     return refresh_backfill.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
 
 
+def _collector_redeploy(args, out):
+    from ops import collector_redeploy
+    if args.count is not None:
+        raise common.Refused("collector-redeploy takes no count: it covers all 10 collectors")
+    return collector_redeploy.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
+
+
 def _apply_migration(args, out):
     from ops import apply_migration
     return apply_migration.run(out, apply=args.apply, revision=args.revision, parent=args.parent,
@@ -122,6 +129,8 @@ RUNBOOKS = {
     "plan-refresh-backfill": ("write", True, _refresh_backfill),
     # Schema step: collectors read these tables, so it keeps the collector quiet windows.
     "apply-migration": ("write", True, _apply_migration),
+    # Same verified image, new deployment (picks up rotated shared variables); no build.
+    "collector-redeploy": ("write", True, _collector_redeploy),
 }
 
 
