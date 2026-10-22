@@ -412,6 +412,32 @@ class VariableReadTests(unittest.TestCase):
         self.assertEqual(generator.failure_class("something else"), "unclassified")
         self.assertEqual(generator.failure_class(""), "silent")
 
+    def test_db_failure_class_never_echoes_the_message(self):
+        class OperationalError(Exception):
+            sqlstate = None
+
+        class AuthError(OperationalError):
+            sqlstate = "28P01"
+
+        host = "secret-host.proxy.example:12345"
+        cases = [
+            (AuthError(f'connection to server at "{host}" failed: FATAL:  password authentication failed for user "u"'),
+             "auth, AuthError, sqlstate 28P01"),
+            (OperationalError(f'connection to server at "{host}" failed: timeout expired'), "timeout, OperationalError"),
+            (OperationalError(f'connection to server at "{host}" failed: Connection refused'), "refused, OperationalError"),
+            (OperationalError(f'could not translate host name "{host}"'), "dns, OperationalError"),
+            (OperationalError("SSL SYSCALL error: EOF detected"), "tls, OperationalError"),
+            (OperationalError("server closed the connection unexpectedly"), "closed, OperationalError"),
+            (OperationalError("odd"), "unclassified, OperationalError"),
+        ]
+        for error, expected in cases:
+            label = generator.db_failure_class(error)
+            self.assertEqual(label, expected)
+            self.assertNotIn("secret-host", label)
+        bad = OperationalError("x")
+        bad.sqlstate = "not a code"
+        self.assertEqual(generator.db_failure_class(bad), "unclassified, OperationalError")
+
     def test_cli_success_is_used_directly(self):
         ok = self.completed(0, stdout=json.dumps({"PGUSER": "u"}))
         with patch.object(generator.subprocess, "run", return_value=ok) as run:
