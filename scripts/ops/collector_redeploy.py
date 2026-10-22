@@ -6,24 +6,33 @@ rotated after Railway's security incident and every collector kept the old one).
 dashboard offers only "Deploy latest commit" on a collector, which builds from the branch and
 loses the verified upload. This runbook makes the new deployment without a build:
 
-For each of the 10 collectors, in name order, the newest committed rollout receipt that deployed
-it (fleet.DEFAULT_RECEIPTS) gives the exact commit and image digest. collector_variables.restore
-stages APP_ENV=staging with --skip-deploys (a value every collector already carries, so nothing
-changes), redeploys the newest redeployable deployment that carries that exact-commit marker and
-the byte-identical image, waits for SUCCESS, and checks digest, cron schedule, start command and
-the read-back. No branch build, no code change, no source job. Stops at the first failure.
+For each of the 10 collectors, in name order, the fleet pin in docs/agent/STAGING_FLEET.json
+(snkr_component for snkrdunk-collector, yuyu_reader_component for the yuyutei shards; the same
+pins Verify staging merge checks) gives the exact commit. The source is the newest redeployable
+deployment carrying that exact-commit marker, and its image digest is the one restored.
+collector_variables.restore stages APP_ENV=staging with --skip-deploys (a value every collector
+already carries, so nothing changes), redeploys that source, waits for SUCCESS, and checks digest,
+cron schedule, start command and the read-back. No branch build, no code change, no source job.
+Stops at the first failure.
 
-Dry run (default): per collector, the receipt commit and digest, the live deployment and the
-source deployment a redeploy would use. The plan SHA-256 covers service, commit, digest and the
-live deployment id, so any deployment between the dry run and the apply refuses the apply.
+The committed rollout receipts are not used: a delivery's receipt is a CI artifact and only some
+were committed (2026-10-22: the receipt chain still named the PR #103 SNKR image, while the fleet
+pin and the live collector had moved to the PR #180 delivery).
+
+Dry run (default): per collector, the pinned commit, the source deployment and its digest, and the
+live deployment. The plan SHA-256 covers service, commit, digest and the live deployment id, so any
+deployment between the dry run and the apply refuses the apply.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 from pathlib import Path
+import re
 
-from ops import common, fleet
+from ops import common
+
+FLEET = "docs/agent/STAGING_FLEET.json"
 
 NOOP = {"APP_ENV": "staging"}
 
@@ -43,24 +52,49 @@ def plan_sha(rows):
     return hashlib.sha256(json.dumps(pinned, separators=(",", ":")).encode()).hexdigest()
 
 
-def plan(live, receipts, names, source_for):
-    """One row per collector: receipt commit and digest, live deployment, redeploy source."""
-    rows = []
+def fleet_pins(names, root=None):
+    """{collector: pinned commit} from STAGING_FLEET.json; refuses a missing or non-SHA pin."""
+    verification = json.loads((Path(root or common.ROOT) / FLEET).read_text())["deployment_verification"]
+    keys = {"snkr": "snkr_component", "yuyu": "yuyu_reader_component"}
+    pins = {}
     for name in sorted(names):
+        key = keys["snkr"] if name == "snkrdunk-collector" else keys["yuyu"] if name.startswith(
+            "yuyutei-collector-shard-") else None
+        commit = verification.get(key) if key else None
+        if not (isinstance(commit, str) and re.fullmatch("[0-9a-f]{40}", commit)):
+            raise common.Refused(f"{name}: no full commit pin in {FLEET}")
+        pins[name] = commit
+    return pins
+
+
+def pinned_source(node, commit, *, read, listing, error=Exception):
+    """Newest redeployable deployment carrying the pin's exact-commit marker and an image."""
+    for identity in listing(node["serviceId"]):
+        try:
+            candidate = read(identity, node["serviceId"], commit)
+        except error:
+            continue
+        digest = (candidate.get("meta") or {}).get("imageDigest") or ""
+        if candidate.get("canRedeploy") and re.fullmatch("sha256:[0-9a-f]{64}", digest):
+            return candidate
+    raise error("No redeployable deployment of the pinned commit")
+
+
+def plan(live, pins, source_for):
+    """One row per collector: pinned commit, redeploy source and its digest, live deployment."""
+    rows = []
+    for name, commit in sorted(pins.items()):
         node = live.get(name)
-        owner = fleet.receipt_for(name, receipts)
-        if node is None or owner is None:
-            raise common.Refused(f"{name}: " + ("service not found" if node is None else "in no receipt"))
-        data = owner[1]
-        row = data["deployments"][name]
-        commit = row.get("source_sha") or data["source_sha"]
-        digest = row.get("image_digest") or row.get("digest")
+        if node is None:
+            raise common.Refused(f"{name}: service not found")
         latest = node.get("latestDeployment") or {}
-        out = {"service": name, "commit": commit, "image_digest": digest,
+        out = {"service": name, "commit": commit, "image_digest": None,
                "live_deployment": latest.get("id"), "live_status": latest.get("status"),
                "schedule": node.get("cronSchedule")}
         try:
-            out["source_deployment"] = source_for(node, commit, digest)["id"]
+            source = source_for(node, commit)
+            out["source_deployment"] = source["id"]
+            out["image_digest"] = source["meta"]["imageDigest"]
         except Exception as error:  # noqa: BLE001 - provider text is never echoed
             out["source_deployment"] = None
             out["problem"] = str(error) if type(error).__name__ == "VerificationError" else type(error).__name__
@@ -93,17 +127,20 @@ def run(out_dir, *, apply=False, expected_sha256=""):
     import generate_staging_state as state
 
     state.staging_environment()
-    receipts = fleet.load_receipts(None)
+    pins = fleet_pins(cv.delivery.NAMES)
     live = cv.delivery.inspect()
-    rows = plan(live, receipts, cv.delivery.NAMES, cv.original_source)
+    rows = plan(live, pins, lambda node, commit: pinned_source(
+        node, commit, read=cv.delivery.read_deployment, listing=cv.recent_deployments,
+        error=state.VerificationError))
     sha = plan_sha(rows)
     missing = [r["service"] for r in rows if not r["source_deployment"]]
     out = {"observed_at": state.timestamp(), "apply": bool(apply), "plan_sha256": sha,
-           "receipts": [str(p.relative_to(common.ROOT)) for p, _ in receipts], "plan": rows}
+           "pins_from": FLEET, "plan": rows}
     summary = {"plan_sha256": sha, "collectors": len(rows), "apply": bool(apply),
                "no_source": missing,
-               "plan": [{k: r.get(k) for k in ("service", "commit", "live_deployment", "live_status",
-                                               "source_deployment", "problem") if r.get(k) is not None}
+               "plan": [{k: r.get(k) for k in ("service", "commit", "image_digest", "live_deployment",
+                                               "live_status", "source_deployment", "problem")
+                         if r.get(k) is not None}
                         for r in rows]}
     if missing:
         summary["ok"] = False

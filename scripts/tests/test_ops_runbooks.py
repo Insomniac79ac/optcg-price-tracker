@@ -690,13 +690,6 @@ class RefreshBackfill(unittest.TestCase):
 
 
 class CollectorRedeploy(unittest.TestCase):
-    def live(self, receipts, status="SUCCESS"):
-        nodes = {}
-        for name in receipts[0][1]["deployments"]:
-            nodes[name] = {"serviceId": f"svc-{name}", "cronSchedule": "1 * * * *",
-                           "latestDeployment": {"id": f"live-{name}", "status": status}}
-        return nodes
-
     def test_registered_as_collector_affecting_write(self):
         self.assertEqual(run.RUNBOOKS["collector-redeploy"][:2], ("write", True))
         self.assertEqual(run.kind_of("collector-redeploy", True), (True, True))
@@ -712,40 +705,68 @@ class CollectorRedeploy(unittest.TestCase):
         with self.assertRaisesRegex(common.Refused, "no count"):
             run._collector_redeploy(args, "out")
 
-    def test_plan_takes_commit_and_digest_from_the_newest_receipt(self):
-        receipts = fleet.load_receipts(None)
-        seen = []
+    def test_pins_come_from_the_fleet_state(self):
+        import collector_variables as cv
+        fleet_state = json.loads((ROOT / "docs/agent/STAGING_FLEET.json").read_text())["deployment_verification"]
+        pins = collector_redeploy.fleet_pins(cv.delivery.NAMES)
+        self.assertEqual(len(pins), 10)
+        self.assertEqual(pins["snkrdunk-collector"], fleet_state["snkr_component"])
+        for name, commit in pins.items():
+            if name != "snkrdunk-collector":
+                self.assertEqual(commit, fleet_state["yuyu_reader_component"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / collector_redeploy.FLEET
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps({"deployment_verification": dict(fleet_state, snkr_component="merge")}))
+            with self.assertRaisesRegex(common.Refused, "snkrdunk-collector: no full commit pin"):
+                collector_redeploy.fleet_pins(cv.delivery.NAMES, root=tmp)
 
-        def source(node, commit, digest):
-            seen.append((node["serviceId"], commit, digest))
-            return {"id": "src-" + node["serviceId"]}
+    def test_pinned_source_is_the_newest_redeployable_copy_of_the_pin(self):
+        class Mismatch(Exception):
+            pass
 
-        rows = collector_redeploy.plan(self.live(receipts), receipts, receipts[0][1]["deployments"], source)
-        self.assertEqual(len(rows), 10)
-        by = {r["service"]: r for r in rows}
-        self.assertEqual(by["snkrdunk-collector"]["commit"][:7], "a504e47")
-        self.assertEqual(by["snkrdunk-collector"]["image_digest"],
-                         receipts[0][1]["deployments"]["snkrdunk-collector"]["image_digest"])
-        for name, row in receipts[1][1]["deployments"].items():
-            self.assertEqual((by[name]["commit"][:7], by[name]["image_digest"]), ("2bcbe90", row["image_digest"]))
-            self.assertEqual(by[name]["source_deployment"], "src-svc-" + name)
-        self.assertEqual(len(seen), 10)
+        image = "sha256:" + "b" * 64
+        rows = {
+            "new-other-commit": None,  # marker of another commit: read refuses
+            "new-no-image": {"id": "new-no-image", "canRedeploy": True, "meta": {}},  # SKIPPED record
+            "pinned-not-redeployable": {"id": "pinned-not-redeployable", "canRedeploy": False,
+                                        "meta": {"imageDigest": image}},
+            "pinned": {"id": "pinned", "canRedeploy": True, "meta": {"imageDigest": image}},
+            "older-pinned": {"id": "older-pinned", "canRedeploy": True, "meta": {"imageDigest": image}},
+        }
 
-    def test_plan_reports_a_missing_source_and_refuses_a_missing_service(self):
+        def read(identity, service_id, commit):
+            if rows[identity] is None:
+                raise Mismatch("Uploaded deployment destination/source mismatch")
+            return rows[identity]
+
+        found = collector_redeploy.pinned_source({"serviceId": "s"}, "c" * 40, read=read,
+                                                 listing=lambda sid: list(rows), error=Mismatch)
+        self.assertEqual(found["id"], "pinned")
+        with self.assertRaisesRegex(Mismatch, "No redeployable deployment of the pinned commit"):
+            collector_redeploy.pinned_source({"serviceId": "s"}, "c" * 40, read=read,
+                                             listing=lambda sid: ["new-other-commit"], error=Mismatch)
+
+    def test_plan_uses_the_pin_and_the_source_digest(self):
         import generate_staging_state as state
-        receipts = fleet.load_receipts(None)
+        pins = {"snkrdunk-collector": "f" * 40, "yuyutei-collector-shard-0": "2" * 40}
+        live = {n: {"serviceId": "svc-" + n, "cronSchedule": "1 * * * *",
+                    "latestDeployment": {"id": "live-" + n, "status": "FAILED"}} for n in pins}
 
-        def none(node, commit, digest):
-            raise state.VerificationError("No redeployable deployment of the verified upload image")
+        def source(node, commit):
+            if node["serviceId"] == "svc-yuyutei-collector-shard-0":
+                raise state.VerificationError("No redeployable deployment of the pinned commit")
+            return {"id": "src-" + commit[:4], "meta": {"imageDigest": "sha256:" + "d" * 64}}
 
-        rows = collector_redeploy.plan(self.live(receipts), receipts, ["snkrdunk-collector"], none)
-        self.assertIsNone(rows[0]["source_deployment"])
-        self.assertIn("No redeployable", rows[0]["problem"])
-        live = self.live(receipts)
-        live.pop("yuyutei-collector-shard-3")
-        with self.assertRaisesRegex(common.Refused, "shard-3: service not found"):
-            collector_redeploy.plan(live, receipts, live.keys() | {"yuyutei-collector-shard-3"},
-                                    lambda *a: {"id": "x"})
+        rows = {r["service"]: r for r in collector_redeploy.plan(live, pins, source)}
+        self.assertEqual(rows["snkrdunk-collector"]["commit"], "f" * 40)
+        self.assertEqual(rows["snkrdunk-collector"]["source_deployment"], "src-ffff")
+        self.assertEqual(rows["snkrdunk-collector"]["image_digest"], "sha256:" + "d" * 64)
+        self.assertIsNone(rows["yuyutei-collector-shard-0"]["source_deployment"])
+        self.assertIn("pinned commit", rows["yuyutei-collector-shard-0"]["problem"])
+        live.pop("yuyutei-collector-shard-0")
+        with self.assertRaisesRegex(common.Refused, "shard-0: service not found"):
+            collector_redeploy.plan(live, pins, source)
 
     def test_plan_sha_pins_the_live_deployment(self):
         row = {"service": "s", "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64, "live_deployment": "d1"}
