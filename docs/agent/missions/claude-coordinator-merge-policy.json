@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "Record the owner's merge-policy decision (2026-10-23 05:00 MYT, 'merge owner approved queue please'): the coordinating session may merge PRs the owner approved in the queue, one at a time, when they change nothing under .github/** or .claude/** and are not collector releases, checks are green, the PR is current and mergeable, inside the merge window with no delivery running, and the previous merge's Verify staging merge passed. hold-for-owner, ops-write approvals and collector delivery rules are unchanged.",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
