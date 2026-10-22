@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "mission": "Safe class for staging database connection failures (owner GO 2026-10-22, password-rotation recovery): since the Postgres password was rotated, staging-state and db-diagnostic report only 'database read/connection failed' while Railway's Data tab reads the same database. Report class, exception type and SQLSTATE so the cause is visible without echoing the driver message (host, user).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/generate_staging_state.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "DB_FAILURE_CLASSES and db_failure_class(error): class (auth, hba, no_database, timeout, refused, dns, tls, closed, too_many, unclassified, silent), exception type and a 5-character SQLSTATE; the database read failure message gains it. The driver text is matched in memory and dropped, as failure_class already does for CLI text."
+    },
+    {
+      "files": [
+        "scripts/ops/db.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "The ops 'staging database connection failed' refusal gains the same class. Read-only path unchanged."
+    },
+    {
+      "files": [
+        "scripts/tests/test_generate_staging_state.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Each class from a realistic driver message carrying a host; the host never appears in the label; a malformed sqlstate is dropped."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly staging-state and db-diagnostic summaries",
+        "Verify staging merge state snapshot"
+      ],
+      "routes": [
+        "Staging Postgres read-only connection (unchanged; only the failure message changes)"
+      ],
+      "dependencies": [
+        "staging at 153d9d5 (after #199)"
+      ],
+      "deployment_impact": "Tooling only: no service, collector, fleet or schema change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "153d9d5800ffa49305a270ef7c3e997326426093",
+      "procedure": "Native revert PR with its own docs/agent/missions/<name>.json; the messages return to the bare 'failed'.",
+      "trigger": "A summary shows any host, user or password text.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_generate_staging_state.py",
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/generate_staging_state.py",
+        "scripts/ops/db.py"
+      ],
+      "observation_window": "The next ops-readonly staging-state and db-diagnostic runs."
+    }
+  },
+  "diff_sha256": "0a59bb6db575ba750c3d825f7f763bceeafa3c1a3ff1176f2193cbb84e021486"
+}

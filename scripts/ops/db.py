@@ -66,9 +66,10 @@ def connection(row_factory=None, statement_timeout_ms=60000):
         variables.clear()
     try:
         conn = psycopg.connect(**kwargs)
-    except Exception:
-        # Driver errors can carry host and user; never echo them.
-        raise common.Refused("staging database connection failed") from None
+    except Exception as error:
+        # Driver errors can carry host and user; never echo them. Class, type and SQLSTATE only.
+        import generate_staging_state as state
+        raise common.Refused(f"staging database connection failed ({state.db_failure_class(error)})") from None
     finally:
         kwargs.clear()
     conn.read_only = True
