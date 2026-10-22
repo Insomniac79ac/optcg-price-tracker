@@ -5,7 +5,8 @@ run-name: ops-write ${{ inputs.runbook }} apply=${{ inputs.apply }} ${{ inputs.r
 # the owner's approval (required reviewer) and holds no credential; only then does the runbook
 # job get the staging credentials of `staging-delivery`. Dry run by default. Quiet windows and
 # "no staging delivery in progress" are checked at dispatch and again right before the runbook
-# runs. Collector releases are not here: they stay on the CI delivery path.
+# runs. Collector releases are not here: they stay on the CI delivery path (collector-redeploy
+# only redeploys the verified image each collector already runs).
 # docs/agent/OPS_RUNBOOKS.md
 on:
   workflow_dispatch:
@@ -20,12 +21,13 @@ on:
           - enqueue-capture-batch
           - plan-refresh-backfill
           - apply-migration
+          - collector-redeploy
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
         default: false
       expected_sha256:
-        description: "apply only: approved-list (apply-migration: SQL plan) SHA-256 from the dry run the owner reviewed"
+        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy: plan) SHA-256 from the dry run the owner reviewed"
         type: string
         default: ""
       count:

@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -687,6 +687,107 @@ class RefreshBackfill(unittest.TestCase):
     def test_registered_as_collector_affecting_write(self):
         self.assertEqual(run.RUNBOOKS["plan-refresh-backfill"][:2], ("write", True))
         self.assertEqual(run.kind_of("plan-refresh-backfill", False), (False, False))
+
+
+class CollectorRedeploy(unittest.TestCase):
+    def live(self, receipts, status="SUCCESS"):
+        nodes = {}
+        for name in receipts[0][1]["deployments"]:
+            nodes[name] = {"serviceId": f"svc-{name}", "cronSchedule": "1 * * * *",
+                           "latestDeployment": {"id": f"live-{name}", "status": status}}
+        return nodes
+
+    def test_registered_as_collector_affecting_write(self):
+        self.assertEqual(run.RUNBOOKS["collector-redeploy"][:2], ("write", True))
+        self.assertEqual(run.kind_of("collector-redeploy", True), (True, True))
+        args = SimpleNamespace(runbook="collector-redeploy", workflow="ops-readonly", apply=False)
+        with self.assertRaisesRegex(common.Refused, "ops-write"):
+            run.preflight(args, read=None)
+        args = SimpleNamespace(runbook="collector-redeploy", workflow="ops-write", apply=True)
+        with self.assertRaisesRegex(common.Refused, "02:00-06:00"):
+            run.preflight(args, now=utc(2026, 10, 22, 3), read=lambda path: {})
+
+    def test_count_refused(self):
+        args = SimpleNamespace(count=5, apply=False, expected_sha256="")
+        with self.assertRaisesRegex(common.Refused, "no count"):
+            run._collector_redeploy(args, "out")
+
+    def test_plan_takes_commit_and_digest_from_the_newest_receipt(self):
+        receipts = fleet.load_receipts(None)
+        seen = []
+
+        def source(node, commit, digest):
+            seen.append((node["serviceId"], commit, digest))
+            return {"id": "src-" + node["serviceId"]}
+
+        rows = collector_redeploy.plan(self.live(receipts), receipts, receipts[0][1]["deployments"], source)
+        self.assertEqual(len(rows), 10)
+        by = {r["service"]: r for r in rows}
+        self.assertEqual(by["snkrdunk-collector"]["commit"][:7], "a504e47")
+        self.assertEqual(by["snkrdunk-collector"]["image_digest"],
+                         receipts[0][1]["deployments"]["snkrdunk-collector"]["image_digest"])
+        for name, row in receipts[1][1]["deployments"].items():
+            self.assertEqual((by[name]["commit"][:7], by[name]["image_digest"]), ("2bcbe90", row["image_digest"]))
+            self.assertEqual(by[name]["source_deployment"], "src-svc-" + name)
+        self.assertEqual(len(seen), 10)
+
+    def test_plan_reports_a_missing_source_and_refuses_a_missing_service(self):
+        import generate_staging_state as state
+        receipts = fleet.load_receipts(None)
+
+        def none(node, commit, digest):
+            raise state.VerificationError("No redeployable deployment of the verified upload image")
+
+        rows = collector_redeploy.plan(self.live(receipts), receipts, ["snkrdunk-collector"], none)
+        self.assertIsNone(rows[0]["source_deployment"])
+        self.assertIn("No redeployable", rows[0]["problem"])
+        live = self.live(receipts)
+        live.pop("yuyutei-collector-shard-3")
+        with self.assertRaisesRegex(common.Refused, "shard-3: service not found"):
+            collector_redeploy.plan(live, receipts, live.keys() | {"yuyutei-collector-shard-3"},
+                                    lambda *a: {"id": "x"})
+
+    def test_plan_sha_pins_the_live_deployment(self):
+        row = {"service": "s", "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64, "live_deployment": "d1"}
+        sha = collector_redeploy.plan_sha([row])
+        self.assertNotEqual(sha, collector_redeploy.plan_sha([dict(row, live_deployment="d2")]))
+        collector_redeploy.check_apply(False, "", sha)
+        collector_redeploy.check_apply(True, sha, sha)
+        for bad in ("", "x" * 64, "0" * 64):
+            with self.assertRaises(common.Refused):
+                collector_redeploy.check_apply(True, bad, sha)
+
+    def test_apply_redeploys_in_order_and_stops_at_first_failure(self):
+        import generate_staging_state as state
+        rows = [{"service": n, "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64,
+                 "live_deployment": "old-" + n} for n in ("a", "b", "c")]
+        calls = []
+
+        def restore(name, values, commit, digest):
+            calls.append((name, values, commit, digest))
+            if name == "b":
+                raise state.VerificationError("Restore failed: Redeployed image differs from the verified upload")
+            return {"source_deployment": "src-" + name, "deployment": "new-" + name, "image_digest": digest,
+                    "observed_at": "t"}
+
+        done, stopped = collector_redeploy.apply_rows(rows, restore, now=lambda: utc(2026, 10, 22, 9))
+        self.assertEqual([c[0] for c in calls], ["a", "b"])
+        self.assertEqual(calls[0][1], {"APP_ENV": "staging"})
+        self.assertEqual([d["deployment"] for d in done], ["new-a"])
+        self.assertEqual(stopped["service"], "b")
+        self.assertIn("image differs", stopped["reason"])
+
+    def test_apply_stops_before_the_collector_quiet_window(self):
+        rows = [{"service": "a", "commit": "c", "image_digest": "d", "live_deployment": "x"}]
+        done, stopped = collector_redeploy.apply_rows(rows, lambda *a: self.fail("ran"),
+                                                      now=lambda: utc(2026, 10, 22, 2, 30))
+        self.assertEqual(done, [])
+        self.assertIn("02:00-06:00", stopped["reason"])
+
+    def test_noop_value_is_an_allowed_collector_variable(self):
+        import collector_variables as cv
+        self.assertEqual(cv.parse_assignments([f"{k}={v}" for k, v in collector_redeploy.NOOP.items()]),
+                         collector_redeploy.NOOP)
 
 
 class FleetAndImages(unittest.TestCase):

@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "mission": "collector-redeploy ops-write runbook (owner GO 2026-10-22 08:44Z, 'go runbook'): after the Postgres password was rotated following Railway's 2026-10-21 security incident, every collector keeps the old password until a new deployment. Railway's dashboard offers only 'Deploy latest commit' on a collector, which builds from the branch and loses the verified upload. The runbook redeploys each of the 10 collectors on the image its newest rollout receipt recorded, via collector_variables.restore with a no-op APP_ENV=staging: no build, no code change, digest, schedule, start command and read-back checked, stops at the first failure. Dry run by default; apply needs the dry run's plan_sha256 and the owner's staging-ops approval.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/collector_redeploy.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New runbook module: plan from fleet.DEFAULT_RECEIPTS (commit, digest per collector), redeploy source via collector_variables.original_source, plan_sha256 over service, commit, digest and live deployment; apply calls collector_variables.restore(name, {APP_ENV: staging}, commit, digest) in name order, stops at the first failure or the 02:00-06:00 UTC window. Reuses the existing verified-upload path; adds no Railway variable write of its own."
+    },
+    {
+      "files": [
+        "scripts/ops/run.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "RUNBOOKS gains collector-redeploy as a collector-affecting write (ops-write only, owner approval, quiet windows, no delivery in progress). Refuses a count."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "runbook choice collector-redeploy; expected_sha256 description and header comment. No job, gate, secret or permission change."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Registration and windows, count refused, plan from the committed receipt chain (snkrdunk a504e47, 9 shards 2bcbe90), missing source and missing service, plan SHA pins the live deployment, apply order and stop at first failure, stop before the quiet window, the no-op value is an allowed collector variable."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "collector-redeploy section; it is not a collector release."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Railway staging collectors (10): snkrdunk-collector, yuyutei-collector-shard-0..8 (shard-4-v2)"
+      ],
+      "routes": [
+        "Railway GraphQL deploymentRedeploy(usePreviousImageTag:true) on the receipt image only, through collector_variables.restore"
+      ],
+      "dependencies": [
+        "staging at 66fbb43 (after #196)",
+        "STAGING_RAILWAY_TOKEN rotated 2026-10-22"
+      ],
+      "deployment_impact": "No collector release, no code change on any collector, no RAW migration. Merging this PR changes nothing live; only an owner-approved ops-write apply redeploys, on the same image digests.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 60
+    },
+    "recovery": {
+      "artifact": "66fbb432eefb5a2ba20e8c60cc44506ed15e9568",
+      "procedure": "A failed collector stays on or returns to its receipt image (restore re-checks the digest); rerun the dry run, or restore one collector with scripts/collector_variables.py --restore --expect-digest <receipt digest>. Code revert: native revert PR with its own mission file.",
+      "trigger": "A redeployed digest differs from the receipt, a schedule or start command changes, or a collector fails its next cron run.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_collector_variables.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/collector_redeploy.py"
+      ],
+      "observation_window": "The owner-approved dry run, the apply, then the next cron run of each collector and a db-diagnostic/staging-state read."
+    }
+  },
+  "diff_sha256": "8a981542a0bbf425b883cebe53d846535829eadf1d54551aaeffb3665af098f5"
+}
