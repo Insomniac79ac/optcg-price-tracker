@@ -16,7 +16,12 @@ a PR or a log.
   the eye icon must show a full value, not a blank.
 - **Variables reach a service only on a new deployment.** A restart or a cron run keeps the old
   values. Deploy with the banner at the top of the canvas, or select the service and use
-  **Ctrl+K → Deploy Latest Commit**.
+  **Ctrl+K → Deploy Latest Commit**. A service whose own variables did not change (it only points at
+  the rotated one, e.g. worker and beat with `${{Redis.REDIS_URL}}`) gets no banner, and Deploy Latest
+  Commit can come back **SKIPPED** ("No changes to watched files"), leaving the old deployment and
+  the old value running. Force it: add or change a harmless variable on that service (e.g.
+  `ROTATED_AT=<date>`), deploy the banner, and confirm in **Deployments** that the ACTIVE entry is
+  minutes old.
 - **Never deploy a collector from Railway.** Before clicking the banner's Deploy, read its list. If it
   names `snkrdunk-collector` or a `yuyutei-collector-shard-*`, do not deploy collectors from there:
   "Deploy latest commit" builds them from the branch and loses their verified, pinned build. To give
@@ -82,7 +87,8 @@ a PR or a log.
 4. **Restart Redis**: `Redis` → **Deployments** → ⋮ on ACTIVE → **Redeploy**. Railway's Redis
    template starts the server with `--requirepass $REDIS_PASSWORD` (Settings → Deploy → Custom
    Start Command), so the new password applies only after a restart.
-5. Redeploy `optcg-price-tracker`, worker and beat (Ctrl+K → Deploy Latest Commit).
+5. Redeploy `optcg-price-tracker`, worker and beat, and confirm each ACTIVE entry is minutes old (if
+   Deploy Latest Commit is SKIPPED, use the `ROTATED_AT` variable, see Rules).
 6. Check: `https://optcg-price-tracker-staging.up.railway.app/health` shows `"redis_connected":true`.
 
 ### 4 to 6. `API_JWT_SECRET`, `AUTH_SECRET`, `ADMIN_TOKEN`
@@ -162,5 +168,8 @@ secret in GitHub, delete the old token in Vercel. Check: the next Verify staging
 - Redis `REDIS_URL` was rebuilt by hand with a wrong name inside `${{ }}` and resolved to an empty
   value; the api's next deploy then failed its health check ("REDIS_URL must not be empty"). Use the
   dropdown and check the eye icon.
+- Worker and beat already pointed at `${{Redis.REDIS_URL}}`, so they got no banner; Deploy Latest
+  Commit was SKIPPED and beat kept its 3-day-old deployment with the old Redis password until a
+  `ROTATED_AT` variable forced a new one.
 - `ADMIN_TOKEN` also lives in Vercel (the website's server adds it to admin calls); an old note in
   `.env.staging.example` said otherwise and was corrected.
