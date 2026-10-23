@@ -42,6 +42,8 @@ a PR or a log.
 | 7 | R2 keys `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Railway `optcg-price-tracker` (`official-images-mirror` references them) | card image storage |
 | 8 | `TELEGRAM_BOT_TOKEN` | Railway app services, only if a bot is set | alerts |
 | 9 | Sentry DSN | Vercel / Railway | error reports (lowest risk) |
+| 10 | `ADMIN_LOGIN_PASSWORD_HASH` (admin sign-in password) | Railway `optcg-price-tracker` | api admin login |
+| 11 | `STAGING_VERCEL_READ_TOKEN` | GitHub, Environment `Staging-delivery` | CI deliveries and Verify (Vercel reads) |
 
 ### 1. Railway project token
 
@@ -77,8 +79,9 @@ a PR or a log.
 2. Eye icon on `REDIS_URL`: a full `redis://...` value, not blank.
 3. `optcg-price-tracker`, worker and beat: `REDIS_URL` = `${{Redis.REDIS_URL}}` (via the dropdown),
    eye icon not blank.
-4. **Restart Redis**: `Redis` → **Deployments** → ⋮ on ACTIVE → **Redeploy**. Its start command reads
-   `REDIS_PASSWORD` only at start (`--requirepass $REDIS_PASSWORD`).
+4. **Restart Redis**: `Redis` → **Deployments** → ⋮ on ACTIVE → **Redeploy**. Railway's Redis
+   template starts the server with `--requirepass $REDIS_PASSWORD` (Settings → Deploy → Custom
+   Start Command), so the new password applies only after a restart.
 5. Redeploy `optcg-price-tracker`, worker and beat (Ctrl+K → Deploy Latest Commit).
 6. Check: `https://optcg-price-tracker-staging.up.railway.app/health` shows `"redis_connected":true`.
 
@@ -91,7 +94,8 @@ Everyone is signed out of staging afterwards. That is expected.
    beat if those names exist there. Deploy the banner (app services only).
 3. Vercel → staging project → **Settings** → **Environment Variables**: `API_JWT_SECRET` (same value
    as Railway), `AUTH_SECRET`, `ADMIN_TOKEN` (same value as Railway). Update every row of a name
-   (Production and Preview). Then **Deployments** → top entry → ⋮ → **Redeploy**.
+   (Production and Preview) and tick **Sensitive** when saving, so Vercel never shows the value
+   again. Then **Deployments** → top entry → ⋮ → **Redeploy**.
 4. Check: `https://optcg-price-tracker-staging.vercel.app/api/collector-token-check` shows
    `{"status":"ok"}` (the two `API_JWT_SECRET` copies match), and `ops-readonly web-smoke` passes.
 
@@ -116,7 +120,26 @@ token at once. `TELEGRAM_CHAT_ID` is not a secret.
 Sentry → the project → **Settings** → **Client Keys (DSN)** → create a new key, put it where the old
 DSN was, deploy, then disable the old key. It only allows sending events, so it is last.
 
+### 10. Admin sign-in password (`ADMIN_LOGIN_PASSWORD_HASH`)
+
+A provider breach exposes the stored hash, which can be attacked offline, so change the password too.
+The owner picks a new password and runs `services/api/scripts/generate_admin_password_hash.py` in
+their own terminal (never in an agent session), pastes only the resulting hash into
+`ADMIN_LOGIN_PASSWORD_HASH` on `optcg-price-tracker`, and deploys. Check: sign in to the admin pages
+with the new password.
+
+### 11. Vercel read token (`STAGING_VERCEL_READ_TOKEN`)
+
+It lives in GitHub, not Railway, so rotate it on a GitHub or Vercel incident. Create a new
+project-scoped, read-only Vercel token (never an account or team token; scope rule in
+[agent/STAGING_DELIVERY.md](agent/STAGING_DELIVERY.md)), update the `Staging-delivery` environment
+secret in GitHub, delete the old token in Vercel. Check: the next Verify staging merge passes.
+
 ## Afterwards
+
+- **Review access in the incident window**: Railway project activity and its Tokens list (no unknown
+  tokens), Cloudflare R2 token activity, GitHub audit log and Vercel activity. Anything unfamiliar
+  goes to the owner before more rotation.
 
 - A **Verify staging merge** re-run on the same commit fails with "Unexpected API build for a change
   outside its watch paths". The rotation redeployed the api on a commit whose merge Railway had
