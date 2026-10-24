@@ -1,7 +1,9 @@
 """Lossless, bounded RAW encoding; no network, clock, identity or price decisions.
 
 Readers precede writers. Existing plaintext remains plaintext. A dictionary is
-one older plaintext snapshot at the identical source URL, never a chain.
+one older snapshot of the same source and parser: a plaintext body (any URL),
+or an encoded body at the identical URL whose own dictionary is plaintext. At
+most two levels, plaintext at the bottom, every level hash-checked.
 """
 
 import base64
@@ -112,6 +114,15 @@ class RawContentAccess:
         stored = self._stored_raw_content
         if not isinstance(stored, str) or not stored.startswith(PREFIX):
             return stored
+        try:
+            return self._reconstruct(allow_anchor=True).decode("utf-8")
+        except UnicodeDecodeError:
+            raise RawPayloadError(
+                "RAW reconstruction is not original UTF-8 text"
+            ) from None
+
+    def _reconstruct(self, *, allow_anchor):
+        """Original bytes of an encoded row; a dictionary is never deeper than one anchor."""
 
         def load_base(base_id):
             if type(self.id) is not int or base_id >= self.id:
@@ -123,25 +134,27 @@ class RawContentAccess:
             if (
                 base is None
                 or base.source_id != self.source_id
-                or base.source_url != self.source_url
                 or base.parser_version != self.parser_version
                 or not isinstance(base._stored_raw_content, str)
-                or base._stored_raw_content.startswith(PREFIX)
             ):
-                raise RawPayloadError("same-source plaintext dictionary required")
-            body = base._stored_raw_content.encode("utf-8")
+                raise RawPayloadError("same-source dictionary required")
+            if base._stored_raw_content.startswith(PREFIX):
+                # An anchor: the same URL's first encoded check. Its own
+                # dictionary must be plaintext, so reconstruction stops there.
+                if not allow_anchor or base.source_url != self.source_url:
+                    raise RawPayloadError("same-source plaintext dictionary required")
+                body = base._reconstruct(allow_anchor=False)
+            else:
+                body = base._stored_raw_content.encode("utf-8")
             if sha256(body) != base.content_hash:
                 raise RawPayloadError("retained base hash mismatch")
             return body
 
-        try:
-            return decode(
-                stored, expected_hash=self.content_hash, load_base=load_base
-            ).decode("utf-8")
-        except UnicodeDecodeError:
-            raise RawPayloadError(
-                "RAW reconstruction is not original UTF-8 text"
-            ) from None
+        return decode(
+            self._stored_raw_content,
+            expected_hash=self.content_hash,
+            load_base=load_base,
+        )
 
     @raw_content.setter
     def raw_content(self, value):

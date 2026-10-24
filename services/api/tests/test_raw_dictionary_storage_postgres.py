@@ -730,3 +730,93 @@ def test_reconstruction_mismatch_fails_before_any_write(database, monkeypatch):
         assert raw_write_attempts(session) == 0  # not even a rolled-back INSERT
         assert session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) == 0
         assert session.scalar(select(func.max(Snapshot.id))) == base_id
+
+
+def ledger(session, snapshot_id):
+    return session.scalar(
+        text("SELECT base_snapshot_id FROM raw_snapshot_dictionaries WHERE id=:id"),
+        {"id": snapshot_id},
+    )
+
+
+def first_check(session, url="https://mock.invalid/card/2", body=None):
+    snapshot = row(body or mock_body().replace("</body>", "CHANGED</body>"), source_url=url)
+    session.add(snapshot)
+    encoded = storage.encode_new_snapshot(session, snapshot)
+    session.commit()
+    return snapshot, encoded
+
+
+def test_sibling_switch_off_keeps_same_url_only(database):
+    with Session(database) as session:
+        base_row(session)
+        snapshot, encoded = first_check(session)
+        assert not encoded and not snapshot._stored_raw_content.startswith(PREFIX)
+
+
+def test_sibling_first_check_then_bounded_anchor(database, monkeypatch):
+    monkeypatch.setenv("RAW_DICTIONARY_SIBLING", "true")
+    with Session(database) as session:
+        sibling = base_row(session)
+        first, encoded = first_check(session)
+        assert encoded and ledger(session, first.id) == sibling.id
+        second, encoded = first_check(session, body=mock_body() + "<p>2</p>")
+        assert encoded and ledger(session, second.id) == first.id
+        third, encoded = first_check(session, body=mock_body() + "<p>3</p>")
+        # Every later check anchors on the first; reconstruction is never deeper.
+        assert encoded and ledger(session, third.id) == first.id
+        ids = (first.id, second.id, third.id)
+    with Session(database) as session:
+        for snapshot_id, tail in zip(ids, ("CHANGED", "<p>2</p>", "<p>3</p>")):
+            assert tail in session.get(Snapshot, snapshot_id).raw_content
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"source_url": "https://mock.invalid/set/op01"},
+        {"source_url": "https://other.invalid/card/2"},
+        {"source_id": 2},
+        {"parser_version": "snkrdunk-collector-v2"},
+    ],
+)
+def test_sibling_needs_same_source_parser_and_url_class(database, monkeypatch, change):
+    monkeypatch.setenv("RAW_DICTIONARY_SIBLING", "true")
+    with Session(database) as session:
+        base_row(session)
+        snapshot = row(mock_body().replace("</body>", "X</body>"), **change)
+        session.add(snapshot)
+        assert not storage.encode_new_snapshot(session, snapshot)
+        session.commit()
+
+
+def test_encoded_row_is_never_a_sibling(database, monkeypatch):
+    monkeypatch.setenv("RAW_DICTIONARY_SIBLING", "true")
+    with Session(database) as session:
+        base_row(session)
+        _, encoded = first_check(session)
+        assert encoded
+        # Hide the plaintext sibling: the only same-class candidate is encoded.
+        session.execute(text("UPDATE raw_snapshots SET source_url='https://mock.invalid/x/a' WHERE id=1"))
+        session.commit()
+        _, encoded = first_check(session, url="https://mock.invalid/card/3")
+        assert not encoded
+
+
+def test_discovery_parsers_encode_on_same_url(database):
+    with Session(database) as session:
+        for parser in ("yuyutei-recurring-discovery-v1", "snkr-published-discovery-v1"):
+            session.add(row(parser_version=parser))
+            session.commit()
+            child = row(mock_body() + "<p>next day</p>", parser_version=parser)
+            session.add(child)
+            assert storage.encode_new_snapshot(session, child)
+            session.commit()
+
+
+def test_url_class_folds_digits_and_orders_query_keys():
+    assert storage.url_class("https://a.test/sell/op01/10001?b=1&a=2") == storage.url_class(
+        "https://a.test/sell/op05/20?a=9&b=3"
+    )
+    assert storage.url_class("https://a.test/sell/op01") != storage.url_class("https://a.test/buy/op01")
+    assert storage.url_class("https://a.test/p?a=1") != storage.url_class("https://a.test/p?b=1")

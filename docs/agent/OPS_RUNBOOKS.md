@@ -30,6 +30,7 @@ file contains a known secret value.
 |---|---|---|---|
 | `staging-state` | - | One live read feeds `generate_staging_state` and `check_raw_health` | `CURRENT_STATE.yaml`, `evidence/staging-state-*.json`, `raw-health.json` |
 | `verify-lossless` | `ledger_floor` (exclusive) | Every daily-v1 ledger row above the floor decoded twice (independent zstd + package decoder) | `verify-lossless-from-<floor>.json` (`next_floor_exclusive`) |
+| `verify-lossless` | `ledger_floor=sample` | Sibling-encoding gate (`scripts/ops/encoding_sample.py`): newest plaintext rows per parser paired as the writer would with `RAW_DICTIONARY_SIBLING=true`, encoded in memory only. `gate_pass` needs >=10 pairs and median encoded <=10 KB (Yuyu listings) and <=16 KB (SNKRDUNK discovery) | `encoding-sample.json` |
 | `storage-rates` | `transients` (comma list; empty = all named) | Planning and stress (worst rolling 24 h) since the current collector code, as observed, with named steps removed, and with named transients excluded (`scripts/ops/storage_events.json`) | `storage-rates.json`, `volume-series.json` |
 | `fleet-vs-receipt` | `receipt` (comma-separated committed receipts; empty = PR #103 then PR #173 rollouts) | All 10 collectors, each against the newest receipt that deployed it: live deployment, status, exact-commit marker, image digest, cron and deployment records after that receipt | `fleet-vs-receipt.json` |
 | `official-images-status` | - | Last 5 `official-images-mirror` runs and the `check_official_images` database check (no R2 or Bandai request) | `official-images-status.json` |
@@ -215,6 +216,7 @@ ID=state-$(date -u +%Y%m%dT%H%M%SZ)          # any unique text; it becomes part 
 gh api -X POST $R/actions/workflows/ops-readonly.yml/dispatches -f ref=staging \
   -f 'inputs[runbook]=staging-state' -f "inputs[request_id]=$ID"
 #   verify-lossless:  -f 'inputs[ledger_floor]=59328'
+#   encoding sample:  -f 'inputs[runbook]=verify-lossless' -f 'inputs[ledger_floor]=sample'
 #   db-diagnostic:    -f 'inputs[diagnostic]=freshness-not-met'
 #   capture-batch-preview: -f 'inputs[count]=50'
 #   storage-rates:    -f 'inputs[transients]=2026-10-14-04z'

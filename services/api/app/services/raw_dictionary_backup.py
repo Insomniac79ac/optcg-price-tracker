@@ -33,9 +33,11 @@ def validate_dictionary_references(tables):
                 == row["original_sha256"]
                 == child["content_hash"]
                 and sha256(base_body) == row["base_sha256"] == base["content_hash"]
+                # A sibling dictionary may be another URL of the same source
+                # and parser; portable bodies are complete plaintext either way.
                 and all(
                     child[field] == base[field]
-                    for field in ("source_id", "source_url", "parser_version")
+                    for field in ("source_id", "parser_version")
                 )
             )
         except (KeyError, TypeError, AttributeError):

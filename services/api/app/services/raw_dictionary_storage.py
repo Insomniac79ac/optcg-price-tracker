@@ -8,6 +8,8 @@ rewritten by the writer. Disabled configuration performs no extra SQL.
 
 import json
 import os
+import re
+from urllib.parse import parse_qsl, urlsplit
 
 from sqlalchemy import func, select, text
 from opcg_source_identity.raw_payload import (
@@ -20,11 +22,21 @@ from opcg_source_identity.raw_payload import (
 )
 
 PROJECT = "c613898d-bf03-43a6-8813-761f72e1c00a"
-PARSERS = frozenset({"yuyutei-collector-v3", "snkrdunk-collector-v2"})
+PARSERS = frozenset(
+    {
+        "yuyutei-collector-v3",
+        "snkrdunk-collector-v2",
+        "yuyutei-recurring-discovery-v1",
+        "snkr-published-discovery-v1",
+    }
+)
 CANARY_LIMIT = 200
 DAILY_ROWS = 8192
 DAILY_BYTES = 32 * 1024 * 1024
 RECENT_BASE_ROWS = 32
+SIBLING_RECENT_ROWS = 64
+SIBLING_ID_WINDOW = 50_000
+SIBLING_LEDGER_ROWS = 128
 LOCK = 734027410
 
 
@@ -56,12 +68,14 @@ def admission(session):
 
 
 def dictionary_base(session, model, snapshot):
-    """At most 32 recent bodies, then the oldest retained plaintext anchor.
+    """At most 32 recent bodies, then the oldest retained same-URL row.
 
-    The scope index avoids scanning unrelated URLs. An encoding always has an
-    older plaintext same-scope dependency, so the oldest surviving scoped row
-    cannot be encoded. Full URL equality still guards hash-index collisions.
-    A changed page that cannot encode is kept plain and becomes the recent base.
+    The scope index avoids scanning unrelated URLs. Without siblings an
+    encoding always has an older plaintext same-scope dependency, so the
+    oldest surviving scoped row is plaintext. With siblings a URL's first
+    check may be encoded on another page; it is then used as a bounded anchor.
+    Full URL equality still guards hash-index collisions. A changed page that
+    cannot encode is kept plain and becomes the recent base.
     """
     scope = (
         model.source_id == snapshot.source_id,
@@ -94,8 +108,12 @@ def dictionary_base(session, model, snapshot):
             select(model.id).where(*scope).order_by(model.id).limit(1)
         )
         oldest = session.execute(projected.where(model.id == oldest_id)).first()
-        if oldest is None or oldest[1]:
+        if oldest is None:
             return None
+        if oldest[1]:
+            # Only a sibling-encoded first check is encoded at the bottom of
+            # its URL history; with siblings ON it becomes a bounded anchor.
+            return anchor_base(session, model, snapshot, oldest[0]) if sibling() else None
         base_id = oldest[0]
     # Retain the same-scope, plaintext, hash and shared-row-lock guards on the
     # exact base used to encode; the projection cannot authorise a changed row.
@@ -106,6 +124,130 @@ def dictionary_base(session, model, snapshot):
         )
         .with_for_update(read=True)
     ).first()
+
+
+def url_class(url):
+    """Page family: scheme, host, path with digit runs folded, sorted query keys."""
+    parts = urlsplit(url)
+    keys = sorted({key for key, _ in parse_qsl(parts.query, keep_blank_values=True)})
+    return (parts.scheme, parts.netloc, re.sub(r"[0-9]+", "#", parts.path), tuple(keys))
+
+
+def plaintext(session, ids):
+    """Of these snapshot IDs, those with no active ledger encoding (no body reads)."""
+    if not ids:
+        return set()
+    encoded = session.scalars(
+        text("""
+        SELECT id FROM raw_snapshot_dictionaries
+        WHERE id = ANY(:ids) AND expanded_at IS NULL
+    """),
+        {"ids": list(ids)},
+    ).all()
+    return set(ids) - set(encoded)
+
+
+def anchor_base(session, model, snapshot, anchor_id):
+    """The URL's first encoded check, only when its own dictionary is plaintext.
+
+    Readers stop one level below an anchor, so an anchor never depends on
+    another encoding. The savings rule uses the plaintext bottom's stored size.
+    """
+    ledger = session.execute(
+        text("""
+        SELECT base_snapshot_id FROM raw_snapshot_dictionaries
+        WHERE id=:id AND expanded_at IS NULL
+    """),
+        {"id": anchor_id},
+    ).first()
+    if ledger is None or not plaintext(session, [ledger[0]]):
+        return None
+    bottom_bytes = session.scalar(
+        select(func.pg_column_size(model._stored_raw_content)).where(
+            model.id == ledger[0],
+            model.id < anchor_id,
+            model.source_id == snapshot.source_id,
+            model.parser_version == snapshot.parser_version,
+            model.http_status == 200,
+            ~model._stored_raw_content.startswith(PREFIX),
+        )
+    )
+    if bottom_bytes is None:
+        return None
+    anchor = session.scalar(
+        select(model)
+        .where(
+            model.id == anchor_id,
+            model.source_id == snapshot.source_id,
+            model.parser_version == snapshot.parser_version,
+            model.source_url == snapshot.source_url,
+            model.http_status == 200,
+        )
+        .with_for_update(read=True)
+    )
+    return None if anchor is None else (anchor, bottom_bytes)
+
+
+def sibling_base(session, model, snapshot):
+    """Newest plaintext page of the same family (source, parser, URL class).
+
+    Candidates are bounded: the newest rows of a recent ID window plus the
+    bases of recent ledger rows, then one exact row with the plaintext guard.
+    """
+    family = (
+        model.source_id == snapshot.source_id,
+        model.parser_version == snapshot.parser_version,
+        model.http_status == 200,
+    )
+    top = session.scalar(select(func.max(model.id)))
+    if top is None:
+        return None
+    recent = session.execute(
+        select(model.id, model.source_url)
+        .where(*family, model.id > top - SIBLING_ID_WINDOW)
+        .order_by(model.id.desc())
+        .limit(SIBLING_RECENT_ROWS)
+    ).all()
+    # Recent ledger rows are bounded by daily admission; the join reads row
+    # headers, never bodies. Bases already used by this family are proven.
+    recent += session.execute(
+        text("""
+        SELECT DISTINCT r.id, r.source_url
+        FROM raw_snapshot_dictionaries d JOIN raw_snapshots r ON r.id = d.base_snapshot_id
+        WHERE d.created_at >= now() - interval '2 days'
+          AND r.source_id = :source AND r.parser_version = :parser AND r.http_status = 200
+        ORDER BY r.id DESC LIMIT :limit
+    """),
+        {
+            "source": snapshot.source_id,
+            "parser": snapshot.parser_version,
+            "limit": SIBLING_LEDGER_ROWS,
+        },
+    ).all()
+    wanted = url_class(snapshot.source_url)
+    candidates = {
+        snapshot_id
+        for snapshot_id, url in recent
+        if url != snapshot.source_url and url_class(url) == wanted
+    }
+    for base_id in sorted(plaintext(session, candidates), reverse=True):
+        found = session.execute(
+            select(model, func.pg_column_size(model._stored_raw_content))
+            .where(
+                model.id == base_id,
+                *family,
+                ~model._stored_raw_content.startswith(PREFIX),
+            )
+            .with_for_update(read=True)
+        ).first()
+        if found is not None:
+            return found
+    return None
+
+
+def sibling():
+    """Second switch: sibling and anchor dictionaries. OFF keeps same-URL only."""
+    return os.getenv("RAW_DICTIONARY_SIBLING", "false").lower() == "true"
 
 
 def enabled():
@@ -158,6 +300,8 @@ def _encode_new_snapshot(session, snapshot):
     # Prevent this pending INSERT from autoflushing into the base selection.
     with session.no_autoflush:
         base_result = dictionary_base(session, model, snapshot)
+        if base_result is None and sibling():
+            base_result = sibling_base(session, model, snapshot)
     if base_result is None:
         return False
     base, current_stored_bytes = base_result

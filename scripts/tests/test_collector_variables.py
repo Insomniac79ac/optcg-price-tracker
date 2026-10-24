@@ -98,8 +98,11 @@ class AssignmentTests(unittest.TestCase):
     def test_only_writer_keys_and_staging_app_env(self):
         self.assertEqual(cv.parse_assignments(["APP_ENV=staging", "RAW_DICTIONARY_STORAGE_MODE=daily-v1"]),
                          {"APP_ENV": "staging", "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"})
+        self.assertEqual(cv.parse_assignments(["RAW_DICTIONARY_SIBLING=true"]), {"RAW_DICTIONARY_SIBLING": "true"})
+        self.assertEqual(cv.effective({}, ["RAW_DICTIONARY_SIBLING"]), {"RAW_DICTIONARY_SIBLING": "false"})
         for item in ["APP_ENV=production", "DUE_MAX_PRODUCTS_PER_RUN=70", "YUYUTEI_REQUEST_DELAY_MS=0",
-                     "RAW_DICTIONARY_STORAGE_ENABLED=yes", "RAW_DICTIONARY_STORAGE_ENABLED"]:
+                     "RAW_DICTIONARY_STORAGE_ENABLED=yes", "RAW_DICTIONARY_STORAGE_ENABLED",
+                     "RAW_DICTIONARY_SIBLING=on"]:
             with self.assertRaises(cv.state.VerificationError):
                 cv.parse_assignments([item])
         with self.assertRaises(cv.state.VerificationError):

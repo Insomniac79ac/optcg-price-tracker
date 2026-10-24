@@ -30,16 +30,40 @@ def independent(stored, base, prefix):
     return env, zstd.ZstdDecompressor(dict_data=dictionary).decompress(comp, max_output_size=16 * 1024**2)
 
 
-def check_row(row, base_row, *, prefix, decode):
-    """{check: bool} for one encoded ledger row against its base snapshot."""
-    stored, base = row["stored"], base_row["raw_content"].encode()
-    checks = {
-        "encoded": stored.startswith(prefix),
-        "base_plain_older_same_scope": (not base_row["raw_content"].startswith(prefix) and base_row["id"] < row["id"]
-            and (row["source_url"], row["source_id"], row["parser_version"])
-            == (base_row["source_url"], base_row["source_id"], base_row["parser_version"])),
-        "base_hash": sha(base) == base_row["content_hash"] == row["base_sha256"],
-    }
+def base_body(base_row, bottom_row, *, prefix, decode):
+    """Plaintext bytes of a base: its own text, or an anchor rebuilt from its plaintext bottom."""
+    if not base_row["raw_content"].startswith(prefix):
+        return base_row["raw_content"].encode()
+    bottom = bottom_row["raw_content"].encode()
+    _, independent_body = independent(base_row["raw_content"], bottom, prefix)
+    package = decode(base_row["raw_content"], expected_hash=base_row["content_hash"], load_base=lambda _: bottom)
+    if package != independent_body:
+        raise ValueError("anchor rebuilds disagree")
+    return package
+
+
+def check_row(row, base_row, *, prefix, decode, bottom_row=None):
+    """{check: bool} for one encoded ledger row against its base snapshot.
+
+    The base is plaintext (same URL, or a sibling URL of the same source and parser), or an
+    anchor: the same URL's encoded first check, whose own base (bottom_row) is plaintext.
+    """
+    stored = row["stored"]
+    anchor = base_row["raw_content"].startswith(prefix)
+    same_family = (row["source_id"], row["parser_version"]) == (base_row["source_id"], base_row["parser_version"])
+    bounded = (not anchor or (bottom_row is not None and row["source_url"] == base_row["source_url"]
+                              and not bottom_row["raw_content"].startswith(prefix)
+                              and bottom_row["id"] < base_row["id"]
+                              and (bottom_row["source_id"], bottom_row["parser_version"])
+                              == (base_row["source_id"], base_row["parser_version"])))
+    checks = {"encoded": stored.startswith(prefix),
+              "base_older_same_scope": base_row["id"] < row["id"] and same_family and bounded}
+    try:
+        base = base_body(base_row, bottom_row, prefix=prefix, decode=decode)
+        checks["base_hash"] = sha(base) == base_row["content_hash"] == row["base_sha256"]
+    except Exception as exc:  # noqa: BLE001 - a decode failure is a failed check
+        checks.update(base_decode_ok=False, error=type(exc).__name__)
+        base = b""
     try:
         env, body = independent(stored, base, prefix)
         package = decode(stored, expected_hash=row["content_hash"], load_base=lambda _: base)
@@ -57,6 +81,8 @@ def check_row(row, base_row, *, prefix, decode):
     return checks
 
 
+BOTTOM_SQL = """select r.id, r.raw_content, r.content_hash, r.source_url, r.source_id, r.parser_version
+  from raw_snapshot_dictionaries d join raw_snapshots r on r.id=d.base_snapshot_id where d.id=%s"""
 LEDGER_SQL = """select d.*, r.source_url, r.source_id, r.parser_version, r.http_status, r.content_hash,
   r.raw_content stored, s.name source from raw_snapshot_dictionaries d join raw_snapshots r on r.id=d.id
   join sources s on s.id=r.source_id where d.id > %s and d.id <= %s order by d.id limit %s"""
@@ -93,7 +119,11 @@ def verify(db, floor, *, prefix=None, decode=None, batch=BATCH, progress=print):
                 bases[bid] = db.execute(BASE_SQL, (bid,)).fetchone()
                 if len(bases) > BASE_CACHE:
                     bases.pop(next(iter(bases)))
-            checks = check_row(r, bases[bid], prefix=prefix, decode=decode)
+            bottom = None
+            if bases[bid] is not None and bases[bid]["raw_content"].startswith(prefix):
+                bottom = db.execute(BOTTOM_SQL, (bid,)).fetchone()
+                res["anchored"] = res.get("anchored", 0) + 1
+            checks = check_row(r, bases[bid], prefix=prefix, decode=decode, bottom_row=bottom)
             if not all(v for k, v in checks.items() if k != "error"):
                 res["failures"].append({"id": r["id"], "checks": checks})
                 ok = False
