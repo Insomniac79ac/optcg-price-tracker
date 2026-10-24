@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import capture_batch, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, encoding_sample, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -768,6 +768,128 @@ class RefreshBackfill(unittest.TestCase):
     def test_registered_as_collector_affecting_write(self):
         self.assertEqual(run.RUNBOOKS["plan-refresh-backfill"][:2], ("write", True))
         self.assertEqual(run.kind_of("plan-refresh-backfill", False), (False, False))
+
+
+class CollectorRedeploy(unittest.TestCase):
+    def test_registered_as_collector_affecting_write(self):
+        self.assertEqual(run.RUNBOOKS["collector-redeploy"][:2], ("write", True))
+        self.assertEqual(run.kind_of("collector-redeploy", True), (True, True))
+        args = SimpleNamespace(runbook="collector-redeploy", workflow="ops-readonly", apply=False)
+        with self.assertRaisesRegex(common.Refused, "ops-write"):
+            run.preflight(args, read=None)
+        args = SimpleNamespace(runbook="collector-redeploy", workflow="ops-write", apply=True)
+        with self.assertRaisesRegex(common.Refused, "02:00-06:00"):
+            run.preflight(args, now=utc(2026, 10, 22, 3), read=lambda path: {})
+
+    def test_count_refused(self):
+        args = SimpleNamespace(count=5, apply=False, expected_sha256="")
+        with self.assertRaisesRegex(common.Refused, "no count"):
+            run._collector_redeploy(args, "out")
+
+    def test_pins_come_from_the_fleet_state(self):
+        import collector_variables as cv
+        fleet_state = json.loads((ROOT / "docs/agent/STAGING_FLEET.json").read_text())["deployment_verification"]
+        pins = collector_redeploy.fleet_pins(cv.delivery.NAMES)
+        self.assertEqual(len(pins), 10)
+        self.assertEqual(pins["snkrdunk-collector"], fleet_state["snkr_component"])
+        for name, commit in pins.items():
+            if name != "snkrdunk-collector":
+                self.assertEqual(commit, fleet_state["yuyu_reader_component"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / collector_redeploy.FLEET
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps({"deployment_verification": dict(fleet_state, snkr_component="merge")}))
+            with self.assertRaisesRegex(common.Refused, "snkrdunk-collector: no full commit pin"):
+                collector_redeploy.fleet_pins(cv.delivery.NAMES, root=tmp)
+
+    def test_pinned_source_is_the_newest_redeployable_copy_of_the_pin(self):
+        class Mismatch(Exception):
+            pass
+
+        image = "sha256:" + "b" * 64
+        rows = {
+            "new-other-commit": None,  # marker of another commit: read refuses
+            "new-no-image": {"id": "new-no-image", "canRedeploy": True, "meta": {}},  # SKIPPED record
+            "pinned-not-redeployable": {"id": "pinned-not-redeployable", "canRedeploy": False,
+                                        "meta": {"imageDigest": image}},
+            "pinned": {"id": "pinned", "canRedeploy": True, "meta": {"imageDigest": image}},
+            "older-pinned": {"id": "older-pinned", "canRedeploy": True, "meta": {"imageDigest": image}},
+        }
+
+        def read(identity, service_id, commit):
+            if rows[identity] is None:
+                raise Mismatch("Uploaded deployment destination/source mismatch")
+            return rows[identity]
+
+        found = collector_redeploy.pinned_source({"serviceId": "s"}, "c" * 40, read=read,
+                                                 listing=lambda sid: list(rows), error=Mismatch)
+        self.assertEqual(found["id"], "pinned")
+        with self.assertRaisesRegex(Mismatch, "No redeployable deployment of the pinned commit"):
+            collector_redeploy.pinned_source({"serviceId": "s"}, "c" * 40, read=read,
+                                             listing=lambda sid: ["new-other-commit"], error=Mismatch)
+
+    def test_plan_uses_the_pin_and_the_source_digest(self):
+        import generate_staging_state as state
+        pins = {"snkrdunk-collector": "f" * 40, "yuyutei-collector-shard-0": "2" * 40}
+        live = {n: {"serviceId": "svc-" + n, "cronSchedule": "1 * * * *",
+                    "latestDeployment": {"id": "live-" + n, "status": "FAILED"}} for n in pins}
+
+        def source(node, commit):
+            if node["serviceId"] == "svc-yuyutei-collector-shard-0":
+                raise state.VerificationError("No redeployable deployment of the pinned commit")
+            return {"id": "src-" + commit[:4], "meta": {"imageDigest": "sha256:" + "d" * 64}}
+
+        rows = {r["service"]: r for r in collector_redeploy.plan(live, pins, source)}
+        self.assertEqual(rows["snkrdunk-collector"]["commit"], "f" * 40)
+        self.assertEqual(rows["snkrdunk-collector"]["source_deployment"], "src-ffff")
+        self.assertEqual(rows["snkrdunk-collector"]["image_digest"], "sha256:" + "d" * 64)
+        self.assertIsNone(rows["yuyutei-collector-shard-0"]["source_deployment"])
+        self.assertIn("pinned commit", rows["yuyutei-collector-shard-0"]["problem"])
+        live.pop("yuyutei-collector-shard-0")
+        with self.assertRaisesRegex(common.Refused, "shard-0: service not found"):
+            collector_redeploy.plan(live, pins, source)
+
+    def test_plan_sha_pins_the_live_deployment(self):
+        row = {"service": "s", "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64, "live_deployment": "d1"}
+        sha = collector_redeploy.plan_sha([row])
+        self.assertNotEqual(sha, collector_redeploy.plan_sha([dict(row, live_deployment="d2")]))
+        collector_redeploy.check_apply(False, "", sha)
+        collector_redeploy.check_apply(True, sha, sha)
+        for bad in ("", "x" * 64, "0" * 64):
+            with self.assertRaises(common.Refused):
+                collector_redeploy.check_apply(True, bad, sha)
+
+    def test_apply_redeploys_in_order_and_stops_at_first_failure(self):
+        import generate_staging_state as state
+        rows = [{"service": n, "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64,
+                 "live_deployment": "old-" + n} for n in ("a", "b", "c")]
+        calls = []
+
+        def restore(name, values, commit, digest):
+            calls.append((name, values, commit, digest))
+            if name == "b":
+                raise state.VerificationError("Restore failed: Redeployed image differs from the verified upload")
+            return {"source_deployment": "src-" + name, "deployment": "new-" + name, "image_digest": digest,
+                    "observed_at": "t"}
+
+        done, stopped = collector_redeploy.apply_rows(rows, restore, now=lambda: utc(2026, 10, 22, 9))
+        self.assertEqual([c[0] for c in calls], ["a", "b"])
+        self.assertEqual(calls[0][1], {"APP_ENV": "staging"})
+        self.assertEqual([d["deployment"] for d in done], ["new-a"])
+        self.assertEqual(stopped["service"], "b")
+        self.assertIn("image differs", stopped["reason"])
+
+    def test_apply_stops_before_the_collector_quiet_window(self):
+        rows = [{"service": "a", "commit": "c", "image_digest": "d", "live_deployment": "x"}]
+        done, stopped = collector_redeploy.apply_rows(rows, lambda *a: self.fail("ran"),
+                                                      now=lambda: utc(2026, 10, 22, 2, 30))
+        self.assertEqual(done, [])
+        self.assertIn("02:00-06:00", stopped["reason"])
+
+    def test_noop_value_is_an_allowed_collector_variable(self):
+        import collector_variables as cv
+        self.assertEqual(cv.parse_assignments([f"{k}={v}" for k, v in collector_redeploy.NOOP.items()]),
+                         collector_redeploy.NOOP)
 
 
 class FleetAndImages(unittest.TestCase):

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "mission": "collector-redeploy takes each collector's commit from the fleet pins (owner-visible fix 2026-10-22): the first apply restored snkrdunk-collector to the PR #103 image a504e47 because the committed receipt chain never received the PR #180 SNKR delivery, and Verify staging merge failed 'Unexpected deployed SNKR source or schedule'. Pins now come from docs/agent/STAGING_FLEET.json (snkr_component ff01956, yuyu_reader_component 2bcbe90), the same pins Verify checks; the source is the newest redeployable deployment with that pin's exact-commit marker. Owner-gated as before.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/collector_redeploy.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "fleet_pins() reads STAGING_FLEET.json and refuses a missing or non-SHA pin; pinned_source() returns the newest redeployable deployment carrying the pin's exact-commit marker and an image digest; plan() takes the digest from that source. Receipts no longer read. Apply path (collector_variables.restore) unchanged."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Pins equal the fleet state and a 'merge' pin refuses; the source skips other commits, image-less and non-redeployable records and takes the newest pinned copy; the plan carries pin, source and digest and reports a missing source."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "collector-redeploy uses fleet pins; why receipts are not used; Verify needs one natural cron run afterwards."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Railway staging collectors (10), only through an owner-approved ops-write apply"
+      ],
+      "routes": [
+        "Railway GraphQL deploymentRedeploy(usePreviousImageTag:true) on the fleet-pinned image only, through collector_variables.restore"
+      ],
+      "dependencies": [
+        "staging after #199 and #200"
+      ],
+      "deployment_impact": "Merging changes nothing live. The next owner-approved apply puts snkrdunk-collector back on the ff01956 (PR #180) image and redeploys the shards on their unchanged 2bcbe90 image.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "85dd06abe17b7536940dd5f8f7630eecfdd4e0b4",
+      "procedure": "Native revert PR with its own mission file; a collector on a wrong image is restored with scripts/collector_variables.py --restore --expect-digest <digest> or a corrected dry run.",
+      "trigger": "A dry run shows a source whose commit differs from the fleet pin, or Verify reports an unexpected collector source after an apply.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_collector_variables.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/collector_redeploy.py"
+      ],
+      "observation_window": "Dry run shows snkrdunk-collector at ff01956; apply; Verify staging merge re-run after one natural cron cycle."
+    }
+  },
+  "diff_sha256": "f9781a8efd1dbc924f3b8f65ceb7a67e4b2830f68b872e2e1bdd2b4944935033"
+}

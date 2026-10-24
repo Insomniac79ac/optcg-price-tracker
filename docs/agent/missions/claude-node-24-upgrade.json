@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "mission": "Node 24 for the web app (owner ask 2026-10-22 05:48Z): Node 20 is EOL and gets no fix for the October 2026 Node security release (Brotli RCE, TLS hostname bypasses, Undici). CI setup-node 20 -> 24, apps/web engines.node 24.x as the one source of truth for Vercel and CI, web Dockerfile node:24-alpine. Collector Playwright image (v1.61.0, bundles its own Node) untouched; its bump goes with the next collector release.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "staging-credential-presence (Railway CLI install) and frontend-build setup-node \"20\"/20 -> 24. Every other workflow already pins 24. No step, secret or delivery logic changes."
+    },
+    {
+      "files": [
+        "apps/web/package.json",
+        "apps/web/package-lock.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "engines.node 24.x; the lockfile root mirrors it (3 lines, no dependency change). Vercel builds and serves staging on Node 24.x from the next deployment; npm warns, not fails, on another major."
+    },
+    {
+      "files": [
+        "apps/web/Dockerfile"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "FROM node:20-alpine -> node:24-alpine. Kept: CI prod-compose (scripts/prod_verify.sh, docker-compose.prod.yml) and local docker-compose.yml build it. Railway never builds apps/web (docs/railway_staging.md)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub Actions CI (frontend-build, prod-compose, staging-credential-presence)",
+        "Vercel staging web build runtime"
+      ],
+      "routes": [
+        "None new"
+      ],
+      "dependencies": [
+        "staging at 66fbb432 (after #196)"
+      ],
+      "deployment_impact": "Vercel staging web rebuilds on Node 24.x. No collector rollout, no Railway deployment, no RAW migration, no fleet change. Hand-merged (hold-for-owner).",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "66fbb432eefb5a2ba20e8c60cc44506ed15e9568",
+      "procedure": "Native revert PR of this merge with its own docs/agent/missions/<name>.json; CI, Vercel and the web image return to Node 20.",
+      "trigger": "Vercel staging build fails or the web runtime errors on Node 24, or frontend-build/prod-compose fail after merge.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "frontend-build",
+        "prod-compose"
+      ],
+      "post_change": [
+        "scripts/verify_staging_delivery.py",
+        "scripts/staging_web_smoke.py"
+      ],
+      "observation_window": "Verify staging merge on this hand merge (Vercel READY on the merge, /api/version serves it), then the signed-out web smoke."
+    }
+  },
+  "diff_sha256": "2ec07bb773534dc5ab67508ecf5b3093752142b741c6fa8b3cecea4bbaf0654a"
+}

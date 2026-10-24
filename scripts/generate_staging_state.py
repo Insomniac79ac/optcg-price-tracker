@@ -71,6 +71,33 @@ def failure_class(text):
     return "unclassified" if (text or "").strip() else "silent"
 
 
+# Database driver failures: the message can carry host and user, so only the class, the
+# exception type and the 5-character SQLSTATE are reported.
+DB_FAILURE_CLASSES = (
+    ("auth", r"password authentication failed|28P01|authentication failed"),
+    ("hba", r"pg_hba|no pg_hba.conf entry"),
+    ("no_database", r"database \S+ does not exist|3D000"),
+    ("timeout", r"timeout expired|timed? ?out"),
+    ("refused", r"connection refused"),
+    ("dns", r"could not translate host|name or service not known|nodename nor servname|temporary failure in name"),
+    ("tls", r"\bssl\b|certificate|tls"),
+    ("closed", r"server closed the connection|connection reset|terminating connection|eof detected"),
+    ("too_many", r"too many (clients|connections)|53300"),
+)
+
+
+def db_failure_class(error):
+    """'<class>, <ExceptionType>[, sqlstate XXXXX]' for a driver error; never its message."""
+    text = str(error)
+    name = next((n for n, pattern in DB_FAILURE_CLASSES if re.search(pattern, text, re.I)),
+                "unclassified" if text.strip() else "silent")
+    parts = [name, type(error).__name__]
+    sqlstate = getattr(error, "sqlstate", None)
+    if isinstance(sqlstate, str) and re.fullmatch(r"[0-9A-Z]{5}", sqlstate):
+        parts.append("sqlstate " + sqlstate)
+    return ", ".join(parts)
+
+
 def command_json(args):
     if args[0] == "vercel" and os.environ.get("STAGING_VERCEL_READ_TOKEN"):
         args = [*args, "--token", os.environ["STAGING_VERCEL_READ_TOKEN"]]
@@ -183,10 +210,11 @@ def database_snapshot(expected_revisions=None):
             return result
     except VerificationError:
         raise
-    except Exception:
-        # Driver diagnostics can contain host, username and other connection details.
+    except Exception as error:
+        # Driver diagnostics can contain host, username and other connection details:
+        # class, type and SQLSTATE only.
         raise VerificationError(
-            "Staging database read failed; no snapshot replaced"
+            f"Staging database read failed ({db_failure_class(error)}); no snapshot replaced"
         ) from None
     finally:
         variables.clear()

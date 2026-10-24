@@ -184,6 +184,22 @@ repository, CI and credentials, not by prompt text:
 - dispatch any `ops-readonly` runbook at any time and dispatch `ops-write` runs, dry run first;
 - read runs, check-run annotations and PR state over REST.
 
+**Coordinator merges (owner decision 2026-10-23):** the owner runs a queue of approved PRs and
+a coordinating session works it. For a PR the owner has approved in that queue, the coordinator
+may mark it ready and merge it (REST merge, never admin), one at a time, when all of these hold:
+
+- it changes nothing under `.github/**` or `.claude/**` (those stay `hold-for-owner`, below) and
+  is not a collector release (collector PRs are delivered only by the `staging-automerge` CI job:
+  never hand-merged, never native auto-merge, only in a collector window);
+- every required check is green, the PR is up to date with `staging` and mergeable;
+- it is inside the merge window (06:00-23:00 UTC, never 19:30-20:30 UTC) and no staging
+  delivery or `Verify staging merge` is running or queued;
+- after the merge, the push `Verify staging merge` run is a success before the next merge; a
+  failure stops the queue and goes to the owner.
+
+The coordinator never removes `hold-for-owner` from a PR that needs it and never approves an
+`ops-write` run.
+
 **Still the owner's:**
 
 - approving every `ops-write` run (dry run and apply; an apply also needs the approved-list SHA-256
