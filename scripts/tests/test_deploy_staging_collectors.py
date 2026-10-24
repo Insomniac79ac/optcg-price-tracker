@@ -248,7 +248,7 @@ def test_writer_flag_drift_after_release_rolls_back(tmp_path, monkeypatch):
 
 
 def no_source(*a, **k):
-    raise delivery.state.VerificationError("No redeployable deployment")
+    raise delivery.state.VerificationError(delivery.NO_REDEPLOYABLE)
 
 
 def test_no_redeployable_image_falls_back_to_reupload_of_the_same_commit(tmp_path, monkeypatch):
@@ -388,7 +388,7 @@ def test_reupload_uploads_the_previous_commit_from_a_worktree_with_markers(tmp_p
     assert seen["message"] == delivery.MARKER + OLD
     assert seen["markers"] == ["REVISION = " + repr(OLD) + "\n"] * 2
     assert [c[0] for c in calls] == [["git", "worktree", "add"], ["railway", "up", "--project"],
-                                    ["git", "worktree", "remove"]]
+                                    ["git", "worktree", "remove"], ["git", "worktree", "prune"]]
 
 
 def test_reupload_skipped_means_previous_must_still_be_active_and_failure_refuses(tmp_path, monkeypatch):
@@ -402,9 +402,18 @@ def test_reupload_skipped_means_previous_must_still_be_active_and_failure_refuse
 
     monkeypatch.setattr(delivery, "read_deployment",
                         lambda i, s, c: {"id": i, "status": "SUCCESS", "meta": {}})
+    skipped = {"id": "sk", "status": "SKIPPED", "meta": {"skippedReason": "No changes to watched files"}}
     out = delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
-                            find=lambda *a: {"id": "sk", "status": "SKIPPED"}, clock=lambda: 0, sleep=lambda s: None)
+                            find=lambda *a: skipped, clock=lambda: 0, sleep=lambda s: None)
     assert out["id"] == "prev"
+    try:
+        delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
+                          find=lambda *a: {"id": "sk", "status": "SKIPPED", "meta": {"skippedReason": "other"}},
+                          clock=lambda: 0, sleep=lambda s: None)
+    except delivery.state.VerificationError as error:
+        assert "Unrecognized skipped" in str(error)
+    else:
+        raise AssertionError("unknown skip reason must refuse")
     for status in ("FAILED", "CRASHED"):
         try:
             delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
@@ -424,6 +433,103 @@ def test_reupload_skipped_means_previous_must_still_be_active_and_failure_refuse
         assert "checkout failed" in str(error)
     else:
         raise AssertionError("checkout failure must refuse")
+
+
+def test_reupload_removes_and_prunes_the_worktree_when_upload_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr(delivery.state, "ROOT", tmp_path)
+    calls = []
+
+    def run(cmd, cwd=None, **kwargs):
+        calls.append(cmd[:3])
+        if cmd[:3] == ["git", "worktree", "add"]:
+            for path in ("services/api/app/services", "services/snkrdunk_collector/snkrdunk_collector"):
+                (Path(cmd[4]) / path).mkdir(parents=True)
+        return Completed(1 if cmd[:2] == ["railway", "up"] else 0)
+
+    try:
+        delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
+                          find=lambda *a: None, clock=lambda: 0, sleep=lambda s: None)
+    except delivery.state.VerificationError as error:
+        assert "Rollback upload failed" in str(error)
+    else:
+        raise AssertionError("upload failure must refuse")
+    assert calls[-2:] == [["git", "worktree", "remove"], ["git", "worktree", "prune"]]
+
+
+def test_new_upload_ignores_deployments_that_existed_before(monkeypatch):
+    rows = [{"id": "old-same-marker", "meta": {"cliMessage": delivery.MARKER + OLD}},
+            {"id": "fresh", "meta": {"cliMessage": delivery.MARKER + OLD}}]
+    monkeypatch.setattr(delivery.state, "command_json", lambda *a: rows)
+    monkeypatch.setattr(delivery, "read_deployment", lambda i, s, c: {"id": i, "status": "SUCCESS"})
+    row = {"service_id": IDS["snkrdunk-collector"]}
+    assert delivery.new_upload(row, OLD, {"old-same-marker"})["id"] == "fresh"
+    assert delivery.new_upload(row, OLD, {"old-same-marker", "fresh"}) is None
+
+
+def test_rollback_after_a_skip_requires_the_previous_deployment_to_be_active(monkeypatch):
+    import collector_variables as cv
+
+    row = reupload_row()
+    node = {"serviceId": row["service_id"], "cronSchedule": row["schedule_utc"],
+            "startCommand": row["start_command"], "latestDeployment": {"id": "something-else"}}
+    monkeypatch.setattr(delivery, "inspect", lambda: {"snkrdunk-collector": node})
+    monkeypatch.setattr(delivery, "read_deployment", lambda i, s, c: {"id": i, "status": "SUCCESS", "meta": {}})
+    monkeypatch.setattr(cv, "read_variables", lambda sid: dict(FLAGS))
+    try:
+        delivery.verify_reupload("snkrdunk-collector", row, {"id": "prev"})
+    except delivery.state.VerificationError as error:
+        assert "not the active deployment" in str(error)
+    else:
+        raise AssertionError("an inactive previous deployment must not count as rolled back")
+    node["latestDeployment"] = {"id": "prev"}
+    assert delivery.verify_reupload("snkrdunk-collector", row, {"id": "prev"})["mode"] == "reupload"
+
+
+def test_mixed_rollback_modes_and_one_failure_does_not_stop_the_rest(monkeypatch):
+    import collector_variables as cv
+
+    before = {}
+    for i, name in enumerate(NAMES):
+        before[name] = {**reupload_row(), "service_id": IDS[name], "digest": "sha256:" + "1" * 64,
+                        "rollback": "reupload" if i % 2 == 0 else "redeploy"}
+    done = []
+    monkeypatch.setattr(cv, "restore", lambda name, *a: done.append(("restore", name)) or {"service": name})
+
+    def reup(name, row):
+        done.append(("reupload", name))
+        if name == "snkrdunk-collector":
+            raise delivery.state.VerificationError("Rollback upload failed: " + name)
+        return {"id": "re-" + name}
+
+    monkeypatch.setattr(delivery, "verify_reupload", lambda name, row, dep: {"mode": "reupload"})
+    results = delivery.roll_back(list(NAMES), before, slot=lambda *a: None, reup=reup)
+    assert done == [("reupload", NAMES[2]), ("restore", NAMES[1]), ("reupload", NAMES[0])]
+    assert results[NAMES[0]]["ok"] is False and results[NAMES[1]]["ok"] and results[NAMES[2]]["ok"]
+
+
+def test_other_rollback_source_errors_refuse_instead_of_falling_back(tmp_path, monkeypatch):
+    fleet = Fleet()
+
+    def provider_error(*a, **k):
+        raise delivery.state.VerificationError("Railway query failed (server)")
+
+    try:
+        run_main(fleet, tmp_path, monkeypatch, source=provider_error)
+    except delivery.state.VerificationError as error:
+        assert "Railway query failed" in str(error)
+    else:
+        raise AssertionError("a provider error must refuse, not switch to reupload")
+    assert not [s for s in fleet.log if s[0] == "upload"]
+
+
+def test_fallback_message_matches_collector_variables():
+    import collector_variables as cv
+
+    try:
+        cv.original_source({"serviceId": "s", "latestDeployment": {}}, "c" * 40, "sha256:" + "1" * 64,
+                           read=lambda *a: {}, listing=lambda sid: [])
+    except delivery.state.VerificationError as error:
+        assert str(error) == delivery.NO_REDEPLOYABLE
 
 
 def test_has_commit_rejects_malformed_and_missing(tmp_path, monkeypatch):

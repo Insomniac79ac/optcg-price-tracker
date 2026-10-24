@@ -365,6 +365,9 @@ def verify_released(row, before, deployment, expected):
     return cv.digest(checked)
 
 
+NO_REDEPLOYABLE = "No redeployable deployment of the verified upload image"
+
+
 def has_commit(commit, run=subprocess.run):
     """True when the exact commit is in this checkout (CI checks out full history)."""
     if not re.fullmatch("[0-9a-f]{40}", commit or ""):
@@ -421,16 +424,18 @@ def reupload(name, row, *, run=subprocess.run, known=None, find=None, clock=None
         finally:
             run(["git", "worktree", "remove", "--force", str(tree)], cwd=state.ROOT,
                 capture_output=True, text=True, timeout=120)
+            run(["git", "worktree", "prune"], cwd=state.ROOT, capture_output=True, text=True, timeout=60)
     deadline = clock() + ROLLOUT_WAIT_SECONDS
     while True:
         deployment = find(row, commit, known)
         if deployment and deployment.get("status") == "SUCCESS":
             return deployment
         if deployment and deployment.get("status") == "SKIPPED":
-            previous = read_deployment(row["deployment_id"], row["service_id"], commit)
-            if previous.get("status") != "SUCCESS":
-                raise state.VerificationError("Rollback upload skipped and previous deployment not active: " + name)
-            return previous
+            if (deployment.get("meta") or {}).get("skippedReason") != "No changes to watched files":
+                raise state.VerificationError("Unrecognized skipped rollback upload: " + name)
+            # Nothing changed, so the previous deployment must still be the active one
+            # (verify_reupload checks it is the service's latest and SUCCESS).
+            return read_deployment(row["deployment_id"], row["service_id"], commit)
         if deployment and deployment.get("status") in {"FAILED", "CRASHED", "REMOVED"}:
             raise state.VerificationError("Rollback upload failed to deploy: " + name)
         if clock() > deadline:
@@ -444,15 +449,19 @@ def verify_reupload(name, row, deployment):
     import collector_variables as cv
 
     service = inspect()[name]
-    fresh = deployment["id"] != row["deployment_id"]  # else a skipped upload left the previous one
-    if fresh and (service.get("latestDeployment") or {}).get("id") != deployment["id"]:
+    # Fresh upload or (after a skip) the previous deployment: either way it must be the
+    # service's active deployment, SUCCESS, with the previous commit's exact marker.
+    if (service.get("latestDeployment") or {}).get("id") != deployment["id"]:
         raise state.VerificationError("Rollback upload is not the active deployment: " + name)
+    checked = read_deployment(deployment["id"], row["service_id"], row["commit"])
+    if checked.get("status") != "SUCCESS":
+        raise state.VerificationError("Rolled-back collector is not SUCCESS: " + name)
     if (service.get("cronSchedule"), service.get("startCommand")) != (row["schedule_utc"], row["start_command"]):
         raise state.VerificationError("Collector configuration changed during rollback: " + name)
     if cv.read_variables(row["service_id"]) != row["variables"]:
         raise state.VerificationError("Collector writer flags changed during rollback: " + name)
     return {"service": name, "mode": "reupload", "deployment": deployment["id"], "commit": row["commit"],
-            "image_digest": (deployment.get("meta") or {}).get("imageDigest")}
+            "image_digest": (checked.get("meta") or {}).get("imageDigest")}
 
 
 def roll_back(released, before, *, slot=None, reup=None):
@@ -500,7 +509,9 @@ def capture_before(row, service):
     try:
         cv.original_source(service, commit, image)
         rollback = "redeploy"
-    except state.VerificationError:
+    except state.VerificationError as error:
+        if str(error) != NO_REDEPLOYABLE:
+            raise  # a provider or read error never silently weakens the rollback
         # Since 2026-10-22 Railway offers no redeployable copy of these uploads
         # (canRedeploy false; owner decision 2026-10-24, pragmatist): the way back
         # is a fresh verified upload of the same commit, which must be in this
