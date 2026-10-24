@@ -80,11 +80,23 @@ def pinned_source(node, commit, *, read, listing, error=Exception):
     raise error("No redeployable deployment of the pinned commit")
 
 
-def rollback_check(node, *, read, listing, marker_commit, error=Exception):
+def can_rollback(deployment_id, railway=None):
+    """Railway's separate rollback flag (a deployment can be rollback-able but not
+    redeployable, seen 2026-10-24). True/False, or None when the field is unreadable."""
+    import generate_staging_state as state
+
+    try:
+        row = (railway or state.railway)(f'query {{ deployment(id:"{deployment_id}") {{ id canRollback }} }}')
+        return bool(row["deployment"]["canRollback"])
+    except Exception:  # noqa: BLE001 - an unknown field or provider error reads as unknown
+        return None
+
+
+def rollback_check(node, *, read, listing, marker_commit, error=Exception, rollback=lambda _id: None):
     """The staging-automerge rollout preflight (deploy_staging_collectors.capture_before) needs,
-    per collector, a redeployable deployment of the active image. Report it, plus every
-    exact-commit copy seen (short ids and digests), so a refused rollout can be explained.
-    Read-only."""
+    per collector, a redeployable deployment of the active image. Report it, any deployment of
+    that image Railway can roll back to, and the copies of that image seen as
+    id:status:R(edeploy)/-:B(ack, rollback)/-/?. Read-only."""
     latest = node.get("latestDeployment") or {}
     out = {"active_status": latest.get("status")}
     try:
@@ -95,17 +107,27 @@ def rollback_check(node, *, read, listing, marker_commit, error=Exception):
     except Exception as exc:  # noqa: BLE001
         out["rollback_problem"] = str(exc) if type(exc).__name__ == "VerificationError" else type(exc).__name__
         return out
-    copies, found = [], None
+    copies, found, back = [], None, None
+    seen = set()
     for identity in [latest["id"], *listing(node["serviceId"])]:
+        if identity in seen:
+            continue
+        seen.add(identity)
         try:
             row = read(identity, node["serviceId"], commit)
         except error:
             continue
-        digest = (row.get("meta") or {}).get("imageDigest") or ""
-        copies.append(f"{identity[:8]}:{row.get('status')}:{'R' if row.get('canRedeploy') else '-'}:{digest[7:19]}")
-        if found is None and row.get("canRedeploy") and digest == image:
+        if ((row.get("meta") or {}).get("imageDigest") or "") != image:
+            continue
+        flag = rollback(identity)
+        if found is None and row.get("canRedeploy"):
             found = identity
-    out.update(rollback_copy=found, copies=copies[:12])
+        if back is None and flag and identity != latest["id"]:
+            back = identity
+        if len(copies) < 12:
+            copies.append(f"{identity[:8]}:{row.get('status')}:{'R' if row.get('canRedeploy') else '-'}:"
+                          f"{'B' if flag else '?' if flag is None else '-'}")
+    out.update(rollback_copy=found, rollback_target=back, copies=copies)
     if found is None:
         out["rollback_problem"] = "No redeployable deployment of the verified upload image"
     return out
@@ -166,7 +188,7 @@ def run(out_dir, *, apply=False, expected_sha256=""):
     for row in rows:
         row.update(rollback_check(live[row["service"]], read=cv.delivery.read_deployment,
                                   listing=cv.recent_deployments, marker_commit=cv.delivery.marker_commit,
-                                  error=state.VerificationError))
+                                  error=state.VerificationError, rollback=can_rollback))
     sha = plan_sha(rows)
     missing = [r["service"] for r in rows if not r["source_deployment"]]
     out = {"observed_at": state.timestamp(), "apply": bool(apply), "plan_sha256": sha,
@@ -174,9 +196,11 @@ def run(out_dir, *, apply=False, expected_sha256=""):
     summary = {"plan_sha256": sha, "collectors": len(rows), "apply": bool(apply),
                "no_source": missing,
                "no_rollback_copy": [r["service"] for r in rows if r.get("rollback_problem")],
+               "no_rollback_target": [r["service"] for r in rows if not r.get("rollback_target")],
                "plan": [{k: r.get(k) for k in ("service", "commit", "image_digest", "live_deployment",
                                                "live_status", "source_deployment", "problem",
                                                "active_commit", "active_digest", "rollback_copy",
+                                               "rollback_target",
                                                "rollback_problem", "copies")
                          if r.get(k) is not None}
                         for r in rows]}
