@@ -753,7 +753,7 @@ def build_state(evidence):
         "snapshot_semantics": "observation only; not authorization, desired state or a capacity guarantee",
         "repository": evidence["repository"],
         "staging": {
-            "frontend_url": "https://optcg-price-tracker-staging.vercel.app",
+            "frontend_url": "https://staging.cardpirate.app",
             "api_url": "https://optcg-price-tracker-staging.up.railway.app",
             "database_revision": db["revision"][0]["version_num"],
             "frontend": front or UNKNOWN,

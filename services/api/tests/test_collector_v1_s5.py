@@ -23,7 +23,8 @@ from app.main import app as api_app
 from app.settings import settings
 from tests._auth_helpers import make_bearer_token
 
-STAGING = "https://optcg-price-tracker-staging.vercel.app"
+STAGING = "https://staging.cardpirate.app"
+VERCEL_ALIAS = "https://optcg-price-tracker-staging.vercel.app"
 EVIL = "https://evil.example"
 REPO = Path(__file__).resolve().parents[3]
 
@@ -65,8 +66,8 @@ def environment(monkeypatch):
     [
         ("staging", STAGING, [STAGING]),
         ("staging", f"{STAGING}, https://other.example", [STAGING, "https://other.example"]),
-        ("staging", None, [STAGING]),
-        ("staging", "", [STAGING]),
+        ("staging", None, [STAGING, VERCEL_ALIAS]),
+        ("staging", "", [STAGING, VERCEL_ALIAS]),
         ("development", None, ["*"]),
         ("production", None, []),
         (None, None, []),

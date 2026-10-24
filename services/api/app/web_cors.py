@@ -12,7 +12,8 @@ Rules, in order:
    the stable alias).
 2. Development (``ENVIRONMENT``/``APP_ENV`` = ``development``): ``*``, as
    local work always had.
-3. Staging without the variable: the staging alias only.
+3. Staging without the variable: the staging site's addresses only
+   (staging.cardpirate.app since 2026-10-24, and the Vercel alias).
 4. Anything else (production, or no environment at all): no cross-origin
    browser access. Server-to-server calls (the web app's route handlers) do
    not use CORS and are unaffected.
@@ -25,7 +26,10 @@ from __future__ import annotations
 
 from app.settings import settings
 
-STAGING_WEB_ORIGIN = "https://optcg-price-tracker-staging.vercel.app"
+STAGING_WEB_ORIGINS = (
+    "https://staging.cardpirate.app",
+    "https://optcg-price-tracker-staging.vercel.app",
+)
 
 
 def _environment() -> str:
@@ -40,7 +44,7 @@ def allowed_origins() -> list[str]:
     if environment == "development":
         return ["*"]
     if environment == "staging":
-        return [STAGING_WEB_ORIGIN]
+        return list(STAGING_WEB_ORIGINS)
     return []
 
 

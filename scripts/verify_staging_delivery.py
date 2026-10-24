@@ -15,7 +15,7 @@ import urllib.request
 
 import generate_staging_state as state
 
-WEB = "https://optcg-price-tracker-staging.vercel.app"
+WEB = "https://staging.cardpirate.app"
 API = "https://optcg-price-tracker-staging.up.railway.app"
 # Vercel can report the merge READY before the alias serves it: #189 and #190
 # failed the runtime SHA check 1-2 minutes after merge, a later Verify passed.
