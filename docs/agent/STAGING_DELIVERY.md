@@ -590,3 +590,27 @@ the divergent services. Evidence recorded before this change replays with the
 old head rule. Session-12 counterfactual on real history: Yuyu on a852244 would
 be flagged (2 runtime inputs changed by a504e47), SNKRDUNK on a852244 would not
 (it imports neither), the API on a504e47 would be (104 watched changes).
+
+## Collector rollback without a redeployable image (2026-10-24)
+
+Since 2026-10-22 Railway reports `canRedeploy = false` for every copy of the
+collectors' active images (some can still be rolled back, but a Railway rollback
+also restores that deployment's old variables, so it is not used). The rollout
+preflight (`deploy_staging_collectors.capture_before`) therefore records a
+rollback mode per collector:
+
+- `redeploy`: a redeployable copy of the active image exists; rollback is
+  `collector_variables.restore` on that exact image, as before.
+- `reupload` (owner decision 2026-10-24, pragmatist): no redeployable copy, and
+  the active exact-commit marker's commit is in the checkout (CI checks out full
+  history). Rollback uploads that same commit again from a detached worktree,
+  with the release build markers and the same exact-commit message, follows the
+  new deployment to SUCCESS and checks it is active with unchanged schedule,
+  start command and writer flags. Same code and current variables; a fresh build,
+  so the digest differs and a rollback takes a build (about 10 minutes) instead
+  of a redeploy.
+- neither: the release refuses before any upload.
+
+The receipt's `before.<collector>.rollback` names the mode. Manual emergency
+revert remains Railway's **Rollback** on the original verified upload, followed
+by a check of that collector's variables.
