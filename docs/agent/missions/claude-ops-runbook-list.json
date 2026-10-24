@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "mission": "Docs: list every ops-write runbook in docs/agent/OPS_RUNBOOKS.md and CLAUDE.md (collector-redeploy was missing; CLAUDE.md listed only enqueue-remaining-50). Also the first merge after #210, whose delivery verify reported a false 'Unexpected API build' after the owner's CORS_ALLOWED_ORIGINS change; this merge's verify re-checks staging.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "CLAUDE.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "ops-write runbook lists match scripts/ops/run.py RUNBOOKS."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Agent documentation"
+      ],
+      "routes": [
+        "Documentation only; no runtime route"
+      ],
+      "dependencies": [
+        "staging after #210"
+      ],
+      "deployment_impact": "Documentation only.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "8aa37aaf8e596db6b16cf65ee8ec9a779e577e28",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The lists are wrong.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "observation_window": "This merge's delivery verify."
+    }
+  },
+  "diff_sha256": "a9cae7153ea228041edcd0d95dc7e8f9647d5be7ffe2373b9a85f7df6315315a"
+}

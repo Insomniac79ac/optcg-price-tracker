@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
