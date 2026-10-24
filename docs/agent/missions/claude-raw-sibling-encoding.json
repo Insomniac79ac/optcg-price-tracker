@@ -253,5 +253,5 @@
       "observation_window": "staging-automerge delivery receipt (all ten collectors at the merge), then verify-lossless from the pre-merge ledger max and the encoding sample within 24 h."
     }
   },
-  "diff_sha256": "bf518284ba4c440140983160bf5cedbbd0657ce8a95dc3a1315ca43b57ea5c7b"
+  "diff_sha256": "1823e3b1cd560246298ac7a9e94eb1c93a08f55ca4d7aef4fd43b09ea81f37df"
 }
