@@ -6,7 +6,7 @@ import { AuthSessionProvider } from "@/components/AuthSessionProvider";
 import { Footer } from "@/components/Footer";
 import { JsonLd } from "@/components/JsonLd";
 import { SiteAnalytics } from "@/components/SiteAnalytics";
-import { publicSiteUrl } from "@/lib/publicRoutes";
+import { publicSiteUrl, searchIndexingEnabled } from "@/lib/publicRoutes";
 import { absoluteUrl } from "@/lib/publicSeo";
 import { brand } from "@/lib/brand";
 
@@ -45,6 +45,9 @@ const ibmPlexMono = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(publicSiteUrl()),
+  // Until SITE_SEARCH_INDEXING=on (launch), every page is noindex; next.config
+  // also sends X-Robots-Tag on every response.
+  ...(searchIndexingEnabled() ? {} : { robots: { index: false, follow: false } }),
   title: {
     default: brand.metadataTitleDefault,
     template: brand.metadataTitleTemplate,

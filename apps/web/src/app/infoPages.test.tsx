@@ -5,6 +5,13 @@ import { render, screen, within } from "@testing-library/react";
 import type { Metadata } from "next";
 import { describe, expect, it, vi } from "vitest";
 
+// Page metadata is built at import; these assertions describe the launch
+// behaviour (SITE_SEARCH_INDEXING=on). Off, every page is noindex
+// (publicSeo.test.ts).
+vi.hoisted(() => {
+  process.env.SITE_SEARCH_INDEXING = "on";
+});
+
 vi.mock("@/components/AppHeader", () => ({ AppHeader: () => <header data-testid="app-header" /> }));
 
 import { FOOTER_LINKS, Footer } from "@/components/Footer";

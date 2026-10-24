@@ -84,3 +84,14 @@ describe("concise exact-print titles", () => {
     expect(printShareContent(print).context).toBe("0 contributing sources · Japanese sources · this version");
   });
 });
+
+describe("page robots follow the launch switch", () => {
+  it("is noindex, nofollow unless SITE_SEARCH_INDEXING=on, then honours the page's own index flag", () => {
+    vi.stubEnv("SITE_SEARCH_INDEXING", "");
+    expect(pageMetadata("About", "d", "/about").robots).toEqual({ index: false, follow: false });
+    vi.stubEnv("SITE_SEARCH_INDEXING", "on");
+    expect(pageMetadata("About", "d", "/about").robots).toEqual({ index: true, follow: true });
+    expect(pageMetadata("Terms", "d", "/terms", undefined, false).robots).toEqual({ index: false, follow: true });
+    vi.unstubAllEnvs();
+  });
+});

@@ -4,6 +4,7 @@ import {
   CRAWLER_DISALLOWED_PREFIXES,
   PUBLIC_INDEXABLE_ROUTES,
   publicSiteUrl,
+  searchIndexingEnabled,
 } from "./publicRoutes";
 import { FULL_MATCHER, PROTECTED_MATCHER } from "./proxyGuard";
 
@@ -127,5 +128,16 @@ describe("publicSiteUrl", () => {
     delete process.env.NEXT_PUBLIC_SITE_URL;
     expect(publicSiteUrl()).toMatch(/^https:\/\/[^/]+$/);
     process.env.NEXT_PUBLIC_SITE_URL = previous;
+  });
+});
+
+describe("search indexing switch", () => {
+  it("is on only for exactly 'on' (fail closed)", () => {
+    expect(searchIndexingEnabled({ SITE_SEARCH_INDEXING: "on" })).toBe(true);
+    expect(searchIndexingEnabled({ SITE_SEARCH_INDEXING: " on " })).toBe(true);
+    for (const value of [undefined, "", "off", "ON", "true", "1"]) {
+      expect(searchIndexingEnabled({ SITE_SEARCH_INDEXING: value })).toBe(false);
+    }
+    expect(searchIndexingEnabled({})).toBe(false);
   });
 });

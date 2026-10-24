@@ -94,6 +94,7 @@ function loadNextConfig(root, phase) {
   fs.copyFileSync(path.join(__dirname, "../src/lib/cspSentryOrigin.ts"), path.join(web, "src/lib/cspSentryOrigin.ts"));
   fs.copyFileSync(path.join(__dirname, "../src/lib/metadataBots.ts"), path.join(web, "src/lib/metadataBots.ts"));
   fs.copyFileSync(path.join(__dirname, "../src/lib/legacyRedirects.ts"), path.join(web, "src/lib/legacyRedirects.ts"));
+  fs.copyFileSync(path.join(__dirname, "../src/lib/publicRoutes.ts"), path.join(web, "src/lib/publicRoutes.ts"));
   fs.symlinkSync(path.resolve(__dirname, "../node_modules"), path.join(web, "node_modules"), "dir");
   const loader = require.resolve("next/dist/server/config");
   return spawnSync(process.execPath, ["-e", `require(${JSON.stringify(loader)}).default(${JSON.stringify(phase)}, ${JSON.stringify(web)}).catch(e => { console.error(e.message); process.exitCode = 1; });`], {

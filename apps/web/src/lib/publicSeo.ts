@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { PrintDetail } from "./prints";
-import { publicSiteUrl } from "./publicRoutes";
+import { publicSiteUrl, searchIndexingEnabled } from "./publicRoutes";
 import { artOrdinalLabel, classifyRarityToken, versionPrintingLabel } from "./terminology";
 import { releaseLabelEnglish } from "./releaseNames";
 
@@ -8,7 +8,8 @@ export const absoluteUrl = (path: string) => new URL(path, publicSiteUrl()).toSt
 export function pageMetadata(title: string, description: string, path: string, image = "/share/home/site", index = true): Metadata {
   const fullTitle = `${title} — Card Pirate`;
   return { title: { absolute: fullTitle }, description, alternates: { canonical: absoluteUrl(path) },
-    robots: { index, follow: true },
+    // A page's robots replaces the root layout's, so the launch switch applies here too.
+    robots: searchIndexingEnabled() ? { index, follow: true } : { index: false, follow: false },
     openGraph: { title: fullTitle, description, url: absoluteUrl(path), siteName: "Card Pirate", type: "website", images: [{ url: absoluteUrl(image), width: 1200, height: 630, alt: title }] },
     twitter: { card: "summary_large_image", title: fullTitle, description, images: [absoluteUrl(image)] } };
 }
