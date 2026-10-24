@@ -18,7 +18,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 from ops import capture_batch, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
-from ops import db as ops_db, lossless  # noqa: E402
+from ops import db as ops_db, encoding_sample, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
 
@@ -342,6 +342,87 @@ class Lossless(unittest.TestCase):
     def test_floor_validation(self):
         with self.assertRaises(common.Refused):
             lossless.run("out", "59328")
+        for floor in ("-x", "12a"):
+            with self.assertRaises(common.Refused):
+                run._lossless(SimpleNamespace(ledger_floor=floor), "out")
+        with mock.patch.object(encoding_sample, "run", return_value={"gate_pass": True}) as sample:
+            self.assertEqual(run._lossless(SimpleNamespace(ledger_floor="sample"), "out"), {"gate_pass": True})
+        sample.assert_called_once_with("out")
+
+    def anchored(self):
+        """Sibling bottom 10 (other URL), anchor 20 encoded on 10, child 30 encoded on 20."""
+        from opcg_source_identity.raw_payload import encode, sha256
+        bottom = b"<html>" + b"listing page " * 400 + b"</html>"
+        anchor = bottom.replace(b"</html>", b"first check</html>")
+        child = bottom.replace(b"</html>", b"second check</html>")
+        rows = {
+            10: {"id": 10, "raw_content": bottom.decode(), "content_hash": sha256(bottom), "source_url": "u9",
+                 "source_id": 1, "parser_version": "p"},
+            20: {"id": 20, "raw_content": encode(anchor, base_id=10, base_body=bottom), "content_hash": sha256(anchor),
+                 "source_url": "u", "source_id": 1, "parser_version": "p"},
+        }
+        stored = encode(child, base_id=20, base_body=anchor)
+        row = {"id": 30, "stored": stored, "base_snapshot_id": 20, "expanded_at": None, "base_sha256": sha256(anchor),
+               "original_sha256": sha256(child), "content_hash": sha256(child), "original_bytes": len(child),
+               "encoded_bytes": len(stored.encode()), "http_status": 200, "source_url": "u", "source_id": 1,
+               "parser_version": "p", "source": "yuyutei"}
+        return row, rows
+
+    def test_anchor_and_sibling_bases_are_bounded(self):
+        from opcg_source_identity.raw_payload import PREFIX, decode
+        row, rows = self.anchored()
+        checks = lossless.check_row(row, rows[20], prefix=PREFIX, decode=decode, bottom_row=rows[10])
+        self.assertTrue(all(v for v in checks.values()), checks)
+        # A sibling (other URL, plaintext) is a valid base on its own.
+        sibling = dict(rows[20], raw_content=lossless.base_body(rows[20], rows[10], prefix=PREFIX, decode=decode).decode(),
+                       source_url="u7")
+        self.assertTrue(all(lossless.check_row(row, sibling, prefix=PREFIX, decode=decode).values()))
+        # An anchor at another URL, or with an encoded bottom, is refused.
+        moved = lossless.check_row(row, dict(rows[20], source_url="u8"), prefix=PREFIX, decode=decode,
+                                   bottom_row=rows[10])
+        self.assertFalse(moved["base_older_same_scope"])
+        deep = lossless.check_row(row, rows[20], prefix=PREFIX, decode=decode,
+                                  bottom_row=dict(rows[10], raw_content=rows[20]["raw_content"]))
+        self.assertFalse(deep["base_older_same_scope"])
+        self.assertFalse(lossless.check_row(row, rows[20], prefix=PREFIX, decode=decode)["base_older_same_scope"])
+
+
+class EncodingSample(unittest.TestCase):
+    def test_pairs_prefer_same_url_then_sibling_of_same_class(self):
+        from app.services.raw_dictionary_storage import url_class
+        rows = [{"id": i, "source_id": 1, "source_url": u, "stored_bytes": 100} for i, u in
+                [(5, "https://y.test/c/2"), (4, "https://y.test/c/1"), (3, "https://y.test/c/2"),
+                 (2, "https://y.test/set/a"), (1, "https://y.test/c/9")]]
+        chosen = [(r["id"], b["id"], kind) for r, b, kind in encoding_sample.pairs(rows, url_class)]
+        self.assertEqual(chosen, [(5, 3, "same_url"), (4, 3, "sibling"), (3, 1, "sibling")])
+
+    def test_measure_gates_on_median_and_never_writes(self):
+        from app.services.raw_dictionary_storage import url_class
+        from opcg_source_identity.raw_payload import PREFIX, encode, sha256
+        base = "<html>" + "listing page " * 2000 + "</html>"
+        bodies = {i: base.replace("</html>", f"card {i}</html>") for i in range(1, 13)}
+        candidates = [{"id": i, "source_id": 1, "source_url": f"https://y.test/c/{i}", "stored_bytes": 20000}
+                      for i in sorted(bodies, reverse=True)]
+
+        class DB:
+            statements = []
+
+            def execute(self, sql, params=()):
+                self.statements.append(sql)
+                value = candidates if "limit" in sql else [
+                    {"id": i, "raw_content": bodies[i], "content_hash": sha256(bodies[i].encode())} for i in params[0]]
+                return SimpleNamespace(fetchall=lambda: value)
+
+        db = DB()
+        result = encoding_sample.measure(db, "yuyutei-collector-v3", 10 * 1024, encode=encode, sha256=sha256,
+                                         url_class=url_class, prefix=PREFIX)
+        self.assertEqual((result["pairs"], result["errors"], result["kinds"]["sibling"]), (11, 0, 11))
+        self.assertTrue(result["gate_pass"])
+        self.assertEqual(result["admitted_by_savings_rule"], 11)
+        self.assertTrue(all(s.lstrip().lower().startswith("select") for s in db.statements))
+        tight = encoding_sample.measure(db, "yuyutei-collector-v3", 10, encode=encode, sha256=sha256,
+                                        url_class=url_class, prefix=PREFIX)
+        self.assertFalse(tight["gate_pass"])
 
 
 class ReplanAndEnqueue(unittest.TestCase):
@@ -767,6 +848,43 @@ class CollectorRedeploy(unittest.TestCase):
         live.pop("yuyutei-collector-shard-0")
         with self.assertRaisesRegex(common.Refused, "shard-0: service not found"):
             collector_redeploy.plan(live, pins, source)
+
+    def test_rollback_check_mirrors_the_rollout_preflight(self):
+        class Mismatch(Exception):
+            pass
+
+        image = "sha256:" + "a" * 64
+        other = "sha256:" + "b" * 64
+        rows = {
+            "active": {"status": "SUCCESS", "canRedeploy": False, "meta": {"imageDigest": image}},
+            "skipped": None,
+            "other-image": {"status": "REMOVED", "canRedeploy": True, "meta": {"imageDigest": other}},
+            "copy": {"status": "REMOVED", "canRedeploy": True, "meta": {"imageDigest": image}},
+        }
+
+        def read(identity, service_id, commit):
+            if rows[identity] is None:
+                raise Mismatch("mismatch")
+            return rows[identity]
+
+        node = {"serviceId": "s", "latestDeployment": {"id": "active", "status": "SUCCESS"}}
+        marker = lambda latest: "c" * 40
+        out = collector_redeploy.rollback_check(node, read=read, listing=lambda sid: list(rows),
+                                                marker_commit=marker, error=Mismatch)
+        self.assertEqual(out["rollback_copy"], "copy")
+        self.assertNotIn("rollback_problem", out)
+        self.assertEqual(out["copies"], ["active:SUCCESS:-:?", "copy:REMOVED:R:?"])  # same image only, once each
+        rows["copy"]["canRedeploy"] = False
+        out = collector_redeploy.rollback_check(node, read=read, listing=lambda sid: list(rows),
+                                                marker_commit=marker, error=Mismatch)
+        self.assertIsNone(out["rollback_copy"])
+        self.assertEqual(out["rollback_problem"], "No redeployable deployment of the verified upload image")
+        self.assertIn("copy:REMOVED:-:?", out["copies"])
+        out = collector_redeploy.rollback_check(node, read=read, listing=lambda sid: list(rows),
+                                                marker_commit=marker, error=Mismatch,
+                                                rollback=lambda identity: identity in ("active", "copy"))
+        self.assertEqual(out["rollback_target"], "copy")  # never the active deployment itself
+        self.assertIn("copy:REMOVED:-:B", out["copies"])
 
     def test_plan_sha_pins_the_live_deployment(self):
         row = {"service": "s", "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64, "live_deployment": "d1"}

@@ -40,7 +40,7 @@ class VerificationTests(unittest.TestCase):
         seen = []
         read = lambda url: seen.append(url) or {"status": "ok"}
         self.assertEqual(collector_token_check(read), "ok")
-        self.assertEqual(seen, ["https://optcg-price-tracker-staging.vercel.app/api/collector-token-check"])
+        self.assertEqual(seen, ["https://staging.cardpirate.app/api/collector-token-check"])
         for status in ("mismatch", "disabled", "unconfigured", "unexpected", "unreachable", None):
             with self.assertRaises(state.VerificationError):
                 collector_token_check(lambda url, status=status: {"status": status})
@@ -118,7 +118,7 @@ class VerificationTests(unittest.TestCase):
                 self.validate(e)
 
     def test_nonstaging_destinations_refused_before_network(self):
-        for url in ('https://example.com/health', 'https://optcg-price-tracker-staging.vercel.app.evil.test/'):
+        for url in ('https://example.com/health', 'https://staging.cardpirate.app.evil.test/'):
             with self.assertRaises(state.VerificationError):
                 get(url)
 
@@ -128,7 +128,7 @@ class VerificationTests(unittest.TestCase):
         opener = Mock()
         opener.open.side_effect = [HTTPError('staging', 429, 'limited', {'Retry-After': '2'}, None), body]
         with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep') as sleep:
-            self.assertEqual(get('https://optcg-price-tracker-staging.vercel.app/api/version'), {})
+            self.assertEqual(get('https://staging.cardpirate.app/api/version'), {})
             sleep.assert_called_once_with(2)
             self.assertEqual(opener.open.call_count, 2)
 
@@ -138,7 +138,7 @@ class VerificationTests(unittest.TestCase):
             opener.open.side_effect = HTTPError('staging', 429, 'limited', {'Retry-After': retry}, None)
             with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener):
                 with self.assertRaises(state.VerificationError):
-                    get('https://optcg-price-tracker-staging.vercel.app/api/version')
+                    get('https://staging.cardpirate.app/api/version')
                 self.assertEqual(opener.open.call_count, 1)
 
 
@@ -157,7 +157,7 @@ class VerificationTests(unittest.TestCase):
         v.timeout_retries.clear()
         opener = self.opener_with(TimeoutError('read timed out'), URLError(TimeoutError('connect')), self.body('{"ok": true}'))
         with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep') as sleep:
-            self.assertEqual(get('https://optcg-price-tracker-staging.vercel.app/api/version'), {'ok': True})
+            self.assertEqual(get('https://staging.cardpirate.app/api/version'), {'ok': True})
         self.assertEqual(opener.open.call_count, 3)
         self.assertEqual([c.args[0] for c in sleep.call_args_list], [2, 5])
         self.assertEqual([r['attempt'] for r in v.timeout_retries], [1, 2])
@@ -168,7 +168,7 @@ class VerificationTests(unittest.TestCase):
         opener = self.opener_with(*[TimeoutError('timed out')] * 4)
         with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep'):
             with self.assertRaises(TimeoutError):
-                get('https://optcg-price-tracker-staging.vercel.app/api/version')
+                get('https://staging.cardpirate.app/api/version')
         self.assertEqual(opener.open.call_count, 3)
         self.assertEqual(len(v.timeout_retries), 2)
 
@@ -178,7 +178,7 @@ class VerificationTests(unittest.TestCase):
             opener = self.opener_with(error, self.body())
             with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep') as sleep:
                 with self.assertRaises(type(error)):
-                    get('https://optcg-price-tracker-staging.vercel.app/api/version')
+                    get('https://staging.cardpirate.app/api/version')
             self.assertEqual(opener.open.call_count, 1)
             sleep.assert_not_called()
 
@@ -269,7 +269,7 @@ class FrontendRuntimeWaitTests(unittest.TestCase):
         waited = wait_for_frontend_runtime(self.expected, read=read, clock=clock, sleep=sleep)
         self.assertEqual(waited, 30)
         self.assertEqual(len(seen), 3)
-        self.assertEqual(set(seen), {"https://optcg-price-tracker-staging.vercel.app/api/version"})
+        self.assertEqual(set(seen), {"https://staging.cardpirate.app/api/version"})
 
     def test_immediate_match_does_not_sleep(self):
         sleep = Mock()

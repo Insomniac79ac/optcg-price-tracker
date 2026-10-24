@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "mission": "Unblock collector releases (#197) after Railway stopped offering redeployable copies of collector images (canRedeploy false since 2026-10-22). Owner decision 2026-10-24 17:26 MYT, pragmatist: the rollout preflight records rollback mode 'redeploy' (exact image, unchanged) or 'reupload' (the active commit, required in the full-history checkout, uploaded again from a detached worktree with the release markers and exact-commit message, followed to SUCCESS, then checked active, SUCCESS, exact marker, unchanged schedule, start command and writer flags). Neither: refuse before any upload. Only the 'no redeployable copy' error switches modes; provider errors refuse. Receipt records the mode. Independent review: FAIL then PASS after fixes. This PR also re-releases #197's merged collector code (readers ship to all ten collectors; RAW_DICTIONARY_SIBLING stays false) through staging-automerge, which #197's own delivery could not do; components set to merge for this delivery, pin PR follows.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/deploy_staging_collectors.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "capture_before: rollback mode redeploy/reupload (has_commit), refuse when neither; roll_back dispatches per mode; reupload() (worktree, markers, railway up with exact-commit message, new_upload excludes pre-existing deployment ids, SKIPPED only for 'No changes to watched files'), verify_reupload() (active, SUCCESS, marker, schedule, start command, writer flags); build_markers(root); receipt before.<collector>.rollback. Forward release path unchanged."
+    },
+    {
+      "files": [
+        "scripts/tests/test_deploy_staging_collectors.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Fallback to reupload and its receipt mode, refusal without commit, provider errors refuse, worktree upload with markers and message, cleanup and prune on failure, skip handling, inactive previous deployment refused, mixed modes with one failure continuing, message parity with collector_variables."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_DELIVERY.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Collector rollback without a redeployable image: modes, owner decision, manual Railway rollback caveat (restores old variables)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "staging-automerge collector rollout (all 10 collectors) and its rollback"
+      ],
+      "routes": [
+        "railway up from a detached worktree of the previous verified commit, only on rollback"
+      ],
+      "dependencies": [
+        "staging after #206",
+        "full-history checkout in staging-automerge and staging-delivery (fetch-depth: 0)"
+      ],
+      "deployment_impact": "Collector release of current staging (includes #197) to all nine Yuyu shards and SNKRDUNK, sequential in safe slots, with the new rollback modes; before 18:30Z, never 02:00-06:00Z. Next staging merge pins yuyu_reader_component and snkr_component to this merge.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 10
+    },
+    "recovery": {
+      "artifact": "dde32f54a5a2c6eab8fb523d4b39f84efd5713a7",
+      "procedure": "Native revert PR with its own mission file; collector releases then refuse again until Railway offers redeployable copies.",
+      "trigger": "A rollback reports success while a collector is not on its previous commit, or a re-upload deploys the wrong commit.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_deploy_staging_collectors.py",
+        "scripts/tests/test_collector_variables.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/deploy_staging_collectors.py"
+      ],
+      "observation_window": "The #197 re-release receipt (before.*.rollback = reupload) and its delivery verify."
+    }
+  },
+  "diff_sha256": "c9f71fd1f3c841ef0991654e072e2542e454637be69fa07ef620b50478b08268",
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "6d9e8535-8eec-457c-90d2-d728b8e6f86d"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "6dd0012c-4bed-4f23-b8ab-b07dd09e3ec4"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "bb616bea-1d6e-4e99-8131-f278dd098e2b"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "9d2e896b-274b-4ddc-8682-bb84ca4ce989"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "ff9b851e-2cf4-433d-94aa-6d1141545cdf"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "39fb1797-55bb-4bb4-88f2-ff4f39857266"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "8bec210f-8b98-4314-ab22-ae6741441944"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "7853864c-2347-428f-976e-7a9b41e77c37"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "17aa8b10-0a68-49c6-8c3e-630d75963d72"
+      },
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "502519e6-5062-4c77-a27d-9a3f26b3173b"
+      }
+    ]
+  }
+}

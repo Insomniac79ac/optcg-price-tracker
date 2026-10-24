@@ -20,7 +20,7 @@ import re
 import sys
 from urllib.parse import parse_qs, urlsplit
 
-WEB = "https://optcg-price-tracker-staging.vercel.app"
+WEB = "https://staging.cardpirate.app"
 PUBLIC = ("/", "/cards", "/prints/5661", "/sign-in")
 SIGNED_OUT = ("/account", "/collection", "/watchlist")
 IMAGE_PAGES = ("/cards", "/prints/5661")

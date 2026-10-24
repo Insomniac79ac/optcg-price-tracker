@@ -157,6 +157,12 @@ class Fleet:
             return {**FLAGS, "RAW_DICTIONARY_STORAGE_ENABLED": "false"}
         return dict(FLAGS)
 
+    def reupload(self, name, row, **kwargs):
+        self.log.append(("reupload", name, row["commit"]))
+        self.active[name] = "re-" + name
+        return {"id": "re-" + name, "status": "SUCCESS",
+                "meta": {"cliMessage": delivery.MARKER + row["commit"], "imageDigest": "sha256:" + "5" * 64}}
+
     def restore(self, name, values, commit, digest):
         self.log.append(("restore", name, commit, digest))
         assert values == FLAGS
@@ -169,7 +175,7 @@ TRIGGER = {"triggers": [{"id": "t", "provider": "github", "repository": "Insomni
                          "branch": "staging"}], "auto_deploy": False}
 
 
-def run_main(fleet, tmp_path, monkeypatch, source=None, triggers=None):
+def run_main(fleet, tmp_path, monkeypatch, source=None, triggers=None, commit_present=True, reup=None):
     import collector_variables as cv
 
     for path in ("services/api/app/services", "services/yuyutei_collector/yuyutei_collector",
@@ -194,6 +200,8 @@ def run_main(fleet, tmp_path, monkeypatch, source=None, triggers=None):
     monkeypatch.setattr(cv, "original_source",
                         source or (lambda node, commit, image, *a, **k: {"id": "src"}))
     monkeypatch.setattr(cv, "restore", fleet.restore)
+    monkeypatch.setattr(delivery, "has_commit", lambda commit: commit_present)
+    monkeypatch.setattr(delivery, "reupload", reup or fleet.reupload)
     return delivery.main(["--manifest", str(manifest), "--expected", EXPECTED,
                           "--output", str(output)]), output
 
@@ -239,14 +247,39 @@ def test_writer_flag_drift_after_release_rolls_back(tmp_path, monkeypatch):
         "yuyutei-collector-shard-0", "snkrdunk-collector"]
 
 
-def test_missing_rollback_source_refuses_before_any_upload(tmp_path, monkeypatch):
-    fleet = Fleet()
+def no_source(*a, **k):
+    raise delivery.state.VerificationError(delivery.NO_REDEPLOYABLE)
 
-    def no_source(*a, **k):
-        raise delivery.state.VerificationError("No redeployable deployment")
 
+def test_no_redeployable_image_falls_back_to_reupload_of_the_same_commit(tmp_path, monkeypatch):
+    fleet = Fleet(fail_on="yuyutei-collector-shard-1")
+    monkeypatch.setattr(delivery, "inspect", fleet.inspect)
     try:
         run_main(fleet, tmp_path, monkeypatch, source=no_source)
+    except delivery.state.VerificationError as error:
+        assert "every released collector restored to its previous commit" in str(error)
+    else:
+        raise AssertionError("rollout must refuse")
+    assert not [s for s in fleet.log if s[0] == "restore"]
+    assert [s for s in fleet.log if s[0] == "reupload"] == [("reupload", n, OLD) for n in reversed(NAMES)]
+    assert all(v.startswith("re-") for v in fleet.active.values())
+
+
+def test_success_receipt_records_the_rollback_mode(tmp_path, monkeypatch):
+    fleet = Fleet()
+    code, output = run_main(fleet, tmp_path, monkeypatch, source=no_source)
+    assert code == 0
+    receipt = json.loads(output.read_text())
+    assert {r["rollback"] for r in receipt["before"].values()} == {"reupload"}
+    fleet = Fleet()
+    code, output = run_main(fleet, tmp_path / "b", monkeypatch)
+    assert {r["rollback"] for r in json.loads(output.read_text())["before"].values()} == {"redeploy"}
+
+
+def test_missing_rollback_source_and_commit_refuses_before_any_upload(tmp_path, monkeypatch):
+    fleet = Fleet()
+    try:
+        run_main(fleet, tmp_path, monkeypatch, source=no_source, commit_present=False)
     except delivery.state.VerificationError:
         pass
     else:
@@ -319,6 +352,193 @@ def test_rollback_restore_never_runs_the_trigger_check(tmp_path, monkeypatch):
         pass
     assert len(calls) == len(delivery.NAMES)  # once, in the preflight; restores add none
     assert [s for s in fleet.log if s[0] == "restore"]
+
+
+class Completed:
+    def __init__(self, code=0):
+        self.returncode, self.stdout, self.stderr = code, "", ""
+
+
+def reupload_row():
+    return {"commit": OLD, "service_id": IDS["snkrdunk-collector"], "deployment_id": "prev",
+            "schedule_utc": "27,57 * * * *", "start_command": "python --due-work", "variables": dict(FLAGS)}
+
+
+def test_reupload_uploads_the_previous_commit_from_a_worktree_with_markers(tmp_path, monkeypatch):
+    monkeypatch.setattr(delivery.state, "ROOT", tmp_path)
+    calls, seen = [], {}
+
+    def run(cmd, cwd=None, **kwargs):
+        calls.append((cmd[:3], str(cwd)))
+        if cmd[:3] == ["git", "worktree", "add"]:
+            tree = Path(cmd[4])
+            for path in ("services/api/app/services", "services/snkrdunk_collector/snkrdunk_collector"):
+                (tree / path).mkdir(parents=True)
+        if cmd[:2] == ["railway", "up"]:
+            seen["message"] = cmd[-1]
+            seen["cwd"] = cwd
+            seen["markers"] = sorted((p.read_text() for p in Path(cwd).rglob("*.py")))
+        return Completed()
+
+    states = iter([None, {"id": "re", "status": "BUILDING"}, {"id": "re", "status": "SUCCESS"}])
+    result = delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known={"prev"},
+                               find=lambda row, commit, known: next(states),
+                               clock=lambda: 0, sleep=lambda s: None)
+    assert result["id"] == "re"
+    assert seen["message"] == delivery.MARKER + OLD
+    assert seen["markers"] == ["REVISION = " + repr(OLD) + "\n"] * 2
+    assert [c[0] for c in calls] == [["git", "worktree", "add"], ["railway", "up", "--project"],
+                                    ["git", "worktree", "remove"], ["git", "worktree", "prune"]]
+
+
+def test_reupload_skipped_means_previous_must_still_be_active_and_failure_refuses(tmp_path, monkeypatch):
+    monkeypatch.setattr(delivery.state, "ROOT", tmp_path)
+
+    def run(cmd, cwd=None, **kwargs):
+        if cmd[:3] == ["git", "worktree", "add"]:
+            (Path(cmd[4]) / "services/api/app/services").mkdir(parents=True)
+            (Path(cmd[4]) / "services/snkrdunk_collector/snkrdunk_collector").mkdir(parents=True)
+        return Completed()
+
+    monkeypatch.setattr(delivery, "read_deployment",
+                        lambda i, s, c: {"id": i, "status": "SUCCESS", "meta": {}})
+    skipped = {"id": "sk", "status": "SKIPPED", "meta": {"skippedReason": "No changes to watched files"}}
+    out = delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
+                            find=lambda *a: skipped, clock=lambda: 0, sleep=lambda s: None)
+    assert out["id"] == "prev"
+    try:
+        delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
+                          find=lambda *a: {"id": "sk", "status": "SKIPPED", "meta": {"skippedReason": "other"}},
+                          clock=lambda: 0, sleep=lambda s: None)
+    except delivery.state.VerificationError as error:
+        assert "Unrecognized skipped" in str(error)
+    else:
+        raise AssertionError("unknown skip reason must refuse")
+    for status in ("FAILED", "CRASHED"):
+        try:
+            delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
+                              find=lambda *a: {"id": "x", "status": status}, clock=lambda: 0, sleep=lambda s: None)
+        except delivery.state.VerificationError:
+            pass
+        else:
+            raise AssertionError(status)
+
+    def bad_checkout(cmd, cwd=None, **kwargs):
+        return Completed(1 if cmd[:3] == ["git", "worktree", "add"] else 0)
+
+    try:
+        delivery.reupload("snkrdunk-collector", reupload_row(), run=bad_checkout, known=set(),
+                          find=lambda *a: None, clock=lambda: 0, sleep=lambda s: None)
+    except delivery.state.VerificationError as error:
+        assert "checkout failed" in str(error)
+    else:
+        raise AssertionError("checkout failure must refuse")
+
+
+def test_reupload_removes_and_prunes_the_worktree_when_upload_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr(delivery.state, "ROOT", tmp_path)
+    calls = []
+
+    def run(cmd, cwd=None, **kwargs):
+        calls.append(cmd[:3])
+        if cmd[:3] == ["git", "worktree", "add"]:
+            for path in ("services/api/app/services", "services/snkrdunk_collector/snkrdunk_collector"):
+                (Path(cmd[4]) / path).mkdir(parents=True)
+        return Completed(1 if cmd[:2] == ["railway", "up"] else 0)
+
+    try:
+        delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(),
+                          find=lambda *a: None, clock=lambda: 0, sleep=lambda s: None)
+    except delivery.state.VerificationError as error:
+        assert "Rollback upload failed" in str(error)
+    else:
+        raise AssertionError("upload failure must refuse")
+    assert calls[-2:] == [["git", "worktree", "remove"], ["git", "worktree", "prune"]]
+
+
+def test_new_upload_ignores_deployments_that_existed_before(monkeypatch):
+    rows = [{"id": "old-same-marker", "meta": {"cliMessage": delivery.MARKER + OLD}},
+            {"id": "fresh", "meta": {"cliMessage": delivery.MARKER + OLD}}]
+    monkeypatch.setattr(delivery.state, "command_json", lambda *a: rows)
+    monkeypatch.setattr(delivery, "read_deployment", lambda i, s, c: {"id": i, "status": "SUCCESS"})
+    row = {"service_id": IDS["snkrdunk-collector"]}
+    assert delivery.new_upload(row, OLD, {"old-same-marker"})["id"] == "fresh"
+    assert delivery.new_upload(row, OLD, {"old-same-marker", "fresh"}) is None
+
+
+def test_rollback_after_a_skip_requires_the_previous_deployment_to_be_active(monkeypatch):
+    import collector_variables as cv
+
+    row = reupload_row()
+    node = {"serviceId": row["service_id"], "cronSchedule": row["schedule_utc"],
+            "startCommand": row["start_command"], "latestDeployment": {"id": "something-else"}}
+    monkeypatch.setattr(delivery, "inspect", lambda: {"snkrdunk-collector": node})
+    monkeypatch.setattr(delivery, "read_deployment", lambda i, s, c: {"id": i, "status": "SUCCESS", "meta": {}})
+    monkeypatch.setattr(cv, "read_variables", lambda sid: dict(FLAGS))
+    try:
+        delivery.verify_reupload("snkrdunk-collector", row, {"id": "prev"})
+    except delivery.state.VerificationError as error:
+        assert "not the active deployment" in str(error)
+    else:
+        raise AssertionError("an inactive previous deployment must not count as rolled back")
+    node["latestDeployment"] = {"id": "prev"}
+    assert delivery.verify_reupload("snkrdunk-collector", row, {"id": "prev"})["mode"] == "reupload"
+
+
+def test_mixed_rollback_modes_and_one_failure_does_not_stop_the_rest(monkeypatch):
+    import collector_variables as cv
+
+    before = {}
+    for i, name in enumerate(NAMES):
+        before[name] = {**reupload_row(), "service_id": IDS[name], "digest": "sha256:" + "1" * 64,
+                        "rollback": "reupload" if i % 2 == 0 else "redeploy"}
+    done = []
+    monkeypatch.setattr(cv, "restore", lambda name, *a: done.append(("restore", name)) or {"service": name})
+
+    def reup(name, row):
+        done.append(("reupload", name))
+        if name == "snkrdunk-collector":
+            raise delivery.state.VerificationError("Rollback upload failed: " + name)
+        return {"id": "re-" + name}
+
+    monkeypatch.setattr(delivery, "verify_reupload", lambda name, row, dep: {"mode": "reupload"})
+    results = delivery.roll_back(list(NAMES), before, slot=lambda *a: None, reup=reup)
+    assert done == [("reupload", NAMES[2]), ("restore", NAMES[1]), ("reupload", NAMES[0])]
+    assert results[NAMES[0]]["ok"] is False and results[NAMES[1]]["ok"] and results[NAMES[2]]["ok"]
+
+
+def test_other_rollback_source_errors_refuse_instead_of_falling_back(tmp_path, monkeypatch):
+    fleet = Fleet()
+
+    def provider_error(*a, **k):
+        raise delivery.state.VerificationError("Railway query failed (server)")
+
+    try:
+        run_main(fleet, tmp_path, monkeypatch, source=provider_error)
+    except delivery.state.VerificationError as error:
+        assert "Railway query failed" in str(error)
+    else:
+        raise AssertionError("a provider error must refuse, not switch to reupload")
+    assert not [s for s in fleet.log if s[0] == "upload"]
+
+
+def test_fallback_message_matches_collector_variables():
+    import collector_variables as cv
+
+    try:
+        cv.original_source({"serviceId": "s", "latestDeployment": {}}, "c" * 40, "sha256:" + "1" * 64,
+                           read=lambda *a: {}, listing=lambda sid: [])
+    except delivery.state.VerificationError as error:
+        assert str(error) == delivery.NO_REDEPLOYABLE
+    else:
+        raise AssertionError("original_source must refuse with no copies")
+
+
+def test_has_commit_rejects_malformed_and_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(delivery.state, "ROOT", tmp_path)
+    assert delivery.has_commit("not-a-sha") is False
+    assert delivery.has_commit("a" * 40, run=lambda *a, **k: Completed(1)) is False
+    assert delivery.has_commit("a" * 40, run=lambda *a, **k: Completed(0)) is True
 
 
 if __name__ == "__main__":

@@ -107,5 +107,9 @@ def test_corrupt_or_cross_source_portable_dictionary_fails_before_restore(db_ses
         bad["tables"]["raw_snapshot_dictionaries"][0][field] = value
         assert not validate_backup(bad).valid
     bad = copy.deepcopy(archive)
-    bad["tables"]["raw_snapshots"][0]["source_url"] += "other"
+    bad["tables"]["raw_snapshots"][0]["parser_version"] += "-other"
     assert not validate_backup(bad).valid
+    # A sibling dictionary is another URL of the same source and parser.
+    sibling = copy.deepcopy(archive)
+    sibling["tables"]["raw_snapshots"][0]["source_url"] += "other"
+    assert validate_backup(sibling).valid

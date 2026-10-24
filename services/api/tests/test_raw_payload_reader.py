@@ -125,13 +125,11 @@ def test_orm_reader_and_export_restore_original_text_and_metadata(db_session):
 
 
 @pytest.mark.parametrize(
-    "change", ["url", "source", "parser", "hash", "chain", "future", "missing"]
+    "change", ["source", "parser", "hash", "chain", "future", "missing"]
 )
 def test_orm_base_ownership_and_chain_guard(db_session, change):
     root, child = seed(db_session)
-    if change == "url":
-        root.source_url = "https://example.test/different"
-    elif change == "source":
+    if change == "source":
         child.source_id += 1
     elif change == "parser":
         root.parser_version = "different"
@@ -154,3 +152,57 @@ def test_detached_encoded_row_refuses_instead_of_fetching_a_source(db_session):
     db_session.expunge(child)
     with pytest.raises(RawPayloadError):
         _ = child.raw_content
+
+
+def test_plaintext_sibling_at_another_url_is_a_valid_dictionary(db_session):
+    root, child = seed(db_session)
+    root.source_url = "https://example.test/product/9"
+    db_session.flush()
+    assert child.raw_content.encode() == NEW
+
+
+LATER = NEW.replace(b"250</price>", b"300</price>")
+
+
+def seed_anchor(db):
+    """Plaintext sibling 1 (other URL), anchor 2 encoded on 1, child 3 encoded on 2."""
+    root, anchor = seed(db)
+    root.source_url = "https://example.test/product/9"
+    third = RawSnapshot(
+        id=3,
+        source_id=anchor.source_id,
+        source_url=anchor.source_url,
+        fetched_at=datetime(2026, 10, 3, tzinfo=timezone.utc),
+        http_status=200,
+        content_hash=sha256(LATER),
+        raw_content=LATER.decode(),
+        parser_version=anchor.parser_version,
+    )
+    third._stored_raw_content = encode(LATER, base_id=2, base_body=NEW)
+    db.add(third)
+    db.commit()
+    db.expire_all()
+    return root, anchor, third
+
+
+def test_two_level_anchor_reconstructs_every_byte(db_session):
+    _, anchor, third = seed_anchor(db_session)
+    assert third.raw_content.encode() == LATER
+    assert anchor.raw_content.encode() == NEW
+
+
+@pytest.mark.parametrize("change", ["anchor_url", "three_levels", "anchor_hash"])
+def test_anchor_is_bounded_and_fails_closed(db_session, change):
+    root, anchor, third = seed_anchor(db_session)
+    if change == "anchor_url":
+        anchor.source_url = "https://example.test/product/8"
+    elif change == "three_levels":
+        # The anchor's own dictionary is encoded: a third level is refused.
+        root._stored_raw_content = PREFIX + "{}"
+    elif change == "anchor_hash":
+        anchor.content_hash = "0" * 64
+    db_session.flush()
+    with pytest.raises(RawPayloadError) as refused:
+        _ = third.raw_content
+    if change != "anchor_hash":
+        assert "plaintext dictionary required" in str(refused.value)

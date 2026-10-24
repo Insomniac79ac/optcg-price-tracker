@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "mission": "Staging moves to staging.cardpirate.app (owner decision 2026-10-24; Vercel alias keeps working). The API's staging CORS default allows exactly both addresses (credentials still never cross-origin; the Railway CORS_ALLOWED_ORIGINS variable, if set, must list both); Verify staging merge, the signed-out web smoke and the state report target the new address. The owner sets AUTH_URL (and NEXT_PUBLIC_SITE_URL) in Vercel before this merges.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/web_cors.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "STAGING_WEB_ORIGINS: exact staging.cardpirate.app and the Vercel alias for staging without CORS_ALLOWED_ORIGINS; docstring. Not a collector runtime input (only app.main imports it)."
+    },
+    {
+      "files": [
+        "services/api/tests/test_collector_v1_s5.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Default allows both addresses; lookalike hosts refused; existing cases updated."
+    },
+    {
+      "files": [
+        "scripts/verify_staging_delivery.py",
+        "scripts/staging_web_smoke.py",
+        "scripts/generate_staging_state.py",
+        "scripts/tests/test_verify_staging_delivery.py"
+      ],
+      "effects": [
+        "infrastructure",
+        "tests"
+      ],
+      "reason": "WEB and frontend_url = https://staging.cardpirate.app."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Railway api (rebuild on merge)",
+        "Verify staging merge, web smoke, state report"
+      ],
+      "routes": [
+        "GET https://staging.cardpirate.app/api/version, /api/auth/session, /api/collector-token-check and public pages (verifier and smoke)"
+      ],
+      "dependencies": [
+        "staging.cardpirate.app attached to the Vercel staging project with a valid certificate",
+        "Vercel AUTH_URL set to https://staging.cardpirate.app"
+      ],
+      "deployment_impact": "API rebuild with the CORS default; no collector rollout, no schema change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "d9b8038ad6648fba978628eb947d4e4a422241ea",
+      "procedure": "Native revert PR with its own mission file; set AUTH_URL back to the Vercel alias.",
+      "trigger": "Verify or web smoke fails on the new address, or browsers on staging.cardpirate.app are refused by the API.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "services/api/tests/test_collector_v1_s5.py",
+        "scripts/tests/test_verify_staging_delivery.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests",
+        "backend-tests"
+      ],
+      "post_change": [
+        "services/api/app/web_cors.py",
+        "scripts/verify_staging_delivery.py"
+      ],
+      "observation_window": "This merge's delivery verify and web smoke on staging.cardpirate.app."
+    }
+  },
+  "diff_sha256": "6d5f4b76af10ba13b49dd91b32f051019d513c4b85d157c2f1be2121e3185d85"
+}
