@@ -530,6 +530,8 @@ def test_fallback_message_matches_collector_variables():
                            read=lambda *a: {}, listing=lambda sid: [])
     except delivery.state.VerificationError as error:
         assert str(error) == delivery.NO_REDEPLOYABLE
+    else:
+        raise AssertionError("original_source must refuse with no copies")
 
 
 def test_has_commit_rejects_malformed_and_missing(tmp_path, monkeypatch):
