@@ -80,6 +80,37 @@ def pinned_source(node, commit, *, read, listing, error=Exception):
     raise error("No redeployable deployment of the pinned commit")
 
 
+def rollback_check(node, *, read, listing, marker_commit, error=Exception):
+    """The staging-automerge rollout preflight (deploy_staging_collectors.capture_before) needs,
+    per collector, a redeployable deployment of the active image. Report it, plus every
+    exact-commit copy seen (short ids and digests), so a refused rollout can be explained.
+    Read-only."""
+    latest = node.get("latestDeployment") or {}
+    out = {"active_status": latest.get("status")}
+    try:
+        commit = marker_commit(latest)
+        active = read(latest["id"], node["serviceId"], commit)
+        image = (active.get("meta") or {}).get("imageDigest") or ""
+        out.update(active_commit=commit[:7], active_digest=image[7:19])
+    except Exception as exc:  # noqa: BLE001
+        out["rollback_problem"] = str(exc) if type(exc).__name__ == "VerificationError" else type(exc).__name__
+        return out
+    copies, found = [], None
+    for identity in [latest["id"], *listing(node["serviceId"])]:
+        try:
+            row = read(identity, node["serviceId"], commit)
+        except error:
+            continue
+        digest = (row.get("meta") or {}).get("imageDigest") or ""
+        copies.append(f"{identity[:8]}:{row.get('status')}:{'R' if row.get('canRedeploy') else '-'}:{digest[7:19]}")
+        if found is None and row.get("canRedeploy") and digest == image:
+            found = identity
+    out.update(rollback_copy=found, copies=copies[:12])
+    if found is None:
+        out["rollback_problem"] = "No redeployable deployment of the verified upload image"
+    return out
+
+
 def plan(live, pins, source_for):
     """One row per collector: pinned commit, redeploy source and its digest, live deployment."""
     rows = []
@@ -132,14 +163,21 @@ def run(out_dir, *, apply=False, expected_sha256=""):
     rows = plan(live, pins, lambda node, commit: pinned_source(
         node, commit, read=cv.delivery.read_deployment, listing=cv.recent_deployments,
         error=state.VerificationError))
+    for row in rows:
+        row.update(rollback_check(live[row["service"]], read=cv.delivery.read_deployment,
+                                  listing=cv.recent_deployments, marker_commit=cv.delivery.marker_commit,
+                                  error=state.VerificationError))
     sha = plan_sha(rows)
     missing = [r["service"] for r in rows if not r["source_deployment"]]
     out = {"observed_at": state.timestamp(), "apply": bool(apply), "plan_sha256": sha,
            "pins_from": FLEET, "plan": rows}
     summary = {"plan_sha256": sha, "collectors": len(rows), "apply": bool(apply),
                "no_source": missing,
+               "no_rollback_copy": [r["service"] for r in rows if r.get("rollback_problem")],
                "plan": [{k: r.get(k) for k in ("service", "commit", "image_digest", "live_deployment",
-                                               "live_status", "source_deployment", "problem")
+                                               "live_status", "source_deployment", "problem",
+                                               "active_commit", "active_digest", "rollback_copy",
+                                               "rollback_problem", "copies")
                          if r.get(k) is not None}
                         for r in rows]}
     if missing:
@@ -152,6 +190,11 @@ def run(out_dir, *, apply=False, expected_sha256=""):
         return summary
     check_apply(apply, expected_sha256, sha)
     done, stopped = apply_rows(rows, cv.restore)
+    after = cv.delivery.inspect()
+    for item in done:
+        item["rollback_after"] = rollback_check(
+            after[item["service"]], read=cv.delivery.read_deployment, listing=cv.recent_deployments,
+            marker_commit=cv.delivery.marker_commit, error=state.VerificationError).get("rollback_copy")
     out.update(redeployed=done, stopped=stopped, production_accessed=False, source_jobs_triggered=0)
     common.write_json(Path(out_dir) / "collector-redeploy.json", out)
     summary.pop("plan")

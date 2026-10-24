@@ -849,6 +849,38 @@ class CollectorRedeploy(unittest.TestCase):
         with self.assertRaisesRegex(common.Refused, "shard-0: service not found"):
             collector_redeploy.plan(live, pins, source)
 
+    def test_rollback_check_mirrors_the_rollout_preflight(self):
+        class Mismatch(Exception):
+            pass
+
+        image = "sha256:" + "a" * 64
+        other = "sha256:" + "b" * 64
+        rows = {
+            "active": {"status": "SUCCESS", "canRedeploy": False, "meta": {"imageDigest": image}},
+            "skipped": None,
+            "other-image": {"status": "REMOVED", "canRedeploy": True, "meta": {"imageDigest": other}},
+            "copy": {"status": "REMOVED", "canRedeploy": True, "meta": {"imageDigest": image}},
+        }
+
+        def read(identity, service_id, commit):
+            if rows[identity] is None:
+                raise Mismatch("mismatch")
+            return rows[identity]
+
+        node = {"serviceId": "s", "latestDeployment": {"id": "active", "status": "SUCCESS"}}
+        marker = lambda latest: "c" * 40
+        out = collector_redeploy.rollback_check(node, read=read, listing=lambda sid: list(rows),
+                                                marker_commit=marker, error=Mismatch)
+        self.assertEqual(out["rollback_copy"], "copy")
+        self.assertNotIn("rollback_problem", out)
+        self.assertEqual(len(out["copies"]), 4)  # active listed twice (latest and listing)
+        rows["copy"]["canRedeploy"] = False
+        out = collector_redeploy.rollback_check(node, read=read, listing=lambda sid: list(rows),
+                                                marker_commit=marker, error=Mismatch)
+        self.assertIsNone(out["rollback_copy"])
+        self.assertEqual(out["rollback_problem"], "No redeployable deployment of the verified upload image")
+        self.assertIn("copy:REMOVED:-:" + "a" * 12, out["copies"])
+
     def test_plan_sha_pins_the_live_deployment(self):
         row = {"service": "s", "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64, "live_deployment": "d1"}
         sha = collector_redeploy.plan_sha([row])
