@@ -37,6 +37,11 @@ actually mean to be there - it should not be receiving new deploys - and regardl
 environment you're in, always use staging-only URLs, tokens, and secrets, never anything that could
 be a real production credential.
 
+## Rotating secrets
+
+To rotate staging secrets (database and Redis passwords, app secrets, R2, tokens), follow
+[staging_secret_rotation.md](staging_secret_rotation.md).
+
 ## Why a separate Dockerfile per Railway service
 
 The API and worker historically used service-directory build contexts. Since the
