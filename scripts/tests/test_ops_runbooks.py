@@ -873,13 +873,18 @@ class CollectorRedeploy(unittest.TestCase):
                                                 marker_commit=marker, error=Mismatch)
         self.assertEqual(out["rollback_copy"], "copy")
         self.assertNotIn("rollback_problem", out)
-        self.assertEqual(len(out["copies"]), 4)  # active listed twice (latest and listing)
+        self.assertEqual(out["copies"], ["active:SUCCESS:-:?", "copy:REMOVED:R:?"])  # same image only, once each
         rows["copy"]["canRedeploy"] = False
         out = collector_redeploy.rollback_check(node, read=read, listing=lambda sid: list(rows),
                                                 marker_commit=marker, error=Mismatch)
         self.assertIsNone(out["rollback_copy"])
         self.assertEqual(out["rollback_problem"], "No redeployable deployment of the verified upload image")
-        self.assertIn("copy:REMOVED:-:" + "a" * 12, out["copies"])
+        self.assertIn("copy:REMOVED:-:?", out["copies"])
+        out = collector_redeploy.rollback_check(node, read=read, listing=lambda sid: list(rows),
+                                                marker_commit=marker, error=Mismatch,
+                                                rollback=lambda identity: identity in ("active", "copy"))
+        self.assertEqual(out["rollback_target"], "copy")  # never the active deployment itself
+        self.assertIn("copy:REMOVED:-:B", out["copies"])
 
     def test_plan_sha_pins_the_live_deployment(self):
         row = {"service": "s", "commit": "c" * 40, "image_digest": "sha256:" + "a" * 64, "live_deployment": "d1"}
