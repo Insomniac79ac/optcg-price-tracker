@@ -7,6 +7,7 @@ import { generateBuildVersion } from "./scripts/generate-build-version";
 import { buildImageSrcHosts } from "./src/lib/cspImageOrigin";
 import { sentryIngestOrigin } from "./src/lib/cspSentryOrigin";
 import { legacyRedirects } from "./src/lib/legacyRedirects";
+import { NOINDEX_HEADER_VALUE, searchIndexingEnabled } from "./src/lib/publicRoutes";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -134,6 +135,9 @@ const nextConfig: NextConfig = {
           },
           { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
           { key: "Strict-Transport-Security", value: STRICT_TRANSPORT_SECURITY },
+          // Every response (pages, images, API) is noindex until launch turns
+          // SITE_SEARCH_INDEXING=on; see searchIndexingEnabled().
+          ...(searchIndexingEnabled() ? [] : [{ key: "X-Robots-Tag", value: NOINDEX_HEADER_VALUE }]),
         ],
       },
     ];

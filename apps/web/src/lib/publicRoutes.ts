@@ -64,3 +64,18 @@ export function publicSiteUrl(): string {
   const base = configured || "https://optcg-price-tracker-staging.vercel.app";
   return base.replace(/\/+$/, "");
 }
+
+/** Whether search engines may index this deployment.
+ *
+ * Off unless the server-only variable SITE_SEARCH_INDEXING is exactly "on"
+ * (owner decision 2026-10-24: staging, now on staging.cardpirate.app, is for
+ * testing; cardpirate.app turns indexing on at launch). Fail closed: unset,
+ * empty or any other value keeps every page noindex. Read at build time by
+ * next.config (X-Robots-Tag header) and the root layout (robots meta), so a
+ * change needs a redeploy. */
+export function searchIndexingEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.SITE_SEARCH_INDEXING?.trim() === "on";
+}
+
+/** X-Robots-Tag value sent on every response while indexing is off. */
+export const NOINDEX_HEADER_VALUE = "noindex, nofollow";

@@ -1,6 +1,6 @@
 /** Security headers as next.config.ts emits them (security audit 2026-10-16,
  * F14). nextConfigImgSrc.test.ts covers img-src; this covers the rest. */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PHASE_PRODUCTION_SERVER } from "next/constants";
 
 import loadConfig from "../../next.config";
@@ -46,5 +46,16 @@ describe("next.config.ts security headers", () => {
     expect((await headers()).get("Permissions-Policy")).toBe(
       "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
     );
+  });
+});
+
+describe("next.config.ts search indexing header", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("sends X-Robots-Tag noindex on every response unless SITE_SEARCH_INDEXING=on", async () => {
+    vi.stubEnv("SITE_SEARCH_INDEXING", "");
+    expect((await headers()).get("X-Robots-Tag")).toBe("noindex, nofollow");
+    vi.stubEnv("SITE_SEARCH_INDEXING", "on");
+    expect((await headers()).has("X-Robots-Tag")).toBe(false);
   });
 });
