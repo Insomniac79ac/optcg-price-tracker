@@ -8,8 +8,8 @@ open to every origin by default. Only the API process imports this module
 
 Rules, in order:
 
-1. ``CORS_ALLOWED_ORIGINS`` set: exactly those origins (staging sets it to
-   the stable alias).
+1. ``CORS_ALLOWED_ORIGINS`` set: exactly those origins (on staging it must
+   list https://staging.cardpirate.app and the Vercel alias).
 2. Development (``ENVIRONMENT``/``APP_ENV`` = ``development``): ``*``, as
    local work always had.
 3. Staging without the variable: the staging site's addresses only

@@ -79,6 +79,16 @@ def test_allowed_origins(environment, app_env, origins, expected):
     assert web_cors.allowed_origins() == expected
 
 
+def test_staging_default_allows_both_addresses_and_refuses_lookalikes(environment):
+    environment("staging", None)
+    client = _cors_client()
+    for origin in (STAGING, VERCEL_ALIAS):
+        assert client.get("/health", headers={"Origin": origin}).headers.get("access-control-allow-origin") == origin
+    for origin in ("https://x.cardpirate.app", "https://cardpirate.app", "https://other-staging.vercel.app",
+                   "https://staging.cardpirate.app.evil.example"):
+        assert "access-control-allow-origin" not in client.get("/health", headers={"Origin": origin}).headers
+
+
 def test_credentials_are_never_allowed_cross_origin(environment):
     environment("staging", STAGING)
     assert web_cors.cors_options()["allow_credentials"] is False
