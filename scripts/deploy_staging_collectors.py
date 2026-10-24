@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import time
 import generate_staging_state as state
 from datetime import datetime, timezone
@@ -197,13 +198,14 @@ def rollout_deployment(service, before, tracked, expected):
     return service.get("latestDeployment") or {}
 
 
-def build_markers(requested):
+def build_markers(requested, root=None):
     # Watch patterns cover each collector package, not the shared API package.
     # Change a build-only file in each selected package as well as the installed
     # shared runtime marker; never mutate service watch configuration.
-    markers = [state.ROOT / "services/api/app/services/collector_build.py"]
+    root = Path(root or state.ROOT)
+    markers = [root / "services/api/app/services/collector_build.py"]
     for package in sorted({"snkrdunk_collector" if r["name"] == "snkrdunk-collector" else "yuyutei_collector" for r in requested}):
-        markers.append(state.ROOT / "services" / package / package / "_delivery_revision.py")
+        markers.append(root / "services" / package / package / "_delivery_revision.py")
     return markers
 
 
@@ -363,19 +365,115 @@ def verify_released(row, before, deployment, expected):
     return cv.digest(checked)
 
 
-def roll_back(released, before, *, slot=None):
-    """All-or-nothing: put every collector touched so far back on its original
-    verified image, newest first, verifying each (collector_variables.restore)."""
+def has_commit(commit, run=subprocess.run):
+    """True when the exact commit is in this checkout (CI checks out full history)."""
+    if not re.fullmatch("[0-9a-f]{40}", commit or ""):
+        return False
+    result = run(["git", "cat-file", "-e", commit + "^{commit}"], cwd=state.ROOT,
+                 capture_output=True, text=True, timeout=30)
+    return result.returncode == 0
+
+
+def known_deployments(service_id):
+    import collector_variables as cv
+
+    return set(cv.recent_deployments(service_id))
+
+
+def new_upload(row, commit, known):
+    """The newest marked deployment of this service that did not exist before the upload."""
+    rows = state.command_json(
+        ["railway", "deployment", "list", "--project", state.PROJECT, "--environment",
+         state.ENVIRONMENT, "--service", row["service_id"], "--limit", "5", "--json"]
+    )
+    for item in rows:
+        meta = item.get("meta") or {}
+        meta = json.loads(meta) if isinstance(meta, str) else meta
+        if item.get("id") not in known and meta.get("cliMessage") == MARKER + commit:
+            return read_deployment(item["id"], row["service_id"], commit)
+    return None
+
+
+def reupload(name, row, *, run=subprocess.run, known=None, find=None, clock=None, sleep=None):
+    """Rollback without a redeployable image: upload the collector's previous
+    verified commit again (fresh build, same code, current variables) from a
+    detached worktree, with the same build markers and exact-commit message as
+    a release, and follow it to SUCCESS. A skipped upload means nothing changed:
+    the previous deployment must still be the SUCCESS one."""
+    commit = row["commit"]
+    known = known if known is not None else known_deployments(row["service_id"])
+    find = find or new_upload
+    clock, sleep = clock or time.monotonic, sleep or time.sleep
+    with tempfile.TemporaryDirectory() as tmp:
+        tree = Path(tmp) / "tree"
+        added = run(["git", "worktree", "add", "--detach", str(tree), commit], cwd=state.ROOT,
+                    capture_output=True, text=True, timeout=300)
+        if added.returncode:
+            raise state.VerificationError("Rollback checkout failed: " + name)
+        try:
+            for marker in build_markers([{"name": name}], root=tree):
+                marker.write_text("REVISION = " + repr(commit) + "\n")
+            result = run(["railway", "up", "--project", state.PROJECT, "--environment", state.ENVIRONMENT,
+                          "--service", row["service_id"], "--detach", "--message", MARKER + commit],
+                         cwd=tree, capture_output=True, text=True, timeout=180)
+            if result.returncode:
+                raise state.VerificationError("Rollback upload failed: " + name)
+        finally:
+            run(["git", "worktree", "remove", "--force", str(tree)], cwd=state.ROOT,
+                capture_output=True, text=True, timeout=120)
+    deadline = clock() + ROLLOUT_WAIT_SECONDS
+    while True:
+        deployment = find(row, commit, known)
+        if deployment and deployment.get("status") == "SUCCESS":
+            return deployment
+        if deployment and deployment.get("status") == "SKIPPED":
+            previous = read_deployment(row["deployment_id"], row["service_id"], commit)
+            if previous.get("status") != "SUCCESS":
+                raise state.VerificationError("Rollback upload skipped and previous deployment not active: " + name)
+            return previous
+        if deployment and deployment.get("status") in {"FAILED", "CRASHED", "REMOVED"}:
+            raise state.VerificationError("Rollback upload failed to deploy: " + name)
+        if clock() > deadline:
+            raise state.VerificationError("Rollback upload wait expired: " + name)
+        sleep(15)
+
+
+def verify_reupload(name, row, deployment):
+    """The re-uploaded collector: active, exact previous commit, unchanged schedule,
+    start command and writer flags. The image digest is new by design."""
+    import collector_variables as cv
+
+    service = inspect()[name]
+    fresh = deployment["id"] != row["deployment_id"]  # else a skipped upload left the previous one
+    if fresh and (service.get("latestDeployment") or {}).get("id") != deployment["id"]:
+        raise state.VerificationError("Rollback upload is not the active deployment: " + name)
+    if (service.get("cronSchedule"), service.get("startCommand")) != (row["schedule_utc"], row["start_command"]):
+        raise state.VerificationError("Collector configuration changed during rollback: " + name)
+    if cv.read_variables(row["service_id"]) != row["variables"]:
+        raise state.VerificationError("Collector writer flags changed during rollback: " + name)
+    return {"service": name, "mode": "reupload", "deployment": deployment["id"], "commit": row["commit"],
+            "image_digest": (deployment.get("meta") or {}).get("imageDigest")}
+
+
+def roll_back(released, before, *, slot=None, reup=None):
+    """All-or-nothing: put every collector touched so far back on its previous
+    verified commit, newest first, verifying each: the original image
+    (collector_variables.restore) when Railway can still redeploy it, else a fresh
+    upload of the same commit (reupload)."""
     import collector_variables as cv
 
     slot = slot or wait_for_slot
+    reup = reup or reupload
     results = {}
     for name in reversed(released):
         row = before[name]
         values = {k: v for k, v in row["variables"].items() if v is not None}
         try:
             slot(name, row["schedule_utc"])
-            results[name] = {"ok": True, **cv.restore(name, values, row["commit"], row["digest"])}
+            if row.get("rollback") == "reupload":
+                results[name] = {"ok": True, **verify_reupload(name, row, reup(name, row))}
+            else:
+                results[name] = {"ok": True, **cv.restore(name, values, row["commit"], row["digest"])}
         except Exception as error:  # keep restoring the rest; report loudly
             results[name] = {"ok": False, "error": str(error)[:300]}
     return results
@@ -399,8 +497,21 @@ def capture_before(row, service):
     cron_minutes(service["cronSchedule"])
     commit = marker_commit(latest)
     image = cv.digest(read_deployment(latest["id"], row["service_id"], commit))
-    cv.original_source(service, commit, image)
+    try:
+        cv.original_source(service, commit, image)
+        rollback = "redeploy"
+    except state.VerificationError:
+        # Since 2026-10-22 Railway offers no redeployable copy of these uploads
+        # (canRedeploy false; owner decision 2026-10-24, pragmatist): the way back
+        # is a fresh verified upload of the same commit, which must be in this
+        # checkout. Without either, refuse before touching anything.
+        if not has_commit(commit):
+            raise state.VerificationError(
+                "No rollback for " + row["name"] + ": no redeployable image and its commit is not checked out"
+            ) from None
+        rollback = "reupload"
     return {
+        "rollback": rollback,
         "service_id": row["service_id"],
         "start_command": service["startCommand"],
         "schedule_utc": service["cronSchedule"],
@@ -472,7 +583,7 @@ def main(argv=None):
         raise state.VerificationError(
             "Collector rollout failed at "
             + (released[-1] if released else "preflight")
-            + ("; every released collector restored to its original image"
+            + ("; every released collector restored to its previous commit"
                if complete else "; ROLLBACK INCOMPLETE")
         ) from None
     finally:
@@ -497,6 +608,7 @@ def main(argv=None):
                 "commit": row["commit"],
                 "image_digest": row["digest"],
                 "variables": row["variables"],
+                "rollback": row.get("rollback", "redeploy"),
             }
             for name, row in before.items()
         },
