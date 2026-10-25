@@ -196,6 +196,10 @@ class SecretsStayOut(unittest.TestCase):
         self.assertNotIn("\n", joined)
         self.assertIn('"a":"50%25', joined)
 
+    def test_annotations_keep_japanese_unescaped(self):
+        lines = run.annotations({"p": "フラッグシップバトル"})
+        self.assertIn("フラッグシップバトル", lines[0])
+
 
 class ReadOnlyConnection(unittest.TestCase):
     def test_options_are_read_only(self):
@@ -1084,7 +1088,7 @@ class OfficialSeriesIndex(unittest.TestCase):
 
     def test_filter_options_are_not_series_and_breakdown_counts_products(self):
         entry = lambda *names: SimpleNamespace(product_names=names)
-        pages = {"550901": [entry("Flagship Battle"), entry("Flagship Battle"), entry("Judge Pack Vol.1")],
+        pages = {"550901": [entry("Flagship Battle", "カードリスト"), entry("Flagship Battle"), entry("Judge Pack Vol.1", "商品情報")],
                  "550205": [entry("EB-05 Heroines vol.2")]}
         with tempfile.TemporaryDirectory() as tmp:
             out = official_series.run(
@@ -1097,6 +1101,7 @@ class OfficialSeriesIndex(unittest.TestCase):
         self.assertEqual(out["bandai_series"], 2)
         self.assertEqual(out["breakdown"], [["550901", "Flagship Battle", 2, 0], ["550901", "Judge Pack Vol.1", 1, 1],
                                             ["550205", "EB-05 Heroines vol.2", 1, 0]])
+        self.assertEqual(out["held"], ["550901:1"])
 
 
 class FleetAndImages(unittest.TestCase):

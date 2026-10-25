@@ -20,6 +20,8 @@ SERIES_ID = __import__("re").compile(r"\d{6}")
 # Uncoded groupings that hold many products (promotion cards, limited products) and series
 # missing from the catalogue are broken down by the product each entry names (入手情報).
 MAX_BREAKDOWN_PAGES = 8
+# Link labels the 入手情報 block also carries; they name no product.
+NOT_PRODUCTS = {"カードリスト", "商品情報"}
 
 PRODUCTS_SQL = """
 select rp.source_series_id series_id, rp.official_code code, rp.display_name name,
@@ -54,7 +56,8 @@ def breakdown(series_rows, products, read_page):
     for s in series_rows:
         counts = {}
         for entry in read_page(s["series_id"]):
-            for name in entry.product_names or ("(no product named)",):
+            names = [n for n in entry.product_names if n not in NOT_PRODUCTS] or ["(no product named)"]
+            for name in names:
                 counts[name] = counts.get(name, 0) + 1
         for name, n in sorted(counts.items(), key=lambda kv: -kv[1]):
             out.append({"series_id": s["series_id"], "product": name, "bandai_entries": n,
@@ -95,9 +98,11 @@ def run(out_dir, fetch=None, products=None, read_page=None):
               "catalogue_products_not_in_index": len(orphans), "series": rows, "orphans": orphans,
               "breakdown": products_by_page}
     common.write_json(Path(out_dir) / "official-series-index.json", result)
+    # Annotations carry at most ~27,000 characters: counts and the breakdown go first, the long
+    # held list last and compact, so a truncation loses the least useful part.
     return {k: result[k] for k in ("bandai_series", "in_catalogue", "missing", "catalogue_products_not_in_index")} | {
         "missing_series": [[r["series_id"], r["code"], r["name"]] for r in missing],
-        "held": [[r["series_id"], r["code"], r["prints"]] for r in rows if r["in_catalogue"]],
         "orphans": [[o["series_id"], o["code"], o["name"], o["prints"]] for o in orphans],
         "breakdown": [[b["series_id"], b["product"], b["bandai_entries"], b["catalogue_prints"]]
-                      for b in products_by_page]}
+                      for b in products_by_page],
+        "held": [f'{r["code"] or r["series_id"]}:{r["prints"]}' for r in rows if r["in_catalogue"]]}
