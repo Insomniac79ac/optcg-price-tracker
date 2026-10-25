@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import capture_batch, collector_flag, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, collector_flag, official_series, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, encoding_sample, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -1058,6 +1058,29 @@ class CollectorSiblingSwitch(unittest.TestCase):
         done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
         self.assertEqual(len(done), 1)
         self.assertIn("job time", stopped["reason"])
+
+
+class OfficialSeriesIndex(unittest.TestCase):
+    def test_compare_marks_held_missing_and_orphans(self):
+        series = [{"series_id": "550101", "code": "OP-01", "name": "ROMANCE DAWN"},
+                  {"series_id": "550901", "code": None, "name": "プロモーションカード"}]
+        products = [{"series_id": "550101", "code": "OP-01", "name": "ROMANCE DAWN", "prints": 154},
+                    {"series_id": "999999", "code": "XX-01", "name": "gone", "prints": 3}]
+        rows, orphans = official_series.compare(series, products)
+        self.assertEqual([(r["series_id"], r["in_catalogue"], r["prints"]) for r in rows],
+                         [("550101", True, 154), ("550901", False, 0)])
+        self.assertEqual([o["series_id"] for o in orphans], ["999999"])
+
+    def test_run_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = official_series.run(tmp, fetch=lambda: [{"series_id": "1", "code": None, "name": "promo"}],
+                                      products=[])
+            self.assertEqual((out["bandai_series"], out["missing"]), (1, 1))
+            self.assertEqual(out["missing_series"], [["1", None, "promo"]])
+            self.assertTrue((Path(tmp) / "official-series-index.json").is_file())
+
+    def test_registered_as_read_runbook(self):
+        self.assertEqual(run.RUNBOOKS["official-series-index"][:2], ("read", False))
 
 
 class FleetAndImages(unittest.TestCase):
