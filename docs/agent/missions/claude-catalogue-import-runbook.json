@@ -25,7 +25,7 @@
       ],
       "effects": [
         "infrastructure",
-        "data"
+        "bulk_data"
       ],
       "reason": "New runbook module (scope, capture, uncoded report, plan digest, TCP-proxy checker, backup gate) and its reviewed scopes (eb-05, family-deck-set)."
     },
@@ -53,7 +53,8 @@
         "services/api/app/services/canonical_staging_target.py"
       ],
       "effects": [
-        "data"
+        "application",
+        "bulk_data"
       ],
       "reason": "--series scope (coded only; refuses uncoded, unknown ids and repeated entry ids before connecting); keyword-only open_tunnel (ReroutedChecker: only the connection route changes) and on_plan seams; no change to planning, pins or the apply path."
     },
@@ -62,7 +63,7 @@
         "services/api/app/collect_official_cardlist_snapshot.py"
       ],
       "effects": [
-        "data"
+        "application"
       ],
       "reason": "collect_images(only_entry_ids=None): optional limit to the scope's entries; default unchanged."
     },
@@ -72,7 +73,7 @@
         "scripts/ops/official_series.py"
       ],
       "effects": [
-        "data"
+        "application"
       ],
       "reason": "Parser drops the 入手情報 link labels by exact match (raw getInfo kept verbatim); official-series-index's duplicate filter removed."
     },
