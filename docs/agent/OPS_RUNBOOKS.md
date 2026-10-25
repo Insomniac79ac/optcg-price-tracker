@@ -230,13 +230,16 @@ catalogue-gap request (owner 2026-10-26).
    images of the scope's entries only; 1 request per second, honest User-Agent, stop on
    401/403/429/451. Bandai's link labels in 入手情報 (カードリスト, 商品情報) are dropped by the
    parser (`official_cardlist.OBTAIN_INFO_LINK_LABELS`).
-3. Target: the importer's `verified_staging_target` with a checker that reaches the pinned staging
+3. Target: the importer's `verified_staging_target` with only `open_tunnel` rerouted
+   (`canonical_staging_target.ReroutedChecker` around the real checker) to the pinned staging
    Postgres TCP proxy (`ops/db.py`) instead of a `railway connect` tunnel. All fingerprints and
    the revision-equals-head check still run. The dry run's session is read-only at the server.
 4. Dry run: per-print rows (code, outcome, product, artwork variant, flags), outcome counts, the
-   engine's dry-run report and `plan_sha256` over scope and every planned print.
+   engine's dry-run report and `plan_sha256` over the scope, every whole planned print (identity,
+   official metadata, proposed card and product) and the entry record it was planned from.
 5. `apply=true` with that SHA: refuses without a Railway backup of the staging Postgres volume
-   under 24 hours old (the recovery point, as for `apply-migration`); re-captures and re-plans; the importer refuses before the applier
+   under 24 hours old (the recovery point, as for `apply-migration`); re-captures, re-checks the
+   quiet windows and re-plans; the importer refuses before the applier
    runs unless the plan is identical. Then the engine writes in one transaction with its own
    checks (untouched price tables, import lock, pre-count preflight). Keeps the collector quiet
    windows (collectors match listings against `card_prints`).

@@ -270,6 +270,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     summary = {"runbook": args.runbook, "workflow": args.workflow, "apply": args.apply,
                "started_at": common.now_utc().isoformat()}
+    if args.scope:
+        summary["scope"] = args.scope
     code = 0
     try:
         preflight(args)

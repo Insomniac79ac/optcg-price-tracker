@@ -223,20 +223,21 @@ def _session_factory(url: str, *, read_only: bool):
 def main(
     argv: list[str] | None = None,
     *,
-    checker: object | None = None,
+    open_tunnel: Callable[[str, str], str] | None = None,
     on_plan: Callable[[object], None] | None = None,
 ) -> int:
     """Run the import.
 
-    `checker` and `on_plan` exist for the owner-gated ops runbook
+    `open_tunnel` and `on_plan` exist for the owner-gated ops runbook
     (scripts/ops/catalogue_import.py); the command line never sets them.
 
-    `checker` is handed to `verified_staging_target` unchanged: it may only
-    change how the connection is reached (the runbook reaches the pinned
-    staging Postgres through its Railway TCP proxy, as every other ops
+    `open_tunnel(service, environment)` changes only how the connection is
+    reached: it is wrapped in `ReroutedChecker` around the REAL checker, so
+    every fingerprint, the revision check and the attestation are still the
+    established checker's and cannot be replaced (the runbook reaches the
+    pinned staging Postgres through its Railway TCP proxy, as every other ops
     runbook does, because a CI runner cannot hold a `railway connect` SSH
-    tunnel). Every fingerprint, the revision check and the attestation are
-    still the established checker's, and there is still no way to pass a URL.
+    tunnel). A URL that is not canonical staging is refused by those checks.
 
     `on_plan` sees the finished plan before the applier runs, inside the same
     session. Raising from it stops the run before anything is written (the
@@ -348,6 +349,14 @@ def main(
 
     series_ids = [sid.strip() for sid in (args.series_ids or []) if sid and sid.strip()]
     if series_ids:
+        entry_ids = [e.entry_id for e in snapshot.entries]
+        if len(entry_ids) != len(set(entry_ids)):
+            print(
+                "FAIL: the snapshot repeats an entry id, so --series cannot tell "
+                "which series an occurrence was captured under.",
+                file=sys.stderr,
+            )
+            return EXIT_USAGE
         known = {s.series_id: s for s in snapshot.series}
         for sid in series_ids:
             if sid not in known:
@@ -377,7 +386,13 @@ def main(
         verified = target_authority.verified_staging_target(
             environment=environment,
             service=args.railway_service,
-            checker=checker,
+            checker=(
+                target_authority.ReroutedChecker(
+                    target_authority.load_staging_checker(), open_tunnel
+                )
+                if open_tunnel is not None
+                else None
+            ),
             emit=emit,
         )
     except StagingTargetRefused as exc:

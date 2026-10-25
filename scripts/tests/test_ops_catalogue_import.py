@@ -64,32 +64,34 @@ SCOPES = {"eb-05": {"series": ["550205"], "uncoded_products": []},
           "bad": {"series": ["5502"], "uncoded_products": []}}
 
 
-def fake_plan(codes):
-    prints = [SimpleNamespace(entry_id=c, card_code=c, outcome="create_card_print", creations=("card_print",),
-                              verification_status="verified", official_product_code="EB-05",
-                              official_product_display_name="Heroines vol.2【EB-05】", source_series_id="550205",
-                              official_asset_variant=None, official_artwork_sha256="a" * 64,
-                              existing_canonical_card_id=None, existing_release_product_id=None,
-                              existing_card_print_id=None, flags=()) for c in codes]
+def fake_plan(codes, name="Name"):
+    def planned(code):
+        doc = {"entry_id": code, "card_code": code, "outcome": "create_card_print", "official_product_code": "EB-05",
+               "official_product_display_name": "Heroines vol.2【EB-05】", "official_asset_variant": None,
+               "official_artwork_sha256": "a" * 64, "official_name": name, "flags": []}
+        return SimpleNamespace(entry_id=code, card_code=code, to_dict=lambda: dict(doc))
+    prints = [planned(c) for c in codes]
     return SimpleNamespace(prints=prints, counts=lambda: {"create_card_print": len(prints)})
 
 
 class FakeImporter:
     """Records argv; calls on_plan; mimics the importer's catch-all (raise -> exit 1, nothing written)."""
 
-    def __init__(self, codes=("EB05-001", "EB05-002")):
+    def __init__(self, codes=("EB05-001", "EB05-002"), name="Name"):
         self.codes = codes
+        self.name = name
         self.calls = []
 
-    def __call__(self, argv, *, checker, on_plan):
+    def __call__(self, argv, *, open_tunnel, on_plan):
         self.calls.append(argv)
+        print("::add-mask::{not-json")
         try:
-            on_plan(fake_plan(self.codes))
+            on_plan(fake_plan(self.codes, self.name))
         except Exception as exc:  # noqa: BLE001
             print(f"FAIL: {exc}", file=sys.stderr)
             return 1
         print(json.dumps({"applied": "--apply" in argv, "card_prints_created": len(self.codes) if "--apply" in argv else 0,
-                          "eligible_plans": len(self.codes)}))
+                          "eligible_plans": len(self.codes), "nested": {"a": 1}}, indent=2))
         return 0
 
 
@@ -140,11 +142,14 @@ class PlanDigest(unittest.TestCase):
     def test_sha_is_stable_and_moves_with_any_print_field(self):
         scope = ci.resolve_scope("eb-05", SCOPES)
         rows = ci.plan_rows(fake_plan(["EB05-002", "EB05-001"]))
-        self.assertEqual([r["card_code"] for r in rows], ["EB05-001", "EB05-002"])
+        self.assertEqual([r["print"]["card_code"] for r in rows], ["EB05-001", "EB05-002"])
         sha = ci.plan_sha(scope, rows)
         self.assertEqual(sha, ci.plan_sha(scope, ci.plan_rows(fake_plan(["EB05-001", "EB05-002"]))))
-        rows[0]["artwork_sha256"] = "b" * 64
-        self.assertNotEqual(sha, ci.plan_sha(scope, rows))
+        # metadata the applier writes (a corrected name) moves the SHA, not only identity fields
+        self.assertNotEqual(sha, ci.plan_sha(scope, ci.plan_rows(fake_plan(["EB05-001", "EB05-002"], name="New"))))
+        # so does the entry record the plan was built from
+        records = {"EB05-001": {"fields": [{"name": "cost", "value": "3"}]}}
+        self.assertNotEqual(sha, ci.plan_sha(scope, ci.plan_rows(fake_plan(["EB05-001", "EB05-002"]), records)))
 
     def test_apply_needs_the_matching_sha(self):
         with self.assertRaises(common.Refused):
@@ -155,22 +160,23 @@ class PlanDigest(unittest.TestCase):
 
 
 class Target(unittest.TestCase):
-    def test_proxy_url_is_quoted_and_registered_as_a_secret(self):
+    def test_proxy_url_is_quoted_and_every_form_is_registered_as_a_secret(self):
         url = ci.proxy_url(lambda: ({"domain": "h.proxy.rlwy.net", "proxyPort": 1234},
                                     {"PGUSER": "postgres", "PGPASSWORD": "p@ss/wd", "PGDATABASE": "railway"}))
         self.assertEqual(url, "postgresql://postgres:p%40ss%2Fwd@h.proxy.rlwy.net:1234/railway")
-        self.assertIn(url, common.secret_values())
+        for form in (url, "postgresql+psycopg://postgres:p%40ss%2Fwd@h.proxy.rlwy.net:1234/railway",
+                     "p@ss/wd", "p%40ss%2Fwd"):
+            self.assertIn(form, common.secret_values())
 
-    def test_proxy_checker_changes_only_how_the_connection_is_reached(self):
-        real = SimpleNamespace(evaluate=lambda *a: "real-evaluate", DEFAULT_SERVICE="Postgres")
-        checker = ci.ProxyChecker(real, lambda: "postgresql://u:p@h:1/d")
-        _, url = checker.open_tunnel("Postgres", "staging")
-        self.assertEqual(url, "postgresql://u:p@h:1/d")
-        self.assertEqual(checker.evaluate(), "real-evaluate")
-        self.assertIsNone(checker.close_tunnel(object()))
+    def test_report_is_the_last_json_object_even_after_a_brace_in_a_mask_line(self):
+        text = "::add-mask::{x\n" + json.dumps({"a": {"b": 1}}, indent=2) + "\n"
+        self.assertEqual(ci.parse_report(text), {"a": {"b": 1}})
+        self.assertIsNone(ci.parse_report("no json here"))
 
 
 FRESH = lambda: {"age_hours": 3.0}  # noqa: E731
+OPEN = lambda service, environment: "postgresql://u:p@h:1/d"  # noqa: E731
+NOON = lambda: __import__("datetime").datetime(2026, 10, 26, 12, tzinfo=__import__("datetime").timezone.utc)  # noqa: E731
 
 
 class RunFlow(unittest.TestCase):
@@ -180,7 +186,7 @@ class RunFlow(unittest.TestCase):
     def test_dry_run_plans_the_scope_read_only_and_reports_the_sha(self):
         importer = FakeImporter()
         with tempfile.TemporaryDirectory() as tmp:
-            out = ci.run(tmp, scope="eb-05", fetcher=FakeFetcher(), main=importer, checker=object(), scopes=SCOPES)
+            out = ci.run(tmp, scope="eb-05", fetcher=FakeFetcher(), main=importer, open_tunnel=OPEN, scopes=SCOPES)
         argv = importer.calls[0]
         self.assertEqual(argv[argv.index("--series") + 1], "550205")
         self.assertNotIn("--apply", argv)
@@ -190,41 +196,49 @@ class RunFlow(unittest.TestCase):
 
     def test_apply_with_the_dry_run_sha_writes_and_a_different_plan_refuses(self):
         with tempfile.TemporaryDirectory() as tmp:
-            sha = ci.run(tmp, scope="eb-05", fetcher=FakeFetcher(), main=FakeImporter(), checker=object(),
+            sha = ci.run(tmp, scope="eb-05", fetcher=FakeFetcher(), main=FakeImporter(), open_tunnel=OPEN,
                          scopes=SCOPES)["plan_sha256"]
         importer = FakeImporter()
         with tempfile.TemporaryDirectory() as tmp:
             ok = ci.run(tmp, apply=True, scope="eb-05", expected_sha256=sha, fetcher=FakeFetcher(), main=importer,
-                        checker=object(), scopes=SCOPES, backup=FRESH)
+                        open_tunnel=OPEN, scopes=SCOPES, backup=FRESH, now=NOON)
         self.assertTrue(ok["ok"])
         self.assertIn("--confirm", importer.calls[0])
         self.assertEqual(ok["report"]["card_prints_created"], 2)
         changed = FakeImporter(codes=("EB05-001",))
         with tempfile.TemporaryDirectory() as tmp:
             refused = ci.run(tmp, apply=True, scope="eb-05", expected_sha256=sha, fetcher=FakeFetcher(), main=changed,
-                             checker=object(), scopes=SCOPES, backup=FRESH)
+                             open_tunnel=OPEN, scopes=SCOPES, backup=FRESH, now=NOON)
         self.assertFalse(refused["ok"])
         self.assertIn("differs", refused["refused"])
         self.assertIsNone(refused["report"])
+
+    def test_apply_rechecks_the_quiet_window_after_the_capture(self):
+        importer = FakeImporter()
+        late = lambda: __import__("datetime").datetime(2026, 10, 26, 19, 45, tzinfo=__import__("datetime").timezone.utc)  # noqa: E731
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
+            ci.run(tmp, apply=True, scope="eb-05", expected_sha256="a" * 64, fetcher=FakeFetcher(), main=importer,
+                   open_tunnel=OPEN, scopes=SCOPES, backup=FRESH, now=late)
+        self.assertEqual(importer.calls, [])
 
     def test_apply_refuses_without_a_recent_backup_before_any_request(self):
         fetcher = FakeFetcher()
         for stale in (lambda: None, lambda: {"age_hours": 30}):
             with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
                 ci.run(tmp, apply=True, scope="eb-05", expected_sha256="a" * 64, fetcher=fetcher,
-                       main=FakeImporter(), checker=object(), scopes=SCOPES, backup=stale)
+                       main=FakeImporter(), open_tunnel=OPEN, scopes=SCOPES, backup=stale)
         self.assertEqual(fetcher.urls, [])
 
     def test_uncoded_products_are_reported_with_their_rule_and_never_applied(self):
         importer = FakeImporter()
         with tempfile.TemporaryDirectory() as tmp:
-            out = ci.run(tmp, scope="family-deck-set", fetcher=FakeFetcher(), main=importer, checker=object(),
+            out = ci.run(tmp, scope="family-deck-set", fetcher=FakeFetcher(), main=importer, open_tunnel=OPEN,
                          scopes=SCOPES)
         self.assertEqual(importer.calls, [])
         self.assertEqual(out["uncoded_products"][0]["rule"], "not_a_catchall")
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
             ci.run(tmp, apply=True, scope="family-deck-set", expected_sha256="a" * 64, fetcher=FakeFetcher(),
-                   main=importer, checker=object(), scopes=SCOPES)
+                   main=importer, open_tunnel=OPEN, scopes=SCOPES)
 
 
 if __name__ == "__main__":

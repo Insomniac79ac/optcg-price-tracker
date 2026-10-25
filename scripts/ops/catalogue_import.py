@@ -18,12 +18,13 @@ This runbook gives it both inside the ops-write workflow:
    are not imported yet: the standard's Asia-EN substitution has to be re-measured first (the
    frozen Asia-EN snapshot it relied on is gone, and asia-en pages label the block "Card
    Set(s)", which the JP parser never reads), and that is the owner's decision in step C.
-3. Target. The importer's own verified_staging_target, given a checker whose open_tunnel
-   returns the pinned staging Postgres TCP proxy (ops/db.py: Railway project, environment and
-   service ids, never a stored URL). Every fingerprint, the revision-equals-head check and the
-   attestation are the established checker's; a wrong database that answers is refused.
-4. Plan SHA-256. Over the scope and every planned print (entry, code, outcome, creations,
-   verification, product, artwork variant and digest, existing ids, flags). Apply re-captures,
+3. Target. The importer's own verified_staging_target, with only open_tunnel rerouted
+   (canonical_staging_target.ReroutedChecker around the real checker) to the pinned staging
+   Postgres TCP proxy (ops/db.py: Railway project, environment and service ids, never a stored
+   URL). Every fingerprint, the revision-equals-head check and the attestation are the
+   established checker's; a wrong database that answers is refused.
+4. Plan SHA-256. Over the scope, every whole planned print (identity, official metadata,
+   proposed card and product, existing ids, flags) and the entry record it was planned from. Apply re-captures,
    re-plans and refuses inside the importer (before the applier runs, nothing written) unless
    the plan equals the dry run the owner reviewed.
 
@@ -141,25 +142,35 @@ def uncoded_report(root, products, identity):
 
 # --- plan digest ---------------------------------------------------------------------------
 
-def plan_rows(plan):
-    """One sorted row per planned print: everything that would decide what gets written."""
-    rows = []
-    for p in plan.prints:
-        rows.append({
-            "entry_id": p.entry_id, "card_code": p.card_code, "outcome": p.outcome,
-            "creations": list(p.creations), "verification": p.verification_status,
-            "product_code": p.official_product_code, "product": p.official_product_display_name,
-            "series": p.source_series_id, "variant": p.official_asset_variant,
-            "artwork_sha256": p.official_artwork_sha256, "canonical_card": p.existing_canonical_card_id,
-            "release_product": p.existing_release_product_id, "card_print": p.existing_card_print_id,
-            "flags": list(p.flags)})
-    return sorted(rows, key=lambda r: (r["card_code"], r["entry_id"]))
+def load_entry_records(root):
+    """{entry_id: snapshot record without its fetch time}: the verbatim input the planner and
+    the applier's baseline read (name, rarity, effect text, cost, power, ...)."""
+    from app.services.official_snapshot import ENTRIES_FILE, Snapshot
+
+    records = {}
+    for row in Snapshot(Path(root)).load(ENTRIES_FILE):
+        records[row["entry_id"]] = {k: v for k, v in row.items() if k != "fetched_at"}
+    return records
+
+
+def plan_rows(plan, entry_records=None):
+    """One sorted row per planned print: the whole PlannedPrint (identity, official metadata,
+    proposed card and product) plus the entry record it was planned from, so anything the
+    applier would write is covered."""
+    entry_records = entry_records or {}
+    rows = [{"print": p.to_dict(), "entry": entry_records.get(p.entry_id)} for p in plan.prints]
+    return sorted(rows, key=lambda r: (r["print"]["card_code"], r["print"]["entry_id"]))
 
 
 def plan_sha(scope, rows):
     body = {"scope": scope["name"], "series": scope["series"], "prints": rows}
-    return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
-                                     ensure_ascii=False).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                                     default=str).encode()).hexdigest()
+
+
+def check_sha_shape(expected_sha256):
+    if not (isinstance(expected_sha256, str) and re.fullmatch("[0-9a-f]{64}", expected_sha256 or "")):
+        raise common.Refused("apply needs expected_sha256: the plan SHA-256 from a dry run")
 
 
 def check_apply(expected_sha256, sha):
@@ -171,60 +182,64 @@ def check_apply(expected_sha256, sha):
 # --- target --------------------------------------------------------------------------------
 
 def proxy_url(resolve=None):
-    """postgresql URL of the pinned staging Postgres TCP proxy. A credential: registered as a
-    secret (masked in the Actions log, refused in any output file) and never printed."""
+    """postgresql URL of the pinned staging Postgres TCP proxy. A credential: every form of it
+    (raw and quoted password, both URL schemes) is registered as a secret - masked in the
+    Actions log, refused in any output file - and it is never printed. Called before any
+    output is redirected, so the mask commands reach the runner."""
     from ops import db as ops_db
 
     proxy, variables = (resolve or ops_db.resolve)()
     try:
-        url = (f"postgresql://{quote(variables['PGUSER'], safe='')}:{quote(variables['PGPASSWORD'], safe='')}"
-               f"@{proxy['domain']}:{proxy['proxyPort']}/{quote(variables['PGDATABASE'], safe='')}")
+        password = variables["PGPASSWORD"]
+        tail = (f"{quote(variables['PGUSER'], safe='')}:{quote(password, safe='')}"
+                f"@{proxy['domain']}:{proxy['proxyPort']}/{quote(variables['PGDATABASE'], safe='')}")
+        common.register_secret(password)
+        common.register_secret(quote(password, safe=""))
     finally:
         variables.clear()
+    url = "postgresql://" + tail
     common.register_secret(url)
+    common.register_secret("postgresql+psycopg://" + tail)
     return url
-
-
-class ProxyChecker:
-    """The established staging checker, reached through the TCP proxy instead of an SSH tunnel.
-
-    Only open_tunnel and close_tunnel differ; collect_facts, evaluate, redacted_target and the
-    expected revisions are the checker's own (attribute access falls through to it)."""
-
-    def __init__(self, checker, url_factory):
-        self._checker = checker
-        self._url_factory = url_factory
-
-    def __getattr__(self, name):
-        return getattr(self._checker, name)
-
-    def open_tunnel(self, service, environment):
-        return object(), self._url_factory()
-
-    def close_tunnel(self, process):
-        return None
 
 
 # --- run -----------------------------------------------------------------------------------
 
-def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, checker=None):
+def parse_report(text):
+    """The importer's JSON report: the last top-level object in its stdout."""
+    decoder = json.JSONDecoder()
+    starts = [0] + [m.end() for m in re.finditer(r"\n(?=\{)", text)]
+    for start in reversed(starts):
+        try:
+            value, end = decoder.raw_decode(text, start)
+        except ValueError:
+            continue
+        if isinstance(value, dict) and not text[end:].strip():
+            return value
+    return None
+
+
+def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, open_tunnel=None):
     """Runs the importer on the scope's coded series; returns (exit code, report, plan facts)."""
     from app.services.canonical_import_apply import STAGING_APPLY_CONFIRMATION
 
     if main is None:
         from app.import_frozen_bandai_to_canonical_staging import main
-    if checker is None:
-        from app.services.canonical_staging_target import load_staging_checker
-        checker = ProxyChecker(load_staging_checker(), proxy_url)
+    if open_tunnel is None:
+        url = proxy_url()  # resolved here, outside the redirect below
+
+        def open_tunnel(_service, _environment):
+            return url
     argv = ["--snapshot-root", str(snapshot_root), "--json"]
     for series_id in scope["series"]:
         argv += ["--series", series_id]
     if apply:
         argv += ["--apply", "--confirm", STAGING_APPLY_CONFIRMATION]
+    records = load_entry_records(snapshot_root)
     facts = {}
 
     def on_plan(plan):
-        rows = plan_rows(plan)
+        rows = plan_rows(plan, records)
         facts.update(rows=rows, sha=plan_sha(scope, rows), outcomes=plan.counts())
         if apply:
             try:
@@ -235,17 +250,9 @@ def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, che
 
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        code = main(argv, checker=checker, on_plan=on_plan)
-    text = out.getvalue()
-    start = text.find("{")
-    report = None
-    if start >= 0:
-        try:
-            report, _ = json.JSONDecoder().raw_decode(text[start:])
-        except ValueError:
-            report = None
+        code = main(argv, open_tunnel=open_tunnel, on_plan=on_plan)
     facts["stderr_tail"] = err.getvalue()[-1500:]
-    return code, report, facts
+    return code, parse_report(out.getvalue()), facts
 
 
 REPORT_KEYS = ("applied", "products_created", "product_aliases_created", "canonical_cards_created",
@@ -254,18 +261,15 @@ REPORT_KEYS = ("applied", "products_created", "product_aliases_created", "canoni
                "distinct_image_digests", "rollback_reason", "rollback_detail")
 
 
-def compact_row(r):
-    return " ".join(str(x) for x in (r["card_code"], r["outcome"], r["product_code"] or r["product"],
-                                     r["variant"] or "-", ",".join(r["flags"]) or "-"))
+def compact_row(row):
+    p = row["print"]
+    return " ".join(str(x) for x in (p["card_code"], p["outcome"],
+                                     p["official_product_code"] or p["official_product_display_name"],
+                                     p["official_asset_variant"] or "-", ",".join(p["flags"]) or "-"))
 
 
-def check_sha_shape(expected_sha256):
-    if not (isinstance(expected_sha256, str) and re.fullmatch("[0-9a-f]{64}", expected_sha256 or "")):
-        raise common.Refused("apply needs expected_sha256: the plan SHA-256 from a dry run")
-
-
-def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, main=None, checker=None,
-        scopes=None, backup=None):
+def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, main=None, open_tunnel=None,
+        scopes=None, backup=None, now=common.now_utc):
     import generate_staging_state as state
     from ops import apply_migration
 
@@ -293,8 +297,13 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
         summary.update(ok=True, plan_sha256=None, note="report only: no coded series in this scope")
         common.write_json(Path(out_dir) / "catalogue-import.json", summary)
         return summary
+    if apply:
+        # The capture took minutes since the preflight: re-check the windows before writing.
+        reason = common.quiet_window_refusal(now(), collector_affecting=True, write=True)
+        if reason:
+            raise common.Refused(reason)
     code, report, facts = import_scope(root, chosen, apply=apply, expected_sha256=expected_sha256,
-                                       main=main, checker=checker)
+                                       main=main, open_tunnel=open_tunnel)
     common.write_json(Path(out_dir) / "catalogue-import.json",
                       {**summary, "exit_code": code, "plan_sha256": facts.get("sha"),
                        "outcomes": facts.get("outcomes"), "prints": facts.get("rows"), "report": report,

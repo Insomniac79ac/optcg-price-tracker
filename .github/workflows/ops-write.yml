@@ -1,5 +1,5 @@
 name: ops-write
-run-name: ops-write ${{ inputs.runbook }} apply=${{ inputs.apply }} ${{ inputs.request_id }}
+run-name: ops-write ${{ inputs.runbook }} apply=${{ inputs.apply }} ${{ inputs.scope }} ${{ inputs.request_id }}
 
 # Owner-gated staging write runbooks. The first job waits in the `staging-ops` Environment for
 # the owner's approval (required reviewer) and holds no credential; only then does the runbook

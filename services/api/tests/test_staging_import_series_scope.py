@@ -13,6 +13,7 @@ import pytest
 
 from app import import_frozen_bandai_to_canonical_staging as runner
 from app.services import canonical_import_apply as A
+from app.services import canonical_staging_target as T
 
 
 def _snapshot(root: Path) -> Path:
@@ -71,14 +72,43 @@ def test_series_scope_plans_only_that_series_with_whole_snapshot_sibling_counts(
         raise _Stop()
 
     monkeypatch.setattr(runner, "plan_entries", _plan)
-    marker = object()
-    code = runner.main(["--snapshot-root", str(root), "--series", "550205", "--json"], checker=marker)
+    code = runner.main(
+        ["--snapshot-root", str(root), "--series", "550205", "--json"],
+        open_tunnel=lambda service, environment: f"postgresql://u:p@proxy:1/{service}-{environment}",
+    )
 
     assert code == runner.EXIT_FAILED  # the stub stopped it, nothing ran past planning
     assert seen["entries"] == ["EB05-001", "EB05-001_p1"]
     assert seen["siblings"]["OP01-001"] == 2  # counted over the whole snapshot, not the scope
-    assert seen["checker"] is marker  # handed to the target authority unchanged
     assert seen["closed"]
+    # Only how the connection is reached changes; the real checker decides acceptance.
+    rerouted = seen["checker"]
+    assert isinstance(rerouted, T.ReroutedChecker)
+    assert rerouted.open_tunnel("Postgres", "staging") == (None, "postgresql://u:p@proxy:1/Postgres-staging")
+    assert rerouted.evaluate.__code__.co_filename == str(T.STAGING_CHECKER)
+    assert rerouted.collect_facts.__code__.co_filename == str(T.STAGING_CHECKER)
+    assert rerouted.REFUSED_ENVIRONMENTS == T.load_staging_checker().REFUSED_ENVIRONMENTS
+
+
+def test_without_open_tunnel_the_target_authority_gets_no_checker(tmp_path, monkeypatch):
+    root = _snapshot(tmp_path / "bandai_jp" / "current")
+    seen: dict = {}
+    _stub_target(monkeypatch, seen)
+    monkeypatch.setattr(runner, "plan_entries", lambda *_a, **_k: (_ for _ in ()).throw(_Stop()))
+    runner.main(["--snapshot-root", str(root), "--series", "550205", "--json"])
+    assert seen["checker"] is None
+
+
+def test_a_repeated_entry_id_refuses_the_series_scope(tmp_path, monkeypatch, capsys):
+    root = _snapshot(tmp_path / "bandai_jp" / "current")
+    with (root / "entries.jsonl").open("a") as handle:
+        handle.write("\n" + json.dumps({"entry_id": "EB05-001", "card_code": "EB05-001", "source_series_id": "550101"}))
+    monkeypatch.setattr(
+        runner.target_authority, "verified_staging_target",
+        lambda **_k: (_ for _ in ()).throw(AssertionError("no target may be resolved")),
+    )
+    assert runner.main(["--snapshot-root", str(root), "--series", "550205"]) == runner.EXIT_USAGE
+    assert "repeats an entry id" in capsys.readouterr().err
 
 
 def test_on_plan_runs_before_the_applier_and_a_raise_writes_nothing(tmp_path, monkeypatch):
