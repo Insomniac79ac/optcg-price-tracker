@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "mission": "collector-sibling-on/off ops-write runbooks (owner decision 2026-10-25, perfectionist): set RAW_DICTIONARY_SIBLING on all ten collectors and make it live by re-uploading each fleet-pinned commit (Railway no longer redeploys collector images). Per collector in its safe slot: refuse if deployed since the dry run; stage with --skip-deploys and prove no deployment started; re-upload with a one-off nonce in the build-only marker (REVISION unchanged; release and rollback uploads byte-identical as before); refuse a skipped upload; verify active, SUCCESS, exact marker, schedule, start command and flags. Stop on failure, revert only a collector whose value was staged; per-collector 80-minute budget against the job (360 min) and the next 02:00/19:30 UTC quiet window. Independent review: FAIL then PASS WITH NITS (nits applied).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/collector_flag.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New runbook module (plan, switch, apply_rows, budgets, revert)."
+    },
+    {
+      "files": [
+        "scripts/ops/run.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "RUNBOOKS: collector-sibling-on/off as collector-affecting writes; refuse a count."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Runbook choices; runbook job timeout 180 -> 360 minutes (hosted maximum) for a sequential ten-collector run. No secret, gate or permission change."
+    },
+    {
+      "files": [
+        "scripts/deploy_staging_collectors.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "reupload(nonce=None): optional UPLOAD line in the build-only markers; without a nonce the marker text is unchanged."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_deploy_staging_collectors.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Plan and pin checks, order, revert rules, moved deployment, skipped upload, budgets and windows, nonce marker."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "CLAUDE.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook section and lists."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Railway staging collectors (10), only through an owner-approved ops-write apply"
+      ],
+      "routes": [
+        "railway variable set --skip-deploys RAW_DICTIONARY_SIBLING; railway up of the fleet-pinned commit from a detached worktree"
+      ],
+      "dependencies": [
+        "staging after #211",
+        "encoding sample gate passed 2026-10-24 (Yuyu 3.5 KB, SNKR 7.6 KB medians)"
+      ],
+      "deployment_impact": "Merging changes nothing live. An approved apply re-uploads each collector on its pinned commit with RAW_DICTIONARY_SIBLING set; writer stores sibling/anchor encodings from then on.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 150
+    },
+    "recovery": {
+      "artifact": "b56fdf4f3b0a56ee7edda3756d3ec943d62222e2",
+      "procedure": "collector-sibling-off (same path, value false); code: native revert PR with its own mission file.",
+      "trigger": "A collector fails after the switch, storage grows instead of shrinking, or verify-lossless reports a sibling/anchor problem.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_deploy_staging_collectors.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/collector_flag.py"
+      ],
+      "observation_window": "Dry run, apply, then storage-rates and verify-lossless 24 hours later."
+    }
+  },
+  "diff_sha256": "758f5e1f164c94ba1a20839c1872f520b231417f1372d7dc5d5da1d25af957e6"
+}
