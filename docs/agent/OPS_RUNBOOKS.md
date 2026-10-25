@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -216,6 +216,29 @@ fleet-pinned commit.
    19:30 UTC) for itself plus a revert (80 minutes), so start early in the day. On a failure it
    stops; if that collector's value was already staged it is put back (previous value, re-upload).
    Re-measure storage (`storage-rates`) 24 hours later.
+
+`catalogue-import` (`scripts/ops/catalogue_import.py`, input `scope`): add Bandai JP catalogue
+prints to staging through the existing import engine (`app.import_frozen_bandai_to_canonical_staging`:
+`print_import_planner` plans, `CanonicalImportApplier` writes, every pin unchanged). Phase 2 of the
+catalogue-gap request (owner 2026-10-26).
+
+1. Scope: a name in `docs/agent/CATALOGUE_IMPORT_SCOPES.json` (changed by PR). Coded series go to
+   the importer's `--series`. Uncoded products are reported against
+   `app.services.uncoded_product_evidence` (the rule each passes or fails, member codes) and not
+   imported until the owner settles the Asia-EN evidence question (step C).
+2. Capture: a fresh Bandai JP snapshot in the run directory, every six-digit series page plus the
+   images of the scope's entries only; 1 request per second, honest User-Agent, stop on
+   401/403/429/451. Bandai's link labels in 入手情報 (カードリスト, 商品情報) are dropped by the
+   parser (`official_cardlist.OBTAIN_INFO_LINK_LABELS`).
+3. Target: the importer's `verified_staging_target` with a checker that reaches the pinned staging
+   Postgres TCP proxy (`ops/db.py`) instead of a `railway connect` tunnel. All fingerprints and
+   the revision-equals-head check still run. The dry run's session is read-only at the server.
+4. Dry run: per-print rows (code, outcome, product, artwork variant, flags), outcome counts, the
+   engine's dry-run report and `plan_sha256` over scope and every planned print.
+5. `apply=true` with that SHA: re-captures and re-plans; the importer refuses before the applier
+   runs unless the plan is identical. Then the engine writes in one transaction with its own
+   checks (untouched price tables, import lock, pre-count preflight). Keeps the collector quiet
+   windows (collectors match listings against `card_prints`).
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:

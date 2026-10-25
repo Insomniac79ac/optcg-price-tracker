@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "about": "Named scopes for the ops-write catalogue-import runbook (scripts/ops/catalogue_import.py). A scope is what one run plans: coded Bandai JP series ids, and uncoded product names exactly as Bandai's 入手情報 writes them. Adding or changing a scope is a reviewed PR. Uncoded products are reported against the evidence standard (app.services.uncoded_product_evidence) but not imported until the owner settles the Asia-EN evidence question (Phase 2 step C).",
+  "scopes": {
+    "eb-05": {
+      "note": "Phase 2 step B: EB-05 ONE PIECE Heroines Edition vol.2 (coded, series 550205).",
+      "series": ["550205"],
+      "uncoded_products": []
+    },
+    "family-deck-set": {
+      "note": "Phase 2 step B: Family Deck Set (series 550701). Its product name equals its catch-all series name, so the evidence report is expected to name rule not_a_catchall for the owner to decide.",
+      "series": [],
+      "uncoded_products": ["ファミリーデッキセット"]
+    }
+  }
+}

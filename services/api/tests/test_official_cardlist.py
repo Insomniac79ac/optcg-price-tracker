@@ -112,6 +112,17 @@ def test_an_entry_can_name_several_products():
     assert page.entries[1].product_names == ("Premium Collection", "Jump Campaign")
 
 
+def test_navigation_links_in_the_obtain_block_are_not_products():
+    html = PAGE.replace(
+        "Premium Collection<br>Jump Campaign",
+        "Premium Collection<br>Jump Campaign<br><a href=\"/cardlist/\">カードリスト</a>"
+        "<br><a href=\"/products/\">商品情報</a>",
+    )
+    page = parse_card_list(html, "550901")
+    assert page.entries[1].product_names == ("Premium Collection", "Jump Campaign")
+    assert "カードリスト" in page.entries[1].field("getInfo").value
+
+
 def test_entries_for_card_returns_every_official_artwork():
     page = parse_card_list(PAGE, "550101")
     assert len(page.entries_for_card("OP01-001")) == 2

@@ -135,6 +135,13 @@ def _apply_migration(args, out):
                                expected_sha256=args.expected_sha256)
 
 
+def _catalogue_import(args, out):
+    from ops import catalogue_import
+    if args.count is not None:
+        raise common.Refused("catalogue-import takes no count: --scope names what it plans")
+    return catalogue_import.run(out, apply=args.apply, scope=args.scope, expected_sha256=args.expected_sha256)
+
+
 # name: (kind, collector_affecting, handler). A write runbook runs only in ops-write.
 RUNBOOKS = {
     "staging-state": ("read", False, _staging_state),
@@ -157,6 +164,9 @@ RUNBOOKS = {
     # RAW_DICTIONARY_SIBLING on every collector, applied by re-uploading its pinned commit.
     "collector-sibling-on": ("write", True, _collector_sibling("true")),
     "collector-sibling-off": ("write", True, _collector_sibling("false")),
+    # New catalogue prints: collectors match listings against card_prints, so an apply keeps the
+    # collector quiet windows like apply-migration. Scopes: docs/agent/CATALOGUE_IMPORT_SCOPES.json.
+    "catalogue-import": ("write", True, _catalogue_import),
 }
 
 
@@ -201,6 +211,9 @@ def preflight(args, now=None, read=gh_json):
     if args.runbook == "apply-migration":
         from ops import apply_migration
         apply_migration.check_pair(args.revision, args.parent)
+    if args.runbook == "catalogue-import":
+        from ops import catalogue_import
+        catalogue_import.resolve_scope(args.scope, catalogue_import.load_scopes())
     writes, collector = kind_of(args.runbook, args.apply)
     reason = common.quiet_window_refusal(now or common.now_utc(), collector_affecting=collector, write=writes)
     if reason:
@@ -253,6 +266,7 @@ def main(argv=None):
     parser.add_argument("--expected-sha256", default="")
     parser.add_argument("--revision", default="", help="apply-migration: Alembic revision to apply")
     parser.add_argument("--parent", default="", help="apply-migration: live revision it must apply on")
+    parser.add_argument("--scope", default="", help="catalogue-import: scope name in docs/agent/CATALOGUE_IMPORT_SCOPES.json")
     args = parser.parse_args(argv)
     summary = {"runbook": args.runbook, "workflow": args.workflow, "apply": args.apply,
                "started_at": common.now_utc().isoformat()}

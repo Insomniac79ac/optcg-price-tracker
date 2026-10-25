@@ -37,6 +37,10 @@ FOUR THINGS MUST ALL BE TRUE BEFORE A SINGLE ROW IS WRITTEN
        `railway connect --tunnel-only` tunnel into environment `staging`,
        every fail-closed fingerprint from scripts/staging_db_read_check.py
        PASSing, and an alembic revision equal to this checkout's head.
+       (The owner-gated ops runbook `catalogue-import` reaches the same
+       pinned database through its Railway TCP proxy instead of a tunnel,
+       by handing `main` a checker; the fingerprints, the revision check and
+       the attestation are unchanged. See `main`.)
     4. The existing engine's own preflight agrees: revision, snapshot identity
        and current counts are re-proved inside the writing transaction.
 
@@ -74,6 +78,7 @@ import json
 import sys
 import traceback
 from pathlib import Path
+from typing import Callable
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
@@ -177,6 +182,20 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--series",
+        action="append",
+        default=None,
+        metavar="SERIES_ID",
+        dest="series_ids",
+        help=(
+            "Six-digit Bandai series id of a CODED series to plan, repeatable. The run "
+            "is SCOPED to entries captured under those series, exactly as "
+            "--uncoded-product scopes to a product's entries; sibling counts stay "
+            "measured over the whole snapshot. An uncoded catch-all series is refused "
+            "here: its products are established one by one with --uncoded-product."
+        ),
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Print only the JSON report.",
@@ -201,7 +220,28 @@ def _session_factory(url: str, *, read_only: bool):
     return engine
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    checker: object | None = None,
+    on_plan: Callable[[object], None] | None = None,
+) -> int:
+    """Run the import.
+
+    `checker` and `on_plan` exist for the owner-gated ops runbook
+    (scripts/ops/catalogue_import.py); the command line never sets them.
+
+    `checker` is handed to `verified_staging_target` unchanged: it may only
+    change how the connection is reached (the runbook reaches the pinned
+    staging Postgres through its Railway TCP proxy, as every other ops
+    runbook does, because a CI runner cannot hold a `railway connect` SSH
+    tunnel). Every fingerprint, the revision check and the attestation are
+    still the established checker's, and there is still no way to pass a URL.
+
+    `on_plan` sees the finished plan before the applier runs, inside the same
+    session. Raising from it stops the run before anything is written (the
+    runbook refuses an apply whose plan differs from the reviewed dry run).
+    """
     args = build_parser().parse_args(argv)
     emit = (lambda line="": None) if args.json else (lambda line="": print(line, flush=True))
 
@@ -306,10 +346,38 @@ def main(argv: list[str] | None = None) -> int:
                 )
         renderings = {k: tuple(v) for k, v in renderings.items()}
 
+    series_ids = [sid.strip() for sid in (args.series_ids or []) if sid and sid.strip()]
+    if series_ids:
+        known = {s.series_id: s for s in snapshot.series}
+        for sid in series_ids:
+            if sid not in known:
+                print(f"FAIL: --series {sid!r} is not a series in the snapshot.", file=sys.stderr)
+                return EXIT_USAGE
+            if not known[sid].official_code:
+                print(
+                    f"FAIL: --series {sid!r} is an uncoded catch-all series; name its "
+                    "products with --uncoded-product instead.",
+                    file=sys.stderr,
+                )
+                return EXIT_USAGE
+        wanted_series = set(series_ids)
+        from_products = {e.entry_id for e in planned_entries} if requested else set()
+        planned_entries = tuple(
+            e
+            for e in snapshot.entries
+            if (snapshot.entry_source.get(e.entry_id) or {}).get("source_series_id") in wanted_series
+            or e.entry_id in from_products
+        )
+        if not sibling_counts:
+            for entry in snapshot.entries:
+                key = (entry.card_code or "").strip().upper()
+                sibling_counts[key] = sibling_counts.get(key, 0) + 1
+
     try:
         verified = target_authority.verified_staging_target(
             environment=environment,
             service=args.railway_service,
+            checker=checker,
             emit=emit,
         )
     except StagingTargetRefused as exc:
@@ -327,7 +395,9 @@ def main(argv: list[str] | None = None) -> int:
         emit(f"  {'  series':<24} {ev.source_series_id} ({ev.source_series_name})")
         emit(f"  {'  members':<24} {len(ev.member_card_codes)} card codes")
         emit(f"  {'  validation':<24} JP-only ({ev.asia_en_absence_proof})")
-    if requested:
+    for sid in series_ids:
+        emit(f"  {'series':<24} {sid}")
+    if requested or series_ids:
         emit(f"  {'scoped entries':<24} {len(planned_entries)} of {snapshot.entry_count}")
     for key, value in snapshot.describe().items():
         emit(f"  {key:<24} {value}")
@@ -354,6 +424,8 @@ def main(argv: list[str] | None = None) -> int:
                 sibling_counts=sibling_counts,
                 authorised_uncoded_names=frozenset(authorised),
             )
+            if on_plan is not None:
+                on_plan(plan)
             pinning = ApplyPinning(
                 snapshot_identity=snapshot.identity,
                 source_catalogue=SOURCE_CATALOGUE,

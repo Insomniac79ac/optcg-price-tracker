@@ -20,8 +20,6 @@ SERIES_ID = __import__("re").compile(r"\d{6}")
 # Uncoded groupings that hold many products (promotion cards, limited products) and series
 # missing from the catalogue are broken down by the product each entry names (入手情報).
 MAX_BREAKDOWN_PAGES = 8
-# Link labels the 入手情報 block also carries; they name no product.
-NOT_PRODUCTS = {"カードリスト", "商品情報"}
 
 PRODUCTS_SQL = """
 select rp.source_series_id series_id, rp.official_code code, rp.display_name name,
@@ -56,7 +54,9 @@ def breakdown(series_rows, products, read_page):
     for s in series_rows:
         counts = {}
         for entry in read_page(s["series_id"]):
-            names = [n for n in entry.product_names if n not in NOT_PRODUCTS] or ["(no product named)"]
+            # Bandai's link labels (カードリスト, 商品情報) are dropped by the parser
+            # (official_cardlist.OBTAIN_INFO_LINK_LABELS).
+            names = list(entry.product_names) or ["(no product named)"]
             for name in names:
                 counts[name] = counts.get(name, 0) + 1
         for name, n in sorted(counts.items(), key=lambda kv: -kv[1]):

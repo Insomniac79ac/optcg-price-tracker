@@ -1097,7 +1097,7 @@ class OfficialSeriesIndex(unittest.TestCase):
 
     def test_filter_options_are_not_series_and_breakdown_counts_products(self):
         entry = lambda *names: SimpleNamespace(product_names=names)
-        pages = {"550901": [entry("Flagship Battle", "カードリスト"), entry("Flagship Battle"), entry("Judge Pack Vol.1", "商品情報")],
+        pages = {"550901": [entry("Flagship Battle"), entry("Flagship Battle"), entry("Judge Pack Vol.1")],
                  "550205": [entry("EB-05 Heroines vol.2")]}
         with tempfile.TemporaryDirectory() as tmp:
             out = official_series.run(

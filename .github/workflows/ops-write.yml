@@ -24,12 +24,13 @@ on:
           - collector-redeploy
           - collector-sibling-on
           - collector-sibling-off
+          - catalogue-import
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
         default: false
       expected_sha256:
-        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy: plan) SHA-256 from the dry run the owner reviewed"
+        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy, catalogue-import: plan) SHA-256 from the dry run the owner reviewed"
         type: string
         default: ""
       count:
@@ -42,6 +43,10 @@ on:
         default: ""
       parent:
         description: "apply-migration only: the live revision it applies on"
+        type: string
+        default: ""
+      scope:
+        description: "catalogue-import only: scope name from docs/agent/CATALOGUE_IMPORT_SCOPES.json (e.g. eb-05)"
         type: string
         default: ""
       request_id:
@@ -82,6 +87,7 @@ jobs:
       COUNT: ${{ inputs.count }}
       REVISION: ${{ inputs.revision }}
       PARENT: ${{ inputs.parent }}
+      SCOPE: ${{ inputs.scope }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,6 +102,7 @@ jobs:
           args=(--preflight --workflow ops-write --expected-sha256 "$EXPECTED_SHA256")
           if [ -n "$REVISION" ]; then args+=(--revision "$REVISION"); fi
           if [ -n "$PARENT" ]; then args+=(--parent "$PARENT"); fi
+          if [ -n "$SCOPE" ]; then args+=(--scope "$SCOPE"); fi
           if [ -n "$COUNT" ]; then args+=(--count "$COUNT"); fi
           if [ "$APPLY" = true ]; then args+=(--apply); fi
           python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
@@ -118,6 +125,7 @@ jobs:
       COUNT: ${{ inputs.count }}
       REVISION: ${{ inputs.revision }}
       PARENT: ${{ inputs.parent }}
+      SCOPE: ${{ inputs.scope }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -142,6 +150,7 @@ jobs:
           args=(--out ops-out --workflow ops-write --expected-sha256 "$EXPECTED_SHA256")
           if [ -n "$REVISION" ]; then args+=(--revision "$REVISION"); fi
           if [ -n "$PARENT" ]; then args+=(--parent "$PARENT"); fi
+          if [ -n "$SCOPE" ]; then args+=(--scope "$SCOPE"); fi
           if [ -n "$COUNT" ]; then args+=(--count "$COUNT"); fi
           if [ "$APPLY" = true ]; then args+=(--apply); fi
           python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
