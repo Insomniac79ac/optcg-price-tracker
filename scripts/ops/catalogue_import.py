@@ -163,8 +163,7 @@ def plan_sha(scope, rows):
 
 
 def check_apply(expected_sha256, sha):
-    if not (isinstance(expected_sha256, str) and re.fullmatch("[0-9a-f]{64}", expected_sha256 or "")):
-        raise common.Refused("apply needs expected_sha256: the plan SHA-256 from a dry run")
+    check_sha_shape(expected_sha256)
     if expected_sha256 != sha:
         raise common.Refused("the plan differs from the dry run's (expected_sha256); dry run again")
 
@@ -260,22 +259,34 @@ def compact_row(r):
                                      r["variant"] or "-", ",".join(r["flags"]) or "-"))
 
 
+def check_sha_shape(expected_sha256):
+    if not (isinstance(expected_sha256, str) and re.fullmatch("[0-9a-f]{64}", expected_sha256 or "")):
+        raise common.Refused("apply needs expected_sha256: the plan SHA-256 from a dry run")
+
+
 def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, main=None, checker=None,
-        scopes=None):
+        scopes=None, backup=None):
     import generate_staging_state as state
+    from ops import apply_migration
 
     chosen = resolve_scope(scope, scopes if scopes is not None else load_scopes())
-    if apply and not chosen["series"]:
-        raise common.Refused(f"scope {chosen['name']!r} has no coded series to import; "
-                             "uncoded products are reported only until Phase 2 step C")
+    newest = None
     if apply:
-        check_apply(expected_sha256, expected_sha256)  # shape only; equality is checked on the plan
+        if not chosen["series"]:
+            raise common.Refused(f"scope {chosen['name']!r} has no coded series to import; "
+                                 "uncoded products are reported only until Phase 2 step C")
+        check_sha_shape(expected_sha256)  # equality is checked on the plan, inside the importer
+        # The recovery point: a Railway backup of the staging Postgres volume under 24 hours old,
+        # the same rule apply-migration enforces.
+        newest = apply_migration.check_backup((backup or apply_migration.newest_backup)())
     root = Path(out_dir) / "snapshot" / "bandai_jp" / "current"
     captured = capture(root, chosen, fetcher=fetcher)
     from app.services.snapshot_planner_input import load_snapshot
     identity = load_snapshot(root).identity
     summary = {"scope": chosen["name"], "apply": bool(apply), "snapshot_identity": identity,
                "capture": captured, "database_writes_possible": bool(apply)}
+    if newest is not None:
+        summary["backup"] = newest
     if chosen["uncoded_products"]:
         summary["uncoded_products"] = uncoded_report(root, chosen["uncoded_products"], identity)
     if not chosen["series"]:

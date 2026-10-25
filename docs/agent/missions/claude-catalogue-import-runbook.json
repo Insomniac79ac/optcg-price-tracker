@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "mission": "Phase 2 step A of the catalogue-gap request (owner 2026-10-26, perfectionist): an owner-gated ops-write runbook catalogue-import that runs the existing Bandai JP import engine (app.import_frozen_bandai_to_canonical_staging: print_import_planner plans, CanonicalImportApplier writes, every pin unchanged) inside the ops-write workflow. Fresh Bandai capture in the run (six-digit series pages, images for the scope's entries only, 1 req/s, honest User-Agent, stop on 401/403/429/451); named scopes in docs/agent/CATALOGUE_IMPORT_SCOPES.json; importer gains --series (coded scope, whole-snapshot sibling counts) and two keyword seams for the runbook (checker passed to verified_staging_target so the pinned staging Postgres is reached through its Railway TCP proxy with every fingerprint and the revision check unchanged; on_plan sees the plan before the applier). Plan SHA-256 over every planned print; apply re-plans and refuses unless identical, and needs a Railway backup under 24 h. Uncoded products are reported against the evidence standard, not imported (Asia-EN evidence is the owner's step C decision). Root fix: the JP parser drops Bandai's new 入手情報 link labels (カードリスト, 商品情報), which made every entry name three products.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/catalogue_import.py",
+        "docs/agent/CATALOGUE_IMPORT_SCOPES.json"
+      ],
+      "effects": [
+        "infrastructure",
+        "data"
+      ],
+      "reason": "New runbook module (scope, capture, uncoded report, plan digest, TCP-proxy checker, backup gate) and its reviewed scopes (eb-05, family-deck-set)."
+    },
+    {
+      "files": [
+        "scripts/ops/run.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "RUNBOOKS: catalogue-import as a collector-affecting write; --scope; scope validated in preflight."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Runbook choice and a scope input passed to both jobs. No secret, gate, permission or timeout change."
+    },
+    {
+      "files": [
+        "services/api/app/import_frozen_bandai_to_canonical_staging.py"
+      ],
+      "effects": [
+        "data"
+      ],
+      "reason": "--series scope (coded only, refuses uncoded and unknown ids before connecting); keyword-only checker and on_plan seams; no URL parameter, no change to planning, pins or the apply path."
+    },
+    {
+      "files": [
+        "services/api/app/collect_official_cardlist_snapshot.py"
+      ],
+      "effects": [
+        "data"
+      ],
+      "reason": "collect_images(only_entry_ids=None): optional limit to the scope's entries; default unchanged."
+    },
+    {
+      "files": [
+        "services/api/app/services/official_cardlist.py",
+        "scripts/ops/official_series.py"
+      ],
+      "effects": [
+        "data"
+      ],
+      "reason": "Parser drops the 入手情報 link labels by exact match (raw getInfo kept verbatim); official-series-index's duplicate filter removed."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "scripts/tests/test_ops_runbooks.py",
+        "services/api/tests/test_staging_import_series_scope.py",
+        "services/api/tests/test_official_cardlist.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Scope, capture (series filter, scoped images, labels dropped), plan digest, proxy checker, apply gate and backup, uncoded report; importer --series scope and seams; parser labels."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "CLAUDE.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook section and lists."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "staging Postgres catalogue tables (release_products, canonical_cards, card_prints, release_product_aliases), only through an owner-approved ops-write apply"
+      ],
+      "routes": [
+        "GET https://www.onepiece-cardgame.com/cardlist/?series=<id> (about 64 pages) and the scope's card images, 1 per second"
+      ],
+      "dependencies": [
+        "staging after #216"
+      ],
+      "deployment_impact": "Merging changes nothing live. A dry run reads; an approved apply adds the scope's prints through the existing engine in one transaction.",
+      "database_writes": 0,
+      "source_requests": 130,
+      "estimated_runtime_minutes": 10
+    },
+    "recovery": {
+      "artifact": "853a411c7d6bebebe46c6eb271d393f6f1115a17",
+      "procedure": "Code: native revert PR with its own mission file. Data: the apply report lists every created row; restore from the Railway backup the apply required (under 24 h), or an owner-approved removal of those rows.",
+      "trigger": "A wrong print, product or identity after an apply, or a planner/engine refusal that the dry run did not show.",
+      "backup": "Railway Postgres volume backup under 24 hours old, checked before every apply.",
+      "validation": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "services/api/tests/test_staging_import_series_scope.py",
+        "services/api/tests/test_canonical_staging_import_gate.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/catalogue_import.py",
+        "services/api/app/import_frozen_bandai_to_canonical_staging.py"
+      ],
+      "observation_window": "catalogue-import eb-05 dry run, owner-approved apply, then official-series-index and web-smoke."
+    }
+  },
+  "diff_sha256": ""
+}

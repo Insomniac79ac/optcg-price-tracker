@@ -235,7 +235,8 @@ catalogue-gap request (owner 2026-10-26).
    the revision-equals-head check still run. The dry run's session is read-only at the server.
 4. Dry run: per-print rows (code, outcome, product, artwork variant, flags), outcome counts, the
    engine's dry-run report and `plan_sha256` over scope and every planned print.
-5. `apply=true` with that SHA: re-captures and re-plans; the importer refuses before the applier
+5. `apply=true` with that SHA: refuses without a Railway backup of the staging Postgres volume
+   under 24 hours old (the recovery point, as for `apply-migration`); re-captures and re-plans; the importer refuses before the applier
    runs unless the plan is identical. Then the engine writes in one transaction with its own
    checks (untouched price tables, import lock, pre-count preflight). Keeps the collector quiet
    windows (collectors match listings against `card_prints`).

@@ -170,6 +170,9 @@ class Target(unittest.TestCase):
         self.assertIsNone(checker.close_tunnel(object()))
 
 
+FRESH = lambda: {"age_hours": 3.0}  # noqa: E731
+
+
 class RunFlow(unittest.TestCase):
     def setUp(self):
         sys.modules.setdefault("generate_staging_state", SimpleNamespace(timestamp=lambda: "t"))
@@ -192,17 +195,25 @@ class RunFlow(unittest.TestCase):
         importer = FakeImporter()
         with tempfile.TemporaryDirectory() as tmp:
             ok = ci.run(tmp, apply=True, scope="eb-05", expected_sha256=sha, fetcher=FakeFetcher(), main=importer,
-                        checker=object(), scopes=SCOPES)
+                        checker=object(), scopes=SCOPES, backup=FRESH)
         self.assertTrue(ok["ok"])
         self.assertIn("--confirm", importer.calls[0])
         self.assertEqual(ok["report"]["card_prints_created"], 2)
         changed = FakeImporter(codes=("EB05-001",))
         with tempfile.TemporaryDirectory() as tmp:
             refused = ci.run(tmp, apply=True, scope="eb-05", expected_sha256=sha, fetcher=FakeFetcher(), main=changed,
-                             checker=object(), scopes=SCOPES)
+                             checker=object(), scopes=SCOPES, backup=FRESH)
         self.assertFalse(refused["ok"])
         self.assertIn("differs", refused["refused"])
         self.assertIsNone(refused["report"])
+
+    def test_apply_refuses_without_a_recent_backup_before_any_request(self):
+        fetcher = FakeFetcher()
+        for stale in (lambda: None, lambda: {"age_hours": 30}):
+            with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
+                ci.run(tmp, apply=True, scope="eb-05", expected_sha256="a" * 64, fetcher=fetcher,
+                       main=FakeImporter(), checker=object(), scopes=SCOPES, backup=stale)
+        self.assertEqual(fetcher.urls, [])
 
     def test_uncoded_products_are_reported_with_their_rule_and_never_applied(self):
         importer = FakeImporter()
