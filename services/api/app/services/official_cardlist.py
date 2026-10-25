@@ -65,6 +65,14 @@ FIELD_CLASSES = (
 # membership is keyed on this label and never on the class alone.
 OBTAIN_INFO_LABEL = "入手情報"
 
+# Navigation link labels Bandai added inside the 入手情報 block by October
+# 2026 (seen on every entry of the 2026-10-25 official-series-index run, e.g.
+# EB-05: product + カードリスト + 商品情報). They name no product. Left in,
+# every entry would appear to name three products, and the planner would put
+# every print on needs_review as `multiple_products`. Dropped by exact match
+# only; the raw `getInfo` field keeps them verbatim.
+OBTAIN_INFO_LINK_LABELS = frozenset({"カードリスト", "商品情報"})
+
 # One card entry in the source document, from its opening tag to its close.
 ENTRY_OPEN_RE = re.compile(r'<dl class="modalCol"', re.IGNORECASE)
 ENTRY_CLOSE = "</dl>"
@@ -490,7 +498,15 @@ class _CardListParser(HTMLParser):
         obtain = next(
             (f for f in fields if f.name == "getInfo" and f.label == OBTAIN_INFO_LABEL), None
         )
-        products = tuple(obtain.value.split("\n")) if obtain and obtain.value else ()
+        products = (
+            tuple(
+                name
+                for name in obtain.value.split("\n")
+                if name not in OBTAIN_INFO_LINK_LABELS
+            )
+            if obtain and obtain.value
+            else ()
+        )
         self.entries.append(
             OfficialCardEntry(
                 entry_id=self._entry_id.strip(),

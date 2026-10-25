@@ -237,10 +237,22 @@ def collect_pages(
 
 
 def collect_images(
-    snapshot: Snapshot, fetcher: RateLimitedFetcher, *, resume: bool, workers: int
+    snapshot: Snapshot,
+    fetcher: RateLimitedFetcher,
+    *,
+    resume: bool,
+    workers: int,
+    only_entry_ids: frozenset[str] | None = None,
 ) -> dict[str, Any]:
-    """Fetch every distinct asset URL, storing bytes by content digest."""
+    """Fetch every distinct asset URL, storing bytes by content digest.
+
+    `only_entry_ids` limits the fetch to those entries' images (the ops
+    catalogue-import runbook fetches only what it will plan). Any other entry
+    then has no digest, which the planner treats as missing evidence.
+    """
     entries = snapshot.load(ENTRIES_FILE)
+    if only_entry_ids is not None:
+        entries = [row for row in entries if row.get("entry_id") in only_entry_ids]
     urls = sorted({row["image_url"] for row in entries if row.get("image_url")})
 
     known: dict[str, dict[str, Any]] = {}

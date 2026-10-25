@@ -99,6 +99,31 @@ def load_staging_checker(path: Path | None = None) -> Any:
     return module
 
 
+class ReroutedChecker:
+    """The established checker with ONE thing changed: how the connection is reached.
+
+    `open_tunnel(service, environment)` returns a URL the caller resolved (the
+    ops runbook resolves the pinned staging Postgres TCP proxy from Railway's
+    project, environment and service ids). Everything that decides whether the
+    target is accepted - collect_facts, evaluate, the expected revisions,
+    REFUSED_ENVIRONMENTS, redacted_target - is the real checker's, reached by
+    attribute fall-through, and cannot be replaced through this class.
+    """
+
+    def __init__(self, checker: Any, open_url: Callable[[str, str], str]) -> None:
+        self._checker = checker
+        self._open_url = open_url
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._checker, name)
+
+    def open_tunnel(self, service: str, environment: str) -> tuple[None, str]:
+        return None, self._open_url(service, environment)
+
+    def close_tunnel(self, _process: object) -> None:
+        return None
+
+
 def _connect_read_only(url: str, checker: Any) -> Any:
     """Collects facts over a server-enforced read-only session.
 
