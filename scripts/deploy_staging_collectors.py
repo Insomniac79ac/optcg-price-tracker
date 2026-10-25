@@ -397,7 +397,7 @@ def new_upload(row, commit, known):
     return None
 
 
-def reupload(name, row, *, run=subprocess.run, known=None, find=None, clock=None, sleep=None):
+def reupload(name, row, *, run=subprocess.run, known=None, find=None, clock=None, sleep=None, nonce=None):
     """Rollback without a redeployable image: upload the collector's previous
     verified commit again (fresh build, same code, current variables) from a
     detached worktree, with the same build markers and exact-commit message as
@@ -414,8 +414,12 @@ def reupload(name, row, *, run=subprocess.run, known=None, find=None, clock=None
         if added.returncode:
             raise state.VerificationError("Rollback checkout failed: " + name)
         try:
+            # A nonce (a settings-only re-upload of the active commit) changes the
+            # build-only marker so Railway does not skip the upload as unchanged;
+            # REVISION, which the runtime reports, stays the commit.
+            text = "REVISION = " + repr(commit) + "\n" + (f"UPLOAD = {nonce!r}\n" if nonce else "")
             for marker in build_markers([{"name": name}], root=tree):
-                marker.write_text("REVISION = " + repr(commit) + "\n")
+                marker.write_text(text)
             result = run(["railway", "up", "--project", state.PROJECT, "--environment", state.ENVIRONMENT,
                           "--service", row["service_id"], "--detach", "--message", MARKER + commit],
                          cwd=tree, capture_output=True, text=True, timeout=180)

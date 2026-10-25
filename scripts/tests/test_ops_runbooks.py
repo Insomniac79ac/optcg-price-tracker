@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import capture_batch, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import capture_batch, collector_flag, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, encoding_sample, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -927,6 +927,103 @@ class CollectorRedeploy(unittest.TestCase):
         import collector_variables as cv
         self.assertEqual(cv.parse_assignments([f"{k}={v}" for k, v in collector_redeploy.NOOP.items()]),
                          collector_redeploy.NOOP)
+
+
+class CollectorSiblingSwitch(unittest.TestCase):
+    PIN = "d" * 40
+
+    def live(self, names=("snkrdunk-collector", "yuyutei-collector-shard-0"), commit=None, status="SUCCESS"):
+        return {n: {"serviceId": "svc-" + n, "cronSchedule": "1,31 * * * *", "startCommand": "x --due-work",
+                    "latestDeployment": {"id": "live-" + n, "status": status, "commit": commit or self.PIN}}
+                for n in names}
+
+    def plan(self, live, values=None):
+        values = values or {}
+        pins = {n: self.PIN for n in live}
+        return collector_flag.plan(live, pins, "true", marker_commit=lambda latest: latest["commit"],
+                                   variables=lambda sid: {"RAW_DICTIONARY_STORAGE_ENABLED": "true",
+                                                          "RAW_DICTIONARY_SIBLING": values.get(sid)})
+
+    def test_registered_as_collector_affecting_writes(self):
+        for name in ("collector-sibling-on", "collector-sibling-off"):
+            self.assertEqual(run.RUNBOOKS[name][:2], ("write", True))
+        args = SimpleNamespace(count=3, apply=False, expected_sha256="")
+        with self.assertRaisesRegex(common.Refused, "no count"):
+            run.RUNBOOKS["collector-sibling-on"][2](args, "out")
+
+    def test_plan_requires_the_fleet_pin_and_skips_collectors_already_set(self):
+        rows = self.plan(self.live(), values={"svc-snkrdunk-collector": "true"})
+        self.assertEqual([(r["service"], r["action"]) for r in rows],
+                         [("snkrdunk-collector", "none"), ("yuyutei-collector-shard-0", "set-and-reupload")])
+        with self.assertRaisesRegex(common.Refused, "not its fleet pin"):
+            self.plan(self.live(commit="e" * 40))
+        with self.assertRaisesRegex(common.Refused, "not SUCCESS"):
+            self.plan(self.live(status="CRASHED"))
+        sha = collector_flag.plan_sha(rows)
+        moved = [dict(rows[0], live_deployment="other"), rows[1]]
+        self.assertNotEqual(sha, collector_flag.plan_sha(moved))
+
+    def fakes(self, fail_verify_on=None, skip=False):
+        log, state = [], {"latest": {}}
+        live = self.live()
+
+        def inspect():
+            return {n: dict(node, latestDeployment={"id": state["latest"].get(n, "live-" + n)})
+                    for n, node in live.items()}
+
+        def stage(node, values):
+            log.append(("stage", node["serviceId"], dict(values)))
+
+        def reupload(name, before, nonce=None):
+            log.append(("reupload", name, before["variables"]["RAW_DICTIONARY_SIBLING"], bool(nonce)))
+            if skip:
+                return {"id": before["deployment_id"]}
+            new = f"new-{name}-{len(log)}"
+            state["latest"][name] = new
+            return {"id": new}
+
+        def verify(name, before, deployment):
+            if name == fail_verify_on and before["variables"]["RAW_DICTIONARY_SIBLING"] == "true":
+                raise collector_flag.common.Refused("writer flags changed")
+            return {"deployment": deployment["id"]}
+
+        kwargs = dict(inspect=inspect, stage=stage, reupload=reupload, verify=verify,
+                      slot=lambda *a: log.append(("slot", a[0])), now=lambda: utc(2026, 10, 25, 9),
+                      stamp=lambda: "T")
+        return log, kwargs
+
+    def test_apply_stages_then_reuploads_each_collector_in_its_slot(self):
+        rows = self.plan(self.live())
+        log, kwargs = self.fakes()
+        done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+        self.assertIsNone(stopped)
+        self.assertEqual([d["changed"] for d in done], [True, True])
+        self.assertEqual(log[:3], [("slot", "snkrdunk-collector"),
+                                   ("stage", "svc-snkrdunk-collector", {"RAW_DICTIONARY_SIBLING": "true"}),
+                                   ("reupload", "snkrdunk-collector", "true", True)])
+
+    def test_failure_stops_and_reverts_that_collector(self):
+        rows = self.plan(self.live())
+        log, kwargs = self.fakes(fail_verify_on="snkrdunk-collector")
+        done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+        self.assertEqual(done, [])
+        self.assertEqual(stopped["service"], "snkrdunk-collector")
+        self.assertEqual(stopped["reverted"]["value"], "false")  # unset before: off
+        self.assertNotIn(("slot", "yuyutei-collector-shard-0"), log)
+
+    def test_a_skipped_reupload_is_never_accepted(self):
+        rows = self.plan(self.live())
+        log, kwargs = self.fakes(skip=True)
+        done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+        self.assertIn("re-upload was skipped", stopped["reason"])
+
+    def test_stops_before_the_collector_quiet_window(self):
+        rows = self.plan(self.live())
+        log, kwargs = self.fakes()
+        kwargs["now"] = lambda: utc(2026, 10, 25, 2, 10)
+        done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+        self.assertEqual(done, [])
+        self.assertIn("02:00-06:00", stopped["reason"])
 
 
 class FleetAndImages(unittest.TestCase):

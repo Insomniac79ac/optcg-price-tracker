@@ -115,6 +115,15 @@ def _collector_redeploy(args, out):
     return collector_redeploy.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
 
 
+def _collector_sibling(value):
+    def handler(args, out):
+        from ops import collector_flag
+        if args.count is not None:
+            raise common.Refused("collector-sibling takes no count: it covers all 10 collectors")
+        return collector_flag.run(out, value=value, apply=args.apply, expected_sha256=args.expected_sha256)
+    return handler
+
+
 def _apply_migration(args, out):
     from ops import apply_migration
     return apply_migration.run(out, apply=args.apply, revision=args.revision, parent=args.parent,
@@ -139,6 +148,9 @@ RUNBOOKS = {
     "apply-migration": ("write", True, _apply_migration),
     # Same verified image, new deployment (picks up rotated shared variables); no build.
     "collector-redeploy": ("write", True, _collector_redeploy),
+    # RAW_DICTIONARY_SIBLING on every collector, applied by re-uploading its pinned commit.
+    "collector-sibling-on": ("write", True, _collector_sibling("true")),
+    "collector-sibling-off": ("write", True, _collector_sibling("false")),
 }
 
 

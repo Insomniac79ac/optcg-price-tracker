@@ -22,6 +22,8 @@ on:
           - plan-refresh-backfill
           - apply-migration
           - collector-redeploy
+          - collector-sibling-on
+          - collector-sibling-off
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
