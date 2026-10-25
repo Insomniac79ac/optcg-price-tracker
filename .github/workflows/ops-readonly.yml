@@ -32,6 +32,7 @@ on:
         default: work-by-state
         options:
           - capture-day-storage
+          - catalogue-products
           - degraded-signals
           - freshness-not-met
           - identity-capture-work
