@@ -534,6 +534,23 @@ def test_fallback_message_matches_collector_variables():
         raise AssertionError("original_source must refuse with no copies")
 
 
+def test_reupload_nonce_changes_the_marker_but_not_the_revision(tmp_path, monkeypatch):
+    monkeypatch.setattr(delivery.state, "ROOT", tmp_path)
+    seen = {}
+
+    def run(cmd, cwd=None, **kwargs):
+        if cmd[:3] == ["git", "worktree", "add"]:
+            for path in ("services/api/app/services", "services/snkrdunk_collector/snkrdunk_collector"):
+                (Path(cmd[4]) / path).mkdir(parents=True)
+        if cmd[:2] == ["railway", "up"]:
+            seen["markers"] = sorted(p.read_text() for p in Path(cwd).rglob("*.py"))
+        return Completed()
+
+    delivery.reupload("snkrdunk-collector", reupload_row(), run=run, known=set(), nonce="K=v@T",
+                      find=lambda *a: {"id": "n", "status": "SUCCESS"}, clock=lambda: 0, sleep=lambda s: None)
+    assert seen["markers"] == ["REVISION = " + repr(OLD) + "\nUPLOAD = 'K=v@T'\n"] * 2
+
+
 def test_has_commit_rejects_malformed_and_missing(tmp_path, monkeypatch):
     monkeypatch.setattr(delivery.state, "ROOT", tmp_path)
     assert delivery.has_commit("not-a-sha") is False

@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -193,6 +193,28 @@ cron run keeps the variables of the deployment it runs, and Railway's dashboard 
 4. Afterwards `fleet-vs-receipt` reports the new deployment ids as records after the receipts,
    by design. Verify staging merge then needs one natural cron run per collector on the new
    deployment (its SNKR check waits up to 30 minutes for that receipt).
+
+`collector-sibling-on` / `collector-sibling-off` (`scripts/ops/collector_flag.py`): set
+`RAW_DICTIONARY_SIBLING` to `true` / `false` on every collector and make it live (owner decision
+2026-10-24, after the #197 encoding sample passed). A collector reads variables only on a new
+deployment and Railway no longer redeploys their images, so each one is re-uploaded on its
+fleet-pinned commit.
+
+1. Dry run: every collector's active deployment must be a SUCCESS exact-commit upload of its
+   fleet pin; the plan lists current and target values and `plan_sha256` over service, commit,
+   live deployment and values. Every collector is re-uploaded, even one already showing the target
+   (a staged value says nothing about what its running deployment read), so a re-run is safe.
+2. `apply=true` with the plan SHA, per collector in its safe slot: stage the value with
+   `--skip-deploys` and prove no deployment started; re-upload the pinned commit
+   (`deploy_staging_collectors.reupload`, with a one-off nonce in the build-only marker so Railway
+   does not skip it; the runtime REVISION stays the commit); refuse a skipped upload; check the new
+   deployment is active, SUCCESS, exact marker, unchanged schedule and start command, and writer
+   flags as before except the switch, and refuse a collector deployed since the dry run. About 7
+   minutes per collector plus slot waits; the job allows 360 minutes.
+3. A collector starts only with enough job time and time before the next quiet window (02:00 or
+   19:30 UTC) for itself plus a revert (80 minutes), so start early in the day. On a failure it
+   stops; if that collector's value was already staged it is put back (previous value, re-upload).
+   Re-measure storage (`storage-rates`) 24 hours later.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
