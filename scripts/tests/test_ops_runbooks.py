@@ -1073,14 +1073,30 @@ class OfficialSeriesIndex(unittest.TestCase):
 
     def test_run_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
-            out = official_series.run(tmp, fetch=lambda: [{"series_id": "1", "code": None, "name": "promo"}],
+            out = official_series.run(tmp, fetch=lambda: [{"series_id": "550999", "code": None, "name": "promo"}],
                                       products=[])
             self.assertEqual((out["bandai_series"], out["missing"]), (1, 1))
-            self.assertEqual(out["missing_series"], [["1", None, "promo"]])
+            self.assertEqual(out["missing_series"], [["550999", None, "promo"]])
             self.assertTrue((Path(tmp) / "official-series-index.json").is_file())
 
     def test_registered_as_read_runbook(self):
         self.assertEqual(run.RUNBOOKS["official-series-index"][:2], ("read", False))
+
+    def test_filter_options_are_not_series_and_breakdown_counts_products(self):
+        entry = lambda *names: SimpleNamespace(product_names=names)
+        pages = {"550901": [entry("Flagship Battle"), entry("Flagship Battle"), entry("Judge Pack Vol.1")],
+                 "550205": [entry("EB-05 Heroines vol.2")]}
+        with tempfile.TemporaryDirectory() as tmp:
+            out = official_series.run(
+                tmp, fetch=lambda: [{"series_id": "550901", "code": None, "name": "プロモーションカード"},
+                                    {"series_id": "550205", "code": "EB-05", "name": "EB-05"},
+                                    {"series_id": "13000", "code": None, "name": "13000"},
+                                    {"series_id": "0", "code": None, "name": "0"}],
+                products=[{"series_id": "550901", "code": None, "name": "Judge Pack Vol.1", "prints": 1}],
+                read_page=lambda sid: pages[sid])
+        self.assertEqual(out["bandai_series"], 2)
+        self.assertEqual(out["breakdown"], [["550901", "Flagship Battle", 2, 0], ["550901", "Judge Pack Vol.1", 1, 1],
+                                            ["550205", "EB-05 Heroines vol.2", 1, 0]])
 
 
 class FleetAndImages(unittest.TestCase):

@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "mission": "Phase 0 catalogue gap, step 2: official-series-index keeps only six-digit Bandai series ids (the picker parse also returns cost/power filter options) and breaks the uncoded series (promotion cards 550901, limited products 550801) and missing series (EB-05, family deck set) down by the product each entry names, with catalogue prints per product. At most 9 Bandai requests, 2 s apart, honest User-Agent, stop on 401/403/429/451. Read-only.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/official_series.py",
+        "scripts/tests/test_ops_runbooks.py",
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "infrastructure",
+        "tests",
+        "documentation"
+      ],
+      "reason": "Series id filter, per-product breakdown (breakdown()), summary rows; tests for filter and breakdown."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly official-series-index"
+      ],
+      "routes": [
+        "GET https://www.onepiece-cardgame.com/cardlist/?series=<id> (at most 9, 2 s apart)"
+      ],
+      "dependencies": [
+        "staging after #213"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 9,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "d322d128aa33ad0774f5ca6572f0bbd1d2ebc06d",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "Wrong counts or a Bandai refusal.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/official_series.py"
+      ],
+      "observation_window": "The next official-series-index run."
+    }
+  },
+  "diff_sha256": "8af7b54c0aec5c7bd8dbf4021af2056bcb9dbf5654f41d91e1b491011cf3894c"
+}
