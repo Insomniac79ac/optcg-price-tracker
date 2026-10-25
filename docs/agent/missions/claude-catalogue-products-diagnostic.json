@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "Phase 0 of the catalogue-gap request (owner 2026-10-25): a read-only db-diagnostic catalogue-products listing every release product with active/verified prints and Yuyu-Tei/SNKRDUNK approved mappings, prints with no product by card-code prefix, cards and prints by card type (DON!! included) and prints by language, to build the product-by-product gap table against Bandai's Card List, Logia and CardTrader.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
