@@ -74,6 +74,11 @@ def _diagnostic(args, out):
     return diagnostic.run(out, args.diagnostic)
 
 
+def _official_series(args, out):
+    from ops import official_series
+    return official_series.run(out)
+
+
 def _web_smoke(args, out):
     receipt = Path(out) / "web-smoke.json"
     status = subprocess.run([sys.executable, str(common.ROOT / "scripts/staging_web_smoke.py"), "--output", str(receipt)],
@@ -140,6 +145,7 @@ RUNBOOKS = {
     "db-diagnostic": ("read", False, _diagnostic),
     "web-smoke": ("read", False, _web_smoke),
     "capture-batch-preview": ("read", False, _capture_preview),
+    "official-series-index": ("read", False, _official_series),
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
     "enqueue-capture-batch": ("write", True, _capture),

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Phase 0 of the catalogue-gap request (owner 2026-10-25): a read-only db-diagnostic catalogue-products listing every release product with active/verified prints and Yuyu-Tei/SNKRDUNK approved mappings, prints with no product by card-code prefix, cards and prints by card type (DON!! included) and prints by language, to build the product-by-product gap table against Bandai's Card List, Logia and CardTrader.",
+  "mission": "Phase 0 of the catalogue-gap request (owner 2026-10-25): a read-only db-diagnostic catalogue-products listing every release product with active/verified prints and Yuyu-Tei/SNKRDUNK approved mappings, prints with no product by card-code prefix, cards and prints by card type (DON!! included) and prints by language, to build the product-by-product gap table against Bandai's Card List, Logia and CardTrader. Plus a read-only ops-readonly runbook official-series-index: one polite request to Bandai's JP Card List series picker (existing snapshot fetcher, honest User-Agent, stops on 401/403/429/451) compared with the catalogue's release products.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -35,6 +35,20 @@
         "infrastructure"
       ],
       "reason": "diagnostic choice catalogue-products (tests keep the choice list equal to scripts/diagnostics)."
+    },
+    {
+      "files": [
+        "scripts/ops/official_series.py",
+        "scripts/ops/run.py",
+        "scripts/tests/test_ops_runbooks.py",
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "infrastructure",
+        "tests",
+        "documentation"
+      ],
+      "reason": "official-series-index read runbook (one Bandai request, read-only DB), registered and documented; tests for compare, summary and registration."
     }
   ],
   "safeguards": {
@@ -43,14 +57,15 @@
         "ops-readonly db-diagnostic"
       ],
       "routes": [
-        "Read-only staging Postgres session (default_transaction_read_only=on)"
+        "Read-only staging Postgres session (default_transaction_read_only=on)",
+        "GET https://www.onepiece-cardgame.com/cardlist/?series=550101 (one request, honest User-Agent)"
       ],
       "dependencies": [
         "staging after #212"
       ],
       "deployment_impact": "None: a new read-only report.",
       "database_writes": 0,
-      "source_requests": 0,
+      "source_requests": 1,
       "estimated_runtime_minutes": 5
     },
     "recovery": {
@@ -75,5 +90,5 @@
       "observation_window": "First ops-readonly db-diagnostic catalogue-products run."
     }
   },
-  "diff_sha256": "d279f49dc3526989a6573c4aaecc3ad9ca6097a9054718887caf67f1dbb95e6c"
+  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
 }
