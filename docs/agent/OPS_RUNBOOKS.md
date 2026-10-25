@@ -201,16 +201,20 @@ deployment and Railway no longer redeploys their images, so each one is re-uploa
 fleet-pinned commit.
 
 1. Dry run: every collector's active deployment must be a SUCCESS exact-commit upload of its
-   fleet pin; the plan lists current and target values (collectors already at the target are left
-   alone) and `plan_sha256` over service, commit, live deployment and values.
+   fleet pin; the plan lists current and target values and `plan_sha256` over service, commit,
+   live deployment and values. Every collector is re-uploaded, even one already showing the target
+   (a staged value says nothing about what its running deployment read), so a re-run is safe.
 2. `apply=true` with the plan SHA, per collector in its safe slot: stage the value with
    `--skip-deploys` and prove no deployment started; re-upload the pinned commit
    (`deploy_staging_collectors.reupload`, with a one-off nonce in the build-only marker so Railway
    does not skip it; the runtime REVISION stays the commit); refuse a skipped upload; check the new
    deployment is active, SUCCESS, exact marker, unchanged schedule and start command, and writer
-   flags as before except the switch. About 7 minutes per collector plus slot waits.
-3. On a failure it stops, puts that collector back (previous value, re-upload) and reports. It
-   stops before 02:00 UTC. Re-measure storage (`storage-rates`) 24 hours later.
+   flags as before except the switch, and refuse a collector deployed since the dry run. About 7
+   minutes per collector plus slot waits; the job allows 360 minutes.
+3. A collector starts only with enough job time and time before the next quiet window (02:00 or
+   19:30 UTC) for itself plus a revert (80 minutes), so start early in the day. On a failure it
+   stops; if that collector's value was already staged it is put back (previous value, re-upload).
+   Re-measure storage (`storage-rates`) 24 hours later.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:

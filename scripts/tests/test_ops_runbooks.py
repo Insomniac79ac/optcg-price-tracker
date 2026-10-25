@@ -931,16 +931,17 @@ class CollectorRedeploy(unittest.TestCase):
 
 class CollectorSiblingSwitch(unittest.TestCase):
     PIN = "d" * 40
+    NAMES = ("snkrdunk-collector", "yuyutei-collector-shard-0")
 
-    def live(self, names=("snkrdunk-collector", "yuyutei-collector-shard-0"), commit=None, status="SUCCESS"):
+    def live(self, commit=None, status="SUCCESS"):
         return {n: {"serviceId": "svc-" + n, "cronSchedule": "1,31 * * * *", "startCommand": "x --due-work",
                     "latestDeployment": {"id": "live-" + n, "status": status, "commit": commit or self.PIN}}
-                for n in names}
+                for n in self.NAMES}
 
     def plan(self, live, values=None):
         values = values or {}
-        pins = {n: self.PIN for n in live}
-        return collector_flag.plan(live, pins, "true", marker_commit=lambda latest: latest["commit"],
+        return collector_flag.plan(live, {n: self.PIN for n in live}, "true",
+                                   marker_commit=lambda latest: latest["commit"],
                                    variables=lambda sid: {"RAW_DICTIONARY_STORAGE_ENABLED": "true",
                                                           "RAW_DICTIONARY_SIBLING": values.get(sid)})
 
@@ -951,20 +952,18 @@ class CollectorSiblingSwitch(unittest.TestCase):
         with self.assertRaisesRegex(common.Refused, "no count"):
             run.RUNBOOKS["collector-sibling-on"][2](args, "out")
 
-    def test_plan_requires_the_fleet_pin_and_skips_collectors_already_set(self):
+    def test_plan_requires_the_fleet_pin_and_reuploads_even_when_already_set(self):
         rows = self.plan(self.live(), values={"svc-snkrdunk-collector": "true"})
-        self.assertEqual([(r["service"], r["action"]) for r in rows],
-                         [("snkrdunk-collector", "none"), ("yuyutei-collector-shard-0", "set-and-reupload")])
+        self.assertEqual([r["service"] for r in rows], list(self.NAMES))
         with self.assertRaisesRegex(common.Refused, "not its fleet pin"):
             self.plan(self.live(commit="e" * 40))
         with self.assertRaisesRegex(common.Refused, "not SUCCESS"):
             self.plan(self.live(status="CRASHED"))
         sha = collector_flag.plan_sha(rows)
-        moved = [dict(rows[0], live_deployment="other"), rows[1]]
-        self.assertNotEqual(sha, collector_flag.plan_sha(moved))
+        self.assertNotEqual(sha, collector_flag.plan_sha([dict(rows[0], live_deployment="other"), rows[1]]))
 
-    def fakes(self, fail_verify_on=None, skip=False):
-        log, state = [], {"latest": {}}
+    def fakes(self, fail_verify_on=None, skip=False, fail_slot=False, moved=None, fail_revert=False):
+        log, state = [], {"latest": dict(moved or {})}
         live = self.live()
 
         def inspect():
@@ -983,13 +982,18 @@ class CollectorSiblingSwitch(unittest.TestCase):
             return {"id": new}
 
         def verify(name, before, deployment):
-            if name == fail_verify_on and before["variables"]["RAW_DICTIONARY_SIBLING"] == "true":
+            value = before["variables"]["RAW_DICTIONARY_SIBLING"]
+            if name == fail_verify_on and (value == "true" or fail_revert):
                 raise collector_flag.common.Refused("writer flags changed")
             return {"deployment": deployment["id"]}
 
-        kwargs = dict(inspect=inspect, stage=stage, reupload=reupload, verify=verify,
-                      slot=lambda *a: log.append(("slot", a[0])), now=lambda: utc(2026, 10, 25, 9),
-                      stamp=lambda: "T")
+        def slot(name, schedule):
+            log.append(("slot", name))
+            if fail_slot:
+                raise collector_flag.common.Refused("No safe rollout slot for " + name)
+
+        kwargs = dict(inspect=inspect, stage=stage, reupload=reupload, verify=verify, slot=slot,
+                      now=lambda: utc(2026, 10, 25, 9), stamp=lambda: "T", clock=lambda: 0)
         return log, kwargs
 
     def test_apply_stages_then_reuploads_each_collector_in_its_slot(self):
@@ -997,19 +1001,42 @@ class CollectorSiblingSwitch(unittest.TestCase):
         log, kwargs = self.fakes()
         done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
         self.assertIsNone(stopped)
-        self.assertEqual([d["changed"] for d in done], [True, True])
+        self.assertEqual(len(done), 2)
         self.assertEqual(log[:3], [("slot", "snkrdunk-collector"),
                                    ("stage", "svc-snkrdunk-collector", {"RAW_DICTIONARY_SIBLING": "true"}),
                                    ("reupload", "snkrdunk-collector", "true", True)])
 
-    def test_failure_stops_and_reverts_that_collector(self):
+    def test_failure_after_staging_stops_and_reverts_that_collector(self):
         rows = self.plan(self.live())
         log, kwargs = self.fakes(fail_verify_on="snkrdunk-collector")
         done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
         self.assertEqual(done, [])
-        self.assertEqual(stopped["service"], "snkrdunk-collector")
-        self.assertEqual(stopped["reverted"]["value"], "false")  # unset before: off
+        self.assertEqual(stopped["reverted"]["value"], "false")
+        self.assertTrue(stopped["reverted"]["was_unset"])
         self.assertNotIn(("slot", "yuyutei-collector-shard-0"), log)
+
+    def test_failed_revert_is_reported(self):
+        rows = self.plan(self.live())
+        log, kwargs = self.fakes(fail_verify_on="snkrdunk-collector", fail_revert=True)
+        done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+        self.assertIn("revert_failed", stopped)
+
+    def test_failure_before_staging_touches_nothing_and_does_not_revert(self):
+        rows = self.plan(self.live())
+        log, kwargs = self.fakes(fail_slot=True)
+        done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+        self.assertTrue(stopped["untouched"])
+        self.assertNotIn("reverted", stopped)
+        self.assertEqual([e for e in log if e[0] != "slot"], [])
+        self.assertEqual(len([e for e in log if e[0] == "slot"]), 1)
+
+    def test_a_collector_deployed_since_the_dry_run_is_refused_before_staging(self):
+        rows = self.plan(self.live())
+        log, kwargs = self.fakes(moved={"snkrdunk-collector": "someone-else"})
+        done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+        self.assertIn("deployed since the dry run", stopped["reason"])
+        self.assertTrue(stopped["untouched"])
+        self.assertFalse([e for e in log if e[0] == "stage"])
 
     def test_a_skipped_reupload_is_never_accepted(self):
         rows = self.plan(self.live())
@@ -1017,13 +1044,20 @@ class CollectorSiblingSwitch(unittest.TestCase):
         done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
         self.assertIn("re-upload was skipped", stopped["reason"])
 
-    def test_stops_before_the_collector_quiet_window(self):
+    def test_budget_and_quiet_windows_stop_before_touching_a_collector(self):
         rows = self.plan(self.live())
+        for now in (utc(2026, 10, 25, 2, 10), utc(2026, 10, 25, 1, 0), utc(2026, 10, 25, 18, 30)):
+            log, kwargs = self.fakes()
+            kwargs["now"] = lambda now=now: now
+            done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
+            self.assertEqual(done, [], now)
+            self.assertTrue(stopped["untouched"], now)
         log, kwargs = self.fakes()
-        kwargs["now"] = lambda: utc(2026, 10, 25, 2, 10)
+        times = iter([0, 0, collector_flag.JOB_BUDGET_SECONDS])
+        kwargs["clock"] = lambda: next(times)
         done, stopped = collector_flag.apply_rows(rows, "true", **kwargs)
-        self.assertEqual(done, [])
-        self.assertIn("02:00-06:00", stopped["reason"])
+        self.assertEqual(len(done), 1)
+        self.assertIn("job time", stopped["reason"])
 
 
 class FleetAndImages(unittest.TestCase):

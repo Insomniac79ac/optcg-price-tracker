@@ -104,7 +104,9 @@ jobs:
     needs: owner-approval
     runs-on: ubuntu-latest
     # approve-f1-batch approves one proposal per transaction, each a fresh resolver run.
-    timeout-minutes: 180
+    # collector-sibling-on/off re-uploads all 10 collectors in their slots (budgeted in
+    # scripts/ops/collector_flag.py JOB_BUDGET_SECONDS); 360 is the hosted-runner maximum.
+    timeout-minutes: 360
     environment: staging-delivery
     permissions:
       contents: read
