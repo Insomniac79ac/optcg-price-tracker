@@ -213,7 +213,9 @@ def preflight(args, now=None, read=gh_json):
 
 def annotations(summary, title="ops-summary", chunk=3000, limit=9):
     """Workflow-command lines carrying the compact JSON summary (readable over REST)."""
-    text = json.dumps(summary, separators=(",", ":"), default=common.json_default)
+    # ensure_ascii=False: Japanese product names stay one character each instead of six (\uXXXX),
+    # so a long Japanese summary fits the annotation budget.
+    text = json.dumps(summary, separators=(",", ":"), default=common.json_default, ensure_ascii=False)
     escaped = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
     parts = [escaped[i:i + chunk] for i in range(0, len(escaped), chunk)] or [""]
     if len(parts) > limit:

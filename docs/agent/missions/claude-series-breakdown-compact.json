@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "mission": "Phase 0 catalogue gap, step 3: ops summaries keep Japanese unescaped (one character, not six) so the official-series-index breakdown fits the annotation budget; the breakdown drops the page-link labels カードリスト and 商品情報, which name no product; the summary puts the breakdown before a compact held list. Read-only.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/official_series.py",
+        "scripts/ops/run.py",
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "infrastructure",
+        "tests"
+      ],
+      "reason": "Summary encoding and order, link-label filter; tests for both."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly official-series-index"
+      ],
+      "routes": [
+        "GET https://www.onepiece-cardgame.com/cardlist/?series=<id> (at most 9, 2 s apart)"
+      ],
+      "dependencies": [
+        "staging after #214"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 9,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "b70d368cf79ba19ce40d5aa271e584895688cba8",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "An unreadable summary or wrong counts.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/official_series.py",
+        "scripts/ops/run.py"
+      ],
+      "observation_window": "The next official-series-index run."
+    }
+  },
+  "diff_sha256": "ae4a88bef45228edca29f4019d448e976e34d436c680901caf1228c90af13478"
+}
