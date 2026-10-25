@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "Phase 0 catalogue gap, step 2: official-series-index keeps only six-digit Bandai series ids (the picker parse also returns cost/power filter options) and breaks the uncoded series (promotion cards 550901, limited products 550801) and missing series (EB-05, family deck set) down by the product each entry names, with catalogue prints per product. At most 9 Bandai requests, 2 s apart, honest User-Agent, stop on 401/403/429/451. Read-only.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
