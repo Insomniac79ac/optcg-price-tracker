@@ -40,8 +40,10 @@ def plan_sha(rows):
     return hashlib.sha256(json.dumps(pinned, separators=(",", ":")).encode()).hexdigest()
 
 
+import deploy_staging_collectors as _delivery
+
 # One collector can take a full slot wait plus a rollout wait, twice with a revert.
-COLLECTOR_BUDGET_SECONDS = 2 * (1500 + 900)
+COLLECTOR_BUDGET_SECONDS = 2 * (_delivery.SLOT_WAIT_SECONDS + _delivery.ROLLOUT_WAIT_SECONDS)
 # The runbook job's own timeout (ops-write.yml) less a margin for setup and reporting.
 JOB_BUDGET_SECONDS = 340 * 60
 
@@ -77,8 +79,8 @@ def switch(row, value, *, inspect, stage, reupload, verify, slot, nonce, progres
     latest = (node.get("latestDeployment") or {}).get("id")
     if expected_latest is not None and latest != expected_latest:
         raise common.Refused(f"{name}: deployed since the dry run ({latest}); dry run again")
+    progress["staged"] = True  # before the call: it can fail after Railway applied the value
     stage(node, {KEY: value})
-    progress["staged"] = True
     if (inspect()[name].get("latestDeployment") or {}).get("id") != latest:
         raise common.Refused(f"{name}: a deployment started while staging the variable")
     expected = dict(row["variables"], **{KEY: value})
