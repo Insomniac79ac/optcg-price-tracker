@@ -16,7 +16,8 @@ import re
 from ops import common
 
 DIRECTORY = common.ROOT / "scripts/diagnostics"
-# Rows small enough for the ops-summary annotations (9 x 3000 characters) go into the summary, so
+# Rows small enough for the ops-summary annotations (9 x 4000 bytes; measured here as ASCII-escaped
+# JSON, which is never shorter than the UTF-8 the annotations carry) go into the summary, so
 # an agent reads them over REST; a larger statement keeps only its count (rows in the artifact).
 INLINE_CHARS = 18000
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,62}")

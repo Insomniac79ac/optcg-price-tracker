@@ -211,13 +211,28 @@ def preflight(args, now=None, read=gh_json):
             raise common.Refused("a staging delivery is in progress: " + "; ".join(busy))
 
 
-def annotations(summary, title="ops-summary", chunk=3000, limit=9):
-    """Workflow-command lines carrying the compact JSON summary (readable over REST)."""
-    # ensure_ascii=False: Japanese product names stay one character each instead of six (\uXXXX),
-    # so a long Japanese summary fits the annotation budget.
+def _escape(text):
+    return text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def annotations(summary, title="ops-summary", chunk=4000, limit=9):
+    """Workflow-command lines carrying the compact JSON summary (readable over REST).
+
+    GitHub keeps at most 4096 UTF-8 bytes of an annotation message and drops the rest silently
+    (2026-10-25: Japanese product names, 3 bytes each, lost about 500 characters per chunk). So
+    chunks are measured in bytes after escaping, and an escape (%25) or a character is never split.
+    ensure_ascii=False: a Japanese character costs 3 bytes instead of 6 as \\uXXXX."""
     text = json.dumps(summary, separators=(",", ":"), default=common.json_default, ensure_ascii=False)
-    escaped = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-    parts = [escaped[i:i + chunk] for i in range(0, len(escaped), chunk)] or [""]
+    parts, current, size = [], [], 0
+    for char in text:
+        piece = _escape(char)
+        cost = len(piece.encode("utf-8"))
+        if current and size + cost > chunk:
+            parts.append("".join(current))
+            current, size = [], 0
+        current.append(piece)
+        size += cost
+    parts.append("".join(current))
     if len(parts) > limit:
         parts = parts[:limit - 1] + ["(truncated; see summary.json in the artifact)"]
     return [f"::notice title={title} {i + 1}/{len(parts)}::{p}" for i, p in enumerate(parts)]

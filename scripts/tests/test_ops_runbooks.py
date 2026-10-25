@@ -191,7 +191,7 @@ class SecretsStayOut(unittest.TestCase):
     def test_annotations_escape_and_chunk(self):
         lines = run.annotations({"a": "50%\nx", "b": "y" * 7000})
         self.assertTrue(all(line.startswith("::notice title=ops-summary ") for line in lines))
-        self.assertEqual(len(lines), 3)
+        self.assertEqual(len(lines), 2)
         joined = "".join(line.split("::", 2)[2] for line in lines)
         self.assertNotIn("\n", joined)
         self.assertIn('"a":"50%25', joined)
@@ -199,6 +199,15 @@ class SecretsStayOut(unittest.TestCase):
     def test_annotations_keep_japanese_unescaped(self):
         lines = run.annotations({"p": "フラッグシップバトル"})
         self.assertIn("フラッグシップバトル", lines[0])
+
+    def test_annotation_messages_fit_githubs_byte_limit_and_rejoin(self):
+        summary = {"p": "フラッグシップバトル%" * 900}
+        lines = run.annotations(summary)
+        messages = [line.split("::", 2)[2] for line in lines]
+        self.assertGreater(len(messages), 1)
+        self.assertTrue(all(len(m.encode("utf-8")) <= 4096 for m in messages))
+        joined = "".join(messages).replace("%0A", "\n").replace("%0D", "\r").replace("%25", "%")
+        self.assertEqual(json.loads(joined), summary)
 
 
 class ReadOnlyConnection(unittest.TestCase):
