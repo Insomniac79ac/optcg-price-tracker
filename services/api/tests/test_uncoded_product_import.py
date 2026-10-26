@@ -247,3 +247,21 @@ def test_no_rendering_is_recorded_for_a_product_that_was_not_named(db_session):
     plan = _plan(db_session, [_entry()], authorised=[NAME])
     _applier(db_session, plan, authorised=[NAME], renderings={}).run(apply=True)
     assert db_session.execute(select(ReleaseProductAlias)).scalars().all() == []
+
+
+def test_a_repeated_code_in_one_product_becomes_two_prints(db_session):
+    """Step C amendment B (owner 2026-10-26): a base and a holo reprint of one
+    card in one product are two entries at two image addresses, so they plan
+    and write as two prints with distinct official asset variants."""
+    card = CanonicalCard(card_code="ST01-007", name_en="Nami", name_jp="ナミ",
+                         card_type="Character", rarity="C")
+    db_session.add(card); db_session.commit()
+    entries = [_entry(variant="p2"), _entry(variant="p3")]
+    plan = _plan(db_session, entries, authorised=[NAME])
+    assert [p.outcome for p in plan.prints] == [P.OUTCOME_CREATE, P.OUTCOME_CREATE]
+    report = _applier(db_session, plan, authorised=[NAME]).run(apply=True)
+
+    assert report.products_created == 1
+    assert report.card_prints_created == 2
+    variants = sorted(p.official_asset_variant for p in db_session.execute(select(CardPrint)).scalars())
+    assert variants == ["p2", "p3"]

@@ -101,6 +101,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
+from app.services.official_asset_variant import parse_official_asset_variant
+
 # The three uncoded catch-all series in the JP catalogue. Buckets, never
 # products - rule 6 refuses them by name, and rule 3 requires membership to
 # sit inside exactly one of them.
@@ -243,9 +245,18 @@ def asia_en_agreement(member_codes: Iterable[str], asia_en_root: Path) -> tuple[
     series = _records(asia_en_root / "series.jsonl")
     uncoded_ids = {s["source_series_id"] for s in series if not s.get("official_code")}
     by_product: dict[str, set[str]] = {}
-    for e in _records(asia_en_root / "entries.jsonl"):
-        if e.get("source_series_id") not in uncoded_ids:
-            continue
+    uncoded = [e for e in _records(asia_en_root / "entries.jsonl") if e.get("source_series_id") in uncoded_ids]
+    # Fail closed on evidence that cannot tell "absent" from "not read": no
+    # uncoded entries at all, or an entry without a code or a product name (a
+    # changed label or markup would otherwise make every product "Japan-only").
+    incomplete = [e for e in uncoded if not (e.get("card_code") or "").strip() or not (e.get("product_names") or [])]
+    if not uncoded or incomplete:
+        raise UncodedProductEvidenceError(
+            "asia_en_incomplete",
+            f"bandai_asia_en evidence at {asia_en_root} has {len(uncoded)} uncoded entries, "
+            f"{len(incomplete)} without a card code or a product name; absence cannot be proven",
+        )
+    for e in uncoded:
         code = (e.get("card_code") or "").strip()
         for name in e.get("product_names") or []:
             by_product.setdefault(name, set()).add(code)
@@ -418,19 +429,28 @@ def prove_uncoded_product(
         # its own image address - a base and a holo reprint of one card can show
         # the same picture (owner 2026-10-26). The same entry or the same image
         # address twice is not two printings and is refused.
+        # Compared as the official asset variant the print's identity uses, so two
+        # addresses that would collapse to one variant are refused here, not at apply.
         entry_id = e.get("entry_id") or ""
+        variant = parse_official_asset_variant(e.get("image_url"), code)
         if code in seen_images:
-            if entry_id in entry_ids or basename in seen_images[code]:
+            if entry_id in entry_ids or variant is None or variant in seen_images[code]:
                 raise UncodedProductEvidenceError(
                     "internally_consistent",
                     f"card code {code!r} appears more than once under {product_name!r} "
-                    "with the same entry or the same image address",
+                    "with the same entry or the same official asset variant",
+                )
+            if None in seen_images[code]:
+                raise UncodedProductEvidenceError(
+                    "internally_consistent",
+                    f"card code {code!r} repeats under {product_name!r} but an occurrence has "
+                    "no official asset variant",
                 )
             if code not in repeated:
                 repeated.append(code)
         else:
             codes.append(code)
-        seen_images.setdefault(code, set()).add(basename)
+        seen_images.setdefault(code, set()).add(variant)
         entry_ids.append(entry_id)
 
     proof = asia_en_absence_proof

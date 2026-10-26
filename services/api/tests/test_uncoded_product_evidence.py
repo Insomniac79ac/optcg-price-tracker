@@ -42,7 +42,8 @@ SIX = [
 @frozen
 @pytest.mark.parametrize("name, series_id, size", SIX)
 def test_each_scoped_product_is_proven_from_the_frozen_jp_catalogue(name, series_id, size):
-    ev = prove_uncoded_product(name, jp_root=JP, asia_en_root=EN, snapshot_identity="test")
+    ev = prove_uncoded_product(name, jp_root=JP, asia_en_root=EN, snapshot_identity="test",
+                               asia_en_absence_proof="2026-08-22 JP-only measurement")
     assert ev.product_name == name
     assert ev.source_series_id == series_id
     assert ev.source_series_id in UNCODED_SERIES_IDS
@@ -56,7 +57,8 @@ def test_each_scoped_product_is_proven_from_the_frozen_jp_catalogue(name, series
 def test_an_uncoded_product_never_acquires_an_official_code(name, _s, _n):
     """The whole point of the tranche, stated as a test: identity comes from
     the surrogate id and the frozen name, never from a code somebody minted."""
-    ev = prove_uncoded_product(name, jp_root=JP, asia_en_root=EN, snapshot_identity="test")
+    ev = prove_uncoded_product(name, jp_root=JP, asia_en_root=EN, snapshot_identity="test",
+                               asia_en_absence_proof="2026-08-22 JP-only measurement")
     assert ev.official_code is None
     assert ev.as_provenance()["official_code"] is None
 
@@ -72,12 +74,19 @@ def test_the_asia_en_absence_is_measured_not_assumed():
 @frozen
 @pytest.mark.parametrize("name, _s, _n", SIX)
 def test_jp_only_validation_is_recorded_on_every_accepted_product(name, _s, _n):
-    ev = prove_uncoded_product(name, jp_root=JP, asia_en_root=EN, snapshot_identity="test")
-    # The 2026-08-22 Asia-EN snapshot was parsed with the JP label only, so it
-    # carries no product names: under step C every product reads as absent.
+    ev = prove_uncoded_product(name, jp_root=JP, asia_en_root=EN, snapshot_identity="test",
+                               asia_en_absence_proof="2026-08-22 JP-only measurement")
     assert ev.jp_only_validation is True
-    assert "Japan-only" in ev.asia_en_absence_proof
     assert ev.as_provenance()["jp_only_validation"] is True
+
+
+@frozen
+def test_the_2026_08_asia_en_snapshot_is_incomplete_evidence():
+    """It was parsed with the JP label only, so its uncoded entries carry no
+    product names: step C refuses it rather than reading every product absent."""
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        asia_en_agreement(["OP01-001"], EN)
+    assert exc.value.rule == "asia_en_incomplete"
 
 
 def test_the_jp_only_substitution_is_refused_when_asia_en_does_carry_names(tmp_path):
@@ -338,3 +347,35 @@ def test_prove_records_agreement_when_no_proof_is_supplied(tmp_path):
     ev = prove_uncoded_product("P", jp_root=root, asia_en_root=asia, snapshot_identity="t")
     assert ev.jp_only_validation is False
     assert ev.asia_en_product == "Promotion Pack EN"
+
+
+def test_asia_en_evidence_without_product_names_is_refused(tmp_path):
+    root = _asia(tmp_path, {"Promotion Pack Vol.1": ["P-001"]})
+    (root / "entries.jsonl").write_text(json.dumps(
+        {"source_series_id": "556901", "entry_id": "x", "card_code": "P-001", "product_names": []}) + "\n")
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        asia_en_agreement(["P-099"], root)
+    assert exc.value.rule == "asia_en_incomplete"
+
+
+def test_empty_asia_en_evidence_is_refused(tmp_path):
+    root = _asia(tmp_path, {})
+    (root / "entries.jsonl").write_text("")
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        asia_en_agreement(["P-099"], root)
+    assert exc.value.rule == "asia_en_incomplete"
+
+
+def test_a_repeated_code_whose_addresses_collapse_to_one_variant_is_refused(tmp_path):
+    root = _mini(tmp_path, [
+        {"entry_id": "A", "card_code": "P-106", "product_names": ["P"],
+         "image_url": "https://x.test/P-106.png", "source_series_id": "550901"},
+        {"entry_id": "B", "card_code": "P-106", "product_names": ["P"],
+         "image_url": "https://x.test/p-106.png", "source_series_id": "550901"},
+    ])
+    (root / "assets.jsonl").write_text(
+        "\n".join(json.dumps({"basename": b, "sha256": "a" * 64}) for b in ("P-106.png", "p-106.png")) + "\n")
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        prove_uncoded_product("P", jp_root=root, asia_en_root=root,
+                              snapshot_identity="t", asia_en_absence_proof="n/a")
+    assert exc.value.rule == "internally_consistent"

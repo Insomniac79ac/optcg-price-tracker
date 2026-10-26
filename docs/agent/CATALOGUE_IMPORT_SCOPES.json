@@ -42,7 +42,8 @@
       "exclude_products": [
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
-      ]
+      ],
+      "exclude_pattern": "China|English"
     },
     "standard-battle": {
       "note": "Phase 2 step C batch: Standard Battle Packs and Standard Battle prizes.",
@@ -54,7 +55,8 @@
       "exclude_products": [
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
-      ]
+      ],
+      "exclude_pattern": "China|English"
     },
     "promotion-packs": {
       "note": "Phase 2 step C batch: Promotion Packs, EX packs, Promotion Card Sets and their campaigns.",
@@ -66,7 +68,8 @@
       "exclude_products": [
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
-      ]
+      ],
+      "exclude_pattern": "China|English"
     },
     "premium-card-collections": {
       "note": "Phase 2 step C batch: Premium Card Collections.",
@@ -78,7 +81,8 @@
       "exclude_products": [
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
-      ]
+      ],
+      "exclude_pattern": "China|English"
     },
     "magazines": {
       "note": "Phase 2 step C batch: Magazine and book promos (Jump, V Jump, Saikyo Jump, GIGA, ONE PIECE magazine, complete guides).",
@@ -90,7 +94,8 @@
       "exclude_products": [
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
-      ]
+      ],
+      "exclude_pattern": "China|English"
     },
     "events-and-prizes": {
       "note": "Phase 2 step C batch: Meetups, Championship, 8 Pack Battle, Extra Grand Battle, Meramera, Fest and ONE PIECE DAY prizes.",
@@ -102,7 +107,8 @@
       "exclude_products": [
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
-      ]
+      ],
+      "exclude_pattern": "China|English|プレミアムカードコレクション"
     },
     "other-limited": {
       "note": "Phase 2 step C batch: everything else in 550801/550901 (anniversary sets, FILM RED gifts, campaigns, tie-ins, playmat sets, storage box set, BASE SHOP).",
@@ -110,7 +116,7 @@
         "550801",
         "550901"
       ],
-      "exclude_pattern": "フラッグシップバトル|スタンダードバトル|プロモーション|プレミアムカードコレクション|ジャンプ|magazine|マガジン|学園|COMPLETE GUIDE|交流会|チャンピオンシップ|パックバトル|エクストラグランドバトル|メラメラ|来場|Fest|ONE PIECE DAY",
+      "exclude_pattern": "フラッグシップバトル|スタンダードバトル|プロモーション|プレミアムカードコレクション|ジャンプ|magazine|マガジン|学園|COMPLETE GUIDE|交流会|チャンピオンシップ|パックバトル|エクストラグランドバトル|メラメラ|来場|Fest|ONE PIECE DAY|China|English",
       "exclude_products": [
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"

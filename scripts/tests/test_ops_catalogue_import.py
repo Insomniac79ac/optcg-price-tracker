@@ -53,6 +53,7 @@ ASIA_EN = {
 <div class="cardName">Luffy</div></dt><dd><div class="frontCol"><img data-src="../images/cardlist/card/P-001.png"></div>
 <div class="backCol"><div class="getInfo"><h3>Card Set(s)</h3>Promotion Pack Vol.1</div></div></dd></dl>""",
 }
+ASIA_UNNAMED = ASIA_EN["569901"].replace("<h3>Card Set(s)</h3>Promotion Pack Vol.1", "<h3>Card Sets</h3>Promotion Pack Vol.1")
 
 
 class FakeFetcher:
@@ -185,17 +186,21 @@ class Measure(unittest.TestCase):
         with self.assertRaises(common.Refused):
             ci.resolve_scope("bad", {"bad": {"uncoded_series": ["550901"], "product_pattern": "("}})
 
-    def test_committed_family_batches_cover_each_product_once_except_known_overlap(self):
+    def test_committed_family_batches_partition_the_products(self):
         scopes = ci.load_scopes()
         batches = [ci.resolve_scope(n, scopes) for n in ("flagship-battle", "standard-battle", "promotion-packs",
                                                           "premium-card-collections", "magazines", "events-and-prizes",
                                                           "other-limited")]
-        names = ["フラッグシップバトル2022 優勝記念品", "スタンダードバトルパックVol.4", "プロモーションパックVol.8",
-                 "プレミアムカードコレクション-ウタ-", "Vジャンプ9月特大号付録（2022年7月21日売）", "交流会3月開催記念品",
-                 "1st ANNIVERSARY SET"]
-        rows = [{"entry_id": str(i), "source_series_id": "550901", "product_names": [n]} for i, n in enumerate(names)]
+        names = [["フラッグシップバトル2022 優勝記念品"], ["スタンダードバトルパックVol.4"], ["プロモーションパックVol.8"],
+                 ["プレミアムカードコレクション-ウタ-", "プレミアムカードコレクション-ONE PIECE DAY’25-",
+                  "プレミアムカードコレクション-メラメラの実争奪戦Edition-"],
+                 ["Vジャンプ9月特大号付録（2022年7月21日売）"], ["メラメラの実争奪戦 上位記念品", "交流会3月開催記念品"],
+                 ["1st ANNIVERSARY SET"]]
+        flat = [n for group in names for n in group]
+        rows = [{"entry_id": str(i), "source_series_id": "550901", "product_names": [n]} for i, n in enumerate(
+            flat + ["ONE PIECE カードゲーム China 3rd ANNIVERSARY SET", "ONE PIECE カードゲーム English 3rd ANNIVERSARY SET"])]
         picked = [ci.expand_products(rows, b) for b in batches]
-        self.assertEqual(picked, [[n] for n in names])
+        self.assertEqual(picked, [sorted(g) for g in names])  # each once; a future China/English set in none
 
     def test_measure_scope_reports_and_never_imports(self):
         importer = FakeImporter()
@@ -212,6 +217,16 @@ class Measure(unittest.TestCase):
         self.assertEqual(asia["pages"], [["569901", "Promotion card", 1]])
         self.assertEqual(asia["top_products"], [["Promotion Pack Vol.1", 1]])
         self.assertEqual(asia["obtain_block_labels"], [["Card Set(s)", 1]])
+
+    def test_an_asia_en_page_that_reads_no_products_refuses(self):
+        class Relabelled(FakeFetcher):
+            def get(self, url):
+                if url.endswith("series=569901"):
+                    self.urls.append(url)
+                    return 200, ASIA_UNNAMED.encode(), "text/html"
+                return super().get(url)
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
+            ci.run(tmp, scope="family-deck-set", fetcher=Relabelled(), main=FakeImporter(), open_tunnel=OPEN, scopes=SCOPES)
 
     def test_an_asia_en_page_that_fails_refuses_rather_than_reading_absent(self):
         class Broken(FakeFetcher):

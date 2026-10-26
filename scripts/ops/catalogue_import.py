@@ -258,6 +258,11 @@ def capture_asia_en(asia_root, fetcher, limit=30):
             if status != 200:
                 raise common.Refused(f"Asia-EN series {series.series_id} HTTP {status}")
             page = parse_card_list(body.decode("utf-8", "replace"), series.series_id)
+            unnamed = [e.entry_id for e in page.entries if not e.product_names or not e.card_code]
+            if not page.entries or unnamed:
+                raise common.Refused(f"Asia-EN series {series.series_id}: {len(page.entries)} entries, "
+                                     f"{len(unnamed)} without a card code or a Card Set(s) product; "
+                                     "the page no longer reads as expected")
             pages.append([series.series_id, series.display_name, len(page.entries)])
             series_rows.append({"source_catalogue": "bandai_asia_en", "source_series_id": series.series_id,
                                 "display_name": series.display_name, "official_code": None, "source_url": url})
