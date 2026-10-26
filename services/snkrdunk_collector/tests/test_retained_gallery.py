@@ -88,7 +88,7 @@ def test_absent_ambiguous_or_unscoped_gallery_preserves_refusal(kwargs):
         BeautifulSoup(html(**kwargs), "html.parser")
     )
     assert url == PLACEHOLDER
-    assert diagnostic["selector"] == 'img[class$="__mainImage"]'
+    assert diagnostic["selector"] == 'img[css-module "mainImage"]'
 
 
 def test_real_dom_primary_keeps_precedence():
@@ -96,7 +96,7 @@ def test_real_dom_primary_keeps_precedence():
         BeautifulSoup(html(src=URL + "?size=l"), "html.parser")
     )
     assert url == URL + "?size=l"
-    assert diagnostic["selector"] == 'img[class$="__mainImage"]'
+    assert diagnostic["selector"] == 'img[css-module "mainImage"]'
 
 
 def test_missing_or_duplicate_primary_dom_is_not_rescued_by_embedded_data():

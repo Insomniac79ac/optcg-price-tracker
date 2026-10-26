@@ -26,6 +26,7 @@ denial handling or what gets written.
 """
 
 import argparse
+from datetime import timedelta
 import sys
 from dataclasses import dataclass, field
 from importlib.metadata import version as pkg_version
@@ -33,6 +34,7 @@ from importlib.metadata import version as pkg_version
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
+from app.services.freshness_integration import CaptureResult
 from yuyutei_collector.browser import (
     DeadlineExceeded,
     HOMEPAGE_URL,
@@ -235,6 +237,7 @@ def run_one_mapping_detailed(
     batch_run_id: str | None = None,
     freshness=None,
     turn=None,
+    probe: bool = False,
 ) -> MappingOutcome:
     """Does the actual navigation/extraction/write work for one mapping and
     returns a structured MappingOutcome. Takes an already-open `session`
@@ -243,6 +246,8 @@ def run_one_mapping_detailed(
     rollback/commit touching a different connection."""
     if freshness is not None and validate_only:
         raise ValueError("due collection cannot use legacy validate-only")
+    if probe and freshness is None:
+        raise ValueError("a source probe requires its metered validation attempt")
     if turn is not None and freshness is None:
         raise ValueError("a reused turn browser requires a metered due attempt")
     mapping, source, load_reasons = _load_mapping(session, mapping_id)
@@ -575,6 +580,16 @@ def run_one_mapping_detailed(
 
     observed_classification = result_holder["observed_classification"]
     source_denied = observed_classification in SOURCE_DENIAL_CLASSIFICATIONS
+    if freshness is not None and source_denied and not freshness.denied:
+        # A challenge page (even HTTP 200) is recorded as a denial now, as
+        # discovery does: it pauses the source and marks recovery work durably,
+        # not only when (and if) the attempt settles.
+        try:
+            freshness.deny()
+        except Exception as exc:  # noqa: BLE001 - the attempt still settles as source_denial
+            session.rollback()
+            log_event("source_denial_record_failed", mapping_id=mapping_id,
+                      error=type(exc).__name__, batch_run_id=batch_run_id)
 
     if result_holder["extraction"] is None:
         reasons = [f"no_extraction_attempted:classification={observed_classification}"]
@@ -596,6 +611,36 @@ def run_one_mapping_detailed(
         )
 
     result_holder["failure_stage"] = "validation"
+    if freshness and probe:
+        # Source probe (yuyutei_collector.recovery): the page was fetched and
+        # its raw snapshot persisted under the metered attempt; validate the
+        # identity exactly as a capture would, but write no price.
+        freshness.begin_result()
+        probe_check = validate_and_write_observation(
+            session=session,
+            mapping=mapping,
+            classification=result_holder["classification"],
+            extraction=result_holder["extraction"],
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
+            write_observation=False,
+        )
+        session.rollback()
+        verified = bool(probe_check.written)
+        price_only = bool(probe_check.reasons) and all(
+            reason.startswith("price_") for reason in probe_check.reasons)
+        freshness.result = CaptureResult(
+            "completed" if verified else ("transient_failure" if price_only else "identity_refusal"),
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
+            failure=None if verified else ";".join(probe_check.reasons),
+            resume_cursor={
+                **(freshness.claim.resume_cursor or {}),
+                "identity_verified": verified,
+                "product_page_verified": result_holder["classification"] == "normal_product",
+            } if verified else None,
+            # A validation scope is one-shot; it is never due again.
+            next_due_at=freshness.clock() + timedelta(days=36500) if verified else None,
+        )
+        return MappingOutcome(mapping_id=mapping_id, stage=freshness.result.outcome, written=False)
     if freshness:
         from yuyutei_collector.due import write_capture
         freshness.begin_result()

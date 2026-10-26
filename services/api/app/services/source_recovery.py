@@ -9,7 +9,7 @@ from copy import deepcopy
 from datetime import timedelta
 from uuid import uuid4
 from sqlalchemy import select
-from app.models import FreshnessAttempt, FreshnessWork, RawSnapshot, Source
+from app.models import FreshnessAttempt, FreshnessWork, RawSnapshot, Source, SourceDispatchBudget
 from app.services import freshness_queue as queue
 from app.services.freshness_policy import utc_now, require_utc
 from opcg_source_identity import canonical_source_listing_identity
@@ -109,6 +109,8 @@ def latest_denial_id(db, source_id):
 
 
 def permitted_recovery_request(db, budget, work):
+    if db.scalar(select(Source.name).where(Source.id == work.source_id)) == YUYU_SOURCE:
+        return _yuyu_probe_current(db, budget, work)
     cursor = work.resume_cursor or {}
     denial_id = cursor.get("recovery_denial_attempt_id")
     if (
@@ -404,3 +406,468 @@ def resume_after_recovery(db, token, *, clock=utc_now):
         raise ValueError("recovery evidence is no longer current")
     budget.pause_reason, budget.paused_until = None, None
     db.flush()
+
+
+# --- Yuyu-Tei: one scheduled probe at a time per retained pause ---------------
+#
+# Owner decision 2026-10-26 (perfectionist), after a single challenge page at
+# 2026-10-25 16:27Z paused every Yuyu-Tei shard. The same discipline as the
+# SNKRDUNK path above, without its SNKR-specific repair branches:
+#
+#   preview_yuyu_probe  read only: the one probe that could be planned now (the
+#                       latest denial, its pause chain, the chosen mapping and
+#                       request bound) and every reason it cannot. The ops dry
+#                       run shows exactly this; the apply writes exactly this.
+#   plan_yuyu_probe     owner-approved (ops-write yuyu-source-probe): re-runs the
+#                       preview under the budget row lock, refuses unless it
+#                       equals the approved plan, and records one authorized,
+#                       unattempted validation scope. No I/O, no reservation.
+#   yuyu_probe_ready / claim_yuyu_probe
+#                       a scheduled Yuyu shard closes leftover probes (expired
+#                       mid-attempt, or whose authority is stale), then claims
+#                       the authorized one (row lock, one winner), reserving its
+#                       bound while the source-wide pause stays.
+#   close_yuyu_probe    every probe is closed (blocked) after its one attempt,
+#                       so it is never served again nor stalls ordinary claims.
+#   resume_after_yuyu_probe
+#                       clears the pause only after that one attempt settled as
+#                       a completed, identity-verified product capture whose
+#                       raw page (this mapping's product URL) was fetched inside
+#                       the attempt with HTTP 200.
+#
+# A pause chain starts at the refresh or discovery denial that paused the
+# source (its root). A probe that meets a challenge records a newer denial but
+# stays in the same chain, so YUYU_PROBES_PER_PAUSE caps every probe of one
+# pause, and after any challenged probe the next waits YUYU_PROBE_COOLDOWN.
+# No retry and no timer: every probe is a new owner approval.
+
+YUYU_SOURCE = "yuyutei"
+YUYU_PROBE_MAX_REQUESTS = 200
+YUYU_PROBE_MIN_REQUESTS = 60
+# A cold probe also pays the homepage warm-up that a warm turn skips.
+YUYU_PROBE_WARM_UP_ALLOWANCE = 20
+YUYU_PROBE_PREFIX = "source-recovery:yuyutei:"
+YUYU_PROBES_PER_PAUSE = 3
+YUYU_PROBE_COOLDOWN = timedelta(hours=6)
+YUYU_PROBE_MAX_LEASE = timedelta(minutes=15)
+YUYU_PROBE_CANDIDATES = 50
+YUYU_PROBE_PLAN_KEYS = (
+    "source_id", "root_denial_attempt_id", "denial_attempt_id", "probe_number",
+    "mapping_id", "card_print_id", "product_identity", "request_bound",
+)
+
+
+def _yuyu_scope(root_id, number):
+    return f"{YUYU_PROBE_PREFIX}{root_id}:{number}"
+
+
+def _yuyu_scope_matches(work, cursor):
+    return work.scope_key == _yuyu_scope(cursor.get("root_denial_attempt_id"), cursor.get("probe_number"))
+
+
+def _is_yuyu_probe(work):
+    return (
+        work.kind == "validation"
+        and (work.scope_key or "").startswith(YUYU_PROBE_PREFIX)
+        and (work.resume_cursor or {}).get("probe") == YUYU_SOURCE
+    )
+
+
+def _yuyu_budget_row(db, source_id):
+    """The budget row without a lock (read-only callers), or None."""
+    if source_id is None:
+        return None
+    return db.scalar(
+        select(SourceDispatchBudget)
+        .where(SourceDispatchBudget.source_id == source_id)
+        .execution_options(populate_existing=True)
+    )
+
+
+def _yuyu_paused(db, budget, source_id):
+    return (
+        budget.enabled
+        and budget.pause_reason == "source_denial"
+        and budget.paused_until is None
+        and db.scalar(select(Source.name).where(Source.id == source_id)) == YUYU_SOURCE
+    )
+
+
+def _yuyu_mapping_lineage(db, source_id, cursor):
+    try:
+        mapping = queue._eligible_mapping(db, cursor.get("mapping_id"))
+    except ValueError:
+        return False  # no longer an approved, active, verified mapping
+    return (
+        mapping.source_id == source_id
+        and mapping.card_print_id == cursor.get("card_print_id")
+        and mapping.canonical_source_listing_identity == cursor.get("product_identity")
+    )
+
+
+def _yuyu_probe_current(db, budget, work):
+    cursor = work.resume_cursor or {}
+    return (
+        _yuyu_paused(db, budget, work.source_id)
+        and _is_yuyu_probe(work)
+        and cursor.get("scheduled_recovery_authorized") is True
+        and _yuyu_scope_matches(work, cursor)
+        and not cursor.get("required_denial")
+        and work.attempt_count == 1
+        and 1 <= work.estimated_request_cost <= YUYU_PROBE_MAX_REQUESTS
+        and cursor.get("recovery_denial_attempt_id") == latest_denial_id(db, work.source_id)
+        and _yuyu_mapping_lineage(db, work.source_id, cursor)
+    )
+
+
+def yuyu_probes_for(db, source_id, root_denial_attempt_id):
+    """Every probe recorded for one pause chain, oldest first."""
+    return list(db.scalars(
+        select(FreshnessWork)
+        .where(
+            FreshnessWork.source_id == source_id,
+            FreshnessWork.kind == "validation",
+            FreshnessWork.scope_key.like(f"{YUYU_PROBE_PREFIX}{root_denial_attempt_id}:%"),
+        )
+        .order_by(FreshnessWork.id)
+    ))
+
+
+def _yuyu_root(denial_attempt, denial_work):
+    """(root denial attempt id, None) or (None, why there is no chain to probe)."""
+    if denial_work.kind in {"refresh", "discovery"}:
+        return denial_attempt.id, None
+    if _is_yuyu_probe(denial_work):
+        root = (denial_work.resume_cursor or {}).get("root_denial_attempt_id")
+        if type(root) is int and root > 0:
+            return root, None
+        return None, "the latest denial came from a probe without a pause chain"
+    return None, f"the latest denial came from {denial_work.kind} work that is not a Yuyu-Tei probe"
+
+
+def _yuyu_probe_candidate(db, source_id):
+    """The approved, eligible mapping whose refresh last captured cleanly (same
+    eligibility the claim and the resume re-check), or None."""
+    rows = db.execute(
+        select(FreshnessWork.source_card_mapping_id, FreshnessWork.last_successfully_checked_at,
+               FreshnessWork.estimated_request_cost)
+        .where(
+            FreshnessWork.source_id == source_id,
+            FreshnessWork.kind == "refresh",
+            FreshnessWork.source_card_mapping_id.is_not(None),
+            FreshnessWork.last_successfully_checked_at.is_not(None),
+            FreshnessWork.state != "blocked",
+            FreshnessWork.last_outcome == "captured",
+        )
+        .order_by(FreshnessWork.last_successfully_checked_at.desc(), FreshnessWork.source_card_mapping_id)
+        .limit(YUYU_PROBE_CANDIDATES)
+    ).all()
+    for mapping_id, last_success, cost in rows:
+        try:
+            mapping = queue._eligible_mapping(db, mapping_id)
+        except ValueError:
+            continue
+        if mapping.source_id == source_id:
+            return mapping, last_success, cost
+    return None
+
+
+def _iso(value):
+    return value.isoformat() if value is not None else None
+
+
+def _probe_fact(work):
+    cursor = work.resume_cursor or {}
+    return {
+        "work_id": work.id, "scope_key": work.scope_key, "state": work.state,
+        "attempt_count": work.attempt_count, "last_outcome": work.last_outcome,
+        "challenged": bool(cursor.get("required_denial")),
+        "closed_at": _iso(work.last_failure_at), "failure": (work.last_failure or "")[:160] or None,
+    }
+
+
+def preview_yuyu_probe(db, source_id, *, clock=utc_now):
+    """(plan or None, problems, facts) for one probe now. Reads only; takes no lock."""
+    now = require_utc(clock())
+    budget = _yuyu_budget_row(db, source_id)
+    if budget is None:
+        return None, ["no Yuyu-Tei dispatch budget"], {}
+    problems = []
+    facts = {"budget": {
+        "source_id": source_id, "enabled": budget.enabled, "pause_reason": budget.pause_reason,
+        "paused_until": _iso(budget.paused_until), "reserved_requests": budget.reserved_requests,
+        "used_requests": budget.used_requests, "request_limit": budget.request_limit,
+    }, "denial": None, "root_denial_attempt_id": None, "probes": [], "mapping": None}
+    if not budget.enabled:
+        problems.append("Yuyu-Tei dispatch is disabled")
+    if not _yuyu_paused(db, budget, source_id):
+        problems.append(f"Yuyu-Tei is not paused for a source denial (pause_reason={budget.pause_reason!r})")
+    if budget.reserved_requests:
+        problems.append("Yuyu-Tei has reserved requests outstanding")
+    denial_id = latest_denial_id(db, source_id)
+    root = None
+    if denial_id is None:
+        problems.append("no source_denial attempt recorded")
+    else:
+        denial_work, denial_attempt = db.execute(
+            select(FreshnessWork, FreshnessAttempt)
+            .join(FreshnessAttempt, FreshnessAttempt.work_id == FreshnessWork.id)
+            .where(FreshnessAttempt.id == denial_id)
+        ).one()
+        facts["denial"] = {
+            "attempt_id": denial_id, "at": _iso(denial_attempt.finished_at), "work_kind": denial_work.kind,
+            "work_id": denial_work.id, "failure": (denial_work.last_failure or "")[:160] or None,
+        }
+        root, why = _yuyu_root(denial_attempt, denial_work)
+        if why:
+            problems.append(why)
+    if root is not None:
+        facts["root_denial_attempt_id"] = root
+        probes = yuyu_probes_for(db, source_id, root)
+        facts["probes"] = [_probe_fact(w) for w in probes]
+        if any(w.state != "blocked" for w in probes):
+            problems.append("an earlier probe of this pause is still open")
+        if len(probes) >= YUYU_PROBES_PER_PAUSE:
+            problems.append(f"{YUYU_PROBES_PER_PAUSE} probes already used for this pause")
+        # A challenged probe is marked durably the moment it is denied (the
+        # cursor's required_denial), before its attempt settles; its closing
+        # time is the latest the challenge could have been.
+        marks = [require_utc(w.last_failure_at or w.updated_at) for w in probes
+                 if (w.resume_cursor or {}).get("required_denial")]
+        if denial_work.kind == "validation" and denial_attempt.finished_at is not None:
+            marks.append(require_utc(denial_attempt.finished_at))
+        if marks and now < max(marks) + YUYU_PROBE_COOLDOWN:
+            problems.append("a probe met a challenge; wait until "
+                            f"{(max(marks) + YUYU_PROBE_COOLDOWN).isoformat()} before another")
+    candidate = _yuyu_probe_candidate(db, source_id)
+    if candidate is None:
+        problems.append("no approved, eligible Yuyu-Tei mapping whose last refresh captured cleanly")
+    else:
+        mapping, last_success, cost = candidate
+        facts["mapping"] = {
+            "mapping_id": mapping.id, "card_print_id": mapping.card_print_id,
+            "product_identity": mapping.canonical_source_listing_identity,
+            "source_url": mapping.source_url, "last_success": _iso(last_success), "refresh_cost": cost,
+        }
+    bound = None
+    if candidate is not None:
+        cost = candidate[2]
+        bound = min(YUYU_PROBE_MAX_REQUESTS,
+                    max(YUYU_PROBE_MIN_REQUESTS, (cost or 0) + YUYU_PROBE_WARM_UP_ALLOWANCE))
+        if bound > budget.request_limit:
+            problems.append(f"the request bound {bound} exceeds the Yuyu-Tei request limit {budget.request_limit}")
+    if problems:
+        return None, problems, facts
+    mapping = candidate[0]
+    return {
+        "source_id": source_id, "root_denial_attempt_id": root, "denial_attempt_id": denial_id,
+        "probe_number": len(facts["probes"]) + 1, "mapping_id": mapping.id,
+        "card_print_id": mapping.card_print_id,
+        "product_identity": mapping.canonical_source_listing_identity, "request_bound": bound,
+    }, [], facts
+
+
+def plan_yuyu_probe(db, source_id, approved, *, clock=utc_now):
+    """Record the owner's authority for exactly the approved probe plan."""
+    if not isinstance(approved, dict) or set(approved) != set(YUYU_PROBE_PLAN_KEYS):
+        raise ValueError("an approved probe plan with exactly the plan keys is required")
+    queue._budget(db, source_id)  # row lock: one planner, and no claim, at a time
+    plan, problems, _ = preview_yuyu_probe(db, source_id, clock=clock)
+    if problems:
+        raise ValueError("; ".join(problems))
+    if plan != approved:
+        raise ValueError("the probe plan differs from the approved dry run")
+    work = queue.plan_validation(
+        db, source_id, _yuyu_scope(plan["root_denial_attempt_id"], plan["probe_number"]),
+        due_at=require_utc(clock()), estimated_request_cost=plan["request_bound"],
+    )
+    if work.attempt_count or work.resume_cursor:
+        raise ValueError("this probe scope was already recorded")
+    work.resume_cursor = {
+        "version": 1,
+        "probe": YUYU_SOURCE,
+        "probe_number": plan["probe_number"],
+        "root_denial_attempt_id": plan["root_denial_attempt_id"],
+        "recovery_denial_attempt_id": plan["denial_attempt_id"],
+        "mapping_id": plan["mapping_id"],
+        "card_print_id": plan["card_print_id"],
+        "product_identity": plan["product_identity"],
+        "scheduled_recovery_authorized": True,
+    }
+    db.flush()
+    return work
+
+
+def _close(work, reason, now, *, challenged=False):
+    work.state = "blocked"
+    work.last_failure = reason[:500]
+    work.last_failure_at = now
+    work.claim_token = work.claimed_by = work.claimed_at = work.claim_expires_at = None
+    if challenged and not (work.resume_cursor or {}).get("required_denial"):
+        work.resume_cursor = {**(work.resume_cursor or {}), "required_denial": True}
+    work.updated_at = now
+
+
+def _yuyu_authority_current(db, budget, source_id, work):
+    """An unattempted probe may still be served: the same authority the claim's
+    requests and the resume re-check (_yuyu_probe_current) once it is attempted."""
+    cursor = work.resume_cursor or {}
+    return (
+        work.attempt_count == 0
+        and cursor.get("scheduled_recovery_authorized") is True
+        and _is_yuyu_probe(work)
+        and _yuyu_scope_matches(work, cursor)
+        and not cursor.get("required_denial")
+        and _yuyu_paused(db, budget, source_id)
+        and cursor.get("recovery_denial_attempt_id") == latest_denial_id(db, source_id)
+        and 1 <= work.estimated_request_cost <= YUYU_PROBE_MAX_REQUESTS
+        and _yuyu_mapping_lineage(db, source_id, cursor)
+    )
+
+
+def _tidy_yuyu_probes(db, budget, source_id, now):
+    """Close every probe that can no longer be served correctly."""
+    queue._roll_window(budget, now)
+    queue._recover_expired(db, budget, now)
+    for work in db.scalars(
+        select(FreshnessWork)
+        .where(
+            FreshnessWork.source_id == source_id,
+            FreshnessWork.kind == "validation",
+            FreshnessWork.scope_key.like(YUYU_PROBE_PREFIX + "%"),
+            FreshnessWork.state == "pending",
+        )
+        .order_by(FreshnessWork.id)
+        .with_for_update(skip_locked=True)
+    ):
+        cursor = work.resume_cursor or {}
+        if work.attempt_count >= 1:
+            # It was used once: its lease expired mid-attempt, or it settled but the
+            # turn ended before resuming or closing it (fails closed either way).
+            _close(work, "probe settled but did not resume the source; a new approval is required"
+                   if work.last_outcome else
+                   "probe attempt ended without settling; a new approval is required", now)
+        elif not _yuyu_authority_current(db, budget, source_id, work):
+            # Stale authority (a newer denial, a manual unpause, a changed
+            # mapping): closed, so it is never served and never stalls claims.
+            _close(work, "probe authority no longer current; a new approval is required", now)
+    db.flush()
+
+
+def _due_yuyu_probe(db, source_id, now):
+    return db.scalar(
+        select(FreshnessWork)
+        .where(
+            FreshnessWork.source_id == source_id,
+            FreshnessWork.kind == "validation",
+            FreshnessWork.scope_key.like(YUYU_PROBE_PREFIX + "%"),
+            FreshnessWork.state == "pending",
+            FreshnessWork.attempt_count == 0,
+            FreshnessWork.next_due_at <= now,
+        )
+        .order_by(FreshnessWork.id)
+        .limit(1)
+        .with_for_update(skip_locked=True)
+    )
+
+
+def yuyu_probe_ready(db, source_id, *, clock=utc_now):
+    """Close leftover probes; True when an authorized probe is due now. A source
+    without a dispatch budget has no probe (admission stays closed)."""
+    if _yuyu_budget_row(db, source_id) is None:
+        return False
+    now = require_utc(clock())
+    budget = queue._budget(db, source_id)
+    _tidy_yuyu_probes(db, budget, source_id, now)
+    return _due_yuyu_probe(db, source_id, now) is not None
+
+
+def claim_yuyu_probe(db, source_id, owner, *, lease, clock=utc_now):
+    """The one scheduled claim of an authorized probe, or None."""
+    if not owner or len(owner) > 128 or not timedelta(0) < lease <= YUYU_PROBE_MAX_LEASE:
+        raise ValueError("bounded probe owner and lease required")
+    if _yuyu_budget_row(db, source_id) is None:
+        return None
+    now = require_utc(clock())
+    budget = queue._budget(db, source_id)
+    _tidy_yuyu_probes(db, budget, source_id, now)
+    work = _due_yuyu_probe(db, source_id, now)
+    if work is None:
+        db.flush()
+        return None
+    cursor = work.resume_cursor or {}
+    bound = work.estimated_request_cost
+    if not _yuyu_authority_current(db, budget, source_id, work):  # tidy closed every other case
+        _close(work, "probe authority no longer current; a new approval is required", now)
+        db.flush()
+        return None
+    if budget.reserved_requests or budget.request_limit - budget.used_requests < bound:
+        return None  # stays authorized for a later turn
+    token = str(uuid4())
+    work.state, work.claim_token, work.claimed_by = "claimed", token, owner
+    work.claimed_at, work.claim_expires_at = now, now + lease
+    work.attempt_count = 1
+    budget.reserved_requests += bound
+    budget.claim_sequence += 1
+    work.last_claim_sequence, work.updated_at = budget.claim_sequence, now
+    db.add(
+        FreshnessAttempt(
+            work_id=work.id,
+            claim_token=token,
+            claimed_by=owner,
+            claimed_at=now,
+            reserved_request_cost=bound,
+            request_costs=[],
+        )
+    )
+    db.flush()
+    return queue.Claim(
+        work.id, token, now + lease, "validation", None, None,
+        work.scope_key, deepcopy(cursor), (), bound,
+    )
+
+
+def close_yuyu_probe(db, work_id, *, reason=None, challenged=False, clock=utc_now):
+    """Close a settled probe (one-shot): it can never be served again and, as
+    blocked work, never sits in the ordinary claim order. challenged=True marks
+    it as having met a challenge even when its attempt could not settle."""
+    work = db.get(FreshnessWork, work_id, with_for_update=True)
+    if work is None or not _is_yuyu_probe(work) or work.state == "claimed":
+        raise ValueError("only a settled Yuyu-Tei probe can be closed")
+    _close(work, reason or work.last_failure or "probe did not verify a capture", require_utc(clock()),
+           challenged=challenged)
+    db.flush()
+    return work
+
+
+def resume_after_yuyu_probe(db, token, *, clock=utc_now):
+    """Clear only this retained pause after the probe's settled, verified capture."""
+    budget, work, attempt = queue._locked_claim(db, token)
+    cursor = work.resume_cursor or {}
+    if not _yuyu_probe_current(db, budget, work):
+        raise ValueError("probe authority no longer current")
+    snapshot = db.get(RawSnapshot, attempt.raw_snapshot_id) if attempt.raw_snapshot_id else None
+    if (
+        attempt.outcome != "completed"
+        or attempt.finished_at is None
+        or attempt.started_at is None
+        or cursor.get("identity_verified") is not True
+        or cursor.get("product_page_verified") is not True
+        or snapshot is None
+        or snapshot.source_id != work.source_id
+        or snapshot.http_status != 200
+        or canonical_source_listing_identity(YUYU_SOURCE, snapshot.source_url)
+        != cursor.get("product_identity")
+        or not attempt.started_at <= snapshot.fetched_at <= attempt.finished_at
+        or budget.reserved_requests != 0
+        or not attempt.actual_request_cost
+        or attempt.actual_request_cost != sum(attempt.request_costs)
+        or attempt.actual_request_cost != attempt.charged_request_cost
+    ):
+        raise ValueError("settled, verified probe capture required before resume")
+    now = require_utc(clock())
+    if not attempt.finished_at <= now <= attempt.finished_at + timedelta(minutes=5):
+        raise ValueError("probe evidence is no longer current")
+    budget.pause_reason, budget.paused_until = None, None
+    db.flush()
+    return work

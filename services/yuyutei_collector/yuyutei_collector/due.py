@@ -10,6 +10,7 @@ from yuyutei_collector.config import settings
 from yuyutei_collector.db import SessionLocal
 from yuyutei_collector.models import Source
 from yuyutei_collector.due_discovery import run_discovery
+from yuyutei_collector.recovery import serve_planned_probe
 from yuyutei_collector.writer import validate_and_write_observation
 
 
@@ -64,6 +65,14 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
     try:
         with session_factory() as session:
             source_id = session.scalar(select(Source.id).where(Source.name == "yuyutei"))
+            # An owner-approved source probe (after a denial pause) is served first,
+            # by whichever shard claims it; ordinary checks resume on the next turn.
+            probe = serve_planned_probe(
+                session, source_id, runner=runner, shard_index=shard_index,
+                mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
+            )
+            if probe is not None:
+                return [probe]
             return drain(
                 session,
                 source_id,
