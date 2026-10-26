@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Yuyu-Tei one-shot source probe (owner decision 2026-10-26, perfectionist). A single Yuyu-Tei challenge page at 2026-10-25 16:27Z paused every Yuyu shard (source_denial, no timer); there was no safe way to resume. app.services.source_recovery gains plan/claim/resume for Yuyu-Tei, mirroring the SNKRDUNK discipline: the owner-approved ops-write yuyu-source-probe records one authorized validation scope for the current denial and one approved mapping (no I/O, no reservation); the next scheduled Yuyu shard turn claims it (row lock, one winner), runs one metered product capture from the collectors' own network with identity validated and no price written; only a completed, identity-verified HTTP 200 capture inside the attempt clears the pause; a challenge keeps it paused and the authority can never be reused. permitted_recovery_request routes Yuyu-Tei work to the new check; the SNKRDUNK path is unchanged. Collector release: Yuyu shards (new recovery module, probe mode, due hook) and SNKRDUNK (services/api source_recovery is in its import graph).",
+  "mission": "Yuyu-Tei one-shot source probe (owner decision 2026-10-26, perfectionist). A single Yuyu-Tei challenge page at 2026-10-25 16:27Z paused every Yuyu shard (source_denial, no timer); there was no safe way to resume. app.services.source_recovery gains plan/claim/resume for Yuyu-Tei, mirroring the SNKRDUNK discipline: the owner-approved ops-write yuyu-source-probe records one authorized validation scope for the current denial and one approved mapping (no I/O, no reservation); the next scheduled Yuyu shard turn claims it (row lock, one winner), runs one metered product capture from the collectors' own network with identity validated and no price written; only a completed, identity-verified HTTP 200 capture inside the attempt clears the pause; a challenge keeps it paused. Every probe is closed after its one attempt (stale, orphaned or ineligible ones at the next turn); a new owner approval may plan another (at most 3 per denial, 6-hour cool-down after a probe's own challenge). permitted_recovery_request routes Yuyu-Tei work to the new check; the SNKRDUNK path is unchanged. Collector release: Yuyu shards (new recovery module, probe mode, due hook) and SNKRDUNK (services/api source_recovery is in its import graph). Independent review: PASS WITH NITS; the three medium findings (no way back after a failed probe, an ineligible mapping crashing every turn, a leftover probe stalling ordinary claims) and the low ones are fixed.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -182,5 +182,5 @@
       }
     ]
   },
-  "diff_sha256": "51b4526a5b83270bdedeebfae086142ecc4f7acd5d32fd12f39cff79d51cbaf4"
+  "diff_sha256": "8f47e95c288e2bc93a4798130d9a67777ad5998e76bcac6326219c56fe636224"
 }
