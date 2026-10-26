@@ -223,9 +223,13 @@ prints to staging through the existing import engine (`app.import_frozen_bandai_
 catalogue-gap request (owner 2026-10-26).
 
 1. Scope: a name in `docs/agent/CATALOGUE_IMPORT_SCOPES.json` (changed by PR). Coded series go to
-   the importer's `--series`. Uncoded products are reported against
-   `app.services.uncoded_product_evidence` (the rule each passes or fails, member codes) and not
-   imported until the owner settles the Asia-EN evidence question (step C).
+   the importer's `--series`. Uncoded products (named, or every product inside an `uncoded_series`
+   minus `exclude_products`) are reported against `app.services.uncoded_product_evidence`: passes
+   with member counts, refusals grouped by rule, the product sets that share one entry (rule 4),
+   and the proposed single-product catch-all exception to rule 6 allowed and flagged (no import
+   path uses it). Not imported until the owner settles step C. `asia_en_measure` also reads the
+   Asia-EN picker and at most six of its uncoded series pages and reports what its "Card Set(s)"
+   block names (`promos-limited-measure` scope).
 2. Capture: a fresh Bandai JP snapshot in the run directory, every six-digit series page plus the
    images of the scope's entries only; 1 request per second, honest User-Agent, stop on
    401/403/429/451. Bandai's link labels in 入手情報 (カードリスト, 商品情報) are dropped by the

@@ -44,6 +44,17 @@ PAGES = {
 }
 
 
+ASIA_PICKER = """<select id="series"><option value="569101">-ROMANCE DAWN- [OP-01]</option>
+<option value="569901">Promotion card</option></select>"""
+ASIA_EN = {
+    "": ASIA_PICKER,
+    "569901": ASIA_PICKER + """
+<dl class="modalCol" id="P-001"><dt><div class="infoCol"><span>P-001</span> | <span>P</span> | <span>LEADER</span></div>
+<div class="cardName">Luffy</div></dt><dd><div class="frontCol"><img data-src="../images/cardlist/card/P-001.png"></div>
+<div class="backCol"><div class="getInfo"><h3>Card Set(s)</h3>Promotion Pack Vol.1</div></div></dd></dl>""",
+}
+
+
 class FakeFetcher:
     def __init__(self):
         self.urls = []
@@ -53,6 +64,8 @@ class FakeFetcher:
     def get(self, url):
         self.urls.append(url)
         self.requests += 1
+        if url.startswith(ci.ASIA_EN_CARD_LIST):
+            return 200, ASIA_EN.get(url.rsplit("series=", 1)[-1] if "series=" in url else "", ASIA_EN[""]).encode(), "text/html"
         if "series=" in url:
             sid = url.rsplit("series=", 1)[1]
             return (200, PAGES[sid].encode(), "text/html") if sid in PAGES else (200, PICKER.encode(), "text/html")
@@ -60,6 +73,7 @@ class FakeFetcher:
 
 
 SCOPES = {"eb-05": {"series": ["550205"], "uncoded_products": []},
+          "measure": {"uncoded_series": ["550701"], "exclude_products": ["Gone"], "asia_en_measure": True},
           "family-deck-set": {"series": [], "uncoded_products": ["ファミリーデッキセット"]},
           "bad": {"series": ["5502"], "uncoded_products": []}}
 
@@ -136,6 +150,39 @@ class Capture(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
             ci.capture(Path(tmp) / "c", {"name": "x", "series": ["559999"], "uncoded_products": []},
                        fetcher=FakeFetcher())
+
+
+class Measure(unittest.TestCase):
+    def test_uncoded_series_expand_to_their_products_minus_excludes(self):
+        rows = [{"entry_id": "a", "source_series_id": "550901", "product_names": ["P1", "P2"]},
+                {"entry_id": "b", "source_series_id": "550901", "product_names": ["Gone"]},
+                {"entry_id": "c", "source_series_id": "550101", "product_names": ["OP-01"]}]
+        scope = {"series": [], "uncoded_products": ["X"], "uncoded_series": ["550901"], "exclude_products": ["Gone"]}
+        self.assertEqual(ci.expand_products(rows, scope), ["P1", "P2", "X"])
+        self.assertEqual(ci.multi_product_sets(rows, ["P1"]), [["P1 + P2", 1]])
+
+    def test_compact_report_groups_refusals_by_rule(self):
+        rows = [{"product": "A", "jp_rules": "pass", "members": 3},
+                {"product": "B", "jp_rules": "refused", "rule": "unambiguous_membership",
+                 "detail": "1 entr(y/ies) under 'B' name more than one product (e.g. 'P-001' -> ['B', 'C'])"},
+                {"product": "D", "jp_rules": "refused", "rule": "internally_consistent",
+                 "detail": "card code 'P-106' appears more than once under 'D'"}]
+        out = ci.compact_uncoded(rows)
+        self.assertEqual(out["pass"], [["A", 3]])
+        self.assertEqual(out["refused"], {"unambiguous_membership": [["B", "P-001"]],
+                                          "internally_consistent": [["D", "P-106"]]})
+
+    def test_measure_scope_reports_family_deck_exception_and_asia_en_names(self):
+        importer = FakeImporter()
+        with tempfile.TemporaryDirectory() as tmp:
+            out = ci.run(tmp, scope="measure", fetcher=FakeFetcher(), main=importer, open_tunnel=OPEN, scopes=SCOPES)
+        self.assertEqual(importer.calls, [])
+        self.assertEqual(out["uncoded"]["pass"], [["ファミリーデッキセット", 1, "single_product_catchall"]])
+        self.assertEqual(out["exclude_products_not_found"], ["Gone"])
+        asia = out["asia_en"]
+        self.assertEqual(asia["uncoded_series"], [["569901", "Promotion card"]])
+        self.assertEqual(asia["top_values"], [["Promotion Pack Vol.1", 1]])
+        self.assertEqual(asia["obtain_block_labels"], [["Card Set(s)", 1]])
 
 
 class PlanDigest(unittest.TestCase):
@@ -235,7 +282,8 @@ class RunFlow(unittest.TestCase):
             out = ci.run(tmp, scope="family-deck-set", fetcher=FakeFetcher(), main=importer, open_tunnel=OPEN,
                          scopes=SCOPES)
         self.assertEqual(importer.calls, [])
-        self.assertEqual(out["uncoded_products"][0]["rule"], "not_a_catchall")
+        # Rule 6's proposed single-product exception is allowed in the report and flagged.
+        self.assertEqual(out["uncoded"]["pass"], [["ファミリーデッキセット", 1, "single_product_catchall"]])
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
             ci.run(tmp, apply=True, scope="family-deck-set", expected_sha256="a" * 64, fetcher=FakeFetcher(),
                    main=importer, open_tunnel=OPEN, scopes=SCOPES)

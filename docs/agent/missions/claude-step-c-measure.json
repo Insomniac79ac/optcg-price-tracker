@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "mission": "Phase 2 step C measurement (owner 2026-10-26 'go C-measure'): the catalogue-import report covers every product inside the uncoded series 550701/550801/550901 (China and English anniversary sets excluded) against the uncoded evidence standard, groups refusals by rule, lists the product sets that share one entry (rule 4), reports the proposed single-product catch-all exception to rule 6 (allowed only in the report; no import path sets it), and reads Bandai's Asia-EN picker plus at most six uncoded series pages to measure what its 'Card Set(s)' block names. Report only: uncoded products are still never imported.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/catalogue_import.py",
+        "docs/agent/CATALOGUE_IMPORT_SCOPES.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Scope fields uncoded_series, exclude_products, asia_en_measure; expansion, compact report, rule 4 sets, Asia-EN measurement; promos-limited-measure scope."
+    },
+    {
+      "files": [
+        "services/api/app/services/uncoded_product_evidence.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "prove_uncoded_product(allow_single_product_catchall=False): proposed rule 6 exception for a catch-all series whose every entry names exactly that one product; recorded on the evidence. Default unchanged; no import path passes it."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "services/api/tests/test_uncoded_product_evidence.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Expansion, grouping, rule 4 sets, Asia-EN read, Family Deck report; exception default-off, allowed, bucket with another product, promotion bucket."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Scope fields and the measurement."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-write catalogue-import report runs (owner-approved; no database write)"
+      ],
+      "routes": [
+        "GET https://www.onepiece-cardgame.com/cardlist/?series=<id> (about 64 pages) and images of the uncoded series' entries (about 700); GET https://asia-en.onepiece-cardgame.com/cardlist/ plus at most 6 series pages; 1 per second"
+      ],
+      "dependencies": [
+        "staging after #217"
+      ],
+      "deployment_impact": "None: report-only code paths; the import path is unchanged.",
+      "database_writes": 0,
+      "source_requests": 780,
+      "estimated_runtime_minutes": 15
+    },
+    "recovery": {
+      "artifact": "f8e82c02aa4834c89e95d365a97c1618e1450efe",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "A wrong or unreadable report.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "services/api/tests/test_uncoded_product_evidence.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/catalogue_import.py"
+      ],
+      "observation_window": "The promos-limited-measure report run."
+    }
+  },
+  "diff_sha256": "8c0baa3862dffad7a7317a168de0d238cff1aa17149803316cfddd99c553b16c"
+}

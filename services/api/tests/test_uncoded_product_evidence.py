@@ -209,3 +209,61 @@ def test_a_duplicated_card_code_under_one_product_is_refused(tmp_path):
         prove_uncoded_product("P", jp_root=root, asia_en_root=root,
                               snapshot_identity="t", asia_en_absence_proof="n/a")
     assert exc.value.rule == "internally_consistent"
+
+
+# --- proposed rule 6 exception: a single-product catch-all series ----------
+
+_FAMILY_SERIES = [
+    {"source_series_id": "550701", "display_name": "ファミリーデッキセット",
+     "official_code": None, "source_url": "https://x.test/550701"},
+    {"source_series_id": "550901", "display_name": "プロモーションカード",
+     "official_code": None, "source_url": "https://x.test/550901"},
+]
+
+
+def _family(tmp_path, second_names=("ファミリーデッキセット",)):
+    return _mini(tmp_path, [
+        {"entry_id": "A", "card_code": "FD01-001", "product_names": ["ファミリーデッキセット"],
+         "image_url": "https://x.test/FD01-001.png", "source_series_id": "550701"},
+        {"entry_id": "B", "card_code": "FD01-002", "product_names": list(second_names),
+         "image_url": "https://x.test/FD01-002.png", "source_series_id": "550701"},
+    ], series=_FAMILY_SERIES)
+
+
+def test_rule_6_still_refuses_a_catchall_name_by_default(tmp_path):
+    root = _family(tmp_path)
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        prove_uncoded_product("ファミリーデッキセット", jp_root=root, asia_en_root=root,
+                              snapshot_identity="t", asia_en_absence_proof="n/a")
+    assert exc.value.rule == "not_a_catchall"
+
+
+def test_a_single_product_catchall_passes_only_when_allowed_and_is_recorded(tmp_path):
+    root = _family(tmp_path)
+    ev = prove_uncoded_product("ファミリーデッキセット", jp_root=root, asia_en_root=root,
+                               snapshot_identity="t", asia_en_absence_proof="n/a",
+                               allow_single_product_catchall=True)
+    assert ev.single_product_catchall is True
+    assert ev.member_card_codes == ("FD01-001", "FD01-002")
+    assert ev.as_provenance()["single_product_catchall"] is True
+
+
+def test_a_catchall_holding_another_product_stays_a_bucket(tmp_path):
+    root = _family(tmp_path, second_names=("Other Product",))
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        prove_uncoded_product("ファミリーデッキセット", jp_root=root, asia_en_root=root,
+                              snapshot_identity="t", asia_en_absence_proof="n/a",
+                              allow_single_product_catchall=True)
+    assert exc.value.rule == "not_a_catchall"
+
+
+def test_the_promotion_bucket_is_never_a_single_product(tmp_path):
+    root = _mini(tmp_path, [
+        {"entry_id": "A", "card_code": "P-001", "product_names": ["Promo Pack"],
+         "image_url": "https://x.test/P-001.png", "source_series_id": "550901"},
+    ])
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        prove_uncoded_product("プロモーションカード", jp_root=root, asia_en_root=root,
+                              snapshot_identity="t", asia_en_absence_proof="n/a",
+                              allow_single_product_catchall=True)
+    assert exc.value.rule == "not_a_catchall"

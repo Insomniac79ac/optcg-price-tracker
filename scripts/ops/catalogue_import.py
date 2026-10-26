@@ -58,7 +58,14 @@ def load_scopes(root=None):
 
 
 def resolve_scope(name, scopes):
-    """The named scope, validated; refuses an unknown name or a malformed entry."""
+    """The named scope, validated; refuses an unknown name or a malformed entry.
+
+    series            coded Bandai series ids, imported through the importer's --series
+    uncoded_products  exact product names, reported against the uncoded evidence standard
+    uncoded_series    uncoded catch-all series ids: every product their entries name is reported
+    exclude_products  exact names left out of uncoded_series expansion
+    asia_en_measure   also read Bandai's Asia-EN catalogue for its uncoded series (step C)
+    """
     if not name:
         raise common.Refused("catalogue-import needs --scope (a name in " + SCOPES_FILE + ")")
     if name not in scopes:
@@ -66,18 +73,33 @@ def resolve_scope(name, scopes):
     scope = scopes[name]
     series = list(scope.get("series") or [])
     products = list(scope.get("uncoded_products") or [])
-    if not all(isinstance(s, str) and SERIES_ID.fullmatch(s) for s in series):
+    uncoded_series = list(scope.get("uncoded_series") or [])
+    excludes = list(scope.get("exclude_products") or [])
+    if not all(isinstance(s, str) and SERIES_ID.fullmatch(s) for s in series + uncoded_series):
         raise common.Refused(f"scope {name!r}: series must be six-digit Bandai ids")
-    if not all(isinstance(p, str) and p and p == p.strip() for p in products):
-        raise common.Refused(f"scope {name!r}: uncoded product names must be exact, trimmed strings")
-    if not series and not products:
+    if not all(isinstance(p, str) and p and p == p.strip() for p in products + excludes):
+        raise common.Refused(f"scope {name!r}: product names must be exact, trimmed strings")
+    if not series and not products and not uncoded_series:
         raise common.Refused(f"scope {name!r} names nothing to plan")
-    return {"name": name, "series": series, "uncoded_products": products}
+    return {"name": name, "series": series, "uncoded_products": products, "uncoded_series": uncoded_series,
+            "exclude_products": excludes, "asia_en_measure": bool(scope.get("asia_en_measure"))}
 
 
-def scoped_entry_ids(entries, scope):
+def expand_products(entries, scope):
+    """Uncoded product names the scope reports: the explicit ones, plus every name an entry of
+    an uncoded_series carries, minus exclude_products. Sorted, exact strings."""
+    names = set(scope.get("uncoded_products") or ())
+    buckets, excludes = set(scope.get("uncoded_series") or ()), set(scope.get("exclude_products") or ())
+    for row in entries:
+        if row.get("source_series_id") in buckets:
+            names.update(row.get("product_names") or ())
+    return sorted(names - excludes)
+
+
+def scoped_entry_ids(entries, scope, products=None):
     """Entry ids a scope plans: captured under one of its series, or naming one of its products."""
-    series, products = set(scope["series"]), set(scope["uncoded_products"])
+    series = set(scope["series"])
+    products = set(scope.get("uncoded_products") or ()) if products is None else set(products)
     return frozenset(
         row["entry_id"] for row in entries
         if row.get("source_series_id") in series or products & set(row.get("product_names") or ()))
@@ -102,11 +124,13 @@ def capture(root, scope, fetcher=None):
                                  + ", ".join(pages["series_with_real_pagination"]))
         if pages["page_failures"]:
             raise common.Refused(f"{len(pages['page_failures'])} Bandai series page(s) failed to load")
-        wanted = scoped_entry_ids(snapshot.load(ENTRIES_FILE), scope)
         known = {s.series_id for s in series}
-        missing = [s for s in scope["series"] if s not in known]
+        missing = [s for s in scope["series"] + scope.get("uncoded_series", []) if s not in known]
         if missing:
             raise common.Refused("scope series not on Bandai's list: " + ", ".join(missing))
+        entries = snapshot.load(ENTRIES_FILE)
+        products = expand_products(entries, scope)
+        wanted = scoped_entry_ids(entries, scope, products)
         images = collector.collect_images(snapshot, fetcher, resume=False, workers=WORKERS,
                                           only_entry_ids=wanted)
     except collector.CollectionStopped as exc:
@@ -116,7 +140,7 @@ def capture(root, scope, fetcher=None):
     snapshot.save_manifest(manifest)
     return {"series": pages["series"], "entries": pages["entries"], "scoped_entries": len(wanted),
             "asset_urls": images.get("asset_urls"), "asset_failures": len(images.get("asset_failures") or []),
-            "requests": fetcher.requests}
+            "requests": fetcher.requests, "products": products}
 
 
 # --- uncoded products: reported, not imported ------------------------------------------------
@@ -125,19 +149,97 @@ NOT_EVALUATED = "Asia-EN substitution not evaluated (owner decision, Phase 2 ste
 
 
 def uncoded_report(root, products, identity):
-    """Per product: the evidence standard's verdict on the JP rules, and its member codes."""
+    """Per product: the evidence standard's verdict on the JP rules (with the proposed
+    single-product catch-all exception allowed and flagged), and its member codes."""
     from app.services.uncoded_product_evidence import UncodedProductEvidenceError, prove_uncoded_product
 
     out = []
     for name in products:
         try:
             ev = prove_uncoded_product(name, jp_root=Path(root), asia_en_root=Path(root),
-                                       snapshot_identity=identity, asia_en_absence_proof=NOT_EVALUATED)
+                                       snapshot_identity=identity, asia_en_absence_proof=NOT_EVALUATED,
+                                       allow_single_product_catchall=True)
             out.append({"product": name, "jp_rules": "pass", "series": ev.source_series_id,
-                        "members": len(ev.member_card_codes), "codes": list(ev.member_card_codes)[:80]})
+                        "members": len(ev.member_card_codes), "codes": list(ev.member_card_codes)[:80],
+                        "single_product_catchall": ev.single_product_catchall})
         except UncodedProductEvidenceError as exc:
             out.append({"product": name, "jp_rules": "refused", "rule": exc.rule, "detail": exc.detail[:300]})
     return out
+
+
+def compact_uncoded(rows):
+    """Small enough for the annotations: passes with member counts, refusals grouped by rule."""
+    passed = [[r["product"], r["members"]] + (["single_product_catchall"] if r.get("single_product_catchall") else [])
+              for r in rows if r["jp_rules"] == "pass"]
+    refused = {}
+    for r in rows:
+        if r["jp_rules"] != "pass":
+            hint = ""
+            for pattern in (r"\(e\.g\. '([^']*)'", r"card code '([^']*)'", r"for '([^']*)'", r"spans series (\[[^\]]*\])"):
+                found = re.search(pattern, r["detail"])
+                if found:
+                    hint = found.group(1)
+                    break
+            refused.setdefault(r["rule"], []).append([r["product"], hint])
+    return {"products": len(rows), "pass": passed, "refused": refused}
+
+
+def multi_product_sets(entries, products, limit=25):
+    """Which product names share one entry (rule 4's cases), most common first."""
+    from collections import Counter
+
+    wanted = set(products)
+    counts = Counter(" + ".join(sorted(row["product_names"])) for row in entries
+                     if len(row.get("product_names") or ()) > 1 and wanted & set(row["product_names"]))
+    return [[names, n] for names, n in counts.most_common(limit)]
+
+
+ASIA_EN_CARD_LIST = "https://asia-en.onepiece-cardgame.com/cardlist/"
+ASIA_EN_CODED = re.compile(r"\[[A-Z]{2,4}-?\d{1,3}\]\s*$")
+ASIA_EN_MAX_PAGES = 6
+
+
+def asia_en_measure(fetcher, limit=30):
+    """Does Bandai's Asia-EN catalogue name products for its uncoded series' cards?
+
+    Reads the series picker and at most six uncoded series pages (same fetcher, same rate
+    limit). Its obtain block is labelled in English ('Card Set(s)'), which the JP parser keeps
+    as the raw getInfo field but never turns into product_names, so the block is read here."""
+    from collections import Counter
+
+    from app import collect_official_cardlist_snapshot as collector
+    from app.services.official_cardlist import parse_card_list
+
+    try:
+        status, body, _ = fetcher.get(ASIA_EN_CARD_LIST)
+        if status != 200:
+            return {"error": f"Asia-EN card list HTTP {status}"}
+        index = parse_card_list(body.decode("utf-8", "replace"), "").series_index
+        uncoded = [s for s in index if not ASIA_EN_CODED.search(s.display_name)]
+        labels, values, entries, named, pages = Counter(), Counter(), 0, 0, []
+        for series in uncoded[:ASIA_EN_MAX_PAGES]:
+            status, body, _ = fetcher.get(f"{ASIA_EN_CARD_LIST}?series={series.series_id}")
+            if status != 200:
+                pages.append([series.series_id, series.display_name, f"HTTP {status}"])
+                continue
+            page = parse_card_list(body.decode("utf-8", "replace"), series.series_id)
+            pages.append([series.series_id, series.display_name, len(page.entries)])
+            for entry in page.entries:
+                entries += 1
+                block = entry.field("getInfo")
+                if block is None:
+                    continue
+                labels[block.label] += 1
+                names = [v.strip() for v in (block.value or "").split("\n") if v.strip()]
+                if names:
+                    named += 1
+                values.update(names)
+    except collector.CollectionStopped as exc:
+        return {"error": f"Asia-EN refused collection: {exc}"}
+    return {"series_in_picker": len(index), "uncoded_series": [[s.series_id, s.display_name] for s in uncoded],
+            "pages": pages, "entries": entries, "entries_with_obtain_block_values": named,
+            "obtain_block_labels": [list(x) for x in labels.most_common(5)],
+            "distinct_values": len(values), "top_values": [list(x) for x in values.most_common(limit)]}
 
 
 # --- plan digest ---------------------------------------------------------------------------
@@ -268,6 +370,12 @@ def compact_row(row):
                                      p["official_asset_variant"] or "-", ",".join(p["flags"]) or "-"))
 
 
+def _default_fetcher():
+    from app import collect_official_cardlist_snapshot as collector
+
+    return collector.RateLimitedFetcher(min_interval=MIN_INTERVAL)
+
+
 def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, main=None, open_tunnel=None,
         scopes=None, backup=None, now=common.now_utc):
     import generate_staging_state as state
@@ -291,8 +399,22 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
                "capture": captured, "database_writes_possible": bool(apply)}
     if newest is not None:
         summary["backup"] = newest
-    if chosen["uncoded_products"]:
-        summary["uncoded_products"] = uncoded_report(root, chosen["uncoded_products"], identity)
+    # Before the long product lists, so an annotation cut-off loses the least.
+    if chosen["asia_en_measure"]:
+        summary["asia_en"] = asia_en_measure(fetcher or _default_fetcher())
+    products = captured.pop("products", [])
+    summary["capture"]["uncoded_products"] = len(products)
+    if products:
+        from app.services.official_snapshot import ENTRIES_FILE, Snapshot
+
+        rows = uncoded_report(root, products, identity)
+        entries = Snapshot(root).load(ENTRIES_FILE)
+        summary["uncoded"] = compact_uncoded(rows)
+        summary["multi_product_entries"] = multi_product_sets(entries, products)
+        missing_excludes = sorted(set(chosen["exclude_products"]) - {n for e in entries for n in e.get("product_names") or ()})
+        if missing_excludes:
+            summary["exclude_products_not_found"] = missing_excludes
+        common.write_json(Path(out_dir) / "uncoded-products.json", rows)
     if not chosen["series"]:
         summary.update(ok=True, plan_sha256=None, note="report only: no coded series in this scope")
         common.write_json(Path(out_dir) / "catalogue-import.json", summary)

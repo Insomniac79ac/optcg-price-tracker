@@ -117,6 +117,9 @@ class UncodedProductEvidence:
     snapshot_identity: str
     jp_only_validation: bool = True
     asia_en_absence_proof: str = ""
+    # True only when rule 6 was passed through its single-product exception
+    # (see prove_uncoded_product's allow_single_product_catchall).
+    single_product_catchall: bool = False
 
     @property
     def official_code(self) -> None:
@@ -137,6 +140,7 @@ class UncodedProductEvidence:
             "snapshot_identity": self.snapshot_identity,
             "jp_only_validation": self.jp_only_validation,
             "asia_en_absence_proof": self.asia_en_absence_proof,
+            "single_product_catchall": self.single_product_catchall,
         }
 
 
@@ -196,11 +200,19 @@ def prove_uncoded_product(
     asia_en_root: Path,
     snapshot_identity: str,
     asia_en_absence_proof: str | None = None,
+    allow_single_product_catchall: bool = False,
 ) -> UncodedProductEvidence:
     """Prove one uncoded product against the frozen JP catalogue, or refuse.
 
     Every refusal names the rule that produced it, so a caller reports *why*
     a product was not established rather than that it merely was not.
+
+    `allow_single_product_catchall` (default False; no import path sets it
+    until the owner decides, Phase 2 step C) is a proposed narrow exception to
+    rule 6: an uncoded series whose name equals the product's AND whose every
+    captured entry names exactly that one product (550701 ファミリーデッキセット
+    is the case) is the product, not a bucket of several. Rules 1-5 still run
+    unchanged, and the evidence records `single_product_catchall=True`.
     """
     if not product_name or product_name != product_name.strip():
         raise UncodedProductEvidenceError(
@@ -215,11 +227,30 @@ def prove_uncoded_product(
     }
 
     # Rule 6 - a bucket is not a product.
+    single_product_catchall = False
     if product_name in catchall_names:
-        raise UncodedProductEvidenceError(
-            "not_a_catchall",
-            f"{product_name!r} is an uncoded SERIES (a catch-all bucket), not a product",
-        )
+        if not allow_single_product_catchall:
+            raise UncodedProductEvidenceError(
+                "not_a_catchall",
+                f"{product_name!r} is an uncoded SERIES (a catch-all bucket), not a product",
+            )
+        bucket_ids = {
+            s["source_series_id"]
+            for s in series_rows
+            if s["display_name"] == product_name and not s.get("official_code")
+        }
+        in_bucket = [
+            e for e in _records(jp_root / "entries.jsonl") if e.get("source_series_id") in bucket_ids
+        ]
+        if len(bucket_ids) != 1 or not in_bucket or any(
+            (e.get("product_names") or []) != [product_name] for e in in_bucket
+        ):
+            raise UncodedProductEvidenceError(
+                "not_a_catchall",
+                f"{product_name!r} is an uncoded SERIES whose entries do not all name exactly "
+                "that one product, so it is a bucket, not a product",
+            )
+        single_product_catchall = True
     # Rule 2 - coded products go through the strict standard.
     if product_name in coded_names:
         raise UncodedProductEvidenceError(
@@ -324,4 +355,5 @@ def prove_uncoded_product(
         snapshot_identity=snapshot_identity,
         jp_only_validation=True,
         asia_en_absence_proof=proof,
+        single_product_catchall=single_product_catchall,
     )
