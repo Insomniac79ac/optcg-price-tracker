@@ -616,8 +616,10 @@ def run_one_mapping_detailed(
         )
         session.rollback()
         verified = bool(probe_check.written)
+        price_only = bool(probe_check.reasons) and all(
+            reason.startswith("price_") for reason in probe_check.reasons)
         freshness.result = CaptureResult(
-            "completed" if verified else "identity_refusal",
+            "completed" if verified else ("transient_failure" if price_only else "identity_refusal"),
             raw_snapshot_id=result_holder["raw_snapshot_id"],
             failure=None if verified else ";".join(probe_check.reasons),
             resume_cursor={

@@ -261,19 +261,23 @@ catalogue-gap request (owner 2026-10-26).
 clearing the pause blindly (owner decision 2026-10-26, perfectionist).
 
 1. Dry run (read-only): the Yuyu-Tei budget (must be paused for a denial), the latest denial
-   attempt (must come from ordinary refresh work, never from an earlier probe), any probe already
-   recorded for it (never replayed), and the probe mapping: the approved, active Yuyu-Tei mapping
-   whose refresh last succeeded most recently. `plan_sha256` covers source, denial, mapping, print
-   and product identity.
+   attempt (from ordinary refresh work, or from an earlier probe after a 6-hour cool-down), the
+   probes already recorded for it (all closed, at most 3 per denial), and the probe mapping: the
+   approved, active Yuyu-Tei mapping whose refresh last captured cleanly. The request bound is that
+   mapping's refresh cost plus a homepage warm-up allowance (60 to 200). `plan_sha256` covers
+   source, denial, probe number, mapping, print, product identity and bound.
 2. `apply=true` with that SHA: re-reads the facts on a fingerprinted connection, refuses unless
    identical, then `app.services.source_recovery.plan_yuyu_probe` records one authorized,
    unattempted validation scope in one transaction. No request, no reservation.
-3. The next scheduled Yuyu shard turn (any shard; one claim wins) serves it before its ordinary work
-   (`yuyutei_collector.recovery`): one metered product capture from the collectors' own network,
-   identity validated, no price written. Only a completed, identity-verified HTTP 200 capture
-   clears the pause (`resume_after_yuyu_probe`). A challenge settles as `source_denial`: the pause
-   stays and the next probe needs a new dry run and approval. Check the outcome with
-   `ops-readonly staging-state` (Yuyu no longer BLOCKED) or `db-diagnostic work-by-state`.
+3. The next scheduled Yuyu shard turn (any shard; one claim wins) serves it instead of its
+   ordinary work (`yuyutei_collector.recovery`): one metered product capture from the collectors'
+   own network, identity validated, no price written. Only a completed, identity-verified HTTP 200
+   capture of that mapping's product page clears the pause (`resume_after_yuyu_probe`). Every probe
+   is closed afterwards whatever happened, and stale ones (newer denial, manual unpause, mapping no
+   longer eligible, lease expired) are closed at the next turn, so none can be served twice or
+   stall ordinary claims. After a challenge the pause stays; a new probe needs a new dry run and
+   approval after the cool-down. Check the outcome with `ops-readonly staging-state` (Yuyu no
+   longer BLOCKED) or `db-diagnostic work-by-state`.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:

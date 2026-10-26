@@ -20,8 +20,9 @@ def facts(**over):
         "denial": {"attempt_id": 900, "finished_at": AT, "work_kind": "refresh", "work_id": 5,
                    "failure": "source_denial;no_extraction_attempted:classification=challenge_or_captcha"},
         "mapping": {"mapping_id": 77, "card_print_id": 66, "product_identity": "yuyutei:op01:10001",
-                    "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10001", "last_success": AT},
-        "existing_probe": None,
+                    "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10001", "last_success": AT,
+                    "refresh_cost": 40},
+        "probes": [],
     }
     for key, value in over.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
@@ -35,17 +36,35 @@ class Plan(unittest.TestCase):
     def test_a_paused_source_with_a_refresh_denial_plans_one_probe(self):
         p, problems = yp.plan(facts())
         self.assertEqual(problems, [])
-        self.assertEqual((p["denial_attempt_id"], p["mapping_id"]), (900, 77))
+        self.assertEqual((p["denial_attempt_id"], p["mapping_id"], p["probe_number"], p["request_bound"]),
+                         (900, 77, 1, 60))
         self.assertEqual(len(yp.plan_sha(p)), 64)
+
+    def test_limits_match_the_api(self):
+        from app.services import source_recovery as sr
+        self.assertEqual((yp.MAX_REQUESTS, yp.PROBES_PER_DENIAL), (sr.YUYU_PROBE_MAX_REQUESTS, sr.YUYU_PROBES_PER_DENIAL))
+        self.assertEqual(yp.COOLDOWN_HOURS * 3600, sr.YUYU_PROBE_COOLDOWN.total_seconds())
+
+    def test_a_closed_probe_allows_the_next_and_the_bound_follows_the_refresh_cost(self):
+        p, problems = yp.plan(facts(probes=[{"state": "blocked"}], mapping={"refresh_cost": 150}))
+        self.assertEqual((problems, p["probe_number"], p["request_bound"]), ([], 2, 170))
+
+    def test_after_a_probe_challenge_the_cool_down_applies(self):
+        from datetime import timedelta
+        f = facts(denial={"work_kind": "validation"})
+        self.assertIsNone(yp.plan(f, now=AT + timedelta(hours=1))[0])
+        self.assertIsNotNone(yp.plan(f, now=AT + timedelta(hours=7))[0])
 
     def test_every_precondition_refuses(self):
         cases = {
             "not paused": facts(budget={"pause_reason": None}),
             "timed pause": facts(budget={"paused_until": AT}),
             "disabled": facts(budget={"enabled": False}),
-            "probe denial": facts(denial={"work_kind": "validation"}),
+            "probe denial in cool-down": facts(denial={"work_kind": "validation", "finished_at": datetime.now(timezone.utc)}),
+            "discovery denial": facts(denial={"work_kind": "discovery"}),
             "no denial": facts(denial=None),
-            "replay": facts(existing_probe={"id": 1, "state": "blocked"}),
+            "open probe": facts(probes=[{"state": "pending"}]),
+            "limit": facts(probes=[{"state": "blocked"}] * 3),
             "no mapping": facts(mapping=None),
             "reserved": facts(budget={"reserved_requests": 3}),
         }
@@ -90,7 +109,7 @@ class RunFlow(unittest.TestCase):
 
     def test_dry_run_with_a_problem_reports_not_ok(self):
         with tempfile.TemporaryDirectory() as tmp:
-            out = yp.run(tmp, read=lambda: facts(existing_probe={"id": 3}))
+            out = yp.run(tmp, read=lambda: facts(probes=[{"state": "claimed"}]))
         self.assertFalse(out["ok"])
         self.assertIsNone(out["plan_sha256"])
 
@@ -115,7 +134,7 @@ class SqlOnSchema(unittest.TestCase):
                 yp.read_facts(conn)
             conn.rollback()
             for sql, params in ((yp.DENIAL_SQL, {"source_id": 1}), (yp.MAPPING_SQL, {"source_id": 1}),
-                                (yp.PROBE_SQL, {"source_id": 1, "scope": "x"})):
+                                (yp.PROBE_SQL, {"source_id": 1, "prefix": "x%"})):
                 self.assertEqual(conn.execute(sql, params).fetchall(), [])
 
 

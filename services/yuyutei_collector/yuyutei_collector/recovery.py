@@ -14,7 +14,7 @@ stays. Ordinary checks resume on the following scheduled turns.
 import json
 
 from app.services.freshness_integration import AdmissionStopped, Attempt, CaptureResult
-from app.services.source_recovery import claim_yuyu_probe, resume_after_yuyu_probe
+from app.services.source_recovery import claim_yuyu_probe, close_yuyu_probe, resume_after_yuyu_probe
 
 
 def consume_planned_probe(session, source_id, *, runner, owner):
@@ -49,12 +49,24 @@ def consume_planned_probe(session, source_id, *, runner, owner):
         )
     if attempt.result.raw_snapshot_id is None:
         attempt.result.raw_snapshot_id = attempt.raw_snapshot_id
-    settled = attempt.finish(attempt.result)
-    resumed = False
-    if settled and attempt.result.outcome == "completed":
-        resume_after_yuyu_probe(session, claim.claim_token)
+    resumed, refusal = False, None
+    try:
+        settled = attempt.finish(attempt.result)
+        if settled and attempt.result.outcome == "completed":
+            resume_after_yuyu_probe(session, claim.claim_token)
+            session.commit()
+            resumed = True
+    except Exception as exc:  # noqa: BLE001 - fails closed: the pause stays
+        session.rollback()
+        refusal = f"{type(exc).__name__}: {exc}"[:300]
+    try:
+        # One-shot either way: the probe is closed so it is never served again.
+        close_yuyu_probe(session, claim.work_id,
+                         reason="probe resumed the source" if resumed else None)
         session.commit()
-        resumed = True
+    except Exception as exc:  # noqa: BLE001 - a still-claimed probe expires and is closed next turn
+        session.rollback()
+        refusal = refusal or f"close: {type(exc).__name__}"
     result = {
         "status": attempt.result.outcome,
         "resumed": resumed,
@@ -63,6 +75,7 @@ def consume_planned_probe(session, source_id, *, runner, owner):
         "request_cost": attempt.charged_cost,
         "product_snapshot_id": attempt.result.raw_snapshot_id,
         "failure": attempt.result.failure,
+        "resume_refused": refusal,
     }
     print(json.dumps({"event": "scheduled_source_probe", **result}), flush=True)
     return result

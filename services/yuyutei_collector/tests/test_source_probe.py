@@ -55,6 +55,10 @@ class ProbeModeTests(fixture.RawBeforeParseFixture):
         self.assertIsNone(attempt.result.resume_cursor)
         self.assertEqual(attempt.result.failure, "card_code_mismatch")
 
+    def test_a_price_only_failure_is_transient_as_in_ordinary_captures(self):
+        attempt, _, _ = self._probe(False, ["price_missing"])
+        self.assertEqual(attempt.result.outcome, "transient_failure")
+
     def test_probe_requires_a_metered_attempt(self):
         with self.Session() as session, self.assertRaises(ValueError):
             collect.run_one_mapping_detailed(session, self.mapping_id, probe=True)
@@ -70,14 +74,17 @@ class FakeQueueAttempt:
         return True
 
 
-def consume(runner, claim=SimpleNamespace(work_id=7, claim_token="t", resume_cursor={"mapping_id": 3})):
+def consume(runner, claim=SimpleNamespace(work_id=7, claim_token="t", resume_cursor={"mapping_id": 3}),
+            resume_effect=None):
     session = MagicMock()
     with (
         patch.object(recovery, "claim_yuyu_probe", return_value=claim),
         patch.object(recovery, "Attempt", FakeQueueAttempt),
-        patch.object(recovery, "resume_after_yuyu_probe") as resume,
+        patch.object(recovery, "resume_after_yuyu_probe", side_effect=resume_effect) as resume,
+        patch.object(recovery, "close_yuyu_probe") as close,
     ):
         result = recovery.consume_planned_probe(session, 1, runner=runner, owner="yuyutei-probe-0")
+    close.assert_called_once()  # one-shot: closed whatever happened
     return result, resume
 
 
@@ -114,3 +121,13 @@ def test_a_crashing_probe_is_settled_not_left_claimed():
     result, resume = consume(runner)
     assert result["status"] == "transient_failure" and result["failure"] == "RuntimeError"
     resume.assert_not_called()
+
+
+def test_a_refused_resume_fails_closed_and_still_closes_the_probe():
+    def runner(session, mapping_id, *, freshness, probe):
+        freshness.result = CaptureResult("completed", raw_snapshot_id=11)
+        return SimpleNamespace(source_denied=False, reasons=[])
+
+    result, _ = consume(runner, resume_effect=ValueError("probe evidence is no longer current"))
+    assert result["resumed"] is False
+    assert "no longer current" in result["resume_refused"]

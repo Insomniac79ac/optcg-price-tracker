@@ -11,11 +11,18 @@ from app.models import (FreshnessAttempt, FreshnessWork, RawSnapshot, Source, So
                         SourceDispatchBudget)
 from app.services.freshness_queue import admit_request, complete_claim, pause_source
 from app.services.source_recovery import (
+    YUYU_PROBE_COOLDOWN,
     YUYU_PROBE_MAX_REQUESTS,
+    YUYU_PROBES_PER_DENIAL,
     claim_yuyu_probe,
-    plan_yuyu_probe,
+    close_yuyu_probe,
+    plan_yuyu_probe as _plan_yuyu_probe,
     resume_after_yuyu_probe,
 )
+
+
+def plan_yuyu_probe(*args, request_bound=80, **kwargs):
+    return _plan_yuyu_probe(*args, request_bound=request_bound, **kwargs)
 from test_freshness_queue_postgres import T0, admit, claim, db, plan  # noqa: F401 - fixture
 
 T1 = T0 + timedelta(hours=1)
@@ -49,7 +56,7 @@ def probe_capture(factory, token, *, at=T1, status=200, verified=True):
         assert admit_request(session, token, ordinal=1, cost=5, clock=lambda: at)
     with factory.begin() as session:
         work = session.scalar(select(FreshnessWork).where(FreshnessWork.claim_token == token))
-        snap = RawSnapshot(source_id=work.source_id, source_url="https://yuyu-tei.jp/sell/opc/card/x/1",
+        snap = RawSnapshot(source_id=work.source_id, source_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
                            fetched_at=at + timedelta(seconds=20), http_status=status,
                            content_hash="b" * 64, raw_content="page")
         session.add(snap)
@@ -65,15 +72,32 @@ def probe_capture(factory, token, *, at=T1, status=200, verified=True):
         )
 
 
-def test_plan_reserves_nothing_and_is_never_replayed(db):
+def test_plan_reserves_nothing_and_one_open_probe_at_a_time(db):
     factory, source, mapping_id, _ = db
     denial = yuyu_denial(factory, source, mapping_id)
     with factory.begin() as session:
         work = plan_yuyu_probe(session, source, mapping_id, denial, clock=lambda: T1)
-        assert (work.state, work.attempt_count) == ("pending", 0)
+        assert (work.state, work.attempt_count, work.scope_key) == (
+            "pending", 0, f"source-recovery:yuyutei:{denial}:1")
         assert work.resume_cursor["scheduled_recovery_authorized"] is True
     assert budget(factory) == ("source_denial", 0)
-    with factory.begin() as session, pytest.raises(ValueError, match="never replayed"):
+    with factory.begin() as session, pytest.raises(ValueError, match="still open"):
+        plan_yuyu_probe(session, source, mapping_id, denial, clock=lambda: T1)
+
+
+def test_a_failed_probe_can_be_followed_by_a_new_approval_up_to_the_limit(db):
+    factory, source, mapping_id, _ = db
+    denial = yuyu_denial(factory, source, mapping_id)
+    for number in range(1, YUYU_PROBES_PER_DENIAL + 1):
+        with factory.begin() as session:
+            work = plan_yuyu_probe(session, source, mapping_id, denial, clock=lambda: T1)
+            assert work.resume_cursor["probe_number"] == number
+        with factory.begin() as session:
+            probe = claim_yuyu_probe(session, source, "p", clock=lambda: T1)
+        probe_capture(factory, probe.claim_token, verified=False)
+        with factory.begin() as session:
+            close_yuyu_probe(session, probe.work_id, clock=lambda: T1)
+    with factory.begin() as session, pytest.raises(ValueError, match="limit"):
         plan_yuyu_probe(session, source, mapping_id, denial, clock=lambda: T1)
 
 
@@ -117,7 +141,7 @@ def test_an_unverified_or_late_probe_never_resumes(db):
     assert budget(factory)[0] == "source_denial"
 
 
-def test_a_probe_that_meets_a_challenge_stays_paused_and_cannot_be_reused(db):
+def test_a_probe_that_meets_a_challenge_stays_paused_and_waits_for_the_cool_down(db):
     factory, source, mapping_id, _ = db
     denial = yuyu_denial(factory, source, mapping_id)
     with factory.begin() as session:
@@ -129,13 +153,18 @@ def test_a_probe_that_meets_a_challenge_stays_paused_and_cannot_be_reused(db):
         pause_source(session, probe.claim_token, clock=lambda: T1)
         complete_claim(session, probe.claim_token, outcome="source_denial", actual_request_cost=1,
                        clock=lambda: T1 + timedelta(seconds=30))
+    with factory.begin() as session:
+        close_yuyu_probe(session, probe.work_id, clock=lambda: T1)
     assert budget(factory)[0] == "source_denial"
     with factory.begin() as session:
         assert claim_yuyu_probe(session, source, "again", clock=lambda: T1 + timedelta(hours=1)) is None
-        # the probe's own denial cannot authorize another probe
         latest = session.scalar(select(FreshnessAttempt.id).order_by(FreshnessAttempt.id.desc()))
-        with pytest.raises(ValueError, match="cannot authorize"):
+        with pytest.raises(ValueError, match="cool-down"):
             plan_yuyu_probe(session, source, mapping_id, latest, clock=lambda: T1 + timedelta(hours=1))
+    with factory.begin() as session:
+        later = T1 + YUYU_PROBE_COOLDOWN + timedelta(minutes=1)
+        work = plan_yuyu_probe(session, source, mapping_id, latest, clock=lambda: later)
+        assert work.scope_key == f"source-recovery:yuyutei:{latest}:1"
 
 
 def test_a_newer_denial_makes_a_planned_probe_stale(db):
@@ -150,3 +179,31 @@ def test_a_newer_denial_makes_a_planned_probe_stale(db):
             outcome="source_denial"))
     with factory.begin() as session:
         assert claim_yuyu_probe(session, source, "p", clock=lambda: T1) is None
+    with factory() as session:  # closed, so it can never stall ordinary claims
+        assert session.scalar(select(FreshnessWork.state).where(FreshnessWork.kind == "validation")) == "blocked"
+
+
+def test_a_probe_for_a_mapping_that_became_ineligible_is_closed_not_raised(db):
+    factory, source, mapping_id, _ = db
+    denial = yuyu_denial(factory, source, mapping_id)
+    with factory.begin() as session:
+        plan_yuyu_probe(session, source, mapping_id, denial, clock=lambda: T1)
+        session.get(SourceCardMapping, mapping_id).is_active = False
+    with factory.begin() as session:
+        assert claim_yuyu_probe(session, source, "p", clock=lambda: T1) is None
+    with factory() as session:
+        assert session.scalar(select(FreshnessWork.state).where(FreshnessWork.kind == "validation")) == "blocked"
+
+
+def test_an_expired_probe_is_closed_on_the_next_turn(db):
+    factory, source, mapping_id, _ = db
+    denial = yuyu_denial(factory, source, mapping_id)
+    with factory.begin() as session:
+        plan_yuyu_probe(session, source, mapping_id, denial, clock=lambda: T1)
+    with factory.begin() as session:
+        probe = claim_yuyu_probe(session, source, "p", clock=lambda: T1)
+    with factory.begin() as session:
+        assert claim_yuyu_probe(session, source, "p2", clock=lambda: T1 + timedelta(minutes=10)) is None
+    with factory() as session:
+        row = session.get(FreshnessWork, probe.work_id)
+        assert (row.state, row.attempt_count) == ("blocked", 1)
