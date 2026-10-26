@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "mission": "Owner decision 2026-10-26 (option a): the Japanese July 2023 Flagship Battle winner prize (フラッグシップバトル2023 7月優勝記念品) partly overlaps Bandai Asia-EN's 'Winner prize for Flagship Battle in July 2024' because Asia reuses Japanese prize art a year later; the owner cleared it as a Japan-only product. ASIA_EN_OWNER_CLEARED records reviewed clearances, each bound to the exact Asia-EN product it overlaps, so any other overlap is still refused.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/uncoded_product_evidence.py"
+      ],
+      "effects": [
+        "application",
+        "bulk_data"
+      ],
+      "reason": "ASIA_EN_OWNER_CLEARED (one entry) and the bound clearance in prove_uncoded_product."
+    },
+    {
+      "files": [
+        "services/api/tests/test_uncoded_product_evidence.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Cleared overlap imports as Japan-only; an overlap with another Asia-EN product is still refused."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Mentions the clearance list."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "the flagship-battle catalogue-import batch (owner-approved runs)"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "staging after #219"
+      ],
+      "deployment_impact": "None until an owner-approved flagship-battle apply, which then adds this one product (2 cards).",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "d13d91aa5d340b842bbda53fb93604286fd9f655",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The owner reverses the clearance.",
+      "backup": "Not applicable.",
+      "validation": [
+        "services/api/tests/test_uncoded_product_evidence.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/uncoded_product_evidence.py"
+      ],
+      "observation_window": "The next flagship-battle dry run."
+    }
+  },
+  "diff_sha256": ""
+}

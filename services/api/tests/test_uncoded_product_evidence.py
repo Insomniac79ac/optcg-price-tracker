@@ -379,3 +379,38 @@ def test_a_repeated_code_whose_addresses_collapse_to_one_variant_is_refused(tmp_
         prove_uncoded_product("P", jp_root=root, asia_en_root=root,
                               snapshot_identity="t", asia_en_absence_proof="n/a")
     assert exc.value.rule == "internally_consistent"
+
+
+# --- owner-cleared partial overlaps -------------------------------------------
+
+
+def _cleared_case(tmp_path, asia_name):
+    from app.services.uncoded_product_evidence import ASIA_EN_OWNER_CLEARED
+
+    name = next(iter(ASIA_EN_OWNER_CLEARED))
+    root = _mini(tmp_path, [
+        {"entry_id": "A", "card_code": "OP03-001", "product_names": [name],
+         "image_url": "https://x.test/OP03-001.png", "source_series_id": "550901"},
+        {"entry_id": "B", "card_code": "OP03-002", "product_names": [name],
+         "image_url": "https://x.test/OP03-002.png", "source_series_id": "550901"},
+    ])
+    asia = _asia(tmp_path, {asia_name: ["OP03-001"]})
+    return name, root, asia
+
+
+def test_an_owner_cleared_overlap_imports_as_japan_only(tmp_path):
+    from app.services.uncoded_product_evidence import ASIA_EN_OWNER_CLEARED
+
+    name = next(iter(ASIA_EN_OWNER_CLEARED))
+    name, root, asia = _cleared_case(tmp_path, ASIA_EN_OWNER_CLEARED[name][0])
+    ev = prove_uncoded_product(name, jp_root=root, asia_en_root=asia, snapshot_identity="t")
+    assert ev.jp_only_validation is True
+    assert ev.asia_en_product is None
+    assert ev.asia_en_absence_proof.startswith("cleared as Japan-only (owner 2026-10-26")
+
+
+def test_a_clearance_does_not_cover_an_overlap_with_another_asia_product(tmp_path):
+    name, root, asia = _cleared_case(tmp_path, "Some other Asia prize")
+    with pytest.raises(UncodedProductEvidenceError) as exc:
+        prove_uncoded_product(name, jp_root=root, asia_en_root=asia, snapshot_identity="t")
+    assert exc.value.rule == "asia_en_disagrees"
