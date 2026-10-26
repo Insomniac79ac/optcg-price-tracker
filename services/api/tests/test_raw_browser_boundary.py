@@ -196,3 +196,22 @@ def test_observed_advertising_does_not_consume_source_budget(host):
     handler(route)
     route.fetch.assert_not_called()
     attempt.admit.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "url,counted",
+    [
+        ("https://yuyu-tei.jp/assets/app.css", 1),
+        ("https://card.yuyu-tei.jp/opc/x.js", 1),
+        ("https://cdn.example.test/lib.js", 0),
+    ],
+)
+@pytest.mark.parametrize("status", [403, 429])
+def test_optional_source_denials_are_counted_for_the_source_probe(url, counted, status):
+    """Ordinary captures tolerate them; a Yuyu-Tei probe treats any as a denial."""
+    attempt, handler, route = boundary(url, "stylesheet", False)
+    route.fetch.return_value = SimpleNamespace(status=status, headers={})
+    handler(route)
+    attempt.deny.assert_not_called()
+    assert attempt.stopped is None
+    assert attempt.source_optional_denials == counted

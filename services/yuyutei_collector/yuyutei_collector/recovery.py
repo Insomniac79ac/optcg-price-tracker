@@ -68,7 +68,11 @@ def consume_planned_probe(session, source_id, *, runner, owner, lease, telemetry
             "source_denial" if attempt.denied else "transient_failure",
             failure=type(exc).__name__, raw_snapshot_id=attempt.raw_snapshot_id,
         )
-    challenged = bool(attempt.denied or getattr(outcome, "source_denied", False))
+    challenged = bool(
+        attempt.denied
+        or getattr(outcome, "source_denied", False)
+        or getattr(attempt, "source_optional_denials", 0)
+    )
     if attempt.result is None:
         session.rollback()
         attempt.result = CaptureResult(

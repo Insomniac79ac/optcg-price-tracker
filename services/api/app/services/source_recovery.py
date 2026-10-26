@@ -510,6 +510,7 @@ def _yuyu_probe_current(db, budget, work):
     return (
         _yuyu_paused(db, budget, work.source_id)
         and _is_yuyu_probe(work)
+        and cursor.get("scheduled_recovery_authorized") is True
         and _yuyu_scope_matches(work, cursor)
         and not cursor.get("required_denial")
         and work.attempt_count == 1
@@ -648,11 +649,16 @@ def preview_yuyu_probe(db, source_id, *, clock=utc_now):
             "product_identity": mapping.canonical_source_listing_identity,
             "source_url": mapping.source_url, "last_success": _iso(last_success), "refresh_cost": cost,
         }
+    bound = None
+    if candidate is not None:
+        cost = candidate[2]
+        bound = min(YUYU_PROBE_MAX_REQUESTS,
+                    max(YUYU_PROBE_MIN_REQUESTS, (cost or 0) + YUYU_PROBE_WARM_UP_ALLOWANCE))
+        if bound > budget.request_limit:
+            problems.append(f"the request bound {bound} exceeds the Yuyu-Tei request limit {budget.request_limit}")
     if problems:
         return None, problems, facts
-    mapping, _, cost = candidate
-    bound = min(YUYU_PROBE_MAX_REQUESTS,
-                max(YUYU_PROBE_MIN_REQUESTS, (cost or 0) + YUYU_PROBE_WARM_UP_ALLOWANCE))
+    mapping = candidate[0]
     return {
         "source_id": source_id, "root_denial_attempt_id": root, "denial_attempt_id": denial_id,
         "probe_number": len(facts["probes"]) + 1, "mapping_id": mapping.id,
@@ -702,6 +708,23 @@ def _close(work, reason, now, *, challenged=False):
     work.updated_at = now
 
 
+def _yuyu_authority_current(db, budget, source_id, work):
+    """An unattempted probe may still be served: the same authority the claim's
+    requests and the resume re-check (_yuyu_probe_current) once it is attempted."""
+    cursor = work.resume_cursor or {}
+    return (
+        work.attempt_count == 0
+        and cursor.get("scheduled_recovery_authorized") is True
+        and _is_yuyu_probe(work)
+        and _yuyu_scope_matches(work, cursor)
+        and not cursor.get("required_denial")
+        and _yuyu_paused(db, budget, source_id)
+        and cursor.get("recovery_denial_attempt_id") == latest_denial_id(db, source_id)
+        and 1 <= work.estimated_request_cost <= YUYU_PROBE_MAX_REQUESTS
+        and _yuyu_mapping_lineage(db, source_id, cursor)
+    )
+
+
 def _tidy_yuyu_probes(db, budget, source_id, now):
     """Close every probe that can no longer be served correctly."""
     queue._roll_window(budget, now)
@@ -719,17 +742,12 @@ def _tidy_yuyu_probes(db, budget, source_id, now):
     ):
         cursor = work.resume_cursor or {}
         if work.attempt_count >= 1:
-            # Its lease expired mid-attempt: it was used once.
-            _close(work, "probe attempt ended without settling; a new approval is required", now)
-        elif (
-            cursor.get("scheduled_recovery_authorized") is not True
-            or not _is_yuyu_probe(work)
-            or not _yuyu_scope_matches(work, cursor)
-            or not _yuyu_paused(db, budget, source_id)
-            or cursor.get("recovery_denial_attempt_id") != latest_denial_id(db, source_id)
-            or not 1 <= work.estimated_request_cost <= YUYU_PROBE_MAX_REQUESTS
-            or not _yuyu_mapping_lineage(db, source_id, cursor)
-        ):
+            # It was used once: its lease expired mid-attempt, or it settled but the
+            # turn ended before resuming or closing it (fails closed either way).
+            _close(work, "probe settled but did not resume the source; a new approval is required"
+                   if work.last_outcome else
+                   "probe attempt ended without settling; a new approval is required", now)
+        elif not _yuyu_authority_current(db, budget, source_id, work):
             # Stale authority (a newer denial, a manual unpause, a changed
             # mapping): closed, so it is never served and never stalls claims.
             _close(work, "probe authority no longer current; a new approval is required", now)
@@ -779,6 +797,10 @@ def claim_yuyu_probe(db, source_id, owner, *, lease, clock=utc_now):
         return None
     cursor = work.resume_cursor or {}
     bound = work.estimated_request_cost
+    if not _yuyu_authority_current(db, budget, source_id, work):  # tidy closed every other case
+        _close(work, "probe authority no longer current; a new approval is required", now)
+        db.flush()
+        return None
     if budget.reserved_requests or budget.request_limit - budget.used_requests < bound:
         return None  # stays authorized for a later turn
     token = str(uuid4())

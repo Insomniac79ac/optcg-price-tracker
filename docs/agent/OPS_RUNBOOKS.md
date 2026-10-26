@@ -277,7 +277,7 @@ clearing the pause blindly (owner decision 2026-10-26, perfectionist).
    ordinary work (`yuyutei_collector.recovery`), recorded as its own execution (max_work 1): one
    metered product capture from the collectors' own network, identity validated, no price
    written. Only a completed, identity-verified HTTP 200 capture of that mapping's product page,
-   with no denial during the attempt, clears the pause (`resume_after_yuyu_probe`). Every probe is
+   with no denial during the attempt (a challenge page even with HTTP 200, or a 403/429 on any request to Yuyu-Tei's own hosts, optional ones included), clears the pause (`resume_after_yuyu_probe`). Every probe is
    closed afterwards whatever happened (a challenge is marked on it even if its attempt could not
    settle), and stale ones (newer denial, manual unpause, mapping no longer eligible, lease
    expired) are closed at the next turn, so none can be served twice or stall ordinary claims.

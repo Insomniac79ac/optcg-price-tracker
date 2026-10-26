@@ -170,6 +170,9 @@ class Attempt:
         self.browser_closing = False
         self.active_routes = 0
         self.health = {"http_403": 0, "http_429": 0, "optional_resource": 0}
+        # 403/429 on a non-critical request from the source's own hosts. Ordinary
+        # captures tolerate these; a source probe treats any as a denial.
+        self.source_optional_denials = 0
 
     def check(self):
         if self.stopped:
@@ -317,6 +320,8 @@ class Attempt:
                     self.deny()
                 else:
                     self.health["optional_resource"] += 1
+                    if request_host_class(url) != "external":
+                        self.source_optional_denials += 1
             route.fulfill(response=response)
         except Exception as exc:
             # A failed optional asset is a normal browser failure. It must

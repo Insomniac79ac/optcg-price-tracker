@@ -580,6 +580,16 @@ def run_one_mapping_detailed(
 
     observed_classification = result_holder["observed_classification"]
     source_denied = observed_classification in SOURCE_DENIAL_CLASSIFICATIONS
+    if freshness is not None and source_denied and not freshness.denied:
+        # A challenge page (even HTTP 200) is recorded as a denial now, as
+        # discovery does: it pauses the source and marks recovery work durably,
+        # not only when (and if) the attempt settles.
+        try:
+            freshness.deny()
+        except Exception as exc:  # noqa: BLE001 - the attempt still settles as source_denial
+            session.rollback()
+            log_event("source_denial_record_failed", mapping_id=mapping_id,
+                      error=type(exc).__name__, batch_run_id=batch_run_id)
 
     if result_holder["extraction"] is None:
         reasons = [f"no_extraction_attempted:classification={observed_classification}"]

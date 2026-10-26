@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Yuyu-Tei one-shot source probe (owner decision 2026-10-26, perfectionist). A single Yuyu-Tei challenge page at 2026-10-25 16:27Z paused every Yuyu shard (source_denial, no timer); there was no safe way to resume. app.services.source_recovery gains preview/plan/claim/resume for Yuyu-Tei, mirroring the SNKRDUNK discipline: preview_yuyu_probe (read only) is the single source of the plan the ops dry run shows; the owner-approved ops-write yuyu-source-probe apply writes exactly that plan (re-checked under the budget lock) as one authorized validation scope (no I/O, no reservation); the next scheduled Yuyu shard turn claims it (row lock, one winner) in its own execution record, runs one metered product capture from the collectors' own network with identity validated and no price written; only a completed, identity-verified HTTP 200 capture inside the attempt, with no denial during it, clears the pause; a challenge keeps it paused. Every probe is closed after its one attempt (stale, orphaned or ineligible ones at the next turn); a new owner approval may plan another: at most 3 per pause chain (the refresh or discovery denial that paused the source, challenged probes included), 6-hour cool-down after any challenged probe (marked on the probe even when its attempt could not settle). complete_claim now keeps a denial recorded during an attempt (required_denial) when the result writes its cursor, so a denial can never be erased by a completed result (also hardens the SNKRDUNK recovery path). permitted_recovery_request routes Yuyu-Tei work to the new check. Collector release: Yuyu shards (new recovery module, probe mode, due hook) and SNKRDUNK (services/api freshness_queue and source_recovery are in its import graph). Independent reviews: first PASS WITH NITS (fixed); second no blockers, three should-fix (cap reset by challenged probes, missing budget crashing turns, discovery denials unprobeable) and four nits, all fixed, plus the denial-erasure gap found while closing its test gaps.",
+  "mission": "Yuyu-Tei one-shot source probe (owner decision 2026-10-26, perfectionist). A single Yuyu-Tei challenge page at 2026-10-25 16:27Z paused every Yuyu shard (source_denial, no timer); there was no safe way to resume. app.services.source_recovery gains preview/plan/claim/resume for Yuyu-Tei, mirroring the SNKRDUNK discipline: preview_yuyu_probe (read only) is the single source of the plan the ops dry run shows; the owner-approved ops-write yuyu-source-probe apply writes exactly that plan (re-checked under the budget lock) as one authorized validation scope (no I/O, no reservation); the next scheduled Yuyu shard turn claims it (row lock, one winner) in its own execution record, runs one metered product capture from the collectors' own network with identity validated and no price written; only a completed, identity-verified HTTP 200 capture inside the attempt, with no denial during it, clears the pause; a challenge keeps it paused. Every probe is closed after its one attempt (stale, orphaned or ineligible ones at the next turn); a new owner approval may plan another: at most 3 per pause chain (the refresh or discovery denial that paused the source, challenged probes included), 6-hour cool-down after any challenged probe (marked on the probe even when its attempt could not settle). complete_claim now keeps a denial recorded during an attempt (required_denial) when the result writes its cursor, so a denial can never be erased by a completed result (also hardens the SNKRDUNK recovery path). permitted_recovery_request routes Yuyu-Tei work to the new check. Collector release: Yuyu shards (new recovery module, probe mode, due hook) and SNKRDUNK (services/api freshness_queue and source_recovery are in its import graph). Independent reviews: first PASS WITH NITS (fixed); second no blockers, three should-fix (cap reset by challenged probes, missing budget crashing turns, discovery denials unprobeable) and four nits, all fixed, plus the denial-erasure gap found while closing its test gaps. Third review: no blockers; two should-fix fixed (a 200 challenge page is now recorded as a denial at once, as discovery does, so a crash before settling cannot lose it; a 403/429 on an optional request to Yuyu-Tei's own hosts counts as a challenge for the probe) and the nits (close reason, claim re-checks authority, fingerprint before the write, bound above the request limit).",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -21,13 +21,14 @@
     {
       "files": [
         "services/api/app/services/source_recovery.py",
-        "services/api/app/services/freshness_queue.py"
+        "services/api/app/services/freshness_queue.py",
+        "services/api/app/services/freshness_integration.py"
       ],
       "effects": [
         "application",
         "source_envelope"
       ],
-      "reason": "Yuyu-Tei probe preview/plan/claim/resume; permitted_recovery_request routes Yuyu-Tei to its own check. complete_claim keeps a recorded required_denial when a result writes its cursor (fail-closed for both recovery paths); SNKRDUNK recovery logic otherwise unchanged."
+      "reason": "Yuyu-Tei probe preview/plan/claim/resume; permitted_recovery_request routes Yuyu-Tei to its own check. complete_claim keeps a recorded required_denial when a result writes its cursor (fail-closed for both recovery paths); SNKRDUNK recovery logic otherwise unchanged. freshness_integration.Attempt counts 403/429 on optional requests to the source's own hosts (source_optional_denials); ordinary captures still tolerate them."
     },
     {
       "files": [
@@ -39,7 +40,7 @@
         "application",
         "source_envelope"
       ],
-      "reason": "serve_planned_probe before ordinary due work, in its own execution record; probe mode validates identity without writing a price; a missing budget row is a quiet no-probe."
+      "reason": "serve_planned_probe before ordinary due work, in its own execution record; probe mode validates identity without writing a price; a missing budget row is a quiet no-probe. A challenge page (even HTTP 200) is recorded as a denial when classified, as discovery already does, so the pause and the probe's mark are durable before settling."
     },
     {
       "files": [
@@ -64,6 +65,7 @@
       "files": [
         "services/api/tests/test_yuyu_probe_postgres.py",
         "services/api/tests/test_yuyu_probe_consume_postgres.py",
+        "services/api/tests/test_raw_browser_boundary.py",
         "services/yuyutei_collector/tests/test_source_probe.py",
         "services/yuyutei_collector/tests/test_turn_browser.py",
         "scripts/tests/test_ops_yuyu_probe.py"

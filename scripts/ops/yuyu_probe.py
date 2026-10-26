@@ -105,8 +105,18 @@ def _write_plan(p):
     from ops import apply_migration
     from app.services.source_recovery import plan_yuyu_probe
 
-    engine, _guard = apply_migration.staging_engine(writable=True)
+    from ops import db as ops_db
+
+    engine, guard = apply_migration.staging_engine(writable=True)
     try:
+        # The same fingerprint and revision-equals-head check as every read, on this
+        # engine's own target, before anything is written.
+        raw = engine.raw_connection()
+        try:
+            raw.driver_connection.read_only = True
+            ops_db.verify(raw.driver_connection, guard)
+        finally:
+            raw.close()
         with Session(engine) as session:
             try:
                 work = plan_yuyu_probe(session, p["source_id"], p)
