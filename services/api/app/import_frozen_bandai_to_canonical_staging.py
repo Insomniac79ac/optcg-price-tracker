@@ -100,7 +100,6 @@ from app.services.print_import_planner import plan_entries
 from app.services.uncoded_source_renderings import UNCODED_SOURCE_RENDERINGS
 from app.services.uncoded_product_evidence import (
     UncodedProductEvidenceError,
-    prove_asia_en_carries_no_uncoded_names,
     prove_uncoded_product,
 )
 from app.services.snapshot_planner_input import (
@@ -309,7 +308,9 @@ def main(
     if requested:
         asia_en_root = Path(str(root).replace("bandai_jp", "bandai_asia_en"))
         try:
-            absence = prove_asia_en_carries_no_uncoded_names(asia_en_root)
+            # Step C (owner 2026-10-26): Asia-EN is checked per product
+            # (uncoded_product_evidence.asia_en_agreement), and a catch-all
+            # series holding exactly one product is that product.
             for name in requested:
                 if name in authorised:
                     print(f"FAIL: --uncoded-product {name!r} given twice.", file=sys.stderr)
@@ -319,7 +320,7 @@ def main(
                     jp_root=root,
                     asia_en_root=asia_en_root,
                     snapshot_identity=snapshot.identity,
-                    asia_en_absence_proof=absence,
+                    allow_single_product_catchall=True,
                 )
         except UncodedProductEvidenceError as exc:
             print(f"FAIL: uncoded product evidence refused: {exc}", file=sys.stderr)
@@ -409,7 +410,11 @@ def main(
         emit(f"  {'uncoded product':<24} {name}")
         emit(f"  {'  series':<24} {ev.source_series_id} ({ev.source_series_name})")
         emit(f"  {'  members':<24} {len(ev.member_card_codes)} card codes")
-        emit(f"  {'  validation':<24} JP-only ({ev.asia_en_absence_proof})")
+        emit(
+            f"  {'  validation':<24} "
+            + ("JP-only" if ev.jp_only_validation else "JP + Asia-EN agree")
+            + f" ({ev.asia_en_absence_proof})"
+        )
     for sid in series_ids:
         emit(f"  {'series':<24} {sid}")
     if requested or series_ids:

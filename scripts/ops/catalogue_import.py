@@ -64,7 +64,14 @@ def resolve_scope(name, scopes):
     uncoded_products  exact product names, reported against the uncoded evidence standard
     uncoded_series    uncoded catch-all series ids: every product their entries name is reported
     exclude_products  exact names left out of uncoded_series expansion
-    asia_en_measure   also read Bandai's Asia-EN catalogue for its uncoded series (step C)
+    product_pattern   regular expression an expanded product name must match (a family batch)
+    exclude_pattern   regular expression that drops expanded product names
+    asia_en_measure   also report what Bandai's Asia-EN catalogue names (step C measurement)
+    report_only       never import, even with apply (measurement scopes)
+
+    Uncoded products are imported when they pass the evidence standard with the step C
+    amendments (owner 2026-10-26): Asia-EN agreement per product, single-product catch-all,
+    repeated codes with their own entries and image addresses. The rest are reported.
     """
     if not name:
         raise common.Refused("catalogue-import needs --scope (a name in " + SCOPES_FILE + ")")
@@ -81,19 +88,31 @@ def resolve_scope(name, scopes):
         raise common.Refused(f"scope {name!r}: product names must be exact, trimmed strings")
     if not series and not products and not uncoded_series:
         raise common.Refused(f"scope {name!r} names nothing to plan")
+    patterns = {}
+    for key in ("product_pattern", "exclude_pattern"):
+        value = scope.get(key)
+        if value is not None:
+            try:
+                patterns[key] = re.compile(value)
+            except (re.error, TypeError):
+                raise common.Refused(f"scope {name!r}: {key} is not a regular expression") from None
     return {"name": name, "series": series, "uncoded_products": products, "uncoded_series": uncoded_series,
-            "exclude_products": excludes, "asia_en_measure": bool(scope.get("asia_en_measure"))}
+            "exclude_products": excludes, "asia_en_measure": bool(scope.get("asia_en_measure")),
+            "report_only": bool(scope.get("report_only")),
+            "product_pattern": patterns.get("product_pattern"), "exclude_pattern": patterns.get("exclude_pattern")}
 
 
 def expand_products(entries, scope):
     """Uncoded product names the scope reports: the explicit ones, plus every name an entry of
     an uncoded_series carries, minus exclude_products. Sorted, exact strings."""
-    names = set(scope.get("uncoded_products") or ())
+    names = set()
     buckets, excludes = set(scope.get("uncoded_series") or ()), set(scope.get("exclude_products") or ())
     for row in entries:
         if row.get("source_series_id") in buckets:
             names.update(row.get("product_names") or ())
-    return sorted(names - excludes)
+    keep, drop = scope.get("product_pattern"), scope.get("exclude_pattern")
+    names = {n for n in names if (keep is None or keep.search(n)) and (drop is None or not drop.search(n))}
+    return sorted((names | set(scope.get("uncoded_products") or ())) - excludes)
 
 
 def scoped_entry_ids(entries, scope, products=None):
@@ -145,43 +164,53 @@ def capture(root, scope, fetcher=None):
 
 # --- uncoded products: reported, not imported ------------------------------------------------
 
-NOT_EVALUATED = "Asia-EN substitution not evaluated (owner decision, Phase 2 step C)"
+def asia_en_root_for(root):
+    """Where the importer looks for the Asia-EN evidence: the sibling of bandai_jp."""
+    return Path(str(root).replace("bandai_jp", "bandai_asia_en"))
 
 
 def uncoded_report(root, products, identity):
-    """Per product: the evidence standard's verdict on the JP rules (with the proposed
-    single-product catch-all exception allowed and flagged), and its member codes."""
+    """Per product: the evidence standard's verdict exactly as the importer will prove it
+    (step C amendments on), its validation route and its member codes."""
     from app.services.uncoded_product_evidence import UncodedProductEvidenceError, prove_uncoded_product
 
     out = []
     for name in products:
         try:
-            ev = prove_uncoded_product(name, jp_root=Path(root), asia_en_root=Path(root),
-                                       snapshot_identity=identity, asia_en_absence_proof=NOT_EVALUATED,
-                                       allow_single_product_catchall=True)
+            ev = prove_uncoded_product(name, jp_root=Path(root), asia_en_root=asia_en_root_for(root),
+                                       snapshot_identity=identity, allow_single_product_catchall=True)
             out.append({"product": name, "jp_rules": "pass", "series": ev.source_series_id,
-                        "members": len(ev.member_card_codes), "codes": list(ev.member_card_codes)[:80],
-                        "single_product_catchall": ev.single_product_catchall})
+                        "members": len(ev.member_entry_ids), "codes": list(ev.member_card_codes)[:80],
+                        "single_product_catchall": ev.single_product_catchall,
+                        "asia_en_product": ev.asia_en_product, "jp_only": ev.jp_only_validation,
+                        "repeated_card_codes": list(ev.repeated_card_codes), "proof": ev.asia_en_absence_proof})
         except UncodedProductEvidenceError as exc:
             out.append({"product": name, "jp_rules": "refused", "rule": exc.rule, "detail": exc.detail[:300]})
     return out
 
 
 def compact_uncoded(rows):
-    """Small enough for the annotations: passes with member counts, refusals grouped by rule."""
-    passed = [[r["product"], r["members"]] + (["single_product_catchall"] if r.get("single_product_catchall") else [])
-              for r in rows if r["jp_rules"] == "pass"]
+    """Small enough for the annotations: counts by route, the Japan-only and flagged products,
+    refusals grouped by rule with a hint."""
+    passed = [r for r in rows if r["jp_rules"] == "pass"]
     refused = {}
     for r in rows:
         if r["jp_rules"] != "pass":
             hint = ""
-            for pattern in (r"\(e\.g\. '([^']*)'", r"card code '([^']*)'", r"for '([^']*)'", r"spans series (\[[^\]]*\])"):
+            for pattern in (r"\(e\.g\. '([^']*)'", r"card code '([^']*)'", r"product '([^']*)' shares",
+                            r"for '([^']*)'", r"spans series (\[[^\]]*\])"):
                 found = re.search(pattern, r["detail"])
                 if found:
                     hint = found.group(1)
                     break
             refused.setdefault(r["rule"], []).append([r["product"], hint])
-    return {"products": len(rows), "pass": passed, "refused": refused}
+    return {"products": len(rows), "pass": len(passed),
+            "asia_en_agrees": sum(1 for r in passed if not r.get("jp_only")),
+            "japan_only": [[r["product"], r["members"]] for r in passed if r.get("jp_only")],
+            "flagged": [[r["product"], r["members"]] + (["single_product_catchall"] if r.get("single_product_catchall") else [])
+                        + ([f"repeated:{','.join(r['repeated_card_codes'])}"] if r.get("repeated_card_codes") else [])
+                        for r in passed if r.get("single_product_catchall") or r.get("repeated_card_codes")],
+            "refused": refused}
 
 
 def multi_product_sets(entries, products, limit=25):
@@ -199,47 +228,60 @@ ASIA_EN_CODED = re.compile(r"\[[A-Z]{2,4}-?\d{1,3}\]\s*$")
 ASIA_EN_MAX_PAGES = 6
 
 
-def asia_en_measure(fetcher, limit=30):
-    """Does Bandai's Asia-EN catalogue name products for its uncoded series' cards?
+def capture_asia_en(asia_root, fetcher, limit=30):
+    """Bandai's Asia-EN uncoded series, written where the evidence standard reads them.
 
-    Reads the series picker and at most six uncoded series pages (same fetcher, same rate
-    limit). Its obtain block is labelled in English ('Card Set(s)'), which the JP parser keeps
-    as the raw getInfo field but never turns into product_names, so the block is read here."""
+    The picker plus at most six uncoded series pages (same fetcher, same rate limit). Every
+    uncoded series page must load: a missing page would turn a real Asia-EN product into a
+    false "Japan-only" verdict, so any failure refuses. Writes series.jsonl and entries.jsonl
+    (card code and the "Card Set(s)" product names, parsed as product_names); returns stats."""
     from collections import Counter
 
     from app import collect_official_cardlist_snapshot as collector
     from app.services.official_cardlist import parse_card_list
+    from app.services.official_snapshot import ENTRIES_FILE, SERIES_FILE, Snapshot
 
     try:
         status, body, _ = fetcher.get(ASIA_EN_CARD_LIST)
         if status != 200:
-            return {"error": f"Asia-EN card list HTTP {status}"}
+            raise common.Refused(f"Asia-EN card list HTTP {status}")
         index = parse_card_list(body.decode("utf-8", "replace"), "").series_index
         uncoded = [s for s in index if not ASIA_EN_CODED.search(s.display_name)]
-        labels, values, entries, named, pages = Counter(), Counter(), 0, 0, []
-        for series in uncoded[:ASIA_EN_MAX_PAGES]:
-            status, body, _ = fetcher.get(f"{ASIA_EN_CARD_LIST}?series={series.series_id}")
+        if not uncoded or len(uncoded) > ASIA_EN_MAX_PAGES:
+            raise common.Refused(f"Asia-EN picker shows {len(uncoded)} uncoded series (expected 1 to "
+                                 f"{ASIA_EN_MAX_PAGES}); not reading it blind")
+        series_rows, entry_rows, pages = [], [], []
+        values, labels = Counter(), Counter()
+        for series in uncoded:
+            url = f"{ASIA_EN_CARD_LIST}?series={series.series_id}"
+            status, body, _ = fetcher.get(url)
             if status != 200:
-                pages.append([series.series_id, series.display_name, f"HTTP {status}"])
-                continue
+                raise common.Refused(f"Asia-EN series {series.series_id} HTTP {status}")
             page = parse_card_list(body.decode("utf-8", "replace"), series.series_id)
             pages.append([series.series_id, series.display_name, len(page.entries)])
+            series_rows.append({"source_catalogue": "bandai_asia_en", "source_series_id": series.series_id,
+                                "display_name": series.display_name, "official_code": None, "source_url": url})
             for entry in page.entries:
-                entries += 1
                 block = entry.field("getInfo")
-                if block is None:
-                    continue
-                labels[block.label] += 1
-                names = [v.strip() for v in (block.value or "").split("\n") if v.strip()]
-                if names:
-                    named += 1
-                values.update(names)
+                if block is not None:
+                    labels[block.label] += 1
+                values.update(entry.product_names)
+                entry_rows.append({"source_catalogue": "bandai_asia_en", "source_series_id": series.series_id,
+                                   "entry_id": entry.entry_id, "card_code": entry.card_code,
+                                   "image_url": entry.image_url, "product_names": list(entry.product_names)})
     except collector.CollectionStopped as exc:
-        return {"error": f"Asia-EN refused collection: {exc}"}
-    return {"series_in_picker": len(index), "uncoded_series": [[s.series_id, s.display_name] for s in uncoded],
-            "pages": pages, "entries": entries, "entries_with_obtain_block_values": named,
+        raise common.Refused(f"Asia-EN refused collection: {exc}") from None
+    snapshot = Snapshot(Path(asia_root))
+    snapshot.save(SERIES_FILE, series_rows)
+    snapshot.save(ENTRIES_FILE, entry_rows)
+    return {"series_in_picker": len(index), "pages": pages, "entries": len(entry_rows),
+            "entries_with_products": sum(1 for r in entry_rows if r["product_names"]),
             "obtain_block_labels": [list(x) for x in labels.most_common(5)],
-            "distinct_values": len(values), "top_values": [list(x) for x in values.most_common(limit)]}
+            "distinct_products": len(values), "top_products": [list(x) for x in values.most_common(limit)]}
+
+
+def file_sha256(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest() if Path(path).exists() else None
 
 
 # --- plan digest ---------------------------------------------------------------------------
@@ -264,8 +306,12 @@ def plan_rows(plan, entry_records=None):
     return sorted(rows, key=lambda r: (r["print"]["card_code"], r["print"]["entry_id"]))
 
 
-def plan_sha(scope, rows):
+def plan_sha(scope, rows, uncoded=(), asia_en_sha256=None):
     body = {"scope": scope["name"], "series": scope["series"], "prints": rows}
+    if uncoded or asia_en_sha256:
+        # The products the importer is told to establish, and the Asia-EN evidence it proves
+        # them against, decide what gets written too.
+        body.update(uncoded=sorted(uncoded), asia_en_entries_sha256=asia_en_sha256)
     return hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
                                      default=str).encode()).hexdigest()
 
@@ -321,8 +367,9 @@ def parse_report(text):
     return None
 
 
-def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, open_tunnel=None):
-    """Runs the importer on the scope's coded series; returns (exit code, report, plan facts)."""
+def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, open_tunnel=None, uncoded=()):
+    """Runs the importer on the scope's coded series and its proven uncoded products;
+    returns (exit code, report, plan facts)."""
     from app.services.canonical_import_apply import STAGING_APPLY_CONFIRMATION
 
     if main is None:
@@ -335,6 +382,9 @@ def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, ope
     argv = ["--snapshot-root", str(snapshot_root), "--json"]
     for series_id in scope["series"]:
         argv += ["--series", series_id]
+    for name in uncoded:
+        argv += ["--uncoded-product", name]
+    asia_sha = file_sha256(asia_en_root_for(snapshot_root) / "entries.jsonl") if uncoded else None
     if apply:
         argv += ["--apply", "--confirm", STAGING_APPLY_CONFIRMATION]
     records = load_entry_records(snapshot_root)
@@ -342,7 +392,7 @@ def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, ope
 
     def on_plan(plan):
         rows = plan_rows(plan, records)
-        facts.update(rows=rows, sha=plan_sha(scope, rows), outcomes=plan.counts())
+        facts.update(rows=rows, sha=plan_sha(scope, rows, uncoded, asia_sha), outcomes=plan.counts())
         if apply:
             try:
                 check_apply(expected_sha256, facts["sha"])
@@ -384,30 +434,33 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
     chosen = resolve_scope(scope, scopes if scopes is not None else load_scopes())
     newest = None
     if apply:
-        if not chosen["series"]:
-            raise common.Refused(f"scope {chosen['name']!r} has no coded series to import; "
-                                 "uncoded products are reported only until Phase 2 step C")
+        if chosen["report_only"]:
+            raise common.Refused(f"scope {chosen['name']!r} is report-only")
         check_sha_shape(expected_sha256)  # equality is checked on the plan, inside the importer
         # The recovery point: a Railway backup of the staging Postgres volume under 24 hours old,
         # the same rule apply-migration enforces.
         newest = apply_migration.check_backup((backup or apply_migration.newest_backup)())
+    fetcher = fetcher or _default_fetcher()
     root = Path(out_dir) / "snapshot" / "bandai_jp" / "current"
     captured = capture(root, chosen, fetcher=fetcher)
     from app.services.snapshot_planner_input import load_snapshot
     identity = load_snapshot(root).identity
+    products = captured.pop("products", [])
+    captured["uncoded_products"] = len(products)
     summary = {"scope": chosen["name"], "apply": bool(apply), "snapshot_identity": identity,
                "capture": captured, "database_writes_possible": bool(apply)}
     if newest is not None:
         summary["backup"] = newest
-    # Before the long product lists, so an annotation cut-off loses the least.
-    if chosen["asia_en_measure"]:
-        summary["asia_en"] = asia_en_measure(fetcher or _default_fetcher())
-    products = captured.pop("products", [])
-    summary["capture"]["uncoded_products"] = len(products)
+    importable = []
     if products:
         from app.services.official_snapshot import ENTRIES_FILE, Snapshot
 
+        asia = capture_asia_en(asia_en_root_for(root), fetcher)
+        # Before the long product lists, so an annotation cut-off loses the least.
+        summary["asia_en"] = asia if chosen["asia_en_measure"] else {
+            k: asia[k] for k in ("pages", "entries", "entries_with_products", "distinct_products")}
         rows = uncoded_report(root, products, identity)
+        importable = [r["product"] for r in rows if r["jp_rules"] == "pass"]
         entries = Snapshot(root).load(ENTRIES_FILE)
         summary["uncoded"] = compact_uncoded(rows)
         summary["multi_product_entries"] = multi_product_sets(entries, products)
@@ -415,8 +468,10 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
         if missing_excludes:
             summary["exclude_products_not_found"] = missing_excludes
         common.write_json(Path(out_dir) / "uncoded-products.json", rows)
-    if not chosen["series"]:
-        summary.update(ok=True, plan_sha256=None, note="report only: no coded series in this scope")
+    if chosen["report_only"] or not (chosen["series"] or importable):
+        if apply:
+            raise common.Refused(f"scope {chosen['name']!r}: nothing passes the evidence standard to import")
+        summary.update(ok=True, plan_sha256=None, note="report only: nothing to plan in this scope")
         common.write_json(Path(out_dir) / "catalogue-import.json", summary)
         return summary
     if apply:
@@ -425,7 +480,7 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
         if reason:
             raise common.Refused(reason)
     code, report, facts = import_scope(root, chosen, apply=apply, expected_sha256=expected_sha256,
-                                       main=main, open_tunnel=open_tunnel)
+                                       main=main, open_tunnel=open_tunnel, uncoded=importable)
     common.write_json(Path(out_dir) / "catalogue-import.json",
                       {**summary, "exit_code": code, "plan_sha256": facts.get("sha"),
                        "outcomes": facts.get("outcomes"), "prints": facts.get("rows"), "report": report,

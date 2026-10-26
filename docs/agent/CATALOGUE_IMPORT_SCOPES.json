@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "about": "Named scopes for the ops-write catalogue-import runbook (scripts/ops/catalogue_import.py). A scope is what one run plans: coded Bandai JP series ids (series), uncoded product names exactly as Bandai's 入手情報 writes them (uncoded_products), or every product named inside uncoded catch-all series (uncoded_series, minus exclude_products); asia_en_measure also reads Bandai's Asia-EN catalogue. Adding or changing a scope is a reviewed PR. Uncoded products are reported against the evidence standard (app.services.uncoded_product_evidence) but not imported until the owner settles the Asia-EN evidence question (Phase 2 step C).",
+  "about": "Named scopes for the ops-write catalogue-import runbook (scripts/ops/catalogue_import.py). A scope is what one run plans: coded Bandai JP series ids (series), uncoded product names exactly as Bandai's 入手情報 writes them (uncoded_products), or every product named inside uncoded catch-all series (uncoded_series) filtered by product_pattern / exclude_pattern (regular expressions) and exclude_products. Uncoded products are imported when they pass app.services.uncoded_product_evidence with the step C amendments (owner 2026-10-26): Asia-EN agreement per product, single-product catch-all, repeated codes with their own entries and image addresses; the rest are reported. report_only scopes never import. Adding or changing a scope is a reviewed PR.",
   "scopes": {
     "eb-05": {
       "note": "Phase 2 step B: EB-05 ONE PIECE Heroines Edition vol.2 (coded, series 550205).",
@@ -10,7 +10,7 @@
       "uncoded_products": []
     },
     "family-deck-set": {
-      "note": "Phase 2 step B: Family Deck Set (series 550701). Its product name equals its catch-all series name, so the evidence report is expected to name rule not_a_catchall for the owner to decide.",
+      "note": "Phase 2: Family Deck Set (series 550701), established through the single-product catch-all amendment (owner 2026-10-26).",
       "series": [],
       "uncoded_products": [
         "ファミリーデッキセット"
@@ -29,7 +29,92 @@
         "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
         "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
       ],
-      "asia_en_measure": true
+      "asia_en_measure": true,
+      "report_only": true
+    },
+    "flagship-battle": {
+      "note": "Phase 2 step C batch: Flagship Battle winner and top-8 prizes.",
+      "uncoded_series": [
+        "550801",
+        "550901"
+      ],
+      "product_pattern": "フラッグシップバトル",
+      "exclude_products": [
+        "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
+        "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
+      ]
+    },
+    "standard-battle": {
+      "note": "Phase 2 step C batch: Standard Battle Packs and Standard Battle prizes.",
+      "uncoded_series": [
+        "550801",
+        "550901"
+      ],
+      "product_pattern": "スタンダードバトル",
+      "exclude_products": [
+        "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
+        "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
+      ]
+    },
+    "promotion-packs": {
+      "note": "Phase 2 step C batch: Promotion Packs, EX packs, Promotion Card Sets and their campaigns.",
+      "uncoded_series": [
+        "550801",
+        "550901"
+      ],
+      "product_pattern": "プロモーション",
+      "exclude_products": [
+        "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
+        "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
+      ]
+    },
+    "premium-card-collections": {
+      "note": "Phase 2 step C batch: Premium Card Collections.",
+      "uncoded_series": [
+        "550801",
+        "550901"
+      ],
+      "product_pattern": "プレミアムカードコレクション",
+      "exclude_products": [
+        "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
+        "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
+      ]
+    },
+    "magazines": {
+      "note": "Phase 2 step C batch: Magazine and book promos (Jump, V Jump, Saikyo Jump, GIGA, ONE PIECE magazine, complete guides).",
+      "uncoded_series": [
+        "550801",
+        "550901"
+      ],
+      "product_pattern": "ジャンプ|magazine|マガジン|学園|COMPLETE GUIDE",
+      "exclude_products": [
+        "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
+        "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
+      ]
+    },
+    "events-and-prizes": {
+      "note": "Phase 2 step C batch: Meetups, Championship, 8 Pack Battle, Extra Grand Battle, Meramera, Fest and ONE PIECE DAY prizes.",
+      "uncoded_series": [
+        "550801",
+        "550901"
+      ],
+      "product_pattern": "交流会|チャンピオンシップ|パックバトル|エクストラグランドバトル|メラメラ|来場|Fest|ONE PIECE DAY",
+      "exclude_products": [
+        "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
+        "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
+      ]
+    },
+    "other-limited": {
+      "note": "Phase 2 step C batch: everything else in 550801/550901 (anniversary sets, FILM RED gifts, campaigns, tie-ins, playmat sets, storage box set, BASE SHOP).",
+      "uncoded_series": [
+        "550801",
+        "550901"
+      ],
+      "exclude_pattern": "フラッグシップバトル|スタンダードバトル|プロモーション|プレミアムカードコレクション|ジャンプ|magazine|マガジン|学園|COMPLETE GUIDE|交流会|チャンピオンシップ|パックバトル|エクストラグランドバトル|メラメラ|来場|Fest|ONE PIECE DAY",
+      "exclude_products": [
+        "ONE PIECE カードゲーム China 2nd ANNIVERSARY SET",
+        "ONE PIECE カードゲーム English 2nd ANNIVERSARY SET"
+      ]
     }
   }
 }

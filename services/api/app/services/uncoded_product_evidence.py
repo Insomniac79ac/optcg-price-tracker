@@ -61,10 +61,31 @@ tests/test_uncoded_product_evidence.py against the frozen snapshot:
      membership.
   5. INTERNALLY CONSISTENT. Every member entry carries a card code, an image
      address and an asset digest the snapshot actually fetched, and no card
-     code appears twice under the product. This is what makes the membership
-     reproducible from the snapshot alone.
+     code appears twice under the product - unless each occurrence is its own
+     Bandai entry at its own image address (amendment B below). This is what
+     makes the membership reproducible from the snapshot alone.
   6. NOT A CATCH-ALL. The name must not be one of the three uncoded series
-     names themselves. Those are buckets, not products.
+     names themselves. Those are buckets, not products - unless the series
+     holds exactly that one product (amendment A below).
+
+STEP C AMENDMENTS (owner decisions 2026-10-26, perfectionist):
+
+  A. Rule 6, single-product catch-all: an uncoded series whose every entry
+     names exactly the product that shares its name IS that product (550701
+     ファミリーデッキセット). Only when the caller passes
+     allow_single_product_catchall=True; recorded on the evidence.
+  B. Rule 5, repeated codes: a base reprint and a holo reprint of one card can
+     show the same picture (owner, on PRB and promo packs). A code may repeat
+     when every occurrence has its own Bandai entry id and its own image
+     address; the same entry or the same address twice is still refused.
+     Recorded as repeated_card_codes.
+  C. Asia-EN, per product (asia_en_agreement): the JP-only substitution's
+     premise was measured false on 2026-10-26 (Asia-EN names a product on all
+     631 of its uncoded entries). Each product's membership is now compared
+     with Asia-EN's: an equal code set is cross-catalogue agreement
+     (jp_only_validation=False, asia_en_product recorded); no shared code is a
+     recorded Japan-only release (jp_only_validation=True); a partial overlap
+     is refused for review (asia_en_disagrees).
 
 WHAT THIS MODULE DOES NOT DO. It does not read Atlas's own tables, does not
 decide what to import, does not write, and does not look at SNKRDUNK or any
@@ -120,6 +141,12 @@ class UncodedProductEvidence:
     # True only when rule 6 was passed through its single-product exception
     # (see prove_uncoded_product's allow_single_product_catchall).
     single_product_catchall: bool = False
+    # The Asia-EN product whose membership equals this one (cross-catalogue
+    # agreement), or None when the product is absent from Asia-EN.
+    asia_en_product: str | None = None
+    # Card codes Bandai lists more than once under this product, each as its
+    # own entry with its own image address (a base and a holo reprint).
+    repeated_card_codes: tuple[str, ...] = ()
 
     @property
     def official_code(self) -> None:
@@ -141,6 +168,8 @@ class UncodedProductEvidence:
             "jp_only_validation": self.jp_only_validation,
             "asia_en_absence_proof": self.asia_en_absence_proof,
             "single_product_catchall": self.single_product_catchall,
+            "asia_en_product": self.asia_en_product,
+            "repeated_card_codes": list(self.repeated_card_codes),
         }
 
 
@@ -191,6 +220,57 @@ def _coded_names_and_codes(series: Iterable[dict]) -> tuple[set[str], set[str]]:
             codes.add(s["official_code"])
             names.add(s["display_name"])
     return names, codes
+
+
+def asia_en_agreement(member_codes: Iterable[str], asia_en_root: Path) -> tuple[str, str | None, str]:
+    """Step C (owner 2026-10-26, perfectionist): the cross-catalogue check, per product.
+
+    The JP-only substitution assumed Bandai's Asia-EN catalogue names no
+    products for its uncoded cards. Measured on 2026-10-26 it does: every one
+    of its 631 uncoded entries carries a "Card Set(s)" block. So each JP
+    product's membership is compared with the Asia-EN products that share any
+    of its card codes:
+
+      agrees    an Asia-EN product has exactly the same code set -> returned
+                ("agrees", that product's name, proof)
+      absent    no Asia-EN uncoded product carries any of its codes (a
+                Japan-only release) -> ("absent", None, proof); the JP rules
+                stand alone and the absence is recorded per product
+      disagree  some overlap, no equal set -> refused (asia_en_disagrees), for
+                the owner to review
+
+    Returns (status, asia_en_product, proof)."""
+    series = _records(asia_en_root / "series.jsonl")
+    uncoded_ids = {s["source_series_id"] for s in series if not s.get("official_code")}
+    by_product: dict[str, set[str]] = {}
+    for e in _records(asia_en_root / "entries.jsonl"):
+        if e.get("source_series_id") not in uncoded_ids:
+            continue
+        code = (e.get("card_code") or "").strip()
+        for name in e.get("product_names") or []:
+            by_product.setdefault(name, set()).add(code)
+    wanted = {c.strip() for c in member_codes}
+    equal = sorted(name for name, codes in by_product.items() if codes == wanted)
+    if equal:
+        return "agrees", equal[0], (
+            f"bandai_asia_en product {equal[0]!r} has the same {len(wanted)} card code(s)"
+            + (f" (also equal: {', '.join(repr(n) for n in equal[1:])})" if len(equal) > 1 else "")
+        )
+    overlapping = sorted(
+        ((len(codes & wanted), name, len(codes)) for name, codes in by_product.items() if codes & wanted),
+        reverse=True,
+    )
+    if overlapping:
+        shared, name, size = overlapping[0]
+        raise UncodedProductEvidenceError(
+            "asia_en_disagrees",
+            f"bandai_asia_en product {name!r} shares {shared} of this product's {len(wanted)} "
+            f"card code(s) but has {size}; no Asia-EN product has the same membership",
+        )
+    return "absent", None, (
+        f"none of the {len(wanted)} card code(s) appears in bandai_asia_en's uncoded catalogue "
+        f"({len(by_product)} products read); Japan-only, JP rules stand alone"
+    )
 
 
 def prove_uncoded_product(
@@ -313,6 +393,8 @@ def prove_uncoded_product(
     assets = {a["basename"]: a for a in _records(jp_root / "assets.jsonl")}
     codes: list[str] = []
     entry_ids: list[str] = []
+    seen_images: dict[str, set[str]] = {}
+    repeated: list[str] = []
     for e in sorted(members, key=lambda r: (r.get("card_code") or "", r.get("entry_id") or "")):
         code = (e.get("card_code") or "").strip()
         if not code:
@@ -332,17 +414,31 @@ def prove_uncoded_product(
                 f"the snapshot holds no fetched asset digest for {basename!r} ({code}); "
                 "a verified print cannot be created without artwork evidence",
             )
-        if code in codes:
-            raise UncodedProductEvidenceError(
-                "internally_consistent",
-                f"card code {code!r} appears more than once under {product_name!r}",
-            )
-        codes.append(code)
-        entry_ids.append(e.get("entry_id") or "")
+        # A code may repeat when Bandai lists each occurrence as its own entry at
+        # its own image address - a base and a holo reprint of one card can show
+        # the same picture (owner 2026-10-26). The same entry or the same image
+        # address twice is not two printings and is refused.
+        entry_id = e.get("entry_id") or ""
+        if code in seen_images:
+            if entry_id in entry_ids or basename in seen_images[code]:
+                raise UncodedProductEvidenceError(
+                    "internally_consistent",
+                    f"card code {code!r} appears more than once under {product_name!r} "
+                    "with the same entry or the same image address",
+                )
+            if code not in repeated:
+                repeated.append(code)
+        else:
+            codes.append(code)
+        seen_images.setdefault(code, set()).add(basename)
+        entry_ids.append(entry_id)
 
     proof = asia_en_absence_proof
+    asia_en_product = None
+    jp_only = True
     if proof is None:
-        proof = prove_asia_en_carries_no_uncoded_names(asia_en_root)
+        status, asia_en_product, proof = asia_en_agreement(codes, asia_en_root)
+        jp_only = status == "absent"
 
     return UncodedProductEvidence(
         product_name=product_name,
@@ -353,7 +449,9 @@ def prove_uncoded_product(
         member_card_codes=tuple(codes),
         member_entry_ids=tuple(entry_ids),
         snapshot_identity=snapshot_identity,
-        jp_only_validation=True,
+        jp_only_validation=jp_only,
         asia_en_absence_proof=proof,
         single_product_catchall=single_product_catchall,
+        asia_en_product=asia_en_product,
+        repeated_card_codes=tuple(repeated),
     )

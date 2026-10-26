@@ -73,7 +73,8 @@ class FakeFetcher:
 
 
 SCOPES = {"eb-05": {"series": ["550205"], "uncoded_products": []},
-          "measure": {"uncoded_series": ["550701"], "exclude_products": ["Gone"], "asia_en_measure": True},
+          "measure": {"uncoded_series": ["550701"], "exclude_products": ["Gone"], "asia_en_measure": True,
+                      "report_only": True},
           "family-deck-set": {"series": [], "uncoded_products": ["ファミリーデッキセット"]},
           "bad": {"series": ["5502"], "uncoded_products": []}}
 
@@ -162,27 +163,65 @@ class Measure(unittest.TestCase):
         self.assertEqual(ci.multi_product_sets(rows, ["P1"]), [["P1 + P2", 1]])
 
     def test_compact_report_groups_refusals_by_rule(self):
-        rows = [{"product": "A", "jp_rules": "pass", "members": 3},
-                {"product": "B", "jp_rules": "refused", "rule": "unambiguous_membership",
-                 "detail": "1 entr(y/ies) under 'B' name more than one product (e.g. 'P-001' -> ['B', 'C'])"},
+        rows = [{"product": "A", "jp_rules": "pass", "members": 3, "jp_only": False},
+                {"product": "J", "jp_rules": "pass", "members": 1, "jp_only": True, "repeated_card_codes": ["P-106"]},
+                {"product": "B", "jp_rules": "refused", "rule": "asia_en_disagrees",
+                 "detail": "bandai_asia_en product 'Pack EN' shares 2 of this product's 3 card code(s) but has 4"},
                 {"product": "D", "jp_rules": "refused", "rule": "internally_consistent",
-                 "detail": "card code 'P-106' appears more than once under 'D'"}]
+                 "detail": "card code 'P-106' appears more than once under 'D' with the same entry"}]
         out = ci.compact_uncoded(rows)
-        self.assertEqual(out["pass"], [["A", 3]])
-        self.assertEqual(out["refused"], {"unambiguous_membership": [["B", "P-001"]],
+        self.assertEqual((out["pass"], out["asia_en_agrees"], out["japan_only"]), (2, 1, [["J", 1]]))
+        self.assertEqual(out["flagged"], [["J", 1, "repeated:P-106"]])
+        self.assertEqual(out["refused"], {"asia_en_disagrees": [["B", "Pack EN"]],
                                           "internally_consistent": [["D", "P-106"]]})
 
-    def test_measure_scope_reports_family_deck_exception_and_asia_en_names(self):
+    def test_family_batches_select_by_pattern(self):
+        rows = [{"entry_id": "a", "source_series_id": "550901", "product_names": ["フラッグシップバトル2022 優勝記念品"]},
+                {"entry_id": "b", "source_series_id": "550901", "product_names": ["交流会3月開催記念品"]}]
+        scopes = {"fb": {"uncoded_series": ["550901"], "product_pattern": "フラッグシップ"},
+                  "rest": {"uncoded_series": ["550901"], "exclude_pattern": "フラッグシップ"}}
+        self.assertEqual(ci.expand_products(rows, ci.resolve_scope("fb", scopes)), ["フラッグシップバトル2022 優勝記念品"])
+        self.assertEqual(ci.expand_products(rows, ci.resolve_scope("rest", scopes)), ["交流会3月開催記念品"])
+        with self.assertRaises(common.Refused):
+            ci.resolve_scope("bad", {"bad": {"uncoded_series": ["550901"], "product_pattern": "("}})
+
+    def test_committed_family_batches_cover_each_product_once_except_known_overlap(self):
+        scopes = ci.load_scopes()
+        batches = [ci.resolve_scope(n, scopes) for n in ("flagship-battle", "standard-battle", "promotion-packs",
+                                                          "premium-card-collections", "magazines", "events-and-prizes",
+                                                          "other-limited")]
+        names = ["フラッグシップバトル2022 優勝記念品", "スタンダードバトルパックVol.4", "プロモーションパックVol.8",
+                 "プレミアムカードコレクション-ウタ-", "Vジャンプ9月特大号付録（2022年7月21日売）", "交流会3月開催記念品",
+                 "1st ANNIVERSARY SET"]
+        rows = [{"entry_id": str(i), "source_series_id": "550901", "product_names": [n]} for i, n in enumerate(names)]
+        picked = [ci.expand_products(rows, b) for b in batches]
+        self.assertEqual(picked, [[n] for n in names])
+
+    def test_measure_scope_reports_and_never_imports(self):
         importer = FakeImporter()
         with tempfile.TemporaryDirectory() as tmp:
             out = ci.run(tmp, scope="measure", fetcher=FakeFetcher(), main=importer, open_tunnel=OPEN, scopes=SCOPES)
+            with self.assertRaises(common.Refused):
+                ci.run(tmp, apply=True, scope="measure", expected_sha256="a" * 64, fetcher=FakeFetcher(),
+                       main=importer, open_tunnel=OPEN, scopes=SCOPES, backup=FRESH, now=NOON)
         self.assertEqual(importer.calls, [])
-        self.assertEqual(out["uncoded"]["pass"], [["ファミリーデッキセット", 1, "single_product_catchall"]])
+        self.assertEqual(out["uncoded"]["flagged"], [["ファミリーデッキセット", 1, "single_product_catchall"]])
+        self.assertEqual(out["uncoded"]["japan_only"], [["ファミリーデッキセット", 1]])  # FD codes not on Asia-EN
         self.assertEqual(out["exclude_products_not_found"], ["Gone"])
         asia = out["asia_en"]
-        self.assertEqual(asia["uncoded_series"], [["569901", "Promotion card"]])
-        self.assertEqual(asia["top_values"], [["Promotion Pack Vol.1", 1]])
+        self.assertEqual(asia["pages"], [["569901", "Promotion card", 1]])
+        self.assertEqual(asia["top_products"], [["Promotion Pack Vol.1", 1]])
         self.assertEqual(asia["obtain_block_labels"], [["Card Set(s)", 1]])
+
+    def test_an_asia_en_page_that_fails_refuses_rather_than_reading_absent(self):
+        class Broken(FakeFetcher):
+            def get(self, url):
+                if url.endswith("series=569901"):
+                    self.urls.append(url)
+                    return 500, b"", None
+                return super().get(url)
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
+            ci.run(tmp, scope="family-deck-set", fetcher=Broken(), main=FakeImporter(), open_tunnel=OPEN, scopes=SCOPES)
 
 
 class PlanDigest(unittest.TestCase):
@@ -276,17 +315,20 @@ class RunFlow(unittest.TestCase):
                        main=FakeImporter(), open_tunnel=OPEN, scopes=SCOPES, backup=stale)
         self.assertEqual(fetcher.urls, [])
 
-    def test_uncoded_products_are_reported_with_their_rule_and_never_applied(self):
+    def test_a_proven_uncoded_product_is_planned_and_its_evidence_is_in_the_sha(self):
         importer = FakeImporter()
         with tempfile.TemporaryDirectory() as tmp:
             out = ci.run(tmp, scope="family-deck-set", fetcher=FakeFetcher(), main=importer, open_tunnel=OPEN,
                          scopes=SCOPES)
-        self.assertEqual(importer.calls, [])
-        # Rule 6's proposed single-product exception is allowed in the report and flagged.
-        self.assertEqual(out["uncoded"]["pass"], [["ファミリーデッキセット", 1, "single_product_catchall"]])
-        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(common.Refused):
-            ci.run(tmp, apply=True, scope="family-deck-set", expected_sha256="a" * 64, fetcher=FakeFetcher(),
-                   main=importer, open_tunnel=OPEN, scopes=SCOPES)
+        argv = importer.calls[0]
+        self.assertEqual(argv[argv.index("--uncoded-product") + 1], "ファミリーデッキセット")
+        self.assertNotIn("--series", argv)
+        self.assertTrue(out["ok"])
+        scope = ci.resolve_scope("family-deck-set", SCOPES)
+        rows = ci.plan_rows(fake_plan(["EB05-001", "EB05-002"]))
+        self.assertNotEqual(ci.plan_sha(scope, rows), ci.plan_sha(scope, rows, ["ファミリーデッキセット"], "x"))
+        self.assertNotEqual(ci.plan_sha(scope, rows, ["ファミリーデッキセット"], "x"),
+                            ci.plan_sha(scope, rows, ["ファミリーデッキセット"], "y"))
 
 
 if __name__ == "__main__":

@@ -224,14 +224,19 @@ catalogue-gap request (owner 2026-10-26).
 
 1. Scope: a name in `docs/agent/CATALOGUE_IMPORT_SCOPES.json` (changed by PR). Coded series go to
    the importer's `--series`. Uncoded products (named, or every product inside an `uncoded_series`
-   minus `exclude_products`) are reported against `app.services.uncoded_product_evidence`: passes
-   with member counts, refusals grouped by rule, the product sets that share one entry (rule 4),
-   and the proposed single-product catch-all exception to rule 6 allowed and flagged (no import
-   path uses it). Not imported until the owner settles step C. `asia_en_measure` also reads the
-   Asia-EN picker and at most six of its uncoded series pages and reports what its "Card Set(s)"
-   block names (`promos-limited-measure` scope).
+   filtered by `product_pattern` / `exclude_pattern` / `exclude_products`) go to
+   `--uncoded-product` when they pass `app.services.uncoded_product_evidence` with the step C
+   amendments (owner 2026-10-26): per-product Asia-EN agreement (equal code set agrees, no shared
+   code is a recorded Japan-only release, partial overlap is refused for review), the
+   single-product catch-all (Family Deck Set), and a repeated code when each occurrence is its own
+   Bandai entry at its own image address (base and holo reprints). The rest are reported, grouped
+   by rule. `report_only` scopes (`promos-limited-measure`) never import. Family batches:
+   `flagship-battle`, `standard-battle`, `promotion-packs`, `premium-card-collections`,
+   `magazines`, `events-and-prizes`, `other-limited`, `family-deck-set`.
 2. Capture: a fresh Bandai JP snapshot in the run directory, every six-digit series page plus the
-   images of the scope's entries only; 1 request per second, honest User-Agent, stop on
+   images of the scope's entries only; with uncoded products, also Bandai's Asia-EN picker and
+   every one of its uncoded series pages (at most six; any failure refuses, so a missing page can
+   never read as "Japan-only"), written beside it as `bandai_asia_en/current`; 1 request per second, honest User-Agent, stop on
    401/403/429/451. Bandai's link labels in 入手情報 (カードリスト, 商品情報) are dropped by the
    parser (`official_cardlist.OBTAIN_INFO_LINK_LABELS`).
 3. Target: the importer's `verified_staging_target` with only `open_tunnel` rerouted
@@ -240,7 +245,8 @@ catalogue-gap request (owner 2026-10-26).
    the revision-equals-head check still run. The dry run's session is read-only at the server.
 4. Dry run: per-print rows (code, outcome, product, artwork variant, flags), outcome counts, the
    engine's dry-run report and `plan_sha256` over the scope, every whole planned print (identity,
-   official metadata, proposed card and product) and the entry record it was planned from.
+   official metadata, proposed card and product), the entry record it was planned from, the
+   uncoded products the importer is told to establish and the Asia-EN evidence file.
 5. `apply=true` with that SHA: refuses without a Railway backup of the staging Postgres volume
    under 24 hours old (the recovery point, as for `apply-migration`); re-captures, re-checks the
    quiet windows and re-plans; the importer refuses before the applier

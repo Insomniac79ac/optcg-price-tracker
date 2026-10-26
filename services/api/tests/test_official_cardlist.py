@@ -123,6 +123,15 @@ def test_navigation_links_in_the_obtain_block_are_not_products():
     assert "カードリスト" in page.entries[1].field("getInfo").value
 
 
+def test_the_asia_en_card_sets_block_is_read_as_products():
+    html = PAGE.replace(
+        "<h3>&#20837;&#25163;&#24773;&#22577;</h3>Premium Collection<br>Jump Campaign",
+        "<h3>Card Set(s)</h3>Promotion Pack Vol.1",
+    )
+    page = parse_card_list(html, "556901")
+    assert page.entries[1].product_names == ("Promotion Pack Vol.1",)
+
+
 def test_entries_for_card_returns_every_official_artwork():
     page = parse_card_list(PAGE, "550101")
     assert len(page.entries_for_card("OP01-001")) == 2
