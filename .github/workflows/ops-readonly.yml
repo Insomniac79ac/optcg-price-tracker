@@ -23,6 +23,7 @@ on:
           - web-smoke
           - capture-batch-preview
           - official-series-index
+          - snkr-page-check
       ledger_floor:
         description: "verify-lossless: exclusive ledger id floor"
         type: string
