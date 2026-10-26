@@ -224,6 +224,20 @@ def _coded_names_and_codes(series: Iterable[dict]) -> tuple[set[str], set[str]]:
     return names, codes
 
 
+# Partial Asia-EN overlaps the owner has reviewed and cleared as Japan-only
+# releases: {JP product name: (the Asia-EN product it overlaps, decision)}. A
+# clearance holds only while the disagreement names that same Asia-EN product;
+# any other overlap is refused again for review.
+ASIA_EN_OWNER_CLEARED: dict[str, tuple[str, str]] = {
+    "フラッグシップバトル2023 7月優勝記念品": (
+        "Winner prize for Flagship Battle in July 2024",
+        "owner 2026-10-26: Asia reuses Japanese prize art about a year later; the Asia "
+        "July 2024 prize is a separate event, so the Japanese July 2023 winner prize is a "
+        "Japan-only product",
+    ),
+}
+
+
 def asia_en_agreement(member_codes: Iterable[str], asia_en_root: Path) -> tuple[str, str | None, str]:
     """Step C (owner 2026-10-26, perfectionist): the cross-catalogue check, per product.
 
@@ -457,7 +471,13 @@ def prove_uncoded_product(
     asia_en_product = None
     jp_only = True
     if proof is None:
-        status, asia_en_product, proof = asia_en_agreement(codes, asia_en_root)
+        try:
+            status, asia_en_product, proof = asia_en_agreement(codes, asia_en_root)
+        except UncodedProductEvidenceError as exc:
+            cleared = ASIA_EN_OWNER_CLEARED.get(product_name)
+            if exc.rule != "asia_en_disagrees" or cleared is None or f"product {cleared[0]!r} shares" not in exc.detail:
+                raise
+            status, asia_en_product, proof = "absent", None, f"cleared as Japan-only ({cleared[1]}); {exc.detail}"
         jp_only = status == "absent"
 
     return UncodedProductEvidence(

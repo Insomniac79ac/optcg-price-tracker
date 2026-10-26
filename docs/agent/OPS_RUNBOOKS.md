@@ -227,7 +227,8 @@ catalogue-gap request (owner 2026-10-26).
    filtered by `product_pattern` / `exclude_pattern` / `exclude_products`) go to
    `--uncoded-product` when they pass `app.services.uncoded_product_evidence` with the step C
    amendments (owner 2026-10-26): per-product Asia-EN agreement (equal code set agrees, no shared
-   code is a recorded Japan-only release, partial overlap is refused for review), the
+   code is a recorded Japan-only release, partial overlap is refused for review unless the owner
+   cleared that exact overlap in `uncoded_product_evidence.ASIA_EN_OWNER_CLEARED`), the
    single-product catch-all (Family Deck Set), and a repeated code when each occurrence is its own
    Bandai entry at its own image address (base and holo reprints). The rest are reported, grouped
    by rule. `report_only` scopes (`promos-limited-measure`) never import. Family batches:
