@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Yuyu-Tei one-shot source probe (owner decision 2026-10-26, perfectionist). A single Yuyu-Tei challenge page at 2026-10-25 16:27Z paused every Yuyu shard (source_denial, no timer); there was no safe way to resume. app.services.source_recovery gains preview/plan/claim/resume for Yuyu-Tei, mirroring the SNKRDUNK discipline: preview_yuyu_probe (read only) is the single source of the plan the ops dry run shows; the owner-approved ops-write yuyu-source-probe apply writes exactly that plan (re-checked under the budget lock) as one authorized validation scope (no I/O, no reservation); the next scheduled Yuyu shard turn claims it (row lock, one winner) in its own execution record, runs one metered product capture from the collectors' own network with identity validated and no price written; only a completed, identity-verified HTTP 200 capture inside the attempt, with no denial during it, clears the pause; a challenge keeps it paused. Every probe is closed after its one attempt (stale, orphaned or ineligible ones at the next turn); a new owner approval may plan another: at most 3 per pause chain (the refresh or discovery denial that paused the source, challenged probes included), 6-hour cool-down after any challenged probe (marked on the probe even when its attempt could not settle). complete_claim now keeps a denial recorded during an attempt (required_denial) when the result writes its cursor, so a denial can never be erased by a completed result (also hardens the SNKRDUNK recovery path). permitted_recovery_request routes Yuyu-Tei work to the new check. Collector release: Yuyu shards (new recovery module, probe mode, due hook) and SNKRDUNK (services/api freshness_queue and source_recovery are in its import graph). Independent reviews: first PASS WITH NITS (fixed); second no blockers, three should-fix (cap reset by challenged probes, missing budget crashing turns, discovery denials unprobeable) and four nits, all fixed, plus the denial-erasure gap found while closing its test gaps. Third review: no blockers; two should-fix fixed (a 200 challenge page is now recorded as a denial at once, as discovery does, so a crash before settling cannot lose it; a 403/429 on an optional request to Yuyu-Tei's own hosts counts as a challenge for the probe) and the nits (close reason, claim re-checks authority, fingerprint before the write, bound above the request limit).",
+  "mission": "Yuyu-Tei one-shot source probe (owner decision 2026-10-26, perfectionist). A single Yuyu-Tei challenge page at 2026-10-25 16:27Z paused every Yuyu shard (source_denial, no timer); there was no safe way to resume. app.services.source_recovery gains preview/plan/claim/resume for Yuyu-Tei, mirroring the SNKRDUNK discipline: preview_yuyu_probe (read only) is the single source of the plan the ops dry run shows; the owner-approved ops-write yuyu-source-probe apply writes exactly that plan (re-checked under the budget lock) as one authorized validation scope (no I/O, no reservation); the next scheduled Yuyu shard turn claims it (row lock, one winner) in its own execution record, runs one metered product capture from the collectors' own network with identity validated and no price written; only a completed, identity-verified HTTP 200 capture inside the attempt, with no denial during it, clears the pause; a challenge keeps it paused. Every probe is closed after its one attempt (stale, orphaned or ineligible ones at the next turn); a new owner approval may plan another: at most 3 per pause chain (the refresh or discovery denial that paused the source, challenged probes included), 6-hour cool-down after any challenged probe (marked on the probe even when its attempt could not settle). complete_claim now keeps a denial recorded during an attempt (required_denial) when the result writes its cursor, so a denial can never be erased by a completed result (also hardens the SNKRDUNK recovery path). permitted_recovery_request routes Yuyu-Tei work to the new check. Also (owner 2026-10-26, option A, same release): SNKRDUNK renamed its CSS-module classes at ~08:29Z (styles-module-scss-module__slWKSa__mainImage became slWKSa_mainImage on every element), so the parser's '__mainImage' suffix match found no main image and every product page was refused (confirmed by ops-readonly snkr-page-check); the price chip matchers depend on the same pattern. One matcher (_has_module_class) now accepts exactly the two live shapes for a local name and nothing else (fails closed). Collector release: Yuyu shards (new recovery module, probe mode, due hook) and SNKRDUNK (parser fix; services/api freshness_queue and source_recovery are in its import graph). Independent reviews: first PASS WITH NITS (fixed); second no blockers, three should-fix (cap reset by challenged probes, missing budget crashing turns, discovery denials unprobeable) and four nits, all fixed, plus the denial-erasure gap found while closing its test gaps. Third review: no blockers; two should-fix fixed (a 200 challenge page is now recorded as a denial at once, as discovery does, so a crash before settling cannot lose it; a 403/429 on an optional request to Yuyu-Tei's own hosts counts as a challenge for the probe) and the nits (close reason, claim re-checks authority, fingerprint before the write, bound above the request limit).",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -44,6 +44,16 @@
     },
     {
       "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/extractor.py"
+      ],
+      "effects": [
+        "application",
+        "source_envelope"
+      ],
+      "reason": "SNKRDUNK CSS-module class matching accepts the old (prefix__hash__name) and new (hash_name) shapes for main image and price chips; any other token shape is refused as before. Diagnostic selector labels renamed."
+    },
+    {
+      "files": [
         "scripts/ops/yuyu_probe.py",
         "scripts/ops/run.py"
       ],
@@ -68,12 +78,14 @@
         "services/api/tests/test_raw_browser_boundary.py",
         "services/yuyutei_collector/tests/test_source_probe.py",
         "services/yuyutei_collector/tests/test_turn_browser.py",
-        "scripts/tests/test_ops_yuyu_probe.py"
+        "scripts/tests/test_ops_yuyu_probe.py",
+        "services/snkrdunk_collector/tests/test_css_module_naming.py",
+        "services/snkrdunk_collector/tests/test_retained_gallery.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Pause-chain cap and cool-down (challenged probes included, unsettled challenges included), discovery denials, plan equality on apply, read-only preview, eligible mapping choice, one claim, ordinary dispatch stays paused, verified capture resumes, unverified/late/challenged/denied-mid-capture/stale never resume, manual unpause and missing budget, bounded lease; end to end on PostgreSQL with the collector consumer and real Attempt; probe mode writes no price; runbook SHA and apply gate."
+      "reason": "Pause-chain cap and cool-down (challenged probes included, unsettled challenges included), discovery denials, plan equality on apply, read-only preview, eligible mapping choice, one claim, ordinary dispatch stays paused, verified capture resumes, unverified/late/challenged/denied-mid-capture/stale never resume, manual unpause and missing budget, bounded lease; end to end on PostgreSQL with the collector consumer and real Attempt; probe mode writes no price; runbook SHA and apply gate. SNKRDUNK: the same product parses identically in the fixture, pre-2026-10-26 and post-2026-10-26 class shapes; only exact CSS-module tokens match; the refused live markup is found again."
     },
     {
       "files": [
@@ -93,7 +105,8 @@
         "Yuyu-Tei source dispatch budget, only through the owner-approved probe"
       ],
       "routes": [
-        "one metered Yuyu-Tei product capture per owner-approved probe, from the collectors' network"
+        "one metered Yuyu-Tei product capture per owner-approved probe, from the collectors' network",
+        "SNKRDUNK product pages parsed again (no change to which pages are fetched)"
       ],
       "dependencies": [
         "staging after #220",
@@ -107,7 +120,7 @@
     "recovery": {
       "artifact": "780cc263f58492e312443e5335891eb604cf91c3",
       "procedure": "Collectors: the sequential rollout restores every touched collector on failure; afterwards collector-redeploy to the previous fleet pin. Code: native revert PR with its own mission file.",
-      "trigger": "A collector failing after release, or a probe resuming without a verified capture.",
+      "trigger": "A collector failing after release, a probe resuming without a verified capture, or SNKRDUNK captures still refused (or prices mis-parsed) after release.",
       "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
       "validation": [
         "services/api/tests/test_yuyu_probe_postgres.py",
@@ -116,7 +129,8 @@
         "services/api/tests/test_source_recovery_postgres.py",
         "services/yuyutei_collector/tests/test_source_probe.py",
         "scripts/tests/test_ops_yuyu_probe.py",
-        "scripts/tests/test_staging_mission.py"
+        "scripts/tests/test_staging_mission.py",
+        "services/snkrdunk_collector/tests/test_css_module_naming.py"
       ]
     },
     "verification": {
@@ -128,9 +142,10 @@
       "post_change": [
         "services/api/app/services/source_recovery.py",
         "services/api/app/services/freshness_queue.py",
-        "services/yuyutei_collector/yuyutei_collector/recovery.py"
+        "services/yuyutei_collector/yuyutei_collector/recovery.py",
+        "services/snkrdunk_collector/snkrdunk_collector/extractor.py"
       ],
-      "observation_window": "Delivery verify, then yuyu-source-probe dry run, owner-approved apply, and staging-state after the next Yuyu turn."
+      "observation_window": "Delivery verify; SNKRDUNK captures resume with images and prices on the next SNKR turns (staging-state); then yuyu-source-probe dry run, owner-approved apply, and staging-state after the next Yuyu turn."
     }
   },
   "deployment_verification": {

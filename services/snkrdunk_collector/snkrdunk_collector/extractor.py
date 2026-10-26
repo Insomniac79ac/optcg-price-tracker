@@ -34,9 +34,32 @@ AWAITING_LISTING_TEXT = "出品待ち"
 PRICE_DIGITS_RE = re.compile(r"([\d,]+)")
 
 
-def _class_has_suffix(tag: Tag, suffix: str) -> bool:
+# SNKRDUNK's CSS-module class names: a per-deploy hash, then the component's
+# local name. Two shapes seen live: "styles-module-scss-module__slWKSa__mainImage"
+# (until 2026-10-26) and "slWKSa_mainImage" (from 2026-10-26 ~08:29Z). The hash
+# segment never contains an underscore in either; a token that does not have
+# this exact shape is not matched (fails closed: the page is refused, not guessed).
+_MODULE_CLASS_RE = r"(?:[\w-]+__)?[A-Za-z0-9-]+_{{1,2}}{local}"
+
+
+def _module_class(local: str) -> re.Pattern[str]:
+    return re.compile(_MODULE_CLASS_RE.format(local=re.escape(local)))
+
+
+_MODULE_CLASS_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def _has_module_class(tag: Tag, local: str) -> bool:
+    """True when one of the tag's classes is the CSS-module class for `local`."""
+    pattern = _MODULE_CLASS_CACHE.get(local)
+    if pattern is None:
+        pattern = _MODULE_CLASS_CACHE[local] = _module_class(local)
     classes = tag.get("class") or []
-    return any(c.endswith(suffix) for c in classes)
+    return any(pattern.fullmatch(c) for c in classes)
+
+
+def _module_selector(element: str, local: str) -> str:
+    return f'{element}[css-module "{local}"]'
 
 
 def find_condition_chip_container(soup: BeautifulSoup) -> tuple[Tag | None, dict[str, Any]]:
@@ -48,10 +71,10 @@ def find_condition_chip_container(soup: BeautifulSoup) -> tuple[Tag | None, dict
     category) is a `<button class="...__chip">` containing a
     `<p class="...__variant">` label and either a `<p class="...__price">`
     or `<p class="...__awaiting">`; all such buttons share one direct
-    parent container. CSS-module hash prefixes change per deploy, so
-    matching is done on the stable suffix only.
+    parent container. CSS-module hashes change per deploy (and the naming
+    shape changed once), so matching is on the local name (_has_module_class).
     """
-    chip_buttons = [b for b in soup.find_all("button") if _class_has_suffix(b, "__chip")]
+    chip_buttons = [b for b in soup.find_all("button") if _has_module_class(b, "chip")]
     diagnostics: dict[str, Any] = {"chip_button_count": len(chip_buttons)}
     if not chip_buttons:
         diagnostics["reason"] = "no_chip_buttons_found"
@@ -69,18 +92,14 @@ def find_condition_chip_container(soup: BeautifulSoup) -> tuple[Tag | None, dict
     labels = []
     complete = True
     for chip in chip_buttons:
-        variants = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__variant")]
-        values = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__price") or _class_has_suffix(p, "__awaiting")]
+        variants = [p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "variant")]
+        values = [p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "price") or _has_module_class(p, "awaiting")]
         if len(variants) != 1 or not variants[0].get_text(strip=True) or len(values) != 1 or not values[0].get_text(strip=True):
             complete = False
         else:
             labels.append(variants[0].get_text(strip=True))
     diagnostics["category_labels_complete"] = complete and len(labels) == len(set(labels))
-    diagnostics["container_selector"] = 'div (parent of button[class$="__chip"])'
-    diagnostics["row_selector"] = 'button[class$="__chip"]'
-    diagnostics["condition_label_selector"] = 'p[class$="__variant"]'
-    diagnostics["price_selector"] = 'p[class$="__price"]'
-    diagnostics["awaiting_selector"] = 'p[class$="__awaiting"]'
+
     return container, diagnostics
 
 
@@ -100,10 +119,10 @@ def extract_raw_conditions(soup: BeautifulSoup) -> dict[str, Any]:
 
     conditions: dict[str, Any] = {}
     for chip in container.find_all("button", recursive=False):
-        if not _class_has_suffix(chip, "__chip"):
+        if not _has_module_class(chip, "chip"):
             continue
         variant_el = next(
-            (p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__variant")), None
+            (p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "variant")), None
         )
         if variant_el is None:
             continue
@@ -112,10 +131,10 @@ def extract_raw_conditions(soup: BeautifulSoup) -> dict[str, Any]:
             continue
 
         price_el = next(
-            (p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__price")), None
+            (p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "price")), None
         )
         awaiting_el = next(
-            (p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__awaiting")), None
+            (p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "awaiting")), None
         )
 
         price_jpy: int | None = None
@@ -149,15 +168,15 @@ def extract_psa10(soup: BeautifulSoup) -> dict[str, Any]:
         return {"outcome": "parsing_failure", "price_jpy": None}
     chips = []
     for chip in container.find_all("button", recursive=False):
-        variants = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__variant")]
-        if _class_has_suffix(chip, "__chip") and len(variants) == 1 and variants[0].get_text(strip=True) == "PSA10":
+        variants = [p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "variant")]
+        if _has_module_class(chip, "chip") and len(variants) == 1 and variants[0].get_text(strip=True) == "PSA10":
             chips.append(chip)
     if not chips:
         return {"outcome": "absent" if diagnostics["category_labels_complete"] else "parsing_failure", "price_jpy": None}
     if len(chips) != 1:
         return {"outcome": "parsing_failure", "price_jpy": None}
-    prices = [p.get_text(strip=True) for p in chips[0].find_all("p", recursive=False) if _class_has_suffix(p, "__price")]
-    waiting = [p.get_text(strip=True) for p in chips[0].find_all("p", recursive=False) if _class_has_suffix(p, "__awaiting")]
+    prices = [p.get_text(strip=True) for p in chips[0].find_all("p", recursive=False) if _has_module_class(p, "price")]
+    waiting = [p.get_text(strip=True) for p in chips[0].find_all("p", recursive=False) if _has_module_class(p, "awaiting")]
     if not prices and waiting == ["出品待ち"]:
         return {"outcome": "no_listing", "price_jpy": None}
     if len(prices) == 1 and not waiting:
@@ -170,9 +189,10 @@ def extract_psa10(soup: BeautifulSoup) -> dict[str, Any]:
 def find_main_product_image(soup: BeautifulSoup) -> tuple[str | None, dict[str, Any]]:
     """Locate the product's own primary photo, not the site-wide OGP
     fallback image (meta[property=og:image] is a generic SNKRDUNK logo,
-    confirmed live - not product-specific). Confirmed live selector: an
-    <img class="...__mainImage"> inside the page's single image carousel."""
-    imgs = [img for img in soup.find_all("img") if _class_has_suffix(img, "__mainImage")]
+    confirmed live - not product-specific). Confirmed live selector: the one
+    <img> whose CSS-module class is "mainImage" (_has_module_class), inside the
+    page's single image carousel."""
+    imgs = [img for img in soup.find_all("img") if _has_module_class(img, "mainImage")]
     diagnostics = {"main_image_candidate_count": len(imgs)}
     if len(imgs) != 1:
         diagnostics["reason"] = "expected_exactly_one_mainImage_img"
@@ -185,7 +205,7 @@ def find_main_product_image(soup: BeautifulSoup) -> tuple[str | None, dict[str, 
         if retained:
             return retained, {**diagnostics, "reason": "retained_single_primary_gallery", "selector": "ApparelGalleryContainer.mainImages[0].src", "dom_placeholder": src}
     diagnostics["reason"] = "ok"
-    diagnostics["selector"] = 'img[class$="__mainImage"]'
+    diagnostics["selector"] = _module_selector("img", "mainImage")
     return src, diagnostics
 
 
