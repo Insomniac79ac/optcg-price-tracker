@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "mission": "Yuyu-Tei one-shot source probe (owner decision 2026-10-26, perfectionist). A single Yuyu-Tei challenge page at 2026-10-25 16:27Z paused every Yuyu shard (source_denial, no timer); there was no safe way to resume. app.services.source_recovery gains plan/claim/resume for Yuyu-Tei, mirroring the SNKRDUNK discipline: the owner-approved ops-write yuyu-source-probe records one authorized validation scope for the current denial and one approved mapping (no I/O, no reservation); the next scheduled Yuyu shard turn claims it (row lock, one winner), runs one metered product capture from the collectors' own network with identity validated and no price written; only a completed, identity-verified HTTP 200 capture inside the attempt clears the pause; a challenge keeps it paused and the authority can never be reused. permitted_recovery_request routes Yuyu-Tei work to the new check; the SNKRDUNK path is unchanged. Collector release: Yuyu shards (new recovery module, probe mode, due hook) and SNKRDUNK (services/api source_recovery is in its import graph).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/source_recovery.py"
+      ],
+      "effects": [
+        "application",
+        "source_envelope"
+      ],
+      "reason": "Yuyu-Tei probe plan/claim/resume; permitted_recovery_request routes Yuyu-Tei to its own check. SNKRDUNK branches unchanged."
+    },
+    {
+      "files": [
+        "services/yuyutei_collector/yuyutei_collector/recovery.py",
+        "services/yuyutei_collector/yuyutei_collector/collect.py",
+        "services/yuyutei_collector/yuyutei_collector/due.py"
+      ],
+      "effects": [
+        "application",
+        "source_envelope"
+      ],
+      "reason": "consume_planned_probe before ordinary due work; probe mode validates identity without writing a price."
+    },
+    {
+      "files": [
+        "scripts/ops/yuyu_probe.py",
+        "scripts/ops/run.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "ops-write yuyu-source-probe: dry run facts and plan SHA; apply records one probe."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Runbook choice and input description. No secret, gate, permission or timeout change."
+    },
+    {
+      "files": [
+        "services/api/tests/test_yuyu_probe_postgres.py",
+        "services/yuyutei_collector/tests/test_source_probe.py",
+        "services/yuyutei_collector/tests/test_turn_browser.py",
+        "scripts/tests/test_ops_yuyu_probe.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Plan never replays, one claim, ordinary dispatch stays paused, verified capture resumes, unverified/challenged/stale never resume; probe mode writes no price; consumer settles every path; runbook preconditions and apply gate."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "CLAUDE.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook section and list."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "10 staging collectors (sequential CI release)",
+        "Yuyu-Tei source dispatch budget, only through the owner-approved probe"
+      ],
+      "routes": [
+        "one metered Yuyu-Tei product capture per owner-approved probe, from the collectors' network"
+      ],
+      "dependencies": [
+        "staging after #220",
+        "then a fleet-pin PR (yuyu_reader_component and snkr_component to the merge SHA)"
+      ],
+      "deployment_impact": "Collector release: every collector re-uploaded on the merge commit in its own slot with automatic rollback. Behaviour changes only when an owner-approved probe exists; otherwise the shards run exactly as before (still paused).",
+      "database_writes": 0,
+      "source_requests": 1,
+      "estimated_runtime_minutes": 150
+    },
+    "recovery": {
+      "artifact": "780cc263f58492e312443e5335891eb604cf91c3",
+      "procedure": "Collectors: the sequential rollout restores every touched collector on failure; afterwards collector-redeploy to the previous fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "A collector failing after release, or a probe resuming without a verified capture.",
+      "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
+      "validation": [
+        "services/api/tests/test_yuyu_probe_postgres.py",
+        "services/api/tests/test_source_recovery_postgres.py",
+        "services/yuyutei_collector/tests/test_source_probe.py",
+        "scripts/tests/test_ops_yuyu_probe.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/source_recovery.py",
+        "services/yuyutei_collector/yuyutei_collector/recovery.py"
+      ],
+      "observation_window": "Delivery verify, then yuyu-source-probe dry run, owner-approved apply, and staging-state after the next Yuyu turn."
+    }
+  },
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "838a810d-37a0-4bd4-9290-16d64e68ee45"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "856b32ee-ab55-4983-800a-63eba4dba0d6"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "740ec58c-25fa-423c-8b4c-b60b5566a103"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "71686eff-e9f9-4ccc-83e1-c048ca06299d"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "be2a309f-3397-41fe-98be-c3eb1c504e4c"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "4420042e-53de-42a4-9c67-aa4b9c063004"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "633b333b-f051-4fb9-b9ff-a43c9191aa57"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "a706daa2-644a-49e8-9108-ae1acd37c922"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "fdea2a73-8d8b-4c1c-a40f-adaa2dd62fc9"
+      },
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "e4942d80-d246-43a4-8722-ef9a6c46c506"
+      }
+    ]
+  },
+  "diff_sha256": ""
+}
