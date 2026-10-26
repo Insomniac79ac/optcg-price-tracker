@@ -1,6 +1,8 @@
-"""yuyu-source-probe (scripts/ops/yuyu_probe.py): preconditions, plan digest, apply gate, SQL on the schema."""
-from datetime import datetime, timezone
-import os
+"""yuyu-source-probe (scripts/ops/yuyu_probe.py): dry run, plan digest and apply gate.
+
+The plan itself (preconditions, pause chain, cap, cool-down, mapping choice) is
+app.services.source_recovery.preview_yuyu_probe, tested on PostgreSQL in
+services/api/tests/test_yuyu_probe_postgres.py; here the preview is a stand-in."""
 from pathlib import Path
 import sys
 import tempfile
@@ -10,74 +12,29 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 from ops import common, run, yuyu_probe as yp  # noqa: E402
 
-AT = datetime(2026, 10, 25, 16, 27, tzinfo=timezone.utc)
+PLAN = {"source_id": 2, "root_denial_attempt_id": 900, "denial_attempt_id": 900, "probe_number": 1,
+        "mapping_id": 77, "card_print_id": 66, "product_identity": "op01:10001", "request_bound": 60}
+FACTS = {"budget": {"pause_reason": "source_denial"},
+         "denial": {"attempt_id": 900, "at": "2026-10-25T16:27:00+00:00", "work_kind": "refresh"},
+         "root_denial_attempt_id": 900, "probes": [],
+         "mapping": {"mapping_id": 77, "card_print_id": 66, "source_url": "https://yuyu-tei.jp/x",
+                     "last_success": "2026-10-25T10:00:00+00:00"}}
 
 
-def facts(**over):
-    base = {
-        "budget": {"source_id": 2, "enabled": True, "pause_reason": "source_denial", "paused_until": None,
-                   "reserved_requests": 0, "used_requests": 10, "request_limit": 100000},
-        "denial": {"attempt_id": 900, "finished_at": AT, "work_kind": "refresh", "work_id": 5,
-                   "failure": "source_denial;no_extraction_attempted:classification=challenge_or_captcha"},
-        "mapping": {"mapping_id": 77, "card_print_id": 66, "product_identity": "yuyutei:op01:10001",
-                    "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10001", "last_success": AT,
-                    "refresh_cost": 40},
-        "probes": [],
-    }
-    for key, value in over.items():
-        if isinstance(value, dict) and isinstance(base.get(key), dict):
-            base[key] = {**base[key], **value}
-        else:
-            base[key] = value
-    return base
+def preview(plan=PLAN, problems=()):
+    return lambda: (dict(plan) if plan else None, list(problems), FACTS)
 
 
 class Plan(unittest.TestCase):
-    def test_a_paused_source_with_a_refresh_denial_plans_one_probe(self):
-        p, problems = yp.plan(facts())
-        self.assertEqual(problems, [])
-        self.assertEqual((p["denial_attempt_id"], p["mapping_id"], p["probe_number"], p["request_bound"]),
-                         (900, 77, 1, 60))
-        self.assertEqual(len(yp.plan_sha(p)), 64)
+    def test_sha_covers_every_plan_key_from_the_api(self):
+        from app.services.source_recovery import YUYU_PROBE_PLAN_KEYS
 
-    def test_limits_match_the_api(self):
-        from app.services import source_recovery as sr
-        self.assertEqual((yp.MAX_REQUESTS, yp.PROBES_PER_DENIAL), (sr.YUYU_PROBE_MAX_REQUESTS, sr.YUYU_PROBES_PER_DENIAL))
-        self.assertEqual(yp.COOLDOWN_HOURS * 3600, sr.YUYU_PROBE_COOLDOWN.total_seconds())
-
-    def test_a_closed_probe_allows_the_next_and_the_bound_follows_the_refresh_cost(self):
-        p, problems = yp.plan(facts(probes=[{"state": "blocked"}], mapping={"refresh_cost": 150}))
-        self.assertEqual((problems, p["probe_number"], p["request_bound"]), ([], 2, 170))
-
-    def test_after_a_probe_challenge_the_cool_down_applies(self):
-        from datetime import timedelta
-        f = facts(denial={"work_kind": "validation"})
-        self.assertIsNone(yp.plan(f, now=AT + timedelta(hours=1))[0])
-        self.assertIsNotNone(yp.plan(f, now=AT + timedelta(hours=7))[0])
-
-    def test_every_precondition_refuses(self):
-        cases = {
-            "not paused": facts(budget={"pause_reason": None}),
-            "timed pause": facts(budget={"paused_until": AT}),
-            "disabled": facts(budget={"enabled": False}),
-            "probe denial in cool-down": facts(denial={"work_kind": "validation", "finished_at": datetime.now(timezone.utc)}),
-            "discovery denial": facts(denial={"work_kind": "discovery"}),
-            "no denial": facts(denial=None),
-            "open probe": facts(probes=[{"state": "pending"}]),
-            "limit": facts(probes=[{"state": "blocked"}] * 3),
-            "no mapping": facts(mapping=None),
-            "reserved": facts(budget={"reserved_requests": 3}),
-        }
-        for name, f in cases.items():
-            with self.subTest(name):
-                p, problems = yp.plan(f)
-                self.assertIsNone(p)
-                self.assertTrue(problems)
-
-    def test_sha_moves_with_any_plan_field(self):
-        p, _ = yp.plan(facts())
-        q, _ = yp.plan(facts(mapping={"mapping_id": 78}))
-        self.assertNotEqual(yp.plan_sha(p), yp.plan_sha(q))
+        self.assertEqual(set(PLAN), set(YUYU_PROBE_PLAN_KEYS))
+        base = yp.plan_sha(PLAN)
+        self.assertEqual(len(base), 64)
+        for key in YUYU_PROBE_PLAN_KEYS:
+            changed = {**PLAN, key: PLAN[key] + 1 if isinstance(PLAN[key], int) else PLAN[key] + "x"}
+            self.assertNotEqual(yp.plan_sha(changed), base, key)
 
     def test_registered_as_collector_affecting_write(self):
         self.assertEqual(run.RUNBOOKS["yuyu-source-probe"][:2], ("write", True))
@@ -87,55 +44,37 @@ class RunFlow(unittest.TestCase):
     def test_dry_run_writes_nothing_and_reports_the_sha(self):
         written = []
         with tempfile.TemporaryDirectory() as tmp:
-            out = yp.run(tmp, read=lambda: facts(), write=written.append)
+            out = yp.run(tmp, preview=preview(), write=written.append)
             self.assertTrue((Path(tmp) / "yuyu-source-probe.json").is_file())
         self.assertTrue(out["ok"])
         self.assertEqual(written, [])
-        self.assertEqual(out["probe_mapping"]["mapping_id"], 77)
+        self.assertEqual((out["probe_mapping"]["mapping_id"], out["pause_chain_root"], out["probe_number"]),
+                         (77, 900, 1))
+        self.assertEqual(out["plan_sha256"], yp.plan_sha(PLAN))
 
-    def test_apply_needs_the_dry_run_sha_and_writes_once(self):
+    def test_apply_needs_the_dry_run_sha_and_writes_the_plan_once(self):
         with tempfile.TemporaryDirectory() as tmp:
-            sha = yp.run(tmp, read=lambda: facts())["plan_sha256"]
+            sha = yp.run(tmp, preview=preview())["plan_sha256"]
             written = []
-            out = yp.run(tmp, apply=True, expected_sha256=sha, read=lambda: facts(),
+            out = yp.run(tmp, apply=True, expected_sha256=sha, preview=preview(),
                          write=lambda p: written.append(p) or 4242)
-            self.assertEqual((out["probe_work_id"], len(written)), (4242, 1))
+            self.assertEqual((out["probe_work_id"], written), (4242, [PLAN]))
             with self.assertRaises(common.Refused):
-                yp.run(tmp, apply=True, expected_sha256="0" * 64, read=lambda: facts(), write=written.append)
+                yp.run(tmp, apply=True, expected_sha256="0" * 64, preview=preview(), write=written.append)
+            with self.assertRaises(common.Refused):  # the facts moved since the dry run
+                yp.run(tmp, apply=True, expected_sha256=sha, preview=preview({**PLAN, "mapping_id": 78}),
+                       write=written.append)
             with self.assertRaises(common.Refused):
-                yp.run(tmp, apply=True, expected_sha256=sha, read=lambda: facts(budget={"pause_reason": None}),
+                yp.run(tmp, apply=True, expected_sha256=sha, preview=preview(None, ["not paused"]),
                        write=written.append)
         self.assertEqual(len(written), 1)
 
     def test_dry_run_with_a_problem_reports_not_ok(self):
         with tempfile.TemporaryDirectory() as tmp:
-            out = yp.run(tmp, read=lambda: facts(probes=[{"state": "claimed"}]))
+            out = yp.run(tmp, preview=preview(None, ["an earlier probe of this pause is still open"]))
         self.assertFalse(out["ok"])
         self.assertIsNone(out["plan_sha256"])
-
-
-@unittest.skipUnless(os.environ.get("OPS_TEST_POSTGRES_URL"), "needs OPS_TEST_POSTGRES_URL")
-class SqlOnSchema(unittest.TestCase):
-    def test_fact_queries_run_read_only_on_the_schema(self):
-        import psycopg
-        from psycopg.rows import dict_row
-        import sqlalchemy as sa
-        import app.models  # noqa: F401
-        from app.db import Base
-        from ops import db as ops_db
-
-        url = os.environ["OPS_TEST_POSTGRES_URL"]
-        engine = sa.create_engine(url)
-        Base.metadata.create_all(engine)
-        engine.dispose()
-        with psycopg.connect(url.replace("postgresql+psycopg://", "postgresql://"), options=ops_db.options(),
-                             row_factory=dict_row) as conn:
-            with self.assertRaises(common.Refused):  # empty schema: no Yuyu-Tei budget
-                yp.read_facts(conn)
-            conn.rollback()
-            for sql, params in ((yp.DENIAL_SQL, {"source_id": 1}), (yp.MAPPING_SQL, {"source_id": 1}),
-                                (yp.PROBE_SQL, {"source_id": 1, "prefix": "x%"})):
-                self.assertEqual(conn.execute(sql, params).fetchall(), [])
+        self.assertEqual(out["problems"], ["an earlier probe of this pause is still open"])
 
 
 if __name__ == "__main__":

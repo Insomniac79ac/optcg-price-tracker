@@ -1,7 +1,7 @@
 """Yuyu-Tei source probe (owner 2026-10-26): probe mode validates without writing a price, and
 the scheduled consumer resumes only on a completed probe. Playwright and the queue are fakes."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -68,14 +68,18 @@ class FakeQueueAttempt:
     def __init__(self, session, claim):
         self.claim, self.result, self.denied, self.stopped = claim, None, False, None
         self.raw_snapshot_id, self.charged_cost, self.finished = None, 5, []
+        self.health = {"http_403": 0, "http_429": 0, "optional_resource": 0}
 
     def finish(self, result):
         self.finished.append(result)
         return True
 
 
-def consume(runner, claim=SimpleNamespace(work_id=7, claim_token="t", resume_cursor={"mapping_id": 3}),
-            resume_effect=None):
+CLAIM = SimpleNamespace(work_id=7, claim_token="t", resume_cursor={"mapping_id": 3})
+LEASE = timedelta(minutes=4)
+
+
+def consume(runner, claim=CLAIM, resume_effect=None, telemetry=None):
     session = MagicMock()
     with (
         patch.object(recovery, "claim_yuyu_probe", return_value=claim),
@@ -83,14 +87,18 @@ def consume(runner, claim=SimpleNamespace(work_id=7, claim_token="t", resume_cur
         patch.object(recovery, "resume_after_yuyu_probe", side_effect=resume_effect) as resume,
         patch.object(recovery, "close_yuyu_probe") as close,
     ):
-        result = recovery.consume_planned_probe(session, 1, runner=runner, owner="yuyutei-probe-0")
+        result = recovery.consume_planned_probe(session, 1, runner=runner, owner="yuyutei-probe-0",
+                                                lease=LEASE, telemetry=telemetry)
     close.assert_called_once()  # one-shot: closed whatever happened
-    return result, resume
+    return result, resume, close
 
 
 def test_no_authorized_probe_means_ordinary_work():
+    telemetry = {"stopped_reason": None}
     with patch.object(recovery, "claim_yuyu_probe", return_value=None):
-        assert recovery.consume_planned_probe(MagicMock(), 1, runner=MagicMock(), owner="o") is None
+        assert recovery.consume_planned_probe(MagicMock(), 1, runner=MagicMock(), owner="o", lease=LEASE,
+                                              telemetry=telemetry) is None
+    assert telemetry["stopped_reason"] == "source_probe_not_claimed"
 
 
 def test_a_completed_probe_resumes_the_source():
@@ -99,26 +107,45 @@ def test_a_completed_probe_resumes_the_source():
         freshness.result = CaptureResult("completed", raw_snapshot_id=11)
         return SimpleNamespace(source_denied=False, reasons=[])
 
-    result, resume = consume(runner)
-    assert result["resumed"] is True and result["status"] == "completed"
+    telemetry = {"http_403": 0, "http_429": 0, "optional_resource": 0, "challenge": 0, "stopped_reason": None}
+    result, resume, close = consume(runner, telemetry=telemetry)
+    assert result["resumed"] is True and result["status"] == "completed" and result["challenged"] is False
     resume.assert_called_once()
+    assert close.call_args.kwargs["challenged"] is False
+    assert telemetry["stopped_reason"] == "source_probe_resumed"
 
 
-def test_a_challenged_probe_stays_paused():
+def test_a_challenged_probe_stays_paused_and_is_marked():
     def runner(session, mapping_id, *, freshness, probe):
         freshness.denied = True
-        return SimpleNamespace(source_denied=True, reasons=["no_extraction_attempted:classification=challenge_or_captcha"])
+        return SimpleNamespace(source_denied=True, classification="challenge_or_captcha",
+                               reasons=["no_extraction_attempted:classification=challenge_or_captcha"])
 
-    result, resume = consume(runner)
+    telemetry = {"http_403": 0, "http_429": 0, "optional_resource": 0, "challenge": 0, "stopped_reason": None}
+    result, resume, close = consume(runner, telemetry=telemetry)
     assert result["status"] == "source_denial" and result["resumed"] is False
     resume.assert_not_called()
+    assert close.call_args.kwargs["challenged"] is True
+    assert (telemetry["stopped_reason"], telemetry["challenge"]) == ("source_denial", 1)
+
+
+def test_a_denial_beside_a_completed_result_never_resumes():
+    def runner(session, mapping_id, *, freshness, probe):
+        freshness.denied = True
+        freshness.result = CaptureResult("completed", raw_snapshot_id=11)
+        return SimpleNamespace(source_denied=False, reasons=[])
+
+    result, resume, close = consume(runner)
+    assert result["resumed"] is False and result["challenged"] is True
+    resume.assert_not_called()
+    assert close.call_args.kwargs["challenged"] is True
 
 
 def test_a_crashing_probe_is_settled_not_left_claimed():
     def runner(session, mapping_id, *, freshness, probe):
         raise RuntimeError("browser died")
 
-    result, resume = consume(runner)
+    result, resume, _ = consume(runner)
     assert result["status"] == "transient_failure" and result["failure"] == "RuntimeError"
     resume.assert_not_called()
 
@@ -128,6 +155,31 @@ def test_a_refused_resume_fails_closed_and_still_closes_the_probe():
         freshness.result = CaptureResult("completed", raw_snapshot_id=11)
         return SimpleNamespace(source_denied=False, reasons=[])
 
-    result, _ = consume(runner, resume_effect=ValueError("probe evidence is no longer current"))
+    result, _, _ = consume(runner, resume_effect=ValueError("probe evidence is no longer current"))
     assert result["resumed"] is False
     assert "no longer current" in result["resume_refused"]
+
+
+def test_serve_skips_the_execution_when_no_probe_is_due():
+    execution = MagicMock()
+    with patch.object(recovery, "yuyu_probe_ready", return_value=False):
+        assert recovery.serve_planned_probe(MagicMock(), 1, runner=MagicMock(), shard_index=0,
+                                            mapping_seconds=180, execution=execution) is None
+    execution.assert_not_called()
+
+
+def test_serve_caps_the_lease_for_a_long_mapping_timeout():
+    from contextlib import nullcontext
+
+    seen = {}
+
+    def fake_consume(session, source_id, **kwargs):
+        seen.update(kwargs)
+        return {"status": "completed"}
+
+    with patch.object(recovery, "yuyu_probe_ready", return_value=True), \
+         patch.object(recovery, "consume_planned_probe", side_effect=fake_consume):
+        recovery.serve_planned_probe(MagicMock(), 1, runner=MagicMock(), shard_index=2, mapping_seconds=3600,
+                                     execution=lambda *a, **k: nullcontext(None))
+    assert seen["lease"] == recovery.YUYU_PROBE_MAX_LEASE
+    assert seen["owner"] == "yuyutei-probe-2"

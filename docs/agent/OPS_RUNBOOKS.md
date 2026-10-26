@@ -260,24 +260,30 @@ catalogue-gap request (owner 2026-10-26).
 (`source_dispatch_budgets.pause_reason = source_denial`, no timer), authorize ONE probe instead of
 clearing the pause blindly (owner decision 2026-10-26, perfectionist).
 
-1. Dry run (read-only): the Yuyu-Tei budget (must be paused for a denial), the latest denial
-   attempt (from ordinary refresh work, or from an earlier probe after a 6-hour cool-down), the
-   probes already recorded for it (all closed, at most 3 per denial), and the probe mapping: the
-   approved, active Yuyu-Tei mapping whose refresh last captured cleanly. The request bound is that
-   mapping's refresh cost plus a homepage warm-up allowance (60 to 200). `plan_sha256` covers
-   source, denial, probe number, mapping, print, product identity and bound.
-2. `apply=true` with that SHA: re-reads the facts on a fingerprinted connection, refuses unless
-   identical, then `app.services.source_recovery.plan_yuyu_probe` records one authorized,
-   unattempted validation scope in one transaction. No request, no reservation.
+1. Dry run (read-only, verified connection): `app.services.source_recovery.preview_yuyu_probe`
+   reports the Yuyu-Tei budget (must be paused for a denial), the latest denial and the pause
+   chain it belongs to (the refresh or discovery denial that paused the source; a probe that
+   meets a challenge records a newer denial but stays in the same chain), the probes already used
+   for this pause (all closed, at most 3 per pause, challenged or not; after a challenged probe the
+   next waits 6 hours), and the probe mapping: the approved, eligible Yuyu-Tei mapping whose
+   refresh last captured cleanly (the same eligibility the claim re-checks). The request bound is
+   that mapping's refresh cost plus a homepage warm-up allowance (60 to 200). `plan_sha256` covers
+   the whole plan: source, chain, denial, probe number, mapping, print, product identity, bound.
+2. `apply=true` with that SHA: re-runs the preview, refuses unless the SHA matches, then
+   `plan_yuyu_probe` re-runs it once more under the budget row lock and writes only when the plan
+   is identical: one authorized, unattempted validation scope in one transaction. No request, no
+   reservation.
 3. The next scheduled Yuyu shard turn (any shard; one claim wins) serves it instead of its
-   ordinary work (`yuyutei_collector.recovery`): one metered product capture from the collectors'
-   own network, identity validated, no price written. Only a completed, identity-verified HTTP 200
-   capture of that mapping's product page clears the pause (`resume_after_yuyu_probe`). Every probe
-   is closed afterwards whatever happened, and stale ones (newer denial, manual unpause, mapping no
-   longer eligible, lease expired) are closed at the next turn, so none can be served twice or
-   stall ordinary claims. After a challenge the pause stays; a new probe needs a new dry run and
-   approval after the cool-down. Check the outcome with `ops-readonly staging-state` (Yuyu no
-   longer BLOCKED) or `db-diagnostic work-by-state`.
+   ordinary work (`yuyutei_collector.recovery`), recorded as its own execution (max_work 1): one
+   metered product capture from the collectors' own network, identity validated, no price
+   written. Only a completed, identity-verified HTTP 200 capture of that mapping's product page,
+   with no denial during the attempt, clears the pause (`resume_after_yuyu_probe`). Every probe is
+   closed afterwards whatever happened (a challenge is marked on it even if its attempt could not
+   settle), and stale ones (newer denial, manual unpause, mapping no longer eligible, lease
+   expired) are closed at the next turn, so none can be served twice or stall ordinary claims.
+   After a challenge the pause stays; a new probe needs a new dry run and approval after the
+   cool-down. Check the outcome with `ops-readonly staging-state` (Yuyu no longer BLOCKED) or
+   `db-diagnostic work-by-state`.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:

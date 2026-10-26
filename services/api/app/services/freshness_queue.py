@@ -942,7 +942,12 @@ def complete_claim(
         work.last_successfully_checked_at = checked_at
         work.retry_not_before_at = None
         if resume_cursor is not None:
+            # A denial recorded during this attempt (pause_source) is never erased
+            # by the result's cursor, which the producer built from its claim.
+            denied = (work.resume_cursor or {}).get("required_denial")
             work.resume_cursor = deepcopy(resume_cursor)
+            if denied:
+                work.resume_cursor["required_denial"] = True
         if work.kind == "refresh":
             for state in states:
                 if (

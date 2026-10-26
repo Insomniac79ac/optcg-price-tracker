@@ -4,14 +4,18 @@ Owner decision 2026-10-26 (perfectionist). One challenge page from Yuyu-Tei (202
 paused every Yuyu-Tei shard (source_dispatch_budgets.pause_reason = source_denial, no timer).
 Clearing the pause blindly could send up to nine shards into the same challenge. Instead:
 
-1. Dry run (read-only): the Yuyu-Tei budget (must be paused for source_denial), the latest
-   denial attempt (from ordinary refresh work, or from an earlier probe once a 6-hour cool-down
-   has passed), the probes already recorded for it (all closed, at most 3), and the probe mapping:
-   the approved, active Yuyu-Tei mapping whose refresh last captured cleanly. plan_sha256 covers
-   source, denial, probe number, mapping, print, product identity and the request bound.
-2. apply=true with that SHA: re-reads the same facts, refuses unless the plan is identical, then
-   calls app.services.source_recovery.plan_yuyu_probe in one transaction. It records one
-   authorized, unattempted validation scope; it makes no request and reserves nothing.
+1. Dry run (read-only, verified staging connection): app.services.source_recovery.
+   preview_yuyu_probe reports the Yuyu-Tei budget (must be paused for source_denial), the latest
+   denial and the pause chain it belongs to (the refresh or discovery denial that paused the
+   source; probes that met a challenge stay in the same chain), the probes already used for this
+   pause (all closed, at most 3; after a challenged probe the next waits 6 hours), and the probe
+   mapping: the approved, eligible Yuyu-Tei mapping whose refresh last captured cleanly.
+   plan_sha256 covers the whole plan (source, chain, denial, probe number, mapping, print,
+   product identity, request bound).
+2. apply=true with that SHA: re-runs the same preview, refuses unless the SHA matches, then
+   calls plan_yuyu_probe in one transaction, which re-runs the preview under the budget row lock
+   and refuses unless the plan is identical. It records one authorized, unattempted validation
+   scope; it makes no request and reserves nothing.
 3. The next scheduled Yuyu shard turn serves it (yuyutei_collector.recovery): one metered product
    capture from the collectors' own network, identity validated, no price written. Only a
    completed, identity-verified HTTP 200 capture clears the pause; a challenge keeps it paused.
@@ -25,100 +29,11 @@ from pathlib import Path
 
 from ops import common
 
-FACTS_SQL = """
-select s.id source_id, b.enabled, b.pause_reason, b.paused_until, b.reserved_requests,
-  b.used_requests, b.request_limit
-from sources s join source_dispatch_budgets b on b.source_id = s.id where s.name = 'yuyutei'"""
-DENIAL_SQL = """
-select a.id attempt_id, a.finished_at, w.kind work_kind, w.id work_id, left(w.last_failure, 160) failure
-from freshness_attempts a join freshness_work w on w.id = a.work_id
-where w.source_id = %(source_id)s and a.outcome = 'source_denial' order by a.id desc limit 1"""
-PROBE_SQL = """
-select id, scope_key, state, attempt_count, last_outcome, left(last_failure, 160) failure from freshness_work
-where source_id = %(source_id)s and kind = 'validation' and scope_key like %(prefix)s order by id"""
-MAPPING_SQL = """
-select m.id mapping_id, m.card_print_id, m.canonical_source_listing_identity product_identity,
-  m.source_url, w.last_successfully_checked_at last_success, w.estimated_request_cost refresh_cost
-from freshness_work w
-join source_card_mappings m on m.id = w.source_card_mapping_id
-join card_prints p on p.id = m.card_print_id
-where w.source_id = %(source_id)s and w.kind = 'refresh' and w.last_successfully_checked_at is not null
-  and w.state <> 'blocked' and w.last_outcome = 'captured'
-  and m.is_active and m.superseded_at is null and m.review_status = 'approved'
-  and p.is_active and p.verification_status = 'verified'
-  and m.canonical_source_listing_identity is not null
-order by w.last_successfully_checked_at desc, m.id limit 1"""
-# Same limits as app.services.source_recovery (YUYU_PROBE_MAX_REQUESTS, YUYU_PROBES_PER_DENIAL,
-# YUYU_PROBE_COOLDOWN); restated so a dry run needs no API import, and checked by a test.
-MAX_REQUESTS = 200
-PROBES_PER_DENIAL = 3
-COOLDOWN_HOURS = 6
-# A cold probe also pays the homepage warm-up that a warm turn skips.
-WARM_UP_ALLOWANCE = 20
-PLAN_KEYS = ("source_id", "denial_attempt_id", "probe_number", "mapping_id", "card_print_id",
-             "product_identity", "request_bound")
-
-
-def _iso(value):
-    return value.isoformat() if hasattr(value, "isoformat") else value
-
-
-def read_facts(conn):
-    """The facts a probe plan rests on (read-only connection, dict rows)."""
-    budget = conn.execute(FACTS_SQL).fetchone()
-    if budget is None:
-        raise common.Refused("no Yuyu-Tei source dispatch budget found")
-    source_id = budget["source_id"]
-    denial = conn.execute(DENIAL_SQL, {"source_id": source_id}).fetchone()
-    mapping = conn.execute(MAPPING_SQL, {"source_id": source_id}).fetchone()
-    probes = []
-    if denial is not None:
-        probes = [dict(r) for r in conn.execute(PROBE_SQL, {
-            "source_id": source_id, "prefix": f"source-recovery:yuyutei:{denial['attempt_id']}:%"}).fetchall()]
-    return {"budget": dict(budget), "denial": dict(denial) if denial else None,
-            "mapping": dict(mapping) if mapping else None, "probes": probes}
-
-
-def plan(facts, now=None):
-    """(plan dict, problems). A plan exists only when every precondition holds."""
-    from datetime import datetime, timedelta, timezone
-
-    now = now or datetime.now(timezone.utc)
-    b, d, m, probes = facts["budget"], facts["denial"], facts["mapping"], facts.get("probes") or []
-    problems = []
-    if not b["enabled"]:
-        problems.append("Yuyu-Tei dispatch is disabled")
-    if b["pause_reason"] != "source_denial" or b["paused_until"] is not None:
-        problems.append(f"Yuyu-Tei is not paused for a source denial (pause_reason={b['pause_reason']!r})")
-    if d is None:
-        problems.append("no source_denial attempt recorded")
-    elif d["work_kind"] == "validation":
-        finished = d["finished_at"]
-        if finished.tzinfo is None:
-            finished = finished.replace(tzinfo=timezone.utc)
-        if now < finished + timedelta(hours=COOLDOWN_HOURS):
-            problems.append(f"the last probe met a challenge; wait until "
-                            f"{(finished + timedelta(hours=COOLDOWN_HOURS)).isoformat()} before another")
-    elif d["work_kind"] != "refresh":
-        problems.append(f"the latest denial came from {d['work_kind']} work")
-    if any(p["state"] != "blocked" for p in probes):
-        problems.append("an earlier probe for this denial is still open")
-    if len(probes) >= PROBES_PER_DENIAL:
-        problems.append(f"{PROBES_PER_DENIAL} probes already used for this denial")
-    if m is None:
-        problems.append("no approved Yuyu-Tei mapping whose last refresh captured cleanly")
-    if b["reserved_requests"]:
-        problems.append("Yuyu-Tei has reserved requests outstanding")
-    if problems:
-        return None, problems
-    bound = min(MAX_REQUESTS, max(60, (m.get("refresh_cost") or 0) + WARM_UP_ALLOWANCE))
-    return {"source_id": b["source_id"], "denial_attempt_id": d["attempt_id"], "probe_number": len(probes) + 1,
-            "mapping_id": m["mapping_id"], "card_print_id": m["card_print_id"],
-            "product_identity": m["product_identity"], "request_bound": bound}, []
-
 
 def plan_sha(p):
-    return hashlib.sha256(json.dumps({k: p[k] for k in PLAN_KEYS}, sort_keys=True,
+    from app.services.source_recovery import YUYU_PROBE_PLAN_KEYS
+
+    return hashlib.sha256(json.dumps({k: p[k] for k in YUYU_PROBE_PLAN_KEYS}, sort_keys=True,
                                      separators=(",", ":")).encode()).hexdigest()
 
 
@@ -131,31 +46,43 @@ def check_apply(expected_sha256, sha):
 
 
 def _summary(facts, p, problems, sha):
-    d, m = facts["denial"] or {}, facts["mapping"] or {}
-    return {"paused_for": facts["budget"]["pause_reason"],
-            "denial": {"attempt_id": d.get("attempt_id"), "at": _iso(d.get("finished_at")),
-                       "work_kind": d.get("work_kind"), "failure": d.get("failure")},
-            "probe_mapping": {"mapping_id": m.get("mapping_id"), "card_print_id": m.get("card_print_id"),
-                              "source_url": m.get("source_url"), "last_success": _iso(m.get("last_success"))},
-            "earlier_probes": facts.get("probes") or [], "request_bound": (p or {}).get("request_bound"),
+    d, m = facts.get("denial") or {}, facts.get("mapping") or {}
+    return {"paused_for": (facts.get("budget") or {}).get("pause_reason"),
+            "denial": d or None, "pause_chain_root": facts.get("root_denial_attempt_id"),
+            "probe_mapping": {k: m.get(k) for k in ("mapping_id", "card_print_id", "source_url", "last_success")},
+            "earlier_probes": facts.get("probes") or [], "probe_number": (p or {}).get("probe_number"),
+            "request_bound": (p or {}).get("request_bound"),
             "problems": problems, "plan_sha256": sha, "source_requests": 0}
 
 
-def run(out_dir, *, apply=False, expected_sha256="", read=None, write=None):
+def _source_id(session):
+    from sqlalchemy import select
+    from app.models import Source
+
+    source_id = session.scalar(select(Source.id).where(Source.name == "yuyutei"))
+    if source_id is None:
+        raise common.Refused("no Yuyu-Tei source found")
+    return source_id
+
+
+def default_preview():
+    """preview_yuyu_probe on a verified read-only staging session."""
+    from sqlalchemy.orm import Session
     from ops import db as ops_db
+    from app.services.source_recovery import preview_yuyu_probe
 
-    def default_read():
-        with ops_db.connection() as conn:
-            facts = read_facts(conn)
-            conn.rollback()
-        return facts
+    with Session(ops_db.engine()) as session:
+        result = preview_yuyu_probe(session, _source_id(session))
+        session.rollback()
+    return result
 
-    facts = (read or default_read)()
-    p, problems = plan(facts)
+
+def run(out_dir, *, apply=False, expected_sha256="", preview=None, write=None):
+    p, problems, facts = (preview or default_preview)()
     sha = plan_sha(p) if p else None
     summary = _summary(facts, p, problems, sha)
     summary["apply"] = bool(apply)
-    common.write_json(Path(out_dir) / "yuyu-source-probe.json", {**summary, "facts": facts})
+    common.write_json(Path(out_dir) / "yuyu-source-probe.json", {**summary, "plan": p, "facts": facts})
     if problems:
         summary["ok"] = False
         if apply:
@@ -172,25 +99,17 @@ def run(out_dir, *, apply=False, expected_sha256="", read=None, write=None):
 
 
 def _write_plan(p):
-    """plan_yuyu_probe in one transaction on the verified staging database."""
+    """plan_yuyu_probe in one transaction: it re-runs the preview under the budget lock and
+    writes only when the plan equals the approved one."""
     from sqlalchemy.orm import Session
-    from ops import apply_migration, db as ops_db
+    from ops import apply_migration
     from app.services.source_recovery import plan_yuyu_probe
 
-    with ops_db.connection() as conn:  # fingerprint and revision-equals-head check first
-        facts = read_facts(conn)
-        conn.rollback()
-    again, problems = plan(facts)
-    if problems or plan_sha(again) != plan_sha(p):
-        raise common.Refused("the facts changed between the plan and the write; dry run again")
     engine, _guard = apply_migration.staging_engine(writable=True)
     try:
         with Session(engine) as session:
             try:
-                work = plan_yuyu_probe(session, p["source_id"], p["mapping_id"], p["denial_attempt_id"],
-                                       request_bound=p["request_bound"])
-                if work.resume_cursor.get("probe_number") != p["probe_number"]:
-                    raise ValueError("probe number differs from the plan")
+                work = plan_yuyu_probe(session, p["source_id"], p)
                 work_id = work.id
                 session.commit()
             except ValueError as exc:
