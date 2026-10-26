@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "mission": "Owner decision 2026-10-26: a promo code that only appears in promo products (P-017, P-019, P-102, P-103, P-104, P-106 in the standard-battle batch) gets its canonical card by consensus over its occurrences in ESTABLISHED products: coded, already-held uncoded, or uncoded products this run proved and authorised through app.services.uncoded_product_evidence. Same consensus rule as before (identity fields must agree exactly; rarity optional); occurrences under unproven products still count for nothing.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/canonical_import_apply.py"
+      ],
+      "effects": [
+        "application",
+        "bulk_data"
+      ],
+      "reason": "_coded counts established occurrences (coded, held uncoded, authorised uncoded); authorised names threaded through audit_canonical_baselines and resolve_canonical_baseline."
+    },
+    {
+      "files": [
+        "services/api/tests/test_uncoded_product_import.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Promo only in a proven uncoded product gets its canonical card; two proven products disagreeing on the name establish nothing."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "catalogue-import batches (owner-approved applies)"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "staging after #220"
+      ],
+      "deployment_impact": "None until an owner-approved catalogue-import apply; then promo-only cards in proven products are created instead of skipped.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "780cc263f58492e312443e5335891eb604cf91c3",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "A promo canonical card with wrong identity fields.",
+      "backup": "Railway Postgres backup under 24 h, checked before every apply.",
+      "validation": [
+        "services/api/tests/test_uncoded_product_import.py",
+        "services/api/tests/test_canonical_import_apply.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/canonical_import_apply.py"
+      ],
+      "observation_window": "standard-battle dry run: the 8 skipped promo prints become creates."
+    }
+  },
+  "diff_sha256": "b8182f2c75578752229655ade0221104c870792377685e7e424ae2412ce78bdc"
+}
