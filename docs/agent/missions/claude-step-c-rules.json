@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "mission": "Phase 2 step C rules (owner decisions 2026-10-26: Family Deck exception yes; Asia-EN perfectionist; repeated codes allowed per the owner's PRB note that base and holo reprints can share artwork). uncoded_product_evidence: amendment A single-product catch-all (importer passes it), amendment B a code may repeat when each occurrence has its own Bandai entry and its own official asset variant, amendment C per-product Asia-EN agreement (equal code set agrees; no shared code = recorded Japan-only; partial overlap refused for review; incomplete Asia-EN evidence refused). JP parser also reads Asia-EN's 'Card Set(s)' label. catalogue-import captures Asia-EN's uncoded series beside the JP snapshot (any failed, empty or unnamed page refuses), imports proven uncoded products by family batch scopes, report_only for the measurement scope, and the plan SHA covers the authorised products and the Asia-EN evidence file. Independent review: FAIL (Asia-EN could read absent on a relabelled page), then PASS WITH NITS after fixes.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/uncoded_product_evidence.py"
+      ],
+      "effects": [
+        "application",
+        "bulk_data"
+      ],
+      "reason": "Step C amendments A, B, C and asia_en_agreement; evidence records asia_en_product and repeated_card_codes. Owner decisions 2026-10-26."
+    },
+    {
+      "files": [
+        "services/api/app/import_frozen_bandai_to_canonical_staging.py"
+      ],
+      "effects": [
+        "application",
+        "bulk_data"
+      ],
+      "reason": "Proves uncoded products with the amendments; per-product Asia-EN check replaces the global absence proof."
+    },
+    {
+      "files": [
+        "services/api/app/services/official_cardlist.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Obtain block read under 入手情報 or Card Set(s) (Asia-EN)."
+    },
+    {
+      "files": [
+        "scripts/ops/catalogue_import.py",
+        "docs/agent/CATALOGUE_IMPORT_SCOPES.json"
+      ],
+      "effects": [
+        "infrastructure",
+        "bulk_data"
+      ],
+      "reason": "Asia-EN capture beside the JP snapshot, uncoded imports, product_pattern/exclude_pattern/report_only, family batch scopes, plan SHA covers authorised products and Asia-EN evidence."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "services/api/tests/test_uncoded_product_evidence.py",
+        "services/api/tests/test_official_cardlist.py",
+        "services/api/tests/test_staging_import_series_scope.py",
+        "services/api/tests/test_uncoded_product_import.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Agreement, absent, partial, incomplete; repeats with own variant, collapsing variants; Card Set(s) label; importer amendments; DB test two prints for one code; batch partition; Asia-EN failure modes."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook section for uncoded imports and batches."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "staging Postgres catalogue tables, only through owner-approved ops-write catalogue-import applies"
+      ],
+      "routes": [
+        "Bandai JP card list pages and the batch's images; Asia-EN picker plus at most 6 uncoded series pages; 1 per second"
+      ],
+      "dependencies": [
+        "staging after #218"
+      ],
+      "deployment_impact": "Merging changes nothing live. Each family batch is a dry run then an owner-approved apply.",
+      "database_writes": 0,
+      "source_requests": 800,
+      "estimated_runtime_minutes": 15
+    },
+    "recovery": {
+      "artifact": "870d36db26301e121377b2db2dcd7c7c8fb633a1",
+      "procedure": "Code: native revert PR with its own mission file. Data: each apply report lists created rows; restore from the Railway backup the apply required, or an owner-approved removal.",
+      "trigger": "A wrong product, print or identity after a batch apply.",
+      "backup": "Railway Postgres volume backup under 24 hours old, checked before every apply.",
+      "validation": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "services/api/tests/test_uncoded_product_evidence.py",
+        "services/api/tests/test_uncoded_product_import.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/uncoded_product_evidence.py",
+        "scripts/ops/catalogue_import.py"
+      ],
+      "observation_window": "Each batch's dry run and apply, then official-series-index and web-smoke."
+    }
+  },
+  "diff_sha256": ""
+}
