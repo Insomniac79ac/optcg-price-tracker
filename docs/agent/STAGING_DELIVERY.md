@@ -181,6 +181,13 @@ owner merges by hand. After a hand merge, `Verify staging merge` (push to `stagi
 head and regenerates state as usual. Agents may add the label, never remove it
 (`.claude/hooks/guard.py`).
 
+A hand merge never rolls out collectors: only `staging-automerge` runs
+`deploy_staging_collectors.py`. A PR that both needs the hold (it touches `.github/**`) and
+changes collector code must therefore be split: the workflow change held, the collector code
+unheld. When they ship together anyway, the rollout follows as a separate unheld PR that carries
+the same `collector_services` mission (#171 then a follow-up; #223 then
+`claude-yuyu-probe-rollout`, 2026-10-26), opened as a draft that the owner marks ready.
+
 **Frontend runtime lag (2026-10-20).** Vercel can report the merge READY before the staging alias
 serves it (#189 and #190 failed "Frontend runtime SHA disagrees with platform" 1-2 minutes after
 merge; a later Verify staging merge passed). The verifier now polls web `/api/version` every 15 s
