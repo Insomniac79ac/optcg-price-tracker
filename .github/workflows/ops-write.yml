@@ -25,12 +25,13 @@ on:
           - collector-sibling-on
           - collector-sibling-off
           - catalogue-import
+          - yuyu-source-probe
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
         default: false
       expected_sha256:
-        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy, catalogue-import: plan) SHA-256 from the dry run the owner reviewed"
+        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy, catalogue-import, yuyu-source-probe: plan) SHA-256 from the dry run the owner reviewed"
         type: string
         default: ""
       count:

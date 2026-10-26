@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import`, `yuyu-source-probe` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -255,6 +255,25 @@ catalogue-gap request (owner 2026-10-26).
    runs unless the plan is identical. Then the engine writes in one transaction with its own
    checks (untouched price tables, import lock, pre-count preflight). Keeps the collector quiet
    windows (collectors match listings against `card_prints`).
+
+`yuyu-source-probe` (`scripts/ops/yuyu_probe.py`): after a Yuyu-Tei challenge pauses every shard
+(`source_dispatch_budgets.pause_reason = source_denial`, no timer), authorize ONE probe instead of
+clearing the pause blindly (owner decision 2026-10-26, perfectionist).
+
+1. Dry run (read-only): the Yuyu-Tei budget (must be paused for a denial), the latest denial
+   attempt (must come from ordinary refresh work, never from an earlier probe), any probe already
+   recorded for it (never replayed), and the probe mapping: the approved, active Yuyu-Tei mapping
+   whose refresh last succeeded most recently. `plan_sha256` covers source, denial, mapping, print
+   and product identity.
+2. `apply=true` with that SHA: re-reads the facts on a fingerprinted connection, refuses unless
+   identical, then `app.services.source_recovery.plan_yuyu_probe` records one authorized,
+   unattempted validation scope in one transaction. No request, no reservation.
+3. The next scheduled Yuyu shard turn (any shard; one claim wins) serves it before its ordinary work
+   (`yuyutei_collector.recovery`): one metered product capture from the collectors' own network,
+   identity validated, no price written. Only a completed, identity-verified HTTP 200 capture
+   clears the pause (`resume_after_yuyu_probe`). A challenge settles as `source_denial`: the pause
+   stays and the next probe needs a new dry run and approval. Check the outcome with
+   `ops-readonly staging-state` (Yuyu no longer BLOCKED) or `db-diagnostic work-by-state`.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:

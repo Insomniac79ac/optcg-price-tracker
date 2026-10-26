@@ -155,6 +155,7 @@ class TurnBrowserTests(fixture.RawBeforeParseFixture):
             raise RuntimeError("lease lost")
 
         with patch.object(due, "drain", side_effect=failing_drain), \
+             patch.object(due, "consume_planned_probe", return_value=None), \
              patch.object(TurnBrowser, "close") as close:
             with self.assertRaises(RuntimeError):
                 due.run_due(shard_index=0, session_factory=self.Session)
@@ -177,13 +178,25 @@ class TurnBrowserTests(fixture.RawBeforeParseFixture):
                     kwargs["discovery_runner"]("session", "claim", freshness="attempt")
             return []
 
-        with patch.object(due, "drain", side_effect=drain), patch.object(TurnBrowser, "close"):
+        with patch.object(due, "drain", side_effect=drain), patch.object(TurnBrowser, "close"), \
+             patch.object(due, "consume_planned_probe", return_value=None):
             due.run_due(shard_index=0, session_factory=self.Session)
         self.assertEqual(order, ["discard", "discovery"])
 
     def test_explicit_runner_keeps_per_capture_behaviour(self):
         runner = MagicMock()
-        with patch.object(due, "drain", return_value=[]) as drain:
+        with patch.object(due, "drain", return_value=[]) as drain, \
+             patch.object(due, "consume_planned_probe", return_value=None):
             due.run_due(shard_index=0, session_factory=self.Session, runner=runner)
         self.assertIs(drain.call_args.args[3], runner)
         self.assertIs(drain.call_args.kwargs["discovery_runner"], due.run_discovery)
+
+    def test_an_authorized_probe_is_served_instead_of_ordinary_work(self):
+        runner = MagicMock()
+        probe = {"status": "completed", "resumed": True}
+        with patch.object(due, "drain") as drain, \
+             patch.object(due, "consume_planned_probe", return_value=probe) as consume:
+            self.assertEqual(due.run_due(shard_index=4, session_factory=self.Session, runner=runner), [probe])
+        drain.assert_not_called()
+        self.assertEqual(consume.call_args.kwargs["owner"], "yuyutei-probe-4")
+        self.assertIs(consume.call_args.kwargs["runner"], runner)

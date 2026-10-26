@@ -140,6 +140,13 @@ def _apply_migration(args, out):
                                expected_sha256=args.expected_sha256)
 
 
+def _yuyu_probe(args, out):
+    from ops import yuyu_probe
+    if args.count is not None:
+        raise common.Refused("yuyu-source-probe takes no count: it plans exactly one probe")
+    return yuyu_probe.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
+
+
 def _catalogue_import(args, out):
     from ops import catalogue_import
     if args.count is not None:
@@ -173,6 +180,8 @@ RUNBOOKS = {
     # New catalogue prints: collectors match listings against card_prints, so an apply keeps the
     # collector quiet windows like apply-migration. Scopes: docs/agent/CATALOGUE_IMPORT_SCOPES.json.
     "catalogue-import": ("write", True, _catalogue_import),
+    # One owner-approved Yuyu-Tei probe after a source denial pause; the collectors serve it.
+    "yuyu-source-probe": ("write", True, _yuyu_probe),
 }
 
 
