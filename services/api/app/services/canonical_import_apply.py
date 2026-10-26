@@ -325,11 +325,25 @@ def _numeric(value: str | None) -> int | None:
 # product is one the planner could not resolve at all, so it is not evidence
 # Atlas is willing to act on: those occurrences stay needs_review and are read
 # by nothing here. See §4 of the tranche contract.
-def _coded(occurrences: Sequence[PlannedPrint]) -> list[PlannedPrint]:
+def _coded(
+    occurrences: Sequence[PlannedPrint],
+    authorised_uncoded_names: frozenset[str] = frozenset(),
+) -> list[PlannedPrint]:
+    """Occurrences under an ESTABLISHED product: a coded one, an uncoded one
+    Atlas already holds, or an uncoded one this run proved and authorised
+    (app.services.uncoded_product_evidence). Owner decision 2026-10-26: a promo
+    code that only ever appears in promo products (P-102 in Standard Battle
+    Pack Vol.14) is established by consensus over those proven products; an
+    occurrence under an unproven product still counts for nothing."""
     return [
         p
         for p in occurrences
-        if p.official_product_code and p.proposed_canonical_card is not None
+        if p.proposed_canonical_card is not None
+        and (
+            p.official_product_code
+            or p.existing_release_product_id is not None
+            or (p.official_product_display_name or "") in authorised_uncoded_names
+        )
     ]
 
 
@@ -360,6 +374,7 @@ def _resolve_promo_consensus(
     occurrences: Sequence[PlannedPrint],
     *,
     entries: dict[str, Any] | None = None,
+    authorised_uncoded_names: frozenset[str] = frozenset(),
 ) -> CanonicalBaseline:
     """A promo's canonical row, established from consensus over its coded
     occurrences rather than from a baseline printing.
@@ -384,7 +399,7 @@ def _resolve_promo_consensus(
     Rarity reuses the existing vocabulary: `unique` when the coded occurrences
     settle one, `multiple` when they disagree, `none` when none publishes one.
     """
-    coded = _coded(occurrences)
+    coded = _coded(occurrences, authorised_uncoded_names)
     if not coded:
         # Every occurrence is under a product the planner could not resolve.
         # Nothing is established from those, so the card is not composable and
@@ -405,12 +420,12 @@ def _resolve_promo_consensus(
     disagreements: list[str] = []
     if name_status not in ("exact",):
         disagreements.append(
-            f"name_jp has no consensus across the coded occurrences ({name_status}): "
+            f"name_jp has no consensus across the established occurrences ({name_status}): "
             f"{sorted({(p.name_jp or '') for p in proposals})}"
         )
     if type_status not in ("exact",):
         disagreements.append(
-            f"card_type has no consensus across the coded occurrences ({type_status}): "
+            f"card_type has no consensus across the established occurrences ({type_status}): "
             f"{sorted({(p.card_type or '') for p in proposals})}"
         )
 
@@ -463,6 +478,7 @@ def resolve_canonical_baseline(
     occurrences: Sequence[PlannedPrint],
     *,
     entries: dict[str, Any] | None = None,
+    authorised_uncoded_names: frozenset[str] = frozenset(),
 ) -> CanonicalBaseline:
     """The one occurrence a new canonical row may be built from, if it exists.
 
@@ -499,7 +515,12 @@ def resolve_canonical_baseline(
             # products a promo is distributed in are not its original set. So
             # there is no baseline occurrence to scope anything to, and the
             # canonical row is established by CONSENSUS instead.
-            return _resolve_promo_consensus(card_code, occurrences, entries=entries)
+            return _resolve_promo_consensus(
+                card_code,
+                occurrences,
+                entries=entries,
+                authorised_uncoded_names=authorised_uncoded_names,
+            )
         # Not a promo and not readable: a malformed code. Nothing is resolved
         # from it, and it is not quietly promoted into the promo path.
         return CanonicalBaseline(card_code, BASELINE_NONE, None, ())
@@ -643,6 +664,7 @@ def audit_canonical_baselines(
     plans: Iterable[PlannedPrint],
     *,
     entries: dict[str, Any] | None = None,
+    authorised_uncoded_names: frozenset[str] = frozenset(),
 ) -> BaselineAudit:
     """Baselines for every card code the plan proposes to create a card for.
 
@@ -667,7 +689,10 @@ def audit_canonical_baselines(
     audit = BaselineAudit()
     for code in sorted(wanted):
         audit.baselines[code] = resolve_canonical_baseline(
-            code, by_code.get(code, []), entries=entries
+            code,
+            by_code.get(code, []),
+            entries=entries,
+            authorised_uncoded_names=authorised_uncoded_names,
         )
     return audit
 
@@ -1300,7 +1325,11 @@ class CanonicalImportApplier:
         self._check_no_planner_conflicts(report)
 
         # 3. baselines, before a single row is composed
-        audit = audit_canonical_baselines(self._plan.prints, entries=self._entries)
+        audit = audit_canonical_baselines(
+            self._plan.prints,
+            entries=self._entries,
+            authorised_uncoded_names=frozenset(self._authorised_uncoded),
+        )
         report.baseline_counts = audit.counts()
         report.baseline_excluded = audit.to_dict()["excluded"]
         composable = audit.composable_codes
