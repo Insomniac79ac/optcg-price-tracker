@@ -109,7 +109,7 @@
         "SNKRDUNK product pages parsed again (no change to which pages are fetched)"
       ],
       "dependencies": [
-        "staging after #220",
+        "staging after #222",
         "then a fleet-pin PR (yuyu_reader_component and snkr_component to the merge SHA)"
       ],
       "deployment_impact": "Collector release: every collector re-uploaded on the merge commit in its own slot with automatic rollback. Behaviour changes only when an owner-approved probe exists; otherwise the shards run exactly as before (still paused).",
@@ -118,7 +118,7 @@
       "estimated_runtime_minutes": 150
     },
     "recovery": {
-      "artifact": "780cc263f58492e312443e5335891eb604cf91c3",
+      "artifact": "f219c9b32019762d8deb7bf7398d8f5d1543f53c",
       "procedure": "Collectors: the sequential rollout restores every touched collector on failure; afterwards collector-redeploy to the previous fleet pin. Code: native revert PR with its own mission file.",
       "trigger": "A collector failing after release, a probe resuming without a verified capture, or SNKRDUNK captures still refused (or prices mis-parsed) after release.",
       "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
