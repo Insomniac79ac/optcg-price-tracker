@@ -147,3 +147,38 @@ def test_unknown_or_uncoded_series_refuse_before_any_connection(tmp_path, monkey
 
     assert code == runner.EXIT_USAGE
     assert reason in capsys.readouterr().err
+
+
+def test_uncoded_products_are_proven_with_the_step_c_amendments(tmp_path, monkeypatch):
+    """Family Deck Set (product name == its series name) is established through the
+    single-product amendment, and Asia-EN is read per product from the sibling root."""
+    jp = tmp_path / "bandai_jp" / "current"
+    jp.mkdir(parents=True)
+    (jp / "manifest.json").write_text(json.dumps({"source_catalogue": "bandai_jp"}))
+    (jp / "series.jsonl").write_text(json.dumps(
+        {"source_series_id": "550701", "display_name": "ファミリーデッキセット", "official_code": None,
+         "source_url": "https://x.test/550701"}, ensure_ascii=False))
+    (jp / "entries.jsonl").write_text(json.dumps(
+        {"entry_id": "FD-1", "card_code": "ST01-001", "source_series_id": "550701",
+         "product_names": ["ファミリーデッキセット"], "image_url": "https://x.test/ST01-001_p9.png"},
+        ensure_ascii=False))
+    (jp / "assets.jsonl").write_text(json.dumps(
+        {"url": "https://x.test/ST01-001_p9.png", "basename": "ST01-001_p9.png", "sha256": "a" * 64}))
+    asia = tmp_path / "bandai_asia_en" / "current"
+    asia.mkdir(parents=True)
+    (asia / "series.jsonl").write_text(json.dumps({"source_series_id": "556701", "official_code": None}))
+    (asia / "entries.jsonl").write_text(json.dumps(
+        {"source_series_id": "556701", "card_code": "ST01-001", "product_names": ["Family Deck Set"]}))
+    seen: dict = {}
+    _stub_target(monkeypatch, seen)
+
+    def _plan(_session, entries, **kwargs):
+        seen["entries"] = [e.entry_id for e in entries]
+        seen["authorised"] = kwargs["authorised_uncoded_names"]
+        raise _Stop()
+
+    monkeypatch.setattr(runner, "plan_entries", _plan)
+    code = runner.main(["--snapshot-root", str(jp), "--uncoded-product", "ファミリーデッキセット", "--json"])
+    assert code == runner.EXIT_FAILED  # stopped at planning by the stub
+    assert seen["entries"] == ["FD-1"]
+    assert seen["authorised"] == frozenset({"ファミリーデッキセット"})

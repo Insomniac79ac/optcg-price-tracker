@@ -64,6 +64,9 @@ FIELD_CLASSES = (
 # illustrator misprint. Only the heading distinguishes them, so product
 # membership is keyed on this label and never on the class alone.
 OBTAIN_INFO_LABEL = "入手情報"
+# Bandai's Asia-EN catalogue labels the same block in English. Read for the
+# step C cross-catalogue check (owner 2026-10-26); the JP pages never carry it.
+OBTAIN_INFO_LABELS = frozenset({OBTAIN_INFO_LABEL, "Card Set(s)"})
 
 # Navigation link labels Bandai added inside the 入手情報 block by October
 # 2026 (seen on every entry of the 2026-10-25 official-series-index run, e.g.
@@ -496,7 +499,7 @@ class _CardListParser(HTMLParser):
         spans = [_clean(s) for s in self._info_spans]
         fields = tuple(self._fields)
         obtain = next(
-            (f for f in fields if f.name == "getInfo" and f.label == OBTAIN_INFO_LABEL), None
+            (f for f in fields if f.name == "getInfo" and f.label in OBTAIN_INFO_LABELS), None
         )
         products = (
             tuple(
