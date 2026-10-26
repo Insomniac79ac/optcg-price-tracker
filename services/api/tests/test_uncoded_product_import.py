@@ -265,3 +265,30 @@ def test_a_repeated_code_in_one_product_becomes_two_prints(db_session):
     assert report.card_prints_created == 2
     variants = sorted(p.official_asset_variant for p in db_session.execute(select(CardPrint)).scalars())
     assert variants == ["p2", "p3"]
+
+
+def test_a_promo_only_in_a_proven_uncoded_product_gets_its_canonical_card(db_session):
+    """Owner decision 2026-10-26: P-102 appears only in Standard Battle Pack
+    Vol.14 (uncoded). With that product proven and authorised, the promo's
+    canonical card is established by consensus over its occurrence there."""
+    plan = _plan(db_session, [_entry(code="P-102", variant="p1")], authorised=[NAME])
+    report = _applier(db_session, plan, authorised=[NAME]).run(apply=True)
+
+    assert report.canonical_cards_created == 1
+    assert report.card_prints_created == 1
+    card = db_session.execute(select(CanonicalCard).where(CanonicalCard.card_code == "P-102")).scalar_one()
+    assert card.name_jp == "Nami"
+    assert card.card_type == "Character"
+
+
+def test_two_proven_products_that_disagree_on_a_promo_establish_nothing(db_session):
+    """Consensus, never a chosen row: two proven products naming the promo
+    differently leave it uncomposed."""
+    other = "スタンダードバトルパック Vol.14"
+    a = _entry(code="P-102", variant="p1")
+    b = OfficialCardEntry(**{**a.__dict__, "entry_id": "P-102_p2", "card_name": "Robin",
+                             "image_url": f"{CARDLIST}/P-102_p2.png?260821", "product_names": (other,)})
+    plan = _plan(db_session, [a, b], authorised=[NAME, other])
+    report = _applier(db_session, plan, authorised=[NAME, other]).run(apply=True)
+    assert report.canonical_cards_created == 0
+    assert report.skipped_ineligible
