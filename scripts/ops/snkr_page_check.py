@@ -143,6 +143,9 @@ def gallery_trace(soup):
     if bad_json:
         trace["stopped_at"] = "a __next_f.push chunk is not JSON (the parser returns None)"
     keys, duplicates, gallery_modules, other_modules, elements = set(), 0, [], [], []
+    # The export name may be inline (until 2026-10-26) or a reference to its own string
+    # record: `8d:"ApparelGalleryContainer"` then `8e:I[213805,[...],"$8d"]`.
+    strings, modules = {}, []
     for line in records:
         key, sep, encoded = line.partition(":")
         if not sep or not re.fullmatch(r"[0-9a-f]+", key):
@@ -155,15 +158,23 @@ def gallery_trace(soup):
         if key in keys:
             duplicates += 1
         keys.add(key)
+        if isinstance(value, str) and not module:
+            strings[key] = value
         if module and isinstance(value, list) and value:
-            name = value[-1] if isinstance(value[-1], str) else repr(value[-1])[:60]
-            if name == "ApparelGalleryContainer":
-                gallery_modules.append("$L" + key)
-            elif re.search("gallery|image|carousel", str(name), re.I):
-                other_modules.append(str(name)[:60])
+            modules.append((key, value[-1]))
         elif isinstance(value, list) and len(value) == 4 and value[0] == "$" and isinstance(value[1], str) \
                 and isinstance(value[3], dict):
             elements.append(value)
+    referenced = 0
+    for key, last in modules:
+        name = last if isinstance(last, str) else repr(last)[:60]
+        if isinstance(last, str) and re.fullmatch(r"\$[0-9a-f]+", last) and last[1:] in strings:
+            name, referenced = strings[last[1:]], referenced + 1
+        if name == "ApparelGalleryContainer":
+            gallery_modules.append("$L" + key)
+        elif re.search("gallery|image|carousel", str(name), re.I):
+            other_modules.append(str(name)[:60])
+    trace["module_names_by_reference"] = referenced
     trace.update(duplicate_keys=duplicates, gallery_modules=gallery_modules,
                  other_image_modules=sorted(set(other_modules))[:8])
     if duplicates and not trace["stopped_at"]:
@@ -174,7 +185,11 @@ def gallery_trace(soup):
         trace["stopped_at"] = trace["stopped_at"] or f"expected exactly one gallery element, found {len(galleries)}"
         return trace
     gallery = galleries[0]
+    trace["gallery_props_excerpt"] = json.dumps(gallery, ensure_ascii=False)[:400]
     images, variants = gallery.get("mainImages"), gallery.get("variantSources")
+    for label, value in (("main_images_ref", images), ("variant_sources_ref", variants)):
+        if isinstance(value, str) and value.startswith("$"):
+            trace[label] = {"ref": value[:40], "row": strings.get(value[1:].split(":")[0], "")[:200]}
     trace.update(gallery_prop_keys=sorted(gallery)[:20],
                  main_images=len(images) if isinstance(images, list) else type(images).__name__,
                  variant_sources=len(variants) if isinstance(variants, list) else type(variants).__name__)
