@@ -1,7 +1,8 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
+
+import { useCollectorSession } from "@/hooks/useCollectorSession";
 
 /** What a signed-in collector already has of each exact card version, for the
  * public card pages (Collector v1 S6, PLAN E1): the "In your collection ×2"
@@ -117,7 +118,7 @@ export async function meRequest<T>(method: string, path: string, body?: unknown)
 }
 
 export function useCollectorShelf(): CollectorShelf {
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useCollectorSession();
   const isCollector = session?.sessionKind === "collector";
   const [state, setState] = useState<Omit<CollectorShelf, "refresh">>({
     status: "loading",
