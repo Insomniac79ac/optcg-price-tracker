@@ -15,7 +15,7 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": ["error", {
         paths: [{
           name: "next-auth/react",
-          importNames: ["useSession"],
+          importNames: ["useSession", "SessionContext"],
           message: "Use useCollectorSession from @/hooks/useCollectorSession (safe without a SessionProvider).",
         }],
       }],

@@ -2,11 +2,11 @@
 
 import { useSession, type SessionContextValue } from "next-auth/react";
 
-const SIGNED_OUT: SessionContextValue = {
+const SIGNED_OUT: SessionContextValue = Object.freeze({
   data: null,
   status: "unauthenticated",
   update: async () => null,
-};
+});
 
 /** The collector session, for every client component (lint forbids importing next-auth's
  * `useSession` anywhere else).
