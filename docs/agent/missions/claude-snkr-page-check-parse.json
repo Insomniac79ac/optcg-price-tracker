@@ -29,12 +29,13 @@
     },
     {
       "files": [
-        ".github/workflows/ops-readonly.yml"
+        ".github/workflows/ops-readonly.yml",
+        ".github/workflows/ci.yml"
       ],
       "effects": [
         "infrastructure"
       ],
-      "reason": "Installs beautifulsoup4 (the SNKRDUNK collector's pin, read from its requirements) when the runbook is snkr-page-check. No secret, gate, permission or timeout change."
+      "reason": "Installs beautifulsoup4 (the SNKRDUNK collector's pin, read from its requirements) for the snkr-page-check runbook and for the ops runbook tests in CI. No secret, gate, permission or timeout change."
     },
     {
       "files": [

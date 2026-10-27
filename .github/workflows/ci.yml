@@ -419,8 +419,10 @@ jobs:
       - run: pip install pytest==8.4.2 && python -m pytest -q scripts/tests/test_deploy_staging_collectors.py scripts/tests/test_collector_variables.py
       # Guardrails as code: the committed Claude Code settings and hooks block what they should.
       - run: python -m unittest discover -s scripts/tests -p test_claude_guardrails.py -v
-      # Ops runbooks (scripts/ops) with the API package they read through.
+      # Ops runbooks (scripts/ops) with the API package they read through, plus the SNKRDUNK
+      # collector's HTML parser pin (snkr-page-check runs that collector's parser offline).
       - run: pip install -r services/api/requirements.txt && pip install --no-deps ./packages/opcg_source_identity
+      - run: pip install "$(grep -E '^beautifulsoup4==' services/snkrdunk_collector/requirements.txt)"
       - run: python -m unittest discover -s scripts/tests -p 'test_ops_*.py' -v
       - run: python -m unittest discover -s scripts/tests -p test_staging_web_smoke.py -v
 
