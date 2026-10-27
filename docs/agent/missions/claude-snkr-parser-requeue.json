@@ -108,5 +108,5 @@
       "observation_window": "Canary dry run and apply, the next SNKRDUNK turn (db-diagnostic snkrdunk-quarantine, staging-state), then the rest."
     }
   },
-  "diff_sha256": "6d1e8de8c4f9b7847dd639e5dd08eb9851faedb6c413a86494bb8b3405d6ccfb"
+  "diff_sha256": "c11a1d511c3de7090c0fd1c611995c545690e5e9b4025fd8e87c2c3be66ae13a"
 }
