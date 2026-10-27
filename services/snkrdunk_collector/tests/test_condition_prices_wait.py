@@ -5,8 +5,9 @@ GET /v2/products/<id>/size-chips after load. A snapshot before that response is 
 which would read as "nothing listed". No browser, no socket: a fake page replays responses and
 re-renders its HTML after a given number of waits.
 
-The size-chips body schema is not known from stored evidence; the bodies below are illustrative
-and the classifier (browser.body_listings) only relies on keys that name a price."""
+The size-chips body schema is not known from stored evidence, so a body never vouches for
+"nothing listed": a snapshot counts only when a chip shows a rendered price. The bodies below
+are illustrative (browser.body_listings is telemetry only)."""
 
 import json
 from types import SimpleNamespace
@@ -27,11 +28,16 @@ BODY_NONE = json.dumps({"sizeChips": [{"name": label, "minPrice": None} for labe
 
 
 def page_html(prices, *, names=NAMES):
+    def value(v):
+        if v is None:
+            return '<p class="c__awaiting">出品待ち</p>'
+        if v.startswith("<"):
+            return v  # any other chip state, verbatim
+        return f'<p class="c__price">{v}</p>'
+
     chips = "".join(
-        f'<button class="c__chip"><p class="c__variant">{label}</p>'
-        + (f'<p class="c__price">{value}</p>' if value else '<p class="c__awaiting">出品待ち</p>')
-        + "</button>"
-        for label, value in prices.items()
+        f'<button class="c__chip"><p class="c__variant">{label}</p>{value(v)}</button>'
+        for label, v in prices.items()
     )
     return f"<html><head><title>OP01-001</title></head><body><div>{chips}</div>{names}</body></html>"
 
@@ -118,12 +124,11 @@ def test_the_snapshot_is_taken_only_after_the_price_response_and_its_render():
     step, kept = capture(page)
     assert step["classification"] == "normal_page"
     prices = step["condition_prices"]
-    assert (prices["status"], prices["product_id"], prices["dom"], prices["body_listings"]) == (
-        "loaded", PID, "rendered", "prices")
+    assert (prices["status"], prices["product_id"], prices["body_listings"]) == ("loaded", PID, "prices")
     assert step["html"] == page_html(RENDERED) == kept["html"]
     render = page.calls.index(f"wait:{browser.PRICE_CHIPS_RENDER_MS}")
     assert render < len(page.calls) - 1 - page.calls[::-1].index("content")
-    assert kept["condition_prices"] == prices and "price_chips" not in kept  # body kept only when it decides
+    assert kept["condition_prices"] == prices and "price_chips" not in kept  # body kept only when no price shows
     assert page.listeners == []  # the listener is removed whatever happens
 
 
@@ -163,7 +168,7 @@ def test_a_response_with_prices_the_page_never_rendered_is_not_no_listing():
     step, _ = capture(page)
     assert step["classification"] == browser.PRICES_NOT_LOADED
     assert step["condition_prices"]["status"] == "dom_not_rendered"
-    assert step["classification_evidence"] == ["condition_prices:dom_not_rendered"]
+    assert step["classification_evidence"][0] == "condition_prices:dom_not_rendered"
     # the extra render wait is bounded
     assert page.calls.count(f"wait:{browser.PRICE_CHIPS_POLL_MS}") <= (
         1 + browser.PRICE_CHIPS_WAIT_S * 1000 / browser.PRICE_CHIPS_POLL_MS
@@ -174,40 +179,61 @@ def test_a_late_render_inside_the_bound_is_captured():
     page = FakePage(responses=[(FakeResponse(body=BODY_PRICES), 1)],
                     renders=[(0, page_html(AWAITING)), (6, page_html(RENDERED))])
     step, _ = capture(page)
-    assert step["classification"] == "normal_page" and step["condition_prices"]["dom"] == "rendered"
-
-
-def test_all_awaiting_is_no_listing_only_when_the_body_has_no_price_and_the_body_is_kept():
-    page = FakePage(responses=[(FakeResponse(body=BODY_NONE), 1)])
-    step, kept = capture(page)
-    assert step["classification"] == "normal_page"
-    assert (step["condition_prices"]["status"], step["condition_prices"]["dom"]) == (
-        "loaded", "all_awaiting_body_confirms")
-    assert kept["price_chips"] == {"url": f"https://snkrdunk.com/v2/products/{PID}/size-chips", "body": BODY_NONE}
+    assert step["classification"] == "normal_page" and step["condition_prices"]["status"] == "loaded"
 
 
 @pytest.mark.parametrize(
     "response,expected",
     [
-        (FakeResponse(body='{"sizeChips": [{"name": "A"}]}'), "body_unrecognised"),
-        (FakeResponse(body="<html>error</html>"), "body_unrecognised"),
+        (FakeResponse(body=BODY_NONE), "body_unconfirmed"),  # even a body that looks empty
+        (FakeResponse(body='{"sizeChips": [{"name": "A"}]}'), "body_unconfirmed"),
+        (FakeResponse(body="<html>error</html>"), "body_not_json"),
         (FakeResponse(raises=RuntimeError("evicted")), "body_unavailable"),
     ],
 )
-def test_all_awaiting_with_a_body_that_cannot_confirm_it_is_not_no_listing(response, expected):
+def test_a_page_with_no_rendered_price_is_never_no_listing_and_its_body_is_kept(response, expected):
     page = FakePage(responses=[(response, 1)])
-    step, _ = capture(page)
+    step, kept = capture(page)
     assert step["classification"] == browser.PRICES_NOT_LOADED
     assert step["condition_prices"]["status"] == expected
+    assert step["classification_evidence"][0] == f"condition_prices:{expected}"
+    if expected == "body_unavailable":
+        assert "price_chips" not in kept
+    else:
+        assert kept["price_chips"] == {"url": response.url, "body": response._body}
+        assert step["classification_evidence"][1].startswith("size_chips_sha256:")
+
+
+@pytest.mark.parametrize("other", [
+    '<p class="c__skeleton"></p>',  # a loading skeleton
+    '<p class="c__price"></p>',  # an empty price slot
+    '<p class="c__price">---</p>',
+    '<p class="c__price">¥ 0</p>',
+    '<p class="c__unknown">SOLD</p>',
+])
+def test_a_chip_in_any_other_state_is_not_proof_of_a_render(other):
+    page = FakePage(responses=[(FakeResponse(raises=RuntimeError("evicted")), 1)],
+                    renders=[(0, page_html({**AWAITING, "PSA10": other}))])
+    step, _ = capture(page)
+    assert step["classification"] == browser.PRICES_NOT_LOADED
 
 
 def test_graded_prices_alone_show_the_page_rendered():
-    # Raw A-D all 出品待ち next to a priced PSA10 chip is a genuine raw no-listing.
+    # One response fills every chip: raw A-D 出品待ち next to a priced PSA10 is a genuine raw no-listing.
     page = FakePage(responses=[(FakeResponse(body=BODY_PRICES), 1)],
                     renders=[(0, page_html(AWAITING)), (2, page_html(PSA_ONLY))])
     step, kept = capture(page)
-    assert step["classification"] == "normal_page" and step["condition_prices"]["dom"] == "rendered"
+    assert step["classification"] == "normal_page" and step["condition_prices"]["status"] == "loaded"
     assert "price_chips" not in kept
+
+
+def test_a_page_without_a_picker_goes_on_to_extraction_as_a_structure_problem():
+    # Extraction reports it as a parsing failure; without a coherent picker nothing reads as no listing.
+    no_picker = f"<html><title>OP01-001</title><body><div>moved</div>{NAMES}</body></html>"
+    page = FakePage(responses=[(FakeResponse(), 1)], renders=[(0, no_picker)])
+    step, kept = capture(page)
+    assert step["classification"] == "normal_page"
+    assert step["condition_prices"]["status"] == browser.PRICES_NO_PICKER and "price_chips" not in kept
 
 
 def test_a_rendered_page_does_not_need_its_body():
@@ -215,6 +241,40 @@ def test_a_rendered_page_does_not_need_its_body():
                     renders=[(0, page_html(AWAITING)), (2, page_html(RENDERED))])
     step, _ = capture(page)
     assert step["classification"] == "normal_page" and step["condition_prices"]["status"] == "loaded"
+
+
+def test_a_challenge_in_the_price_response_is_a_denial():
+    body = '<html><title>Just a moment...</title><div id="challenge-form"></div></html>'
+    page = FakePage(responses=[(FakeResponse(body=body), 1)])
+    step, kept = capture(page)
+    assert step["classification"] == "challenge_or_captcha"
+    assert step["classification_evidence"][0] == "condition_prices:challenge_body"
+    assert kept["price_chips"]["body"] == body
+
+
+def test_a_stopped_attempt_ends_the_wait():
+    page = FakePage()
+    calls = {"n": 0}
+
+    def stop():
+        calls["n"] += 1
+        return calls["n"] > 2
+
+    step, _ = capture(page, should_stop=stop)
+    assert step["condition_prices"]["status"] == "attempt_stopped"
+    assert step["classification"] == browser.PRICES_NOT_LOADED and page.waits == 3
+
+
+def test_only_a_200_json_response_keeps_the_warmed_browser():
+    assert browser.WARM_SAFE_PRICE_STATUSES == {"dom_not_rendered", "body_unconfirmed"}
+
+
+def test_the_product_deadline_covers_every_wait_with_margin():
+    from snkrdunk_collector.config import settings
+
+    waits = 30 + 1.5 + browser.PRICE_CHIPS_WAIT_S + browser.PRICE_CHIPS_RENDER_MS / 1000 \
+        + browser.PRICE_CHIPS_RENDER_MAX_S + browser.PRICE_CHIPS_POLL_MS / 1000
+    assert settings.PRODUCT_NAV_TIMEOUT_S - waits >= 5
 
 
 def test_a_response_the_page_does_not_name_is_not_trusted():
@@ -291,20 +351,22 @@ def test_the_expected_product_comes_from_the_page_url():
 
 
 @pytest.mark.parametrize(
-    "body,verdict",
+    "body,priced",
     [
-        ({"a": [{"price": 3500}]}, "prices"),
-        ({"a": [{"minPrice": "¥3,500"}, {"minPrice": None}]}, "prices"),
-        ({"a": [{"price": None}, {"lowestPrice": 0}, {"price": ""}, {"price": "出品待ち"}]}, "none"),
-        ({"a": [{"name": "A"}]}, "unrecognised"),
-        ({"price": {"value": 1}}, "unrecognised"),  # a nested price object is walked, its keys are not prices
-        ({"a": [{"price": True}]}, "unrecognised"),
-        ([], "unrecognised"),
+        ({"a": [{"price": 3500}]}, 1),
+        ({"a": [{"minPrice": "¥3,500"}, {"minPrice": None}]}, 1),
+        ({"chips": [{"price": {"amount": 3500}}, {"usedPrice": None}]}, 1),  # inside a price object
+        ({"a": [{"price": None}, {"lowestPrice": 0}, {"price": ""}, {"price": True}]}, 0),
+        ({"chips": [{"minPrice": 0, "lowest": 3500}]}, 0),
+        ({"priceUpdatedAt": "2026-10-26T08:00:00Z"}, 0),
     ],
 )
-def test_body_listings_reads_only_keys_that_name_a_price(body, verdict):
-    assert browser.body_listings(json.dumps(body))["body_listings"] == verdict
+def test_body_listings_is_telemetry_and_never_says_nothing_is_listed(body, priced):
+    found = browser.body_listings(json.dumps(body))
+    assert found["body_json"] and found["body_priced"] == priced
+    assert found["body_listings"] == ("prices" if priced else "unconfirmed")
 
 
-def test_body_listings_rejects_non_json():
-    assert browser.body_listings("<html>")["body_listings"] == "unrecognised"
+@pytest.mark.parametrize("text", ["<html>", "", None, "[" * 100_000])
+def test_body_listings_rejects_non_json(text):
+    assert browser.body_listings(text) == {"body_json": False, "body_listings": "unconfirmed"}

@@ -452,11 +452,12 @@ def _all_awaiting(html):
     return str(soup)
 
 
-@pytest.mark.parametrize("prices", ["not_seen", "dom_not_rendered", "body_confirms_none"])
+@pytest.mark.parametrize("prices", ["not_seen", "dom_not_rendered", "body_unconfirmed"])
 def test_placeholders_are_never_recorded_as_no_listing(db, monkeypatch, prices):
-    """2026-10-26: SNKRDUNK fills condition prices in after load. A page whose chips all read
-    出品待ち is 'nothing listed' only when the page's own price response came back and holds
-    no price; otherwise the capture is retried later (transient) with the reason recorded."""
+    """2026-10-26: SNKRDUNK fills condition prices in after load. A page on which no chip shows
+    a price is never 'nothing listed' (the price response's schema cannot vouch for it yet):
+    the capture is retried later (transient) with the reason recorded, and the price response
+    body is kept beside the page as evidence."""
     from snkrdunk_collector import browser
 
     factory, source, mid, _ = db
@@ -467,7 +468,7 @@ def test_placeholders_are_never_recorded_as_no_listing(db, monkeypatch, prices):
         monkeypatch.setattr(browser, "PRICE_CHIPS_WAIT_S", 0.05)
     elif prices == "dom_not_rendered":
         monkeypatch.setattr(browser, "PRICE_CHIPS_RENDER_MAX_S", 0.05)
-    else:
+    else:  # a body that looks empty still cannot confirm it
         transport.chips_body = b'{"sizeChips": [{"name": "A", "minPrice": null}]}'
     assert len(run(factory, source)) == 1
     with factory() as session:
@@ -476,15 +477,15 @@ def test_placeholders_are_never_recorded_as_no_listing(db, monkeypatch, prices):
         chips = session.scalars(select(RawSnapshot).where(RawSnapshot.source_url.like("%/size-chips"))).all()
         assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
         assert attempt.raw_snapshot_id is not None  # the page is kept as evidence either way
-        if prices == "body_confirms_none":  # a loaded page that really has nothing listed
-            assert (attempt.outcome, row.state) == ("no_listing", "pending")
-            # the body that decided it is kept beside the page; the page stays the evidence row
-            assert [c.raw_content for c in chips] == [transport.chips_body.decode()]
-            assert "/apparels/" in session.get(RawSnapshot, attempt.raw_snapshot_id).source_url
+        assert "/apparels/" in session.get(RawSnapshot, attempt.raw_snapshot_id).source_url
+        assert (attempt.outcome, row.state) == ("transient_failure", "pending")
+        assert f"prices_not_loaded;condition_prices:{prices}" in row.last_failure
+        assert not attempt.category_outcomes or "no_listing" not in attempt.category_outcomes.values()
+        if prices == "not_seen":
+            assert chips == []
         else:
-            assert (attempt.outcome, row.state) == ("transient_failure", "pending")
-            assert f"prices_not_loaded;condition_prices:{prices}" in row.last_failure
-            assert not attempt.category_outcomes or "no_listing" not in attempt.category_outcomes.values()
+            assert [c.raw_content for c in chips] == [transport.chips_body.decode()]
+            assert f"size_chips_sha256:{chips[0].content_hash[:16]}" in row.last_failure
 
 
 def test_partial_absence_keeps_deadline_and_does_not_recapture_in_same_run(

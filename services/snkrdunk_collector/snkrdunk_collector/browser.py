@@ -65,11 +65,14 @@ WEAK_MARKERS = ["cloudflare", "captcha", "cf-error", "ray id"]
 # 出品待ち and fills the real prices in from its own price request
 # (GET /v2/products/<id>/size-chips, <id> = the /apparels/<id> of the page) after load. A
 # snapshot taken before that response is placeholders, which would read as "nothing listed".
-# A product capture therefore waits for THIS product's size-chips response, reads its body
-# (the response the page already received; no extra request), lets the page render it, and
-# only then takes the snapshot. A page whose chips are ALL still 出品待ち is accepted only
-# when that body itself holds no price; otherwise (or without the response) the capture is
-# PRICES_NOT_LOADED and never reaches extraction. A 403/429 on it is a source denial.
+# A product capture therefore waits for THIS product's size-chips response (one request fills
+# every chip, raw and graded), lets the page render it, and only then takes the snapshot. The
+# snapshot counts as loaded only when the page names that request and at least one chip shows
+# a real price. A page with no priced chip (all 出品待ち, skeletons, anything unknown) is
+# PRICES_NOT_LOADED and never reaches extraction (a page with no picker at all does, and
+# fails there as a parsing failure): the response body's schema is not known yet,
+# so it cannot vouch for "nothing listed". Its body is kept as evidence (to learn that schema).
+# A 403/429 on the request, or a challenge in its body, is a source denial.
 PRICE_CHIPS_PATH = re.compile(r"/v2/products/(\d+)/size-chips")
 PRODUCT_PATH = re.compile(r"/apparels/(\d+)/?")
 SNKRDUNK_HOSTS = frozenset({"snkrdunk.com", "www.snkrdunk.com"})
@@ -79,8 +82,16 @@ PRICE_CHIPS_RENDER_MAX_S = 3.0
 PRICE_CHIPS_POLL_MS = 250
 PRICE_CHIPS_BODY_MAX = 512_000
 PRICES_NOT_LOADED = "prices_not_loaded"
+PRICES_NO_PICKER = "no_picker"
+# Statuses whose snapshot goes on to extraction: a rendered price, or no picker at all (a
+# parsing failure there, never a no listing).
+EXTRACTABLE_PRICE_STATUSES = frozenset({"loaded", PRICES_NO_PICKER})
+# prices_not_loaded statuses after which the warmed browser stays usable: the request came
+# back 200 with JSON, only the render (or the schema) is in doubt. Anything else (no response,
+# an error status, a non-JSON body) may be a soft block, so the next capture starts afresh.
+WARM_SAFE_PRICE_STATUSES = frozenset({"dom_not_rendered", "body_unconfirmed"})
 _PRICE_KEY = re.compile("price", re.I)
-_DIGITS = re.compile(r"[0-9][0-9,]*")
+_YEN = re.compile(r"[¥￥]\s*([1-9][0-9]*(?:,[0-9]{3})*)")
 
 
 def _price_chips_response(response) -> tuple[str, int] | None:
@@ -105,10 +116,11 @@ def expected_price_product(url: str | None) -> str | None:
     return match.group(1) if match else None
 
 
-def wait_for_condition_prices(page: Page, seen: list, product_id: str, *, clock=None):
+def wait_for_condition_prices(page: Page, seen: list, product_id: str, *, clock=None, should_stop=None):
     """Wait (bounded) for this product's size-chips response. `seen` holds (id, status,
     response) from a listener registered before navigation; other products' responses (a
-    recommendation, a prefetch) are ignored. Returns (evidence, response or None)."""
+    recommendation, a prefetch) are ignored. Stops early when the attempt is stopped.
+    Returns (evidence, response or None)."""
     clock = clock or time.monotonic
     start = clock()
     end = start + PRICE_CHIPS_WAIT_S
@@ -116,56 +128,44 @@ def wait_for_condition_prices(page: Page, seen: list, product_id: str, *, clock=
     def ours():
         return next((entry for entry in seen if entry[0] == product_id), None)
 
+    stopped = False
     while ours() is None and clock() < end:
+        if should_stop is not None and should_stop():
+            stopped = True
+            break
         page.wait_for_timeout(PRICE_CHIPS_POLL_MS)
     found = ours()
     waited = round(clock() - start, 3)
     if found is None:
-        return {"status": "not_seen", "product_id": product_id, "waited_s": waited}, None
+        return {"status": "attempt_stopped" if stopped else "not_seen", "product_id": product_id,
+                "waited_s": waited}, None
     status = "response_200" if found[1] == 200 else f"http_{found[1]}"
     return {"status": status, "product_id": product_id, "waited_s": waited}, found[2]
 
 
-def _price_value(value) -> str:
-    """'price' a positive amount, 'empty' no amount, 'other' anything else."""
-    if value is None or isinstance(value, bool):
-        return "empty" if value is None else "other"
-    if isinstance(value, (int, float)):
-        return "price" if value > 0 else "empty"
-    if isinstance(value, str):
-        digits = _DIGITS.search(value)
-        if not value.strip() or value.strip() in {"-", "--", "出品待ち"}:
-            return "empty"
-        if digits:
-            return "price" if int(digits.group(0).replace(",", "")) > 0 else "empty"
-    return "other"
-
-
 def body_listings(text: str | None) -> dict:
-    """What the size-chips body says, without assuming its exact schema: every key naming a
-    price, at any depth. 'prices' when one holds a positive amount, 'none' when there are such
-    keys and none does, 'unrecognised' otherwise (not JSON, no price keys, odd values)."""
+    """Evidence about the size-chips body (telemetry only; it never confirms an outcome):
+    whether it is JSON, its top-level shape, and how many values under price-named keys
+    (at any depth, including inside a price-named object) are positive amounts."""
     try:
         data = json.loads(text or "")
-    except ValueError:
-        return {"body_listings": "unrecognised", "body_json": False}
-    kinds = []
-    stack = [data]
+    except (ValueError, RecursionError):
+        return {"body_json": False, "body_listings": "unconfirmed"}
+    priced = 0
+    stack = [(data, False)]
     while stack:
-        node = stack.pop()
+        node, in_price = stack.pop()
         if isinstance(node, dict):
-            for key, value in node.items():
-                if _PRICE_KEY.search(str(key)) and not isinstance(value, (dict, list)):
-                    kinds.append(_price_value(value))
-                else:
-                    stack.append(value)
+            stack.extend((v, in_price or bool(_PRICE_KEY.search(str(k)))) for k, v in node.items())
         elif isinstance(node, list):
-            stack.extend(node)
-    shape = sorted(data)[:8] if isinstance(data, dict) else type(data).__name__
-    verdict = ("prices" if "price" in kinds
-               else "none" if kinds and set(kinds) == {"empty"} else "unrecognised")
-    return {"body_listings": verdict, "body_json": True, "body_price_keys": len(kinds),
-            "body_priced": kinds.count("price"), "body_shape": shape}
+            stack.extend((v, in_price) for v in node)
+        elif in_price and not isinstance(node, bool) and (
+                (isinstance(node, (int, float)) and node > 0)
+                or (isinstance(node, str) and re.fullmatch(r"[¥￥]?\s*[1-9][0-9,]*", node.strip()))):
+            priced += 1
+    shape = sorted(map(str, data))[:8] if isinstance(data, dict) else type(data).__name__
+    return {"body_json": True, "body_listings": "prices" if priced else "unconfirmed",
+            "body_priced": priced, "body_shape": shape}
 
 
 def read_price_body(response) -> tuple[dict, str | None]:
@@ -176,47 +176,50 @@ def read_price_body(response) -> tuple[dict, str | None]:
     except Exception as exc:  # noqa: BLE001 - evicted or failed body: not evidence
         return {"body_listings": "unavailable", "body_error": type(exc).__name__}, None
     if len(body) > PRICE_CHIPS_BODY_MAX:
-        return {"body_listings": "unrecognised", "body_bytes": len(body), "body_error": "too_large"}, None
+        return {"body_listings": "unavailable", "body_bytes": len(body), "body_error": "too_large"}, None
     text = body.decode("utf-8", "replace")
-    return {"body_bytes": len(body), "body_sha256": hashlib.sha256(body).hexdigest()[:16],
+    return {"body_bytes": len(body), "body_sha256": hashlib.sha256(text.encode()).hexdigest()[:16],
             **body_listings(text)}, text
 
 
-def chips_all_awaiting(html: str) -> bool:
-    """True when the product's chip picker is found and every chip still reads 出品待ち (no
-    chip anywhere shows a price), i.e. the page has not rendered any price."""
+def chips_show_a_price(html: str) -> bool | None:
+    """True when the product's chip picker has at least one chip showing a real yen price,
+    i.e. the page has rendered its price response. Placeholders, skeletons and any unknown
+    chip state are not evidence of a render (False). None when there is no picker at all:
+    that is a page-structure problem, which extraction reports as a parsing failure (it can
+    never read as no listing without a coherent picker)."""
     from bs4 import BeautifulSoup
 
     from snkrdunk_collector.extractor import _has_module_class, find_condition_chip_container
 
     container, _ = find_condition_chip_container(BeautifulSoup(html or "", "html.parser"))
     if container is None:
-        return False
-    chips = [b for b in container.find_all("button", recursive=False) if _has_module_class(b, "chip")]
-    values = [p for chip in chips for p in chip.find_all("p", recursive=False)]
-    return bool(chips) and not any(_has_module_class(p, "price") for p in values) and all(
-        any(_has_module_class(p, "awaiting") and p.get_text(strip=True) == "出品待ち"
-            for p in chip.find_all("p", recursive=False))
-        for chip in chips
+        return None
+    return any(
+        _has_module_class(p, "price") and _YEN.search(p.get_text(strip=True))
+        for chip in container.find_all("button", recursive=False) if _has_module_class(chip, "chip")
+        for p in chip.find_all("p", recursive=False)
     )
 
 
-def confirm_prices_loaded(evidence: dict, html: str, *, all_awaiting: bool | None = None) -> dict:
-    """'loaded' only when this product's 200 size-chips response is named by the page and the
-    snapshot agrees with it: rendered prices, or every chip 出品待ち and a body with no price."""
+def confirm_prices_loaded(evidence: dict, html: str, *, rendered: bool | None = None) -> dict:
+    """'loaded' only when this product's 200 size-chips response is named by the page and
+    the snapshot shows at least one rendered price."""
     if evidence.get("status") != "response_200":
         return evidence
     if evidence["product_id"] not in set(PRICE_CHIPS_PATH.findall(html or "")):
         return {**evidence, "status": "not_named_by_page"}
-    if all_awaiting is None:
-        all_awaiting = chips_all_awaiting(html)
-    if not all_awaiting:
-        return {**evidence, "status": "loaded", "dom": "rendered"}
+    if rendered is None:
+        rendered = chips_show_a_price(html)
+    if rendered is None:
+        return {**evidence, "status": PRICES_NO_PICKER}
+    if rendered:
+        return {**evidence, "status": "loaded"}
     listings = evidence.get("body_listings")
-    if listings == "none":
-        return {**evidence, "status": "loaded", "dom": "all_awaiting_body_confirms"}
-    return {**evidence, "status": "dom_not_rendered" if listings == "prices" else f"body_{listings}",
-            "dom": "all_awaiting"}
+    status = ("dom_not_rendered" if listings == "prices"
+              else "body_unavailable" if listings == "unavailable"
+              else "body_unconfirmed" if evidence.get("body_json") else "body_not_json")
+    return {**evidence, "status": status}
 
 
 def log_event(event: str, **fields) -> None:
@@ -306,11 +309,13 @@ def classify_page(status: int | None, html: str, title: str) -> tuple[str, list[
     return "error", [f"http_status:{status}"]
 
 
-def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_prices=False) -> dict:
+def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_prices=False,
+                     should_stop=None) -> dict:
     """One bounded navigation attempt. Returns a dict with either an "error"
     key (navigation-level exception, e.g. DNS/timeout) or the captured
     page state + classification. `condition_prices` (product pages): the
-    snapshot waits for the page's own price request, see PRICE_CHIPS_PATH."""
+    snapshot waits for the page's own price request, see PRICE_CHIPS_PATH;
+    `should_stop` ends that wait early once the attempt is stopped."""
     start = time.monotonic()
     seen: list = []
     listener = None
@@ -329,34 +334,37 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
         classification, evidence = classify_page(status, html, title)
         prices = chips = None
         if condition_prices:
-            prices, chips = _settle_condition_prices(page, seen, status, classification)
+            prices, chips = _settle_condition_prices(page, seen, status, classification, should_stop)
             if prices["status"] == "response_200":
                 html = page.content()
-                all_awaiting = chips_all_awaiting(html)
+                rendered = chips_show_a_price(html)
                 render_end = time.monotonic() + PRICE_CHIPS_RENDER_MAX_S
                 # The body holds prices but none is on the page yet: give the render a
                 # little longer (bounded) before the snapshot.
-                while (all_awaiting and prices.get("body_listings") == "prices"
+                while (rendered is False and prices.get("body_listings") == "prices"
                        and time.monotonic() < render_end):
                     page.wait_for_timeout(PRICE_CHIPS_POLL_MS)
                     html = page.content()
-                    all_awaiting = chips_all_awaiting(html)
+                    rendered = chips_show_a_price(html)
                 title = page.title()
                 classification, evidence = classify_page(status, html, title)
-                prices = confirm_prices_loaded(prices, html, all_awaiting=all_awaiting)
+                prices = confirm_prices_loaded(prices, html, rendered=rendered)
         elapsed = time.monotonic() - start
+        keep_chips = chips is not None and prices["status"] not in EXTRACTABLE_PRICE_STATUSES
         if before_parse is not None:
             before_parse({
                 "html": html, "http_status": status, "final_url": page.url,
                 **({"condition_prices": prices} if prices is not None else {}),
-                # The body is kept as evidence where it decides the outcome: every chip 出品待ち.
-                **({"price_chips": chips} if chips and prices.get("dom", "").startswith("all_awaiting")
-                   else {}),
+                # The body is kept where the page showed no price: the evidence for why.
+                **({"price_chips": chips} if keep_chips else {}),
             })
-        if prices is not None and classification == "normal_page" and prices["status"] != "loaded":
-            denied = prices["status"] in {"http_403", "http_429"}
-            classification = f"static_{prices['status'][5:]}" if denied else PRICES_NOT_LOADED
+        if (prices is not None and classification == "normal_page"
+                and prices["status"] not in EXTRACTABLE_PRICE_STATUSES):
+            classification = {"http_403": "static_403", "http_429": "static_429",
+                              "challenge_body": "challenge_or_captcha"}.get(prices["status"], PRICES_NOT_LOADED)
             evidence = [f"condition_prices:{prices['status']}"]
+            if prices.get("body_sha256"):
+                evidence.append(f"size_chips_sha256:{prices['body_sha256']}")
         return {
             "final_url": page.url,
             "http_status": status,
@@ -379,7 +387,7 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
                 pass
 
 
-def _settle_condition_prices(page: Page, seen: list, status, classification) -> tuple[dict, dict | None]:
+def _settle_condition_prices(page: Page, seen: list, status, classification, should_stop=None):
     """Wait for this product's size-chips response (only on a normal 200 page: a challenge
     or denial is not waited on), read its body and let the page render it. Returns
     (evidence, {"url", "body"} or None)."""
@@ -388,13 +396,16 @@ def _settle_condition_prices(page: Page, seen: list, status, classification) -> 
     product_id = expected_price_product(page.url)
     if product_id is None:
         return {"status": "no_product_id"}, None
-    prices, response = wait_for_condition_prices(page, seen, product_id)
+    prices, response = wait_for_condition_prices(page, seen, product_id, should_stop=should_stop)
     if prices["status"] != "response_200":
         return prices, None
     body, text = read_price_body(response)
     prices.update(body)
+    chips = {"url": response.url, "body": text} if text is not None else None
+    if text is not None and classify_page(200, text, "")[0] == "challenge_or_captcha":
+        return {**prices, "status": "challenge_body"}, chips
     page.wait_for_timeout(PRICE_CHIPS_RENDER_MS)
-    return prices, ({"url": response.url, "body": text} if text is not None else None)
+    return prices, chips
 
 
 def fetch_bytes(page: Page, url: str) -> bytes | None:
