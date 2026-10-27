@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "mission": "snkr-page-check, price evidence (owner 2026-10-27: 'Ok'). The parser trace (#228) showed the photo recovery stops on a new Flight format, and that on every refused page all 16 condition chips read 出品待ち where captures before the change had prices: prices now most likely arrive after load, and the collector would read placeholders as 'no listing'. This read-only runbook now also reports where the condition prices live: price-like keys and yen amounts in the embedded Flight data, excerpts around the condition labels, API-looking paths, loading markers in and around the chip picker, and each chip's label and text. No SNKRDUNK request, no write, no workflow change.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/snkr_page_check.py"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Price evidence per stored page; read-only connection, no source request. Page counts trimmed (2 refusals, 1 capture) to stay inside the annotation budget."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_snkr_page_check.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Price trace finds price keys, yen amounts, API paths, chip texts and loading markers around the chip picker."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook row."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly snkr-page-check"
+      ],
+      "routes": [
+        "none (database read only)"
+      ],
+      "dependencies": [
+        "staging after #228"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 3
+    },
+    "recovery": {
+      "artifact": "8c6bf11ec0181b7e677fe9d63e2a6063d4521240",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "A wrong report.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_snkr_page_check.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/snkr_page_check.py"
+      ],
+      "observation_window": "The first snkr-page-check run."
+    }
+  },
+  "diff_sha256": "1658fac4b4aad041dc8f525694f66949f4047d46af1f9249efa647de9d2d30e3"
+}
