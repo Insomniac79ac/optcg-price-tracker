@@ -9,7 +9,7 @@ from app.models import FreshnessWork, SourceCardMapping
 from app.services import snkr_parser_requeue as rq
 from app.services.freshness_queue import complete_claim
 
-from test_freshness_queue_postgres import admit, claim, db, mapping, plan, snapshot  # noqa: F401 - fixture
+from test_freshness_queue_postgres import admit, claim, db, mapping, observation, plan, snapshot  # noqa: F401 - fixture
 
 IN_WINDOW = rq.CHANGE_AT + timedelta(hours=2)
 NOW = rq.RELEASE_AT + timedelta(hours=1)
@@ -45,11 +45,25 @@ def apply(factory, plan_):
         return rq.apply(session, plan_, clock=lambda: NOW)
 
 
-def capture(factory, work_id, at=NOW + timedelta(minutes=30)):
-    """The reopened item captured on the new code (only the fields the proof reads)."""
+def settle_next(factory, source, work_id, outcome, at=NOW + timedelta(minutes=30)):
+    """The scheduled SNKRDUNK turn claims the reopened item and settles it (real queue path)."""
+    picked = claim(factory, source, at=at)
+    assert [c.work_id for c in picked] == [work_id]
+    token = picked[0].claim_token
+    admit(factory, token, at=at + timedelta(seconds=5))
+    snap = snapshot(factory, source, at + timedelta(seconds=10))
+    with factory() as session:
+        mapping_id = session.get(FreshnessWork, work_id).source_card_mapping_id
+    result = {"captured": dict(observation_ids={"raw": observation(factory, mapping_id, snap, at + timedelta(seconds=10))}),
+              "transient_failure": dict(failure="timeout"),
+              "identity_refusal": dict(failure="no_raw_condition_price_available")}[outcome]
     with factory.begin() as session:
-        work = session.get(FreshnessWork, work_id)
-        work.last_outcome, work.last_successfully_checked_at = "captured", at
+        complete_claim(session, token, outcome=outcome, actual_request_cost=1, raw_snapshot_id=snap,
+                       clock=lambda: at + timedelta(seconds=20), **result)
+
+
+def capture(factory, source, work_id, at=NOW + timedelta(minutes=30)):
+    settle_next(factory, source, work_id, "captured", at)
 
 
 def test_canary_reopens_one_item_and_nothing_else(db):
@@ -88,7 +102,7 @@ def test_the_rest_needs_a_proven_capture_then_reopens_every_remaining_item(db):
     canary = preview(factory, "canary")[0]
     apply(factory, canary)
     assert any("no refused item has captured" in p for p in preview(factory, "rest")[1])
-    capture(factory, canary["work_ids"][0])
+    capture(factory, source, canary["work_ids"][0])
     assert any("already proven" in p for p in preview(factory, "canary")[1])
     rest, problems, facts = preview(factory, "rest")
     assert problems == [] and facts["proven_captures"] == canary["work_ids"]
@@ -99,16 +113,49 @@ def test_the_rest_needs_a_proven_capture_then_reopens_every_remaining_item(db):
     assert any("no refused item is eligible" in p for p in preview(factory, "rest")[1])
 
 
-def test_a_refusal_on_the_new_code_stops_the_rest(db):
+def test_a_refusal_on_the_new_code_stops_both_modes(db):
     factory, source, mapping_id, print_id = db
-    ids = seed(factory, source, mapping_id, print_id)
+    seed(factory, source, mapping_id, print_id)
     canary = preview(factory, "canary")[0]
     apply(factory, canary)
-    capture(factory, canary["work_ids"][0])
-    refuse(factory, source, mapping(factory, source, print_id, 2000), at=NOW, reason="no_raw_condition_price_available")
+    settle_next(factory, source, canary["work_ids"][0], "identity_refusal")
+    for mode in ("canary", "rest"):
+        plan_, problems, facts = preview(factory, mode)
+        assert plan_ is None and any("refused again on the new code" in p for p in problems), mode
+    assert [r["work_id"] for r in facts["refused_on_new_code"]] == canary["work_ids"]
+
+
+def test_a_canary_that_failed_transiently_is_still_open(db):
+    factory, source, mapping_id, print_id = db
+    seed(factory, source, mapping_id, print_id)
+    canary = preview(factory, "canary")[0]
+    apply(factory, canary)
+    settle_next(factory, source, canary["work_ids"][0], "transient_failure")
+    assert any("not settled" in p for p in preview(factory, "canary")[1])
+    assert any("no refused item has captured" in p for p in preview(factory, "rest")[1])
+
+
+def test_the_proof_survives_a_later_failure_of_the_canary(db):
+    factory, source, mapping_id, print_id = db
+    seed(factory, source, mapping_id, print_id)
+    canary = preview(factory, "canary")[0]
+    apply(factory, canary)
+    capture(factory, source, canary["work_ids"][0])
+    with factory.begin() as session:  # its next refresh is due and fails transiently
+        session.get(FreshnessWork, canary["work_ids"][0]).next_due_at = NOW + timedelta(hours=1)
+    settle_next(factory, source, canary["work_ids"][0], "transient_failure", at=NOW + timedelta(hours=2))
     plan_, problems, facts = preview(factory, "rest")
-    assert plan_ is None and any("refused again on the new code" in p for p in problems)
-    assert len(facts["refused_on_new_code"]) == 1 and len(ids) == 3
+    assert problems == [] and facts["proven_captures"] == canary["work_ids"] and len(plan_["work_ids"]) == 2
+
+
+def test_a_reason_with_a_genuine_mismatch_is_not_reopened(db):
+    factory, source, mapping_id, print_id = db
+    refuse(factory, source, mapping_id, reason=rq.REASON + ";title_mismatch:other card")
+    refuse(factory, source, mapping(factory, source, print_id, 4001), reason=rq.REASON.replace("_", "x", 1))
+    good = refuse(factory, source, mapping(factory, source, print_id, 4002),
+                  reason=rq.REASON + ";artwork_not_confirmed_match:missing_image_url;no_raw_condition_price_available")
+    plan_, problems, facts = preview(factory, "canary")
+    assert problems == [] and plan_["work_ids"] == [good] and facts["candidates"] == 1
 
 
 def test_only_the_parser_bug_window_and_reason_are_eligible(db):

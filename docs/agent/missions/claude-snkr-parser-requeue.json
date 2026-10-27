@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "SNKRDUNK requeue after the class-name parser fix (owner decision 2026-10-27, perfectionist: canary then the rest). From 2026-10-26 ~08:29Z until #223's fix reached every collector (#224, 2026-10-27 07:04Z), every SNKRDUNK refresh was refused main_image_not_found and identity_refusal blocked its work: 284 items, all with that reason; blocked work is never retried, so SNKRDUNK had nothing to refresh. New owner-gated ops-write snkr-parser-requeue: app.services.snkr_parser_requeue.preview (read-only) plans either one canary (count 1) or, once a refused item has captured a price on the new code and nothing was refused again on it, every remaining refused item; apply re-runs the plan under row locks and only reopens the approved work (pending, due now, original reason kept behind a requeue marker). Only work refused for exactly that reason between 2026-10-26 08:00Z and 2026-10-27 07:04Z is eligible; older quarantine is never touched. No source request, no collector code change.",
+  "mission": "SNKRDUNK requeue after the class-name parser fix (owner decision 2026-10-27, perfectionist: canary then the rest). From 2026-10-26 ~08:29Z until #223's fix reached every collector (#224, 2026-10-27 07:04Z), every SNKRDUNK refresh was refused main_image_not_found and identity_refusal blocked its work: 284 items, all with that reason; blocked work is never retried, so SNKRDUNK had nothing to refresh. New owner-gated ops-write snkr-parser-requeue: app.services.snkr_parser_requeue.preview (read-only) plans either one canary (count 1) or, once a refused item has captured a price on the new code and nothing was refused again on it, every remaining refused item; apply re-runs the plan under row locks and only reopens the approved work (pending, due now, original reason kept behind a requeue marker). Only work whose reason is exactly the parser bug's (no genuine mismatch alongside), refused between 2026-10-26 08:00Z and 2026-10-27 07:04Z is eligible; older quarantine is never touched. No source request, no collector code change. Independent review: no blockers; its three should-fix items (exact reason set, open and proof from attempt history, canary stops after a new-code refusal) and the policy-version nit are fixed.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -55,7 +55,7 @@
       "effects": [
         "tests"
       ],
-      "reason": "Canary reopens one item only; a second canary waits; the rest needs a proven capture and stops on a refusal on the new code; window and reason filter; ineligible mappings reported; apply writes only the approved plan; read-only preview; runbook mode, SHA and apply gate."
+      "reason": "Canary reopens one item only; a second canary waits while the first is unsettled (including after a transient failure); the rest needs a captured attempt on the new code (real claim and settle path) and survives the canary's later failures; any refusal on the new code stops both modes; window and exact reason set (genuine mismatches excluded); ineligible mappings reported; apply writes only the approved plan; read-only preview; runbook mode, SHA and apply gate."
     },
     {
       "files": [

@@ -6,7 +6,7 @@ re-runs it under row locks and writes only the approved plan. No source request.
 
 - count=1: canary. Reopens the one refused item with the newest earlier clean capture. Wait for
   the next SNKRDUNK turn to capture it (staging-state, db-diagnostic snkrdunk-quarantine).
-- count empty: rest. Needs a refused item that has since captured a price on the new code, and
+- count empty: rest. Needs an attempt on a refused item that captured a price on the new code, and
   nothing refused again on it. Reopens every remaining refused item.
 """
 from __future__ import annotations
