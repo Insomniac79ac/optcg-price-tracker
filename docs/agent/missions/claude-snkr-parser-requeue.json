@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK requeue after the class-name parser fix (owner decision 2026-10-27, perfectionist: canary then the rest). From 2026-10-26 ~08:29Z until #223's fix reached every collector (#224, 2026-10-27 07:04Z), every SNKRDUNK refresh was refused main_image_not_found and identity_refusal blocked its work: 284 items, all with that reason; blocked work is never retried, so SNKRDUNK had nothing to refresh. New owner-gated ops-write snkr-parser-requeue: app.services.snkr_parser_requeue.preview (read-only) plans either one canary (count 1) or, once a refused item has captured a price on the new code and nothing was refused again on it, every remaining refused item; apply re-runs the plan under row locks and only reopens the approved work (pending, due now, original reason kept behind a requeue marker). Only work whose reason is exactly the parser bug's (no genuine mismatch alongside), refused between 2026-10-26 08:00Z and 2026-10-27 07:04Z is eligible; older quarantine is never touched. No source request, no collector code change. Independent review: no blockers; its three should-fix items (exact reason set, open and proof from attempt history, canary stops after a new-code refusal) and the policy-version nit are fixed.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/snkr_parser_requeue.py"
+      ],
+      "effects": [
+        "application",
+        "bulk_data"
+      ],
+      "reason": "Plan and apply for reopening the parser-bug refusals (state blocked -> pending on at most 284 SNKRDUNK refresh rows, only through the owner-approved runbook). Not imported by any collector path."
+    },
+    {
+      "files": [
+        "scripts/ops/snkr_requeue.py",
+        "scripts/ops/run.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "ops-write snkr-parser-requeue: dry run shows the plan and its SHA; apply writes exactly that plan after the staging fingerprint check."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Runbook choice and input descriptions. No secret, gate, permission or timeout change."
+    },
+    {
+      "files": [
+        "services/api/tests/test_snkr_parser_requeue_postgres.py",
+        "scripts/tests/test_ops_snkr_requeue.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Canary reopens one item only; a second canary waits while the first is unsettled (including after a transient failure); the rest needs a captured attempt on the new code (real claim and settle path) and survives the canary's later failures; any refusal on the new code stops both modes; window and exact reason set (genuine mismatches excluded); ineligible mappings reported; apply writes only the approved plan; read-only preview; runbook mode, SHA and apply gate."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "CLAUDE.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook section and list."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "SNKRDUNK freshness_work rows refused by the parser bug (at most 284)"
+      ],
+      "routes": [
+        "The scheduled SNKRDUNK collector refreshes the reopened work; no new route"
+      ],
+      "dependencies": [
+        "staging after #225 (collectors on the fixed parser)"
+      ],
+      "deployment_impact": "No collector rollout. Behaviour changes only after an owner-approved apply: the reopened items are refreshed by the next SNKRDUNK turns.",
+      "database_writes": 284,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "84cdc16c1917db1e09158860abbb5e2fa8c3dc5a",
+      "procedure": "Native revert PR with its own mission file; reopened rows that refuse again block themselves (identity_refusal), so no manual row repair is needed.",
+      "trigger": "The canary or reopened items refused again on the new code, or prices mis-parsed.",
+      "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
+      "validation": [
+        "services/api/tests/test_snkr_parser_requeue_postgres.py",
+        "scripts/tests/test_ops_snkr_requeue.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/snkr_parser_requeue.py",
+        "scripts/ops/snkr_requeue.py"
+      ],
+      "observation_window": "Canary dry run and apply, the next SNKRDUNK turn (db-diagnostic snkrdunk-quarantine, staging-state), then the rest."
+    }
+  },
+  "diff_sha256": "c11a1d511c3de7090c0fd1c611995c545690e5e9b4025fd8e87c2c3be66ae13a"
+}

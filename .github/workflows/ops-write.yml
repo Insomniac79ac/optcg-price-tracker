@@ -26,16 +26,17 @@ on:
           - collector-sibling-off
           - catalogue-import
           - yuyu-source-probe
+          - snkr-parser-requeue
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
         default: false
       expected_sha256:
-        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy, catalogue-import, yuyu-source-probe: plan) SHA-256 from the dry run the owner reviewed"
+        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy, catalogue-import, yuyu-source-probe, snkr-parser-requeue: plan) SHA-256 from the dry run the owner reviewed"
         type: string
         default: ""
       count:
-        description: "Batch size (empty: 50 for enqueue-remaining-50 and enqueue-capture-batch, 500 for approve-f1-batch and plan-refresh-backfill)"
+        description: "Batch size (empty: 50 for enqueue-remaining-50 and enqueue-capture-batch, 500 for approve-f1-batch and plan-refresh-backfill; snkr-parser-requeue: 1 = canary, empty = the rest)"
         type: string
         default: ""
       revision:
