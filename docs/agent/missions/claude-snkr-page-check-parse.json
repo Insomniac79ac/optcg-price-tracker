@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "mission": "snkr-page-check, step 1 of the SNKRDUNK parser follow-up (owner 2026-10-27: 'yes, go'). After the class-name fix (#223, live 2026-10-27 07:04Z) the canary refresh (work 196, 12:00Z) still refuses with artwork_not_confirmed_match:placeholder_image_url;no_raw_condition_price_available: the main image is found but is the site placeholder, the retained-gallery recovery returns nothing, and no raw price is read. The read-only runbook now also runs the SNKRDUNK collector's own current parser offline on each stored page (no SNKRDUNK request, no write) and reports where it stops: main image diagnostics, chip picker and raw/PSA10 results, a step-by-step retained-gallery trace, price-related class tokens and short excerpts. ops-readonly installs beautifulsoup4 at the collector's pin for this runbook only.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/snkr_page_check.py"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Offline parser trace per stored page; read-only connection, no source request."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Installs beautifulsoup4 (the SNKRDUNK collector's pin, read from its requirements) when the runbook is snkr-page-check. No secret, gate, permission or timeout change."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_snkr_page_check.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Parser trace on the collector's reduced product fixture; retained-gallery trace recovers a valid gallery and names the stop on a repeated Flight key."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook row."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly snkr-page-check"
+      ],
+      "routes": [
+        "none (database read only)"
+      ],
+      "dependencies": [
+        "staging after #227"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 3
+    },
+    "recovery": {
+      "artifact": "f939e9e70cf70c860ae9ac5eaea5b7cefccc09b8",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "A wrong report.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_snkr_page_check.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/snkr_page_check.py"
+      ],
+      "observation_window": "The first snkr-page-check run."
+    }
+  },
+  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+}

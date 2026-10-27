@@ -9,6 +9,14 @@ opcg_source_identity.raw_payload, base chains followed), and reports per page: H
 the number of <img> whose class ends in `__mainImage`, every class token that mentions an image
 (top 15), whether the retained gallery props (`ApparelGalleryContainer`) are present, and a short
 escaped excerpt around the first `mainImage`. Read-only session; no source request.
+
+Since the class-name fix (#223, live 2026-10-27 07:04Z) the canary refresh still refuses
+(`artwork_not_confirmed_match:placeholder_image_url;no_raw_condition_price_available`), so each
+page is also run through the collector's own current parser (snkrdunk_collector.extractor,
+offline, the exact code the collectors run): the main image and its diagnostics, the condition
+chip picker and raw/PSA10 results, a step-by-step trace of the retained-gallery recovery
+(retained_gallery.primary_gallery_url) naming the step where it stops, the price-related class
+tokens, and short excerpts around the first price chip and the gallery props.
 """
 from __future__ import annotations
 
@@ -18,6 +26,8 @@ from pathlib import Path
 import re
 
 from ops import common
+
+COLLECTOR = Path(__file__).resolve().parents[2] / "services" / "snkrdunk_collector"
 
 REFUSED_SQL = """
 select a.id attempt_id, a.raw_snapshot_id, a.finished_at
@@ -87,6 +97,129 @@ def describe(text):
             "image_class_tokens": parser.tokens.most_common(15), "excerpt": excerpt[:360]}
 
 
+def _collector_on_path():
+    import sys
+
+    if str(COLLECTOR) not in sys.path:
+        sys.path.insert(0, str(COLLECTOR))
+
+
+def _excerpt(text, needle, width=300):
+    at = text.find(needle)
+    if at < 0:
+        return ""
+    return re.sub(r"\s+", " ", text[max(0, at - width // 3): at + width])[:width]
+
+
+def gallery_trace(soup):
+    """retained_gallery.primary_gallery_url step by step: where it stops and what it saw."""
+    import json
+    from urllib.parse import urlsplit
+
+    trace = {"stopped_at": None}
+    chunks, bad_json = [], 0
+    for script in soup.find_all("script"):
+        body = script.string or ""
+        match = re.fullmatch(r"\s*self\.__next_f\.push\((\[.*\])\)\s*;?\s*", body, re.S)
+        if not match:
+            continue
+        try:
+            value = json.loads(match.group(1))
+        except (ValueError, TypeError):
+            bad_json += 1
+            continue
+        if isinstance(value, list) and len(value) == 2 and value[0] == 1 and isinstance(value[1], str):
+            chunks.append(value[1])
+    payload = "".join(chunks)
+    records = payload.splitlines()
+    trace.update(push_chunks=len(chunks), push_chunks_not_json=bad_json, payload_bytes=len(payload.encode()),
+                 records=len(records))
+    if bad_json:
+        trace["stopped_at"] = "a __next_f.push chunk is not JSON (the parser returns None)"
+    keys, duplicates, gallery_modules, other_modules, elements = set(), 0, [], [], []
+    for line in records:
+        key, sep, encoded = line.partition(":")
+        if not sep or not re.fullmatch(r"[0-9a-f]+", key):
+            continue
+        module = encoded.startswith("I")
+        try:
+            value = json.loads(encoded[1:] if module else encoded)
+        except (ValueError, TypeError):
+            continue
+        if key in keys:
+            duplicates += 1
+        keys.add(key)
+        if module and isinstance(value, list) and value:
+            name = value[-1] if isinstance(value[-1], str) else repr(value[-1])[:60]
+            if name == "ApparelGalleryContainer":
+                gallery_modules.append("$L" + key)
+            elif re.search("gallery|image|carousel", str(name), re.I):
+                other_modules.append(str(name)[:60])
+        elif isinstance(value, list) and len(value) == 4 and value[0] == "$" and isinstance(value[1], str) \
+                and isinstance(value[3], dict):
+            elements.append(value)
+    trace.update(duplicate_keys=duplicates, gallery_modules=gallery_modules,
+                 other_image_modules=sorted(set(other_modules))[:8])
+    if duplicates and not trace["stopped_at"]:
+        trace["stopped_at"] = "a repeated Flight record key (the parser returns None)"
+    galleries = [v[3] for v in elements if v[1] in set(gallery_modules)]
+    trace["gallery_elements"] = len(galleries)
+    if len(galleries) != 1:
+        trace["stopped_at"] = trace["stopped_at"] or f"expected exactly one gallery element, found {len(galleries)}"
+        return trace
+    gallery = galleries[0]
+    images, variants = gallery.get("mainImages"), gallery.get("variantSources")
+    trace.update(gallery_prop_keys=sorted(gallery)[:20],
+                 main_images=len(images) if isinstance(images, list) else type(images).__name__,
+                 variant_sources=len(variants) if isinstance(variants, list) else type(variants).__name__)
+    first = images[0] if isinstance(images, list) and images and isinstance(images[0], dict) else {}
+    src = first.get("src")
+    if isinstance(src, str):
+        parts = urlsplit(src)
+        trace["main_image_src_shape"] = {"scheme": parts.scheme, "host": parts.netloc,
+                                         "path": re.sub(r"[A-Za-z0-9_-]{12,}", "<id>", parts.path)[:80],
+                                         "query": bool(parts.query)}
+    else:
+        trace["main_image_first_keys"] = sorted(first)[:10]
+    if not trace["stopped_at"]:
+        _collector_on_path()
+        from snkrdunk_collector.retained_gallery import primary_gallery_url
+
+        trace["recovered"] = primary_gallery_url(soup) is not None
+        if not trace["recovered"]:
+            trace["stopped_at"] = "mainImages/variantSources shape or URL checks (see shape above)"
+    return trace
+
+
+def parse_trace(text):
+    """The collectors' current parser on this page, offline."""
+    _collector_on_path()
+    from bs4 import BeautifulSoup
+    from snkrdunk_collector import extractor as ex
+
+    soup = BeautifulSoup(text, "html.parser")
+    image, image_diag = ex.find_main_product_image(soup)
+    container, chip_diag = ex.find_condition_chip_container(soup)
+    raw = ex.extract_raw_conditions(soup)
+    psa10 = ex.extract_psa10(soup)
+    price_tokens = Counter()
+    for tag in soup.find_all(True):
+        for token in tag.get("class") or []:
+            if re.search("chip|variant|price|awaiting|condition|picker|size", token, re.I):
+                price_tokens[f"{tag.name}.{token}"] += 1
+    chip_at = "出品待ち" if "出品待ち" in text else "¥"
+    return {
+        "image": (image or "")[-90:], "image_diagnostics": image_diag,
+        "chip_container": container is not None, "chip_diagnostics": chip_diag,
+        "raw_floor_jpy": raw.get("raw_floor_jpy"), "raw_conditions": sorted((raw.get("conditions") or {}).keys()),
+        "psa10": psa10.get("outcome"),
+        "price_class_tokens": price_tokens.most_common(12),
+        "gallery": gallery_trace(soup),
+        "chip_excerpt": _excerpt(text, chip_at),
+        "gallery_excerpt": _excerpt(text, "ApparelGalleryContainer"),
+    }
+
+
 def inspect(conn, rows, label):
     out = []
     for r in rows:
@@ -95,13 +228,17 @@ def inspect(conn, rows, label):
         try:
             snap, text = load_text(conn, r["raw_snapshot_id"])
             item.update(http_status=snap["http_status"], parser_version=snap["parser_version"], **describe(text))
+            try:
+                item["parser"] = parse_trace(text)
+            except Exception as exc:  # noqa: BLE001 - reported per page
+                item["parser"] = {"error": f"{type(exc).__name__}: {exc}"[:200]}
         except Exception as exc:  # noqa: BLE001 - a page that cannot be decoded is reported, not fatal
             item["error"] = type(exc).__name__
         out.append(item)
     return out
 
 
-def run(out_dir, refused=5, captured=3):
+def run(out_dir, refused=3, captured=2):
     from ops import db as ops_db
 
     with ops_db.connection(statement_timeout_ms=120000) as conn:
