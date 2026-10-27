@@ -17,6 +17,12 @@ offline, the exact code the collectors run): the main image and its diagnostics,
 chip picker and raw/PSA10 results, a step-by-step trace of the retained-gallery recovery
 (retained_gallery.primary_gallery_url) naming the step where it stops, the price-related class
 tokens, and short excerpts around the first price chip and the gallery props.
+
+Prices (owner 2026-10-27): on every refused page all 16 condition chips read 出品待ち, where the
+captures before the change had real prices, so the prices now most likely arrive after the page
+loads. `prices` reports where they live: price-like keys and yen amounts in the embedded Flight
+data, excerpts around the condition labels in that data, API-looking paths the page names,
+loading/skeleton markers inside and around the chip picker, and each chip's label and text.
 """
 from __future__ import annotations
 
@@ -191,6 +197,69 @@ def gallery_trace(soup):
     return trace
 
 
+PRICE_KEYS = re.compile(r'\\?"([A-Za-z]*(?:[Pp]rice|[Ll]isting|[Cc]ondition|[Ss]tock|[Ii]tems?Count)[A-Za-z]*)\\?"\s*:')
+API_PATHS = re.compile(r'(?:https://[a-z.]*snkrdunk\.com)?/(?:v\d+|api)/[A-Za-z0-9_/{}$-]{3,80}')
+LOADING = re.compile("skeleton|loading|placeholder|shimmer|spinner", re.I)
+
+
+def _flight_payload(soup):
+    import json
+
+    chunks = []
+    for script in soup.find_all("script"):
+        match = re.fullmatch(r"\s*self\.__next_f\.push\((\[.*\])\)\s*;?\s*", script.string or "", re.S)
+        if not match:
+            continue
+        try:
+            value = json.loads(match.group(1))
+        except (ValueError, TypeError):
+            continue
+        if isinstance(value, list) and len(value) == 2 and isinstance(value[1], str):
+            chunks.append(value[1])
+    return "".join(chunks)
+
+
+def price_trace(soup, text):
+    """Where the condition prices live on this page, and whether the chip picker is still loading."""
+    payload = _flight_payload(soup)
+    keys = Counter(PRICE_KEYS.findall(payload))
+    yen = re.findall(r"[¥￥]\s?[0-9][0-9,]{2,}", payload)
+    labels = [m.start() for m in re.finditer(r'\\?"(?:PSA10|A)\\?"', payload)][:2]
+    excerpts = [re.sub(r"\s+", " ", payload[max(0, at - 120): at + 260]) for at in labels]
+    paths = sorted({p for p in API_PATHS.findall(text) if re.search("price|size|condition|listing|product|apparel", p, re.I)})
+    chips, loading_in, loading_near = [], Counter(), Counter()
+    _collector_on_path()
+    from snkrdunk_collector import extractor as ex
+
+    container, _ = ex.find_condition_chip_container(soup)
+    if container is not None:
+        for chip in container.find_all("button", recursive=False):
+            chips.append(" | ".join(p.get_text(" ", strip=True) for p in chip.find_all("p", recursive=False))[:40])
+        for tag in container.find_all(True):
+            for token in tag.get("class") or []:
+                if LOADING.search(token):
+                    loading_in[token] += 1
+            if tag.get("aria-busy") == "true":
+                loading_in["aria-busy"] += 1
+        parent = container
+        for _ in range(4):
+            parent = parent.parent if parent is not None else None
+            if parent is None:
+                break
+            for token in parent.get("class") or []:
+                if LOADING.search(token):
+                    loading_near[token] += 1
+    page_loading = Counter(t for tag in soup.find_all(True) for t in (tag.get("class") or []) if LOADING.search(t))
+    return {
+        "payload_price_keys": keys.most_common(15), "payload_yen_amounts": len(yen), "payload_yen_sample": yen[:6],
+        "payload_label_excerpts": [e[:380] for e in excerpts],
+        "api_paths": paths[:12],
+        "chips": chips[:16], "chip_loading_markers": loading_in.most_common(6),
+        "around_chips_loading_markers": loading_near.most_common(6),
+        "page_loading_markers": page_loading.most_common(8),
+    }
+
+
 def parse_trace(text):
     """The collectors' current parser on this page, offline."""
     _collector_on_path()
@@ -217,6 +286,7 @@ def parse_trace(text):
         "gallery": gallery_trace(soup),
         "chip_excerpt": _excerpt(text, chip_at),
         "gallery_excerpt": _excerpt(text, "ApparelGalleryContainer"),
+        "prices": price_trace(soup, text),
     }
 
 
@@ -238,7 +308,7 @@ def inspect(conn, rows, label):
     return out
 
 
-def run(out_dir, refused=3, captured=2):
+def run(out_dir, refused=2, captured=1):
     from ops import db as ops_db
 
     with ops_db.connection(statement_timeout_ms=120000) as conn:

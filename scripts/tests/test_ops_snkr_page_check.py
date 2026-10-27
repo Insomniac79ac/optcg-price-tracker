@@ -68,6 +68,25 @@ class Describe(unittest.TestCase):
         dup = page.replace(json.dumps([1, payload]), json.dumps([1, payload + payload]))
         self.assertIn("repeated Flight record key", spc.gallery_trace(BeautifulSoup(dup, "html.parser"))["stopped_at"])
 
+    def test_price_trace_reports_where_prices_live_and_loading_markers(self):
+        import json
+        from bs4 import BeautifulSoup
+
+        data = {"conditions": [{"label": "A", "minPrice": 2900, "priceText": "¥2,900"}],
+                "listingCount": 3}
+        payload = "5:" + json.dumps(data, ensure_ascii=False) + "\n"
+        page = ('<div class="x_wrap x_skeleton"><div class="c_box">'
+                '<button class="c_chip"><p class="c_variant">A</p><p class="c_awaiting">出品待ち</p></button>'
+                '<button class="c_chip"><p class="c_variant">B</p><p class="c_awaiting">出品待ち</p></button>'
+                '</div></div><a href="https://snkrdunk.com/v1/apparels/123/sizes">x</a>'
+                '<script>self.__next_f.push(' + json.dumps([1, payload], ensure_ascii=False) + ')</script>')
+        trace = spc.price_trace(BeautifulSoup(page, "html.parser"), page)
+        keys = dict(trace["payload_price_keys"])
+        self.assertEqual((keys["minPrice"], keys["priceText"], keys["listingCount"]), (1, 1, 1))
+        self.assertEqual((trace["payload_yen_amounts"], trace["chips"]), (1, ["A | 出品待ち", "B | 出品待ち"]))
+        self.assertIn("https://snkrdunk.com/v1/apparels/123/sizes", trace["api_paths"])
+        self.assertIn(("x_skeleton", 1), trace["around_chips_loading_markers"])
+
     def test_registered_read_runbook(self):
         self.assertEqual(run.RUNBOOKS["snkr-page-check"][:2], ("read", False))
 
