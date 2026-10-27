@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Pin yuyu_reader_component and snkr_component in STAGING_FLEET.json to 64961a0 (the #224 merge), whose staging-automerge rolled #223's collector code (Yuyu-Tei source probe, SNKRDUNK CSS-module class fix) out to all ten collectors and passed its delivery verify on 2026-10-27 07:39Z. Required as the next staging merge after a collector delivery.",
+  "mission": "Pin yuyu_reader_component and snkr_component in STAGING_FLEET.json to 64961a0 (the #224 merge), whose staging-automerge rolled #223's collector code (Yuyu-Tei source probe, SNKRDUNK CSS-module class fix) out to all ten collectors and passed its delivery verify on 2026-10-27 07:32Z. Required as the next staging merge after a collector delivery.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
