@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "snkr-page-check, price evidence (owner 2026-10-27: 'Ok'). The parser trace (#228) showed the photo recovery stops on a new Flight format, and that on every refused page all 16 condition chips read 出品待ち where captures before the change had prices: prices now most likely arrive after load, and the collector would read placeholders as 'no listing'. This read-only runbook now also reports where the condition prices live: price-like keys and yen amounts in the embedded Flight data, excerpts around the condition labels, API-looking paths, loading markers in and around the chip picker, and each chip's label and text. No SNKRDUNK request, no write, no workflow change.",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
