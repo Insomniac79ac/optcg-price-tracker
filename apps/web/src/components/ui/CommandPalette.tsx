@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchSavedViews, type SavedView } from "@/lib/api";
 import { useAdminSurface } from "@/components/admin/AdminSurfaceProvider";
+import { useCollectorSession } from "@/hooks/useCollectorSession";
 import { COMMAND_REGISTRY, searchCommands, type Command } from "@/lib/commandRegistry";
 import {
   MIN_QUERY_LENGTH,
@@ -39,7 +39,7 @@ type CardSearchStatus = "idle" | "loading" | "ready" | "error";
  * component can't safely trigger a specific page's dry-run handlers. */
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status } = useCollectorSession();
   const adminSurface = useAdminSurface();
   const isAuthenticated = status === "authenticated";
   const isAdmin = adminSurface?.authorized === true || session?.user?.role === "admin";

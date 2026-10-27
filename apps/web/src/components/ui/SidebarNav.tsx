@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
+
+import { useCollectorSession } from "@/hooks/useCollectorSession";
 
 import { PUBLIC_NAV_ITEMS, publicSectionActive, type NavItem } from "./publicNavigation";
 import styles from "./PublicDrawer.module.css";
@@ -52,7 +54,7 @@ function Section({ label, items, pathname }: { label: string; items: NavItem[]; 
  * Sign out, which leave the header below `sm` so the bar never wraps. */
 export function SidebarNav({ className = "" }: { className?: string }) {
   const pathname = usePathname() ?? "";
-  const { data: session, status } = useSession();
+  const { data: session, status } = useCollectorSession();
   const isAuthenticated = status === "authenticated";
   const isAdmin = session?.user?.role === "admin";
   const collectorItems = session?.sessionKind === "collector"

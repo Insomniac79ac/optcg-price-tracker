@@ -5,6 +5,22 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Read the collector session only through useCollectorSession: Next.js can render
+  // not-found.tsx without the root layout and its SessionProvider (an unrecognised
+  // server-action POST), where next-auth's useSession() returns undefined.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/hooks/useCollectorSession.ts", "src/**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        paths: [{
+          name: "next-auth/react",
+          importNames: ["useSession"],
+          message: "Use useCollectorSession from @/hooks/useCollectorSession (safe without a SessionProvider).",
+        }],
+      }],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

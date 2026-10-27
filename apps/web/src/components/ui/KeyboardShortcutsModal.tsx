@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useCollectorSession } from "@/hooks/useCollectorSession";
 
 const GENERAL_SHORTCUTS: { keys: string; description: string }[] = [
   { keys: "⌘K / Ctrl K", description: "Open the command palette" },
@@ -25,7 +25,7 @@ const GOTO_SHORTCUTS: { keys: string; description: string }[] = [
  * unchanged - AppShell still owns them - this is only about not printing a
  * reference to capability the reader does not have. */
 export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { status } = useSession();
+  const { status } = useCollectorSession();
   const showGotoShortcuts = status === "authenticated";
 
   if (!open) return null;

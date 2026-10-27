@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 
 import { CompassMark } from "@/components/brand/CompassMark";
+import { useCollectorSession } from "@/hooks/useCollectorSession";
 import styles from "./PublicShell.module.css";
 import adminStyles from "@/components/admin/AdminShell.module.css";
 import { AdminReauthenticateLink } from "@/components/admin/AdminReauthenticateLink";
@@ -53,7 +54,7 @@ export function TopBar({
 }) {
   const routerPathname = usePathname();
   const pathname = pathnameHint ?? routerPathname ?? "";
-  const { status } = useSession();
+  const { status } = useCollectorSession();
   const adminSurface = useAdminSurface();
   const adminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   // A concealed not-found page must not disclose operational chrome to a
@@ -184,7 +185,7 @@ function PublicNav({ pathname }: { pathname: string }) {
 }
 
 function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: boolean; adminDisplayName: string | null; pathname: string }) {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useCollectorSession();
   // Deliberately pathname-only (no query string) - useSearchParams() would
   // require every page that renders <AppHeader /> (nearly all of them) to
   // add its own Suspense boundary to stay statically-optimizable, which is
