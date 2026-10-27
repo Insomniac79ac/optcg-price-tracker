@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "mission": "snkr-page-check, photo-data evidence before the SNKRDUNK collector fix (owner 2026-10-28: 'go'). SNKRDUNK's embedded Flight data now names the gallery component through its own string record (8d:\"ApparelGalleryContainer\", then 8e:I[...,\"$8d\"]), so the trace found no gallery element. The read-only trace now resolves those references, and for the gallery element it reports a props excerpt and whether mainImages/variantSources are inline or references, so the collector fix is built from the real shape. No SNKRDUNK request, no write, no workflow change.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/snkr_page_check.py"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Gallery trace resolves module-name references and reports the gallery props shape; read-only."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_snkr_page_check.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Reference-named gallery module is found and its props reported."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly snkr-page-check"
+      ],
+      "routes": [
+        "none (database read only)"
+      ],
+      "dependencies": [
+        "staging after #229"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 3
+    },
+    "recovery": {
+      "artifact": "b678ad6ebec41e5d268958c2316f0963ad4ae626",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "A wrong report.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_snkr_page_check.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/snkr_page_check.py"
+      ],
+      "observation_window": "The first snkr-page-check run."
+    }
+  },
+  "diff_sha256": "6b31d4da945740be4bc73d114b58f0555bb2400a231bad92b8af24d053ec2f3c"
+}

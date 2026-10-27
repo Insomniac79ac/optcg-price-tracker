@@ -65,6 +65,13 @@ class Describe(unittest.TestCase):
         trace = spc.gallery_trace(BeautifulSoup(page, "html.parser"))
         self.assertEqual((trace["stopped_at"], trace["recovered"], trace["main_images"]), (None, True, 1))
         self.assertEqual(trace["main_image_src_shape"]["host"], "cdn.snkrdunk.com")
+        ref_payload = '8d:"ApparelGalleryContainer"\n8e:I' + json.dumps([213805, ["c.js"], "$8d"]) + \
+            "\n43:" + json.dumps(["$", "$L8e", None, props]) + "\n"
+        ref_page = '<script>self.__next_f.push(' + json.dumps([1, ref_payload]) + ')</script>'
+        ref = spc.gallery_trace(BeautifulSoup(ref_page, "html.parser"))
+        self.assertEqual((ref["gallery_modules"], ref["module_names_by_reference"], ref["gallery_elements"]),
+                         (["$L8e"], 1, 1))
+        self.assertIn("mainImages", ref["gallery_props_excerpt"])
         dup = page.replace(json.dumps([1, payload]), json.dumps([1, payload + payload]))
         self.assertIn("repeated Flight record key", spc.gallery_trace(BeautifulSoup(dup, "html.parser"))["stopped_at"])
 
