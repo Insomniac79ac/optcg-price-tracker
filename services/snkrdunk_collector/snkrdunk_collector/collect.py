@@ -41,6 +41,7 @@ from snkrdunk_collector.browser import (
     DESKTOP_CHROME_UA,
     DESKTOP_VIEWPORT,
     HOMEPAGE_URL,
+    PRICES_NOT_LOADED,
     TURN_TEARDOWN_TIMEOUT_S,
     DeadlineExceeded,
     deadline,
@@ -166,7 +167,8 @@ def _capture_in_turn(turn, freshness, navigate, holder) -> bool:
     page, and settled before it is unbound, so no other attempt is charged for
     its traffic. Only an attempt that finds the turn cold captures (and pays
     for, and stores) the homepage. Returns True only for a clean capture -
-    homepage (if captured) usable, product HTTP 200 and a normal page,
+    homepage (if captured) usable, product HTTP 200 and a normal page (or one whose
+    condition prices had not loaded),
     attempt neither stopped nor denied, routes settled, page closed - so the
     turn may stay warm for the next attempt.
     """
@@ -181,7 +183,8 @@ def _capture_in_turn(turn, freshness, navigate, holder) -> bool:
         homepage_ok = navigate(page, warm_up)
         clean = (
             homepage_ok
-            and holder["product_classification"] == "normal_page"
+            # A product whose prices had not loaded leaves the warmed context usable.
+            and holder["product_classification"] in {"normal_page", PRICES_NOT_LOADED}
             and holder["product_http_status"] == 200
             and not freshness.stopped
             and not freshness.denied
@@ -232,6 +235,12 @@ def run_one_mapping_detailed(
             snapshot_id = freshness.snapshot(mapping.source_id, url, step, PARSER_VERSION)
             if url == mapping.source_url:
                 freshness.raw_snapshot_id = snapshot_id
+            chips = step.get("price_chips")
+            if chips:
+                # The size-chips body the page received, kept where it decides the outcome
+                # (every chip 出品待ち); the product page stays the attempt's snapshot.
+                freshness.snapshot(mapping.source_id, chips["url"],
+                                   {"html": chips["body"], "http_status": 200}, PARSER_VERSION)
         step = goto_and_capture(page, url, before_parse=persist, **prices)
         if step.get("classification") in SOURCE_DENIAL_CLASSIFICATIONS and not freshness.denied:
             freshness.deny()
@@ -255,6 +264,7 @@ def run_one_mapping_detailed(
 
     holder: dict = {
         "product_classification": None,
+        "product_classification_evidence": None,
         "product_http_status": None,
         "product_html": None,
         "product_final_url": None,
@@ -312,6 +322,7 @@ def run_one_mapping_detailed(
                 batch_run_id=batch_run_id,
             )
             holder["product_classification"] = product_step.get("classification")
+            holder["product_classification_evidence"] = product_step.get("classification_evidence")
             holder["product_http_status"] = product_step.get("http_status")
 
             if product_step.get("classification") == "normal_page" and "error" not in product_step:
@@ -486,6 +497,10 @@ def run_one_mapping_detailed(
 
     if holder["extraction"] is None:
         reasons = [f"no_extraction_attempted:classification={classification}"]
+        if classification == PRICES_NOT_LOADED:
+            # Which way the prices failed to load (condition_prices:<status>) reaches the
+            # work's last_failure, so health can tell a slow render from a missing response.
+            reasons += list(holder.get("product_classification_evidence") or [])
         log_event(
             "collection_no_write",
             mapping_id=mapping.id,

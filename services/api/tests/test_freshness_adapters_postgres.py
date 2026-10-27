@@ -338,6 +338,10 @@ class Transport:
         self.condition_prices(url)
         return self.response(url)
 
+    # The size-chips body schema is not known from stored evidence; this one is illustrative
+    # (snkrdunk_collector.browser.body_listings only reads keys that name a price).
+    chips_body = b'{"sizeChips": [{"name": "A", "minPrice": 3500}]}'
+
     def condition_prices(self, url):
         """The product page's own price request comes back, as the live page's does (it
         names that request; snkrdunk_collector.browser.PRICE_CHIPS_PATH)."""
@@ -346,9 +350,11 @@ class Transport:
             return
         path = f"/v2/products/{found.group(1)}/size-chips"
         self.body += f"<!-- {path} -->"
+        response = SimpleNamespace(url="https://snkrdunk.com" + path, status=200,
+                                   body=lambda: self.chips_body)
         for call in self.page.on.call_args_list:
             if call.args and call.args[0] == "response":
-                call.args[1](SimpleNamespace(url="https://snkrdunk.com" + path, status=200))
+                call.args[1](response)
 
 
 def run(factory, source, **kwargs):
@@ -446,29 +452,38 @@ def _all_awaiting(html):
     return str(soup)
 
 
-@pytest.mark.parametrize("prices_arrive", [False, True])
-def test_placeholders_are_never_recorded_as_no_listing(db, monkeypatch, prices_arrive):
-    """2026-10-26: SNKRDUNK fills condition prices in after load. Without the page's own price
-    response the capture is retried later (transient), never settled as 'nothing listed'."""
+@pytest.mark.parametrize("prices", ["not_seen", "dom_not_rendered", "body_confirms_none"])
+def test_placeholders_are_never_recorded_as_no_listing(db, monkeypatch, prices):
+    """2026-10-26: SNKRDUNK fills condition prices in after load. A page whose chips all read
+    出品待ち is 'nothing listed' only when the page's own price response came back and holds
+    no price; otherwise the capture is retried later (transient) with the reason recorded."""
     from snkrdunk_collector import browser
 
     factory, source, mid, _ = db
     work = seed(factory, mid)
     transport = Transport(monkeypatch, _all_awaiting(HTML))
-    if not prices_arrive:
+    if prices == "not_seen":
         transport.condition_prices = lambda url: None
         monkeypatch.setattr(browser, "PRICE_CHIPS_WAIT_S", 0.05)
+    elif prices == "dom_not_rendered":
+        monkeypatch.setattr(browser, "PRICE_CHIPS_RENDER_MAX_S", 0.05)
+    else:
+        transport.chips_body = b'{"sizeChips": [{"name": "A", "minPrice": null}]}'
     assert len(run(factory, source)) == 1
     with factory() as session:
         row = session.get(FreshnessWork, work)
         attempt = session.scalar(select(FreshnessAttempt))
+        chips = session.scalars(select(RawSnapshot).where(RawSnapshot.source_url.like("%/size-chips"))).all()
         assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
         assert attempt.raw_snapshot_id is not None  # the page is kept as evidence either way
-        if prices_arrive:  # a loaded page that really has nothing listed
+        if prices == "body_confirms_none":  # a loaded page that really has nothing listed
             assert (attempt.outcome, row.state) == ("no_listing", "pending")
+            # the body that decided it is kept beside the page; the page stays the evidence row
+            assert [c.raw_content for c in chips] == [transport.chips_body.decode()]
+            assert "/apparels/" in session.get(RawSnapshot, attempt.raw_snapshot_id).source_url
         else:
             assert (attempt.outcome, row.state) == ("transient_failure", "pending")
-            assert "prices_not_loaded" in row.last_failure
+            assert f"prices_not_loaded;condition_prices:{prices}" in row.last_failure
             assert not attempt.category_outcomes or "no_listing" not in attempt.category_outcomes.values()
 
 
