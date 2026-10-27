@@ -41,6 +41,33 @@ class Describe(unittest.TestCase):
         snap, text = spc.load_text(FakeConn(rows), 9)
         self.assertEqual(text, body)
 
+    def test_parse_trace_runs_the_collector_parser_offline(self):
+        fixture = (ROOT / "services/snkrdunk_collector/tests/fixtures/product_page_reduced.html").read_text()
+        trace = spc.parse_trace(fixture)
+        self.assertEqual((trace["raw_floor_jpy"], trace["chip_container"]), (24500, True))
+        self.assertEqual(trace["raw_conditions"], ["A", "B", "C", "D"])
+        self.assertTrue(trace["image"].endswith("20221121015111-0.webp?size=l"))
+        self.assertIn("出品待ち", trace["chip_excerpt"])
+        self.assertTrue(any("__price" in t for t, _ in trace["price_class_tokens"]))
+        self.assertEqual(trace["gallery"]["gallery_elements"], 0)
+        self.assertIn("expected exactly one gallery element", trace["gallery"]["stopped_at"])
+
+    def test_gallery_trace_follows_the_retained_gallery_recovery(self):
+        import json
+        from bs4 import BeautifulSoup
+
+        url = "https://cdn.snkrdunk.com/upload_bg_removed/88e7414d-449b-4ce5-bf15-b61311fc8865.webp"
+        props = {"mainImages": [{"src": url}], "variantSources": [{"productId": 1, "imageUrl": url}]}
+        payload = "71:I" + json.dumps([1, ["c.js"], "ApparelGalleryContainer"]) + "\n43:" + \
+            json.dumps(["$", "$L71", None, props]) + "\n"
+        page = '<img class="slWKSa_mainImage" src="/_next/static/media/no-image.x.webp">' \
+               '<script>self.__next_f.push(' + json.dumps([1, payload]) + ')</script>'
+        trace = spc.gallery_trace(BeautifulSoup(page, "html.parser"))
+        self.assertEqual((trace["stopped_at"], trace["recovered"], trace["main_images"]), (None, True, 1))
+        self.assertEqual(trace["main_image_src_shape"]["host"], "cdn.snkrdunk.com")
+        dup = page.replace(json.dumps([1, payload]), json.dumps([1, payload + payload]))
+        self.assertIn("repeated Flight record key", spc.gallery_trace(BeautifulSoup(dup, "html.parser"))["stopped_at"])
+
     def test_registered_read_runbook(self):
         self.assertEqual(run.RUNBOOKS["snkr-page-check"][:2], ("read", False))
 
