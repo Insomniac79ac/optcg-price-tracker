@@ -79,7 +79,7 @@ gh api -X POST $R/actions/workflows/ops-readonly.yml/dispatches -f ref=staging \
   `official-images-status`, `db-diagnostic`, `web-smoke`. Every DB read is `default_transaction_read_only=on`.
 - `ops-write` (owner approves each run in the `staging-ops` Environment): `enqueue-remaining-50`,
   `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`,
-  `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import`, `yuyu-source-probe`; dry run by default. Agents never approve a waiting run.
+  `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import`, `yuyu-source-probe`, `snkr-parser-requeue`; dry run by default. Agents never approve a waiting run.
 - Finding the run and reading its result: [docs/agent/OPS_RUNBOOKS.md](docs/agent/OPS_RUNBOOKS.md).
 
 ## Tests locally (cloud session)

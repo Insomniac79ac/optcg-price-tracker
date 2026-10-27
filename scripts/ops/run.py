@@ -147,6 +147,11 @@ def _yuyu_probe(args, out):
     return yuyu_probe.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
 
 
+def _snkr_requeue(args, out):
+    from ops import snkr_requeue
+    return snkr_requeue.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+
+
 def _catalogue_import(args, out):
     from ops import catalogue_import
     if args.count is not None:
@@ -182,6 +187,9 @@ RUNBOOKS = {
     "catalogue-import": ("write", True, _catalogue_import),
     # One owner-approved Yuyu-Tei probe after a source denial pause; the collectors serve it.
     "yuyu-source-probe": ("write", True, _yuyu_probe),
+    # SNKRDUNK refresh work refused by the 2026-10-26 class-name parser bug, back to the queue
+    # (canary with count 1, then the rest); the collectors serve it.
+    "snkr-parser-requeue": ("write", True, _snkr_requeue),
 }
 
 

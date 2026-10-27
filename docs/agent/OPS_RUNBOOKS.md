@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import`, `yuyu-source-probe` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import`, `yuyu-source-probe`, `snkr-parser-requeue` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -284,6 +284,21 @@ clearing the pause blindly (owner decision 2026-10-26, perfectionist).
    After a challenge the pause stays; a new probe needs a new dry run and approval after the
    cool-down. Check the outcome with `ops-readonly staging-state` (Yuyu no longer BLOCKED) or
    `db-diagnostic work-by-state`.
+
+`snkr-parser-requeue` (`scripts/ops/snkr_requeue.py`, plan in `app.services.snkr_parser_requeue`):
+SNKRDUNK renamed its CSS-module classes on 2026-10-26 ~08:29Z; until #223's fix reached every
+collector (#224, 2026-10-27 07:04Z) each refresh was refused `main_image_not_found` and its work
+blocked, and blocked work is never retried on its own. Owner decision 2026-10-27 (perfectionist):
+
+1. `count=1` (canary): reopens the one refused item with the newest earlier clean capture. Refused
+   while an earlier requeue is still open or once the fix is already proven.
+2. `count` empty (rest): needs proof (a refused item has captured a price on the new code since
+   07:04Z) and nothing refused again on the new code; reopens every remaining refused item.
+
+Only work refused for exactly that reason between 2026-10-26 08:00Z and 2026-10-27 07:04Z is
+eligible; older quarantine is never touched. Dry run lists the work ids and `plan_sha256`; apply
+with that SHA re-runs the plan under row locks and writes only it (state pending, due now, the
+original reason kept behind a requeue marker in `last_failure`). No source request.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
