@@ -15,6 +15,7 @@ def html(
     duplicate=False,
     src=PLACEHOLDER,
     malformed=False,
+    by_reference=False,
 ):
     props = {
         "mainImages": images if images is not None else [{"src": URL}],
@@ -30,13 +31,23 @@ def html(
             ]
         ),
     }
-    payload = (
-        "71:I"
-        + json.dumps([1, ["chunk.js"], module])
-        + "\n43:"
-        + json.dumps(["$", "$L71", None, props])
-        + "\n"
-    )
+    if by_reference:
+        # Since 2026-10-26: the export name is its own string record, referenced by id.
+        payload = (
+            "8d:" + json.dumps(module) + "\n71:I"
+            + json.dumps([213805, ["chunk.js"], "$8d"])
+            + "\n43:"
+            + json.dumps(["$", "$L71", None, props])
+            + "\n"
+        )
+    else:
+        payload = (
+            "71:I"
+            + json.dumps([1, ["chunk.js"], module])
+            + "\n43:"
+            + json.dumps(["$", "$L71", None, props])
+            + "\n"
+        )
     if duplicate:
         payload += "44:" + json.dumps(["$", "$L71", None, props]) + "\n"
     script = "self.__next_f.push(" + json.dumps([1, payload]) + ")"
@@ -89,6 +100,26 @@ def test_absent_ambiguous_or_unscoped_gallery_preserves_refusal(kwargs):
     )
     assert url == PLACEHOLDER
     assert diagnostic["selector"] == 'img[css-module "mainImage"]'
+
+
+@pytest.mark.parametrize("by_reference", [False, True])
+def test_both_flight_name_shapes_recover_the_primary_gallery(by_reference):
+    url, diagnostic = find_main_product_image(BeautifulSoup(html(by_reference=by_reference), "html.parser"))
+    assert url == URL
+    assert diagnostic["reason"] == "retained_single_primary_gallery"
+
+
+@pytest.mark.parametrize("kwargs", [{"module": "RecommendationGallery"}, {"duplicate": True}, {"images": []}])
+def test_reference_named_galleries_keep_every_refusal(kwargs):
+    url, _ = find_main_product_image(BeautifulSoup(html(by_reference=True, **kwargs), "html.parser"))
+    assert url == PLACEHOLDER
+
+
+def test_an_unresolvable_name_reference_is_not_a_gallery():
+    page = html(by_reference=True).replace('8d:\\"ApparelGalleryContainer\\"', '8f:\\"ApparelGalleryContainer\\"')
+    assert "8f:" in page
+    url, _ = find_main_product_image(BeautifulSoup(page, "html.parser"))
+    assert url == PLACEHOLDER
 
 
 def test_real_dom_primary_keeps_precedence():

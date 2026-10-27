@@ -34,7 +34,10 @@ def primary_gallery_url(soup):
     records = payload.splitlines()
     if len(records) > 5000:
         return None
-    modules, elements, keys = set(), [], set()
+    # The component's export name is either inline in its module record
+    # (`71:I[...,"ApparelGalleryContainer"]`, until 2026-10-26) or a reference to its
+    # own string record (`8d:"ApparelGalleryContainer"` then `8e:I[...,"$8d"]`).
+    module_names, strings, elements, keys = {}, {}, [], set()
     for line in records:
         key, separator, encoded = line.partition(":")
         if not separator or not re.fullmatch(r"[0-9a-f]+", key):
@@ -47,13 +50,10 @@ def primary_gallery_url(soup):
         if key in keys:
             return None
         keys.add(key)
-        if (
-            module
-            and isinstance(value, list)
-            and value
-            and value[-1] == "ApparelGalleryContainer"
-        ):
-            modules.add("$L" + key)
+        if isinstance(value, str) and not module:
+            strings[key] = value
+        elif module and isinstance(value, list) and value and isinstance(value[-1], str):
+            module_names[key] = value[-1]
         elif (
             isinstance(value, list)
             and len(value) == 4
@@ -62,6 +62,12 @@ def primary_gallery_url(soup):
             and isinstance(value[3], dict)
         ):
             elements.append(value)
+    modules = set()
+    for key, name in module_names.items():
+        if re.fullmatch(r"\$[0-9a-f]+", name):
+            name = strings.get(name[1:])
+        if name == "ApparelGalleryContainer":
+            modules.add("$L" + key)
     galleries = [v[3] for v in elements if v[1] in modules]
     if len(galleries) != 1:
         return None
