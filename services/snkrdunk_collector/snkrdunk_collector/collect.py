@@ -224,13 +224,15 @@ def run_one_mapping_detailed(
         return MappingOutcome(mapping_id=mapping_id, stage="mapping_load_failed", reasons=load_reasons)
 
     def capture_page(page, url):
+        # The product page's condition prices arrive after load (browser.PRICE_CHIPS_PATH).
+        prices = {"condition_prices": True} if url == mapping.source_url else {}
         if freshness is None:
-            return goto_and_capture(page, url)
+            return goto_and_capture(page, url, **prices)
         def persist(step):
             snapshot_id = freshness.snapshot(mapping.source_id, url, step, PARSER_VERSION)
             if url == mapping.source_url:
                 freshness.raw_snapshot_id = snapshot_id
-        step = goto_and_capture(page, url, before_parse=persist)
+        step = goto_and_capture(page, url, before_parse=persist, **prices)
         if step.get("classification") in SOURCE_DENIAL_CLASSIFICATIONS and not freshness.denied:
             freshness.deny()
         freshness.check()
@@ -305,6 +307,7 @@ def run_one_mapping_detailed(
                 mapping_id=mapping.id,
                 http_status=product_step.get("http_status"),
                 classification=product_step.get("classification"),
+                condition_prices=product_step.get("condition_prices"),
                 error=product_step.get("error"),
                 batch_run_id=batch_run_id,
             )

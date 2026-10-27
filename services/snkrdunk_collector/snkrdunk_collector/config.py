@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     # service variables, no credentials involved.
     BROWSER_LAUNCH_TIMEOUT_S: int = 30
     HOMEPAGE_NAV_TIMEOUT_S: int = 35
-    PRODUCT_NAV_TIMEOUT_S: int = 35
+    # Navigation (30s) + settle (1.5s) + waiting for the page's own condition-price
+    # request (browser.PRICE_CHIPS_WAIT_S, 15s) + render (0.75s).
+    PRODUCT_NAV_TIMEOUT_S: int = 50
     SALES_HISTORY_NAV_TIMEOUT_S: int = 35
     IMAGE_FETCH_TIMEOUT_S: int = 20
     TOTAL_RUN_TIMEOUT_S: int = 180

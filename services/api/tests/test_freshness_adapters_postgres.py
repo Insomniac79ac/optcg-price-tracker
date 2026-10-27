@@ -3,6 +3,7 @@
 from datetime import timedelta
 from pathlib import Path
 from types import SimpleNamespace
+import re
 import sys
 from unittest.mock import MagicMock
 
@@ -334,7 +335,20 @@ class Transport:
         self.handler(route)
         if route.abort.called:
             raise RuntimeError("transport aborted before dispatch")
+        self.condition_prices(url)
         return self.response(url)
+
+    def condition_prices(self, url):
+        """The product page's own price request comes back, as the live page's does (it
+        names that request; snkrdunk_collector.browser.PRICE_CHIPS_PATH)."""
+        found = re.search(r"/apparels/(\d+)", url)
+        if not found:
+            return
+        path = f"/v2/products/{found.group(1)}/size-chips"
+        self.body += f"<!-- {path} -->"
+        for call in self.page.on.call_args_list:
+            if call.args and call.args[0] == "response":
+                call.args[1](SimpleNamespace(url="https://snkrdunk.com" + path, status=200))
 
 
 def run(factory, source, **kwargs):
@@ -420,6 +434,42 @@ def test_independent_categories_and_high_interest(db, monkeypatch, missing):
         assert facts[other]["captured_at"] == T0
         assert facts[other]["expires_at"] == T0 + timedelta(hours=4)
         assert {r["next_due_at"] for r in facts.values()} == {T0 + timedelta(hours=3)}
+
+
+def _all_awaiting(html):
+    """Every condition chip as 出品待ち: how the live page arrives before its prices load."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    for price in soup.find_all("p", class_="css3__price"):
+        price.replace_with(BeautifulSoup('<p class="css3__awaiting">出品待ち</p>', "html.parser"))
+    return str(soup)
+
+
+@pytest.mark.parametrize("prices_arrive", [False, True])
+def test_placeholders_are_never_recorded_as_no_listing(db, monkeypatch, prices_arrive):
+    """2026-10-26: SNKRDUNK fills condition prices in after load. Without the page's own price
+    response the capture is retried later (transient), never settled as 'nothing listed'."""
+    from snkrdunk_collector import browser
+
+    factory, source, mid, _ = db
+    work = seed(factory, mid)
+    transport = Transport(monkeypatch, _all_awaiting(HTML))
+    if not prices_arrive:
+        transport.condition_prices = lambda url: None
+        monkeypatch.setattr(browser, "PRICE_CHIPS_WAIT_S", 0.05)
+    assert len(run(factory, source)) == 1
+    with factory() as session:
+        row = session.get(FreshnessWork, work)
+        attempt = session.scalar(select(FreshnessAttempt))
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        assert attempt.raw_snapshot_id is not None  # the page is kept as evidence either way
+        if prices_arrive:  # a loaded page that really has nothing listed
+            assert (attempt.outcome, row.state) == ("no_listing", "pending")
+        else:
+            assert (attempt.outcome, row.state) == ("transient_failure", "pending")
+            assert "prices_not_loaded" in row.last_failure
+            assert not attempt.category_outcomes or "no_listing" not in attempt.category_outcomes.values()
 
 
 def test_partial_absence_keeps_deadline_and_does_not_recapture_in_same_run(
@@ -1452,6 +1502,7 @@ class TurnTransport(Transport):
         self.handler(route)
         if route.abort.called:
             raise RuntimeError("transport aborted before dispatch")
+        self.condition_prices(url)
         return self.response(url)
 
 

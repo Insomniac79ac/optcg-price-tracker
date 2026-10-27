@@ -10,9 +10,11 @@ navigation attempt per URL per run - no retries after 403/429/challenge.
 """
 
 import json
+import re
 import signal
 import time
 from contextlib import contextmanager
+from urllib.parse import urlsplit
 
 from playwright.sync_api import Page
 
@@ -57,6 +59,59 @@ CHALLENGE_DOM_MARKERS = [
     'id="challenge-stage"',
 ]
 WEAK_MARKERS = ["cloudflare", "captcha", "cf-error", "ray id"]
+
+# Since 2026-10-26 a SNKRDUNK product page arrives with every condition chip reading
+# 出品待ち and fills the real prices in from its own price request
+# (GET /v2/products/<id>/size-chips) after load. A snapshot taken before that response is
+# placeholders, which would read as "nothing listed". A product capture therefore waits
+# for that request to come back 200 (the page names it, so it is this product's), lets
+# the page render it, and only then takes the snapshot; anything else is not a normal
+# page (PRICES_NOT_LOADED) and never reaches extraction.
+PRICE_CHIPS_PATH = re.compile(r"/v2/products/(\d+)/size-chips")
+PRICE_CHIPS_WAIT_S = 15.0
+PRICE_CHIPS_RENDER_MS = 750
+PRICE_CHIPS_POLL_MS = 250
+PRICES_NOT_LOADED = "prices_not_loaded"
+
+
+def _price_chips_response(response) -> tuple[str, int] | None:
+    """(product id, status) when this is a SNKRDUNK size-chips response."""
+    try:
+        parsed = urlsplit(response.url)
+    except (AttributeError, ValueError):
+        return None
+    if parsed.hostname not in {"snkrdunk.com", "www.snkrdunk.com"}:
+        return None
+    match = PRICE_CHIPS_PATH.fullmatch(parsed.path)
+    return (match.group(1), response.status) if match else None
+
+
+def wait_for_condition_prices(page: Page, seen: list, *, clock=None) -> dict:
+    """Wait (bounded) until this page's size-chips request has come back 200, then let the
+    page render it. `seen` is filled by a response listener registered before navigation."""
+    clock = clock or time.monotonic
+    end = clock() + PRICE_CHIPS_WAIT_S
+    start = clock()
+    while not any(status == 200 for _, status in seen) and clock() < end:
+        page.wait_for_timeout(PRICE_CHIPS_POLL_MS)
+    loaded = sorted({pid for pid, status in seen if status == 200})
+    if not loaded:
+        failed = sorted({status for _, status in seen})
+        return {"status": f"http_{failed[-1]}" if failed else "not_seen",
+                "waited_s": round(clock() - start, 3)}
+    page.wait_for_timeout(PRICE_CHIPS_RENDER_MS)
+    return {"status": "response_200", "product_ids": loaded, "waited_s": round(clock() - start, 3)}
+
+
+def confirm_prices_loaded(evidence: dict, html: str) -> dict:
+    """Loaded only when a 200 size-chips response is for a product this page names."""
+    if evidence.get("status") != "response_200":
+        return evidence
+    named = set(PRICE_CHIPS_PATH.findall(html or ""))
+    ours = [pid for pid in evidence["product_ids"] if pid in named]
+    if not ours:
+        return {**evidence, "status": "not_named_by_page", "page_names": sorted(named)[:3]}
+    return {**evidence, "status": "loaded", "product_id": ours[0]}
 
 
 def log_event(event: str, **fields) -> None:
@@ -146,21 +201,38 @@ def classify_page(status: int | None, html: str, title: str) -> tuple[str, list[
     return "error", [f"http_status:{status}"]
 
 
-def goto_and_capture(page: Page, url: str, *, before_parse=None) -> dict:
+def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_prices=False) -> dict:
     """One bounded navigation attempt. Returns a dict with either an "error"
     key (navigation-level exception, e.g. DNS/timeout) or the captured
-    page state + classification."""
+    page state + classification. `condition_prices` (product pages): the
+    snapshot waits for the page's own price request, see PRICE_CHIPS_PATH."""
     start = time.monotonic()
+    seen: list = []
+    listener = None
     try:
+        if condition_prices:
+            def listener(response):
+                found = _price_chips_response(response)
+                if found:
+                    seen.append(found)
+            page.on("response", listener)
         response = page.goto(url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(1500)
+        status = response.status if response else None
+        prices = None
+        if condition_prices:
+            prices = (wait_for_condition_prices(page, seen) if status == 200
+                      else {"status": "page_not_200"})
         elapsed = time.monotonic() - start
         html = page.content()
         title = page.title()
-        status = response.status if response else None
         if before_parse is not None:
             before_parse({"html": html, "http_status": status, "final_url": page.url})
         classification, evidence = classify_page(status, html, title)
+        if prices is not None:
+            prices = confirm_prices_loaded(prices, html)
+            if classification == "normal_page" and prices["status"] != "loaded":
+                classification, evidence = PRICES_NOT_LOADED, [f"condition_prices:{prices['status']}"]
         return {
             "final_url": page.url,
             "http_status": status,
@@ -170,10 +242,17 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None) -> dict:
             "html_bytes": len(html.encode("utf-8")),
             "elapsed_s": round(elapsed, 3),
             "html": html,
+            **({"condition_prices": prices} if prices is not None else {}),
         }
     except Exception as exc:  # noqa: BLE001 - record and continue, never crash the run
         elapsed = time.monotonic() - start
         return {"error": f"{type(exc).__name__}: {exc}", "elapsed_s": round(elapsed, 3)}
+    finally:
+        if listener is not None:
+            try:
+                page.remove_listener("response", listener)
+            except Exception:  # noqa: BLE001 - a closed page has no listeners left
+                pass
 
 
 def fetch_bytes(page: Page, url: str) -> bytes | None:
