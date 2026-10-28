@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "mission": "Identity reviews bound to listing identity, not price (owner 2026-10-29, perfectionist). A retained physical artwork review, and the identity capture it reviews, were bound to the listing's full evidence digest, which hashes the Yuyu-Tei price, stock flag and row text; prices move most days, so a review went stale unless it landed the same day (34 prints captured 2026-10-16 still wait). One shared check, source_mapping_proposals.yuyu_identity_unchanged_since, now decides 'same listing' for both: the evidence the capture was planned under (the capture's own summary, or the listing's proposal history, which keeps every group's summary) must hash to the capture's digest and equal today's evidence in every field except run provenance and YUYU_MARKET_EVIDENCE. Any identity change (code, rarity, name, image, release, family, sibling set) still refuses. Claude becomes an attributable reviewer beside Codex (method/actor pair). approve-f1-batch also approves proposals a review resolved, each through the admin guard with an owner-approved dry run. identity-capture-work gains a review_pack statement (read-only). Released to all ten collectors by staging-automerge: the Yuyu shards run the capture check and the resolver; snkrdunk-collector imports the changed resolver module (behaviour unchanged) and its component check covers it.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/source_mapping_proposals.py",
+        "services/api/app/services/physical_artwork_proof.py",
+        "services/yuyutei_collector/yuyutei_collector/identity_evidence.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "identity_evidence/yuyu_identity_unchanged_since (one read of the listing's proposal groups, no write) replace the full-digest equality in the proof binding and in load_intent; REVIEWERS pairs each review method with its actor namespace (codex:, claude:). identity_weakening is assessed false: every proof still needs a positive review of retained bytes with full hash, lineage, release and sibling-set checks and an owner-approved approval batch; only market fields stop voiding it (owner decision, DECISIONS.md 2026-10-29). The infrastructure effect is the mission-scoped release of the ten collectors."
+    },
+    {
+      "files": [
+        "scripts/ops/f1_approve.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "approvable_rule: an exact proposal is batchable when its reasons name exactly one of F1 or a retained physical artwork review; the summary counts per rule. Same admin approval path, same dry-run/SHA pin."
+    },
+    {
+      "files": [
+        "scripts/diagnostics/identity-capture-work.sql"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "review_pack: read-only SELECT of completed captures still ambiguous, with the lineage a proof names."
+    },
+    {
+      "files": [
+        "services/api/tests/test_physical_artwork_proof.py",
+        "services/yuyutei_collector/tests/test_identity_evidence.py",
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Market change keeps a review and a capture; identity change, missing or non-hashing history and a capture planned under another digest refuse; reviewer pairs; real resolver plus proposal history end to end; approvable rules."
+    },
+    {
+      "files": [
+        "docs/agent/DECISIONS.md",
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/IDENTITY_REVIEWS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Owner decision, runbook changes and the review pipeline."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "10 staging collectors (sequential CI release)"
+      ],
+      "routes": [
+        "no new source request: identity captures and discovery fetch exactly what they fetched before"
+      ],
+      "dependencies": [
+        "staging after #238"
+      ],
+      "deployment_impact": "All ten collectors re-uploaded on the merge commit, one at a time with automatic rollback. Behaviour change: on Yuyu-Tei shards, a planned identity capture whose listing changed only price or stock is captured instead of refused, and a review registry entry stays valid across price changes. No registry entry is added by this PR, so no proposal changes on release.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 150
+    },
+    "recovery": {
+      "artifact": "44d9c0e0106e1599b84648acb5988b27eb594480",
+      "procedure": "The rollout captures each collector's live deployment before upload and restores it on failure (recovery_deployment_id rows are reference only); afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "A collector failing after release, an identity capture or proposal refresh raising, or a proposal resolving that no registry entry names.",
+      "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
+      "validation": [
+        "services/api/tests/test_physical_artwork_proof.py",
+        "services/api/tests/test_source_mapping_proposals.py",
+        "services/api/tests/test_yuyu_identity_capture_enqueue_postgres.py",
+        "services/yuyutei_collector/tests/test_identity_evidence.py",
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/physical_artwork_proof.py",
+        "services/api/app/services/source_mapping_proposals.py",
+        "services/yuyutei_collector/yuyutei_collector/identity_evidence.py"
+      ],
+      "observation_window": "Delivery verify; identity-capture-work review_pack lists the 2026-10-16 captures; the first Claude proof PR resolves its listings on the next discovery turn."
+    }
+  },
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "838a810d-37a0-4bd4-9290-16d64e68ee45"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "856b32ee-ab55-4983-800a-63eba4dba0d6"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "740ec58c-25fa-423c-8b4c-b60b5566a103"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "71686eff-e9f9-4ccc-83e1-c048ca06299d"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "be2a309f-3397-41fe-98be-c3eb1c504e4c"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "4420042e-53de-42a4-9c67-aa4b9c063004"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "633b333b-f051-4fb9-b9ff-a43c9191aa57"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "a706daa2-644a-49e8-9108-ae1acd37c922"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "fdea2a73-8d8b-4c1c-a40f-adaa2dd62fc9"
+      },
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "e4942d80-d246-43a4-8722-ef9a6c46c506"
+      }
+    ]
+  }
+}

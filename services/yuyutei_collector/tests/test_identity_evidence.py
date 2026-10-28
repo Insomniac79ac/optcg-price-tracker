@@ -200,6 +200,7 @@ def test_versioned_intent_retains_current_canonical_guards_before_io(tamper):
         scope_key=identity_evidence_scope(1, digest, 2),
     )
     plan = NS(
+        source_name="yuyutei",
         resolution_status="ambiguous",
         evidence_digest=digest,
         release_product_id=1,
@@ -229,3 +230,50 @@ def test_versioned_intent_retains_current_canonical_guards_before_io(tamper):
                 load_intent(session, NS(work_id=1, resume_cursor=cursor))
         else:
             assert load_intent(session, NS(work_id=1, resume_cursor=cursor))[1] is plan
+
+
+LISTING = {"candidate_id": 1, "set_slug": "op01", "product_id": "10002", "name_jp": "OP01-001",
+           "price_jpy": 1280, "availability": "in_stock", "raw_listing_digest": "a" * 64,
+           "eligible_print_identity": [{"card_print_id": 1}, {"card_print_id": 2}]}
+
+
+@pytest.mark.parametrize("change,captures", [
+    ({"price_jpy": 1980}, True),
+    ({"availability": "sold_out", "raw_listing_digest": "b" * 64}, True),
+    ({"name_jp": "renamed"}, False),
+    ({"eligible_print_identity": [{"card_print_id": 1}, {"card_print_id": 3}]}, False),
+])
+def test_a_price_change_after_planning_does_not_void_the_capture(change, captures):
+    """Owner 2026-10-29: the capture checks the listing identity it was planned for, not its price."""
+    from app.services.identity_evidence_scope import identity_evidence_scope
+    from app.services.source_mapping_proposals import evidence_digest
+
+    planned = evidence_digest({**LISTING, "discovery_run_id": 7})
+    now = {**LISTING, **change, "discovery_run_id": 9}
+    cursor = dict(version=2, candidate_id=1, explicit_identity_capture=True, evidence_digest=planned,
+                  release_product_id=1, considered_print_ids=[1, 2])
+    work = NS(kind="discovery", attempt_count=1, source_id=1,
+              scope_key=identity_evidence_scope(1, planned, 2))
+    plan = NS(source_name="yuyutei", source_id=1, source_candidate_id=1,
+              canonical_source_listing_identity="yuyutei:op01:10002", resolution_status="ambiguous",
+              evidence_digest=evidence_digest(now), evidence_summary=now, release_product_id=1,
+              alternatives=[NS(card_print_id=1), NS(card_print_id=2)])
+    session = Mock()
+    session.get.side_effect = [work, candidate()]
+    history = Mock()
+    history.all.return_value = [{**LISTING, "discovery_run_id": 7}]  # the group the plan came from
+    prints = Mock()
+    prints.all.return_value = [NS(id=1), NS(id=2)]
+    session.scalars.side_effect = [history, prints]
+    with patch(
+        "yuyutei_collector.identity_evidence.resolve_current_candidate_proposal",
+        return_value=plan,
+    ), patch(
+        "yuyutei_collector.identity_evidence.official_image_url",
+        return_value="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001.png",
+    ):
+        if captures:
+            assert load_intent(session, NS(work_id=1, resume_cursor=cursor))[1] is plan
+        else:
+            with pytest.raises(ValueError, match="current ambiguous"):
+                load_intent(session, NS(work_id=1, resume_cursor=cursor))

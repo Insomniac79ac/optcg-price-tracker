@@ -67,36 +67,36 @@ def image_body(row, expected):
     return digest, pixels
 
 
-def bound_evidence_digest(plan, proof, cursor):
-    """The digest this review is bound to, if it is bound to the plan's evidence.
+def bound_evidence_digest(session, plan, proof, cursor):
+    """The digest this review is bound to, if the listing is still the reviewed one.
 
-    Native: the review's baseline equals the current (1.3) digest. Bridge for
-    reviews recorded under resolver 1.2, whose digest also hashed the discovery
-    run that last saw the listing: accept only when the capture's own stored
-    evidence summary hashes to the baseline under 1.2 AND equals the current
-    evidence in every field except the run-scoped ones. Any real evidence change
-    (price, availability, listing text, release, siblings, ...) refuses, so a
-    review never transfers to different evidence.
+    A review attests which physical print a listing's retained artwork shows, so it
+    stays bound while the listing's IDENTITY is unchanged (owner 2026-10-29): native
+    when the review's baseline equals the current digest; otherwise only when the
+    capture was planned under that same baseline and the evidence behind it (the
+    capture's own stored summary, or the listing's proposal history) hashes to it under
+    1.3 or 1.2 and equals the current evidence in every field except run provenance
+    and Yuyu-Tei market state (price, stock, row text). Any identity change (code,
+    rarity, name, image, release, canonical family, sibling set, ...) refuses, so a
+    review never transfers to a different listing or a different set of prints.
     """
-    from app.services.source_mapping_proposals import (
-        legacy_evidence_digest,
-        listing_evidence,
-    )
+    from app.services.source_mapping_proposals import yuyu_identity_unchanged_since
 
     baseline = proof.get("baseline_evidence_digest")
     if baseline == plan.evidence_digest:
         return baseline
-    stored = cursor.get("evidence_summary")
-    current = getattr(plan, "evidence_summary", None)
-    if (
-        not isinstance(stored, dict)
-        or not isinstance(current, dict)
-        or legacy_evidence_digest(stored) != baseline
-        or cursor.get("evidence_digest") != baseline
-        or listing_evidence(stored) != listing_evidence(current)
+    if cursor.get("evidence_digest") != baseline or not yuyu_identity_unchanged_since(
+        session, plan, baseline, cursor.get("evidence_summary")
     ):
         raise ValueError("review is not bound to the current evidence")
     return baseline
+
+
+# Attributable visual reviewers: the method and the actor namespace come as a pair.
+REVIEWERS = {
+    "codex_visual_review_of_unique_full_physical_artwork": "codex:",
+    "claude_visual_review_of_unique_full_physical_artwork": "claude:",
+}
 
 
 def validate(session, plan, siblings, proof):
@@ -108,10 +108,11 @@ def validate(session, plan, siblings, proof):
         or proof.get("source_url") != plan.source_url
         or proof.get("release_product_id") != plan.release_product_id
         or proof.get("language") != "jp"
-        or proof.get("review_method")
-        != "codex_visual_review_of_unique_full_physical_artwork"
+        or proof.get("review_method") not in REVIEWERS
         or not proof.get("reviewed_at")
-        or not proof.get("actor", "").startswith("codex:")
+        or not isinstance(proof.get("actor"), str)
+        or not proof["actor"].startswith(REVIEWERS[proof["review_method"]])
+        or proof["actor"] == REVIEWERS[proof["review_method"]]
         or not proof.get("positive_physical_basis")
         or proof.get("selected_card_print_id") not in {p.id for p in siblings}
     ):
@@ -138,7 +139,7 @@ def validate(session, plan, siblings, proof):
         raise ValueError("physical catalogue identity changed")
     work = session.get(FreshnessWork, proof["work_id"])
     cursor = (work.resume_cursor or {}) if work is not None else {}
-    bound = bound_evidence_digest(plan, proof, cursor)
+    bound = bound_evidence_digest(session, plan, proof, cursor)
     version = cursor.get("version", 1)
     expected_scope = identity_evidence_scope(
         plan.source_candidate_id, bound, version

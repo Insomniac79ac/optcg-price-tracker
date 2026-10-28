@@ -37,6 +37,7 @@ def image(color, metadata=None):
 def evidence():
     plan = Row(
         source_name="yuyutei",
+        canonical_source_listing_identity="yuyutei:op01:10151",
         resolution_status="ambiguous",
         source_candidate_id=1,
         source_url="https://yuyu-tei.jp/sell/opc/card/op01/10151",
@@ -146,6 +147,7 @@ def evidence():
         resume_cursor=cursor,
     )
     attempts = [Row(outcome="completed", raw_snapshot_id=1, actual_request_cost=59)]
+    history = []  # evidence summaries of this listing's proposal groups, as the query returns them
 
     class Session:
         def get(self, model, identifier):
@@ -156,6 +158,8 @@ def evidence():
             )
 
         def scalars(self, statement):
+            if "source_mapping_proposal_groups" in str(statement):
+                return Row(all=lambda: list(history))
             return Row(all=lambda: attempts)
 
     return Row(
@@ -165,6 +169,7 @@ def evidence():
         rows=rows,
         work=work,
         attempts=attempts,
+        history=history,
         session=Session(),
     )
 
@@ -438,8 +443,20 @@ def test_review_bound_under_1_2_reattaches_to_identical_evidence_from_a_later_ru
 
 
 @pytest.mark.parametrize("field,value", [("price_jpy", 1480), ("availability", "sold_out"),
-                                         ("raw_listing_digest", "b" * 64),
-                                         ("eligible_print_identity", [{"card_print_id": 11}])])
+                                         ("raw_listing_digest", "b" * 64)])
+def test_review_survives_a_market_change_since_its_capture(evidence, monkeypatch, field, value):
+    """Owner 2026-10-29: a review is about artwork; price, stock and row text change daily."""
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    _legacy_bound(evidence, {**LISTING, field: value, "discovery_run_id": 900},
+                  {**LISTING, "discovery_run_id": 143})
+    selected, _, _ = proof_module.resolve(evidence.session, evidence.plan, evidence.siblings)
+    assert selected == 11
+
+
+@pytest.mark.parametrize("field,value", [("eligible_print_identity", [{"card_print_id": 11}]),
+                                         ("name_jp", "other"), ("image_url", "https://x/other.jpg"),
+                                         ("detected_rarity", "SR"), ("candidate_id", 2)])
 def test_review_bound_under_1_2_never_transfers_across_real_evidence_change(
     evidence, monkeypatch, field, value
 ):
@@ -462,3 +479,106 @@ def test_legacy_bridge_requires_the_capture_own_stored_evidence(evidence, monkey
     else:
         del evidence.work.resume_cursor["evidence_summary"]
     assert proof_module.resolve(evidence.session, evidence.plan, evidence.siblings) is None
+
+
+def _history_bound(evidence, plan_summary, stored_summary):
+    """A capture planned under 1.3 evidence that only the proposal history still holds."""
+    from app.services.source_mapping_proposals import evidence_digest
+
+    baseline = evidence_digest(stored_summary)
+    evidence.plan.evidence_summary = plan_summary
+    evidence.plan.evidence_digest = evidence_digest(plan_summary)
+    evidence.proof["baseline_evidence_digest"] = baseline
+    evidence.work.resume_cursor["evidence_digest"] = baseline
+    evidence.history.append(stored_summary)
+
+
+def test_review_reattaches_through_the_listing_proposal_history_after_a_price_change(
+    evidence, monkeypatch
+):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    _history_bound(evidence, {**LISTING, "price_jpy": 1980, "discovery_run_id": 900},
+                   {**LISTING, "discovery_run_id": 143})
+    assert "evidence_summary" not in evidence.work.resume_cursor
+    selected, _, _ = proof_module.resolve(evidence.session, evidence.plan, evidence.siblings)
+    assert selected == 11
+
+
+@pytest.mark.parametrize("defect", ["identity_changed", "no_history", "history_does_not_hash",
+                                    "cursor_planned_elsewhere"])
+def test_history_binding_fails_closed(evidence, monkeypatch, defect):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    current = {**LISTING, "price_jpy": 1980, "discovery_run_id": 900}
+    if defect == "identity_changed":
+        current["eligible_print_identity"] = [{"card_print_id": 10}, {"card_print_id": 13}]
+    _history_bound(evidence, current, {**LISTING, "discovery_run_id": 143})
+    if defect == "no_history":
+        evidence.history.clear()
+    elif defect == "history_does_not_hash":
+        evidence.history[0] = {**LISTING, "name_jp": "tampered"}
+    elif defect == "cursor_planned_elsewhere":
+        evidence.work.resume_cursor["evidence_digest"] = "f" * 64
+    assert proof_module.resolve(evidence.session, evidence.plan, evidence.siblings) is None
+
+
+@pytest.mark.parametrize("method,actor,ok", [
+    ("claude_visual_review_of_unique_full_physical_artwork", "claude:retained-review-2026-10-29", True),
+    ("codex_visual_review_of_unique_full_physical_artwork", "codex:test-review", True),
+    ("claude_visual_review_of_unique_full_physical_artwork", "codex:test-review", False),
+    ("codex_visual_review_of_unique_full_physical_artwork", "claude:retained-review", False),
+    ("claude_visual_review_of_unique_full_physical_artwork", "claude:", False),
+    ("claude_visual_review_of_unique_full_physical_artwork", None, False),
+])
+def test_reviewer_method_and_actor_namespace_come_as_a_pair(evidence, monkeypatch, method, actor, ok):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    evidence.proof.update(review_method=method, actor=actor)
+    result = proof_module.resolve(evidence.session, evidence.plan, evidence.siblings)
+    assert (result is not None) is ok
+    if ok:
+        assert result[2] == actor
+
+
+def test_identity_check_against_the_real_resolver_and_proposal_history(db_session):
+    """Price, stock and row text move; the listing identity does not. Postgres-free, real resolver."""
+    from tests.test_source_mapping_proposals import _base, _release, _family, _print, _run, _yuyu
+    from app.services.source_mapping_proposals import (
+        persist_proposals,
+        resolve_current_candidate_proposal,
+        yuyu_identity_unchanged_since,
+    )
+
+    _base(db_session)
+    release = _release(db_session, "OP-01")
+    family = _family(db_session, "OP01-120")
+    _print(db_session, family, release)
+    _print(db_session, family, release, "p1")
+    candidate = _yuyu(db_session, _run(db_session, "op01"), "op01", 10151, family.card_code,
+                      price_jpy=1280, availability="in_stock", raw_listing_text="1,280円 在庫あり")
+    db_session.commit()
+
+    def current():
+        return resolve_current_candidate_proposal(db_session, source_name="yuyutei", candidate_id=candidate.id)
+
+    planned = current()
+    assert planned.resolution_status == "ambiguous"
+    persist_proposals(db_session, [planned])
+    db_session.commit()
+    candidate.price_jpy, candidate.availability, candidate.raw_listing_text = 1980, "out_of_stock", "1,980円 売切"
+    candidate.discovery_run_id = _run(db_session, "op01").id
+    db_session.commit()
+    moved = current()
+    assert moved.evidence_digest != planned.evidence_digest
+    assert yuyu_identity_unchanged_since(db_session, moved, planned.evidence_digest)
+    assert not yuyu_identity_unchanged_since(db_session, moved, "e" * 64)
+    assert not yuyu_identity_unchanged_since(db_session, moved, None)
+
+    candidate.name_jp = "renamed listing"
+    db_session.commit()
+    assert not yuyu_identity_unchanged_since(db_session, current(), planned.evidence_digest)
+    candidate.name_jp = family.card_code
+    _print(db_session, family, release, "p2")  # the sibling set changed
+    db_session.commit()
+    assert not yuyu_identity_unchanged_since(db_session, current(), planned.evidence_digest)

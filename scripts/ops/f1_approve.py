@@ -1,8 +1,10 @@
 """D9 F1 batch approval (ops-write runbook `approve-f1-batch`).
 
 Approves current exact Yuyu-Tei proposals made by the F1 rule (reason
-``unique_listing_kind_resolves_one_release_sibling``) in owner-approved batches, through the
-same `approve_exact_proposal` the admin review page uses, so every guard is the admin guard.
+``unique_listing_kind_resolves_one_release_sibling``) or resolved by a retained physical
+artwork review (reason ``retained_positive_unique_physical_artwork_review``, owner 2026-10-29)
+in owner-approved batches, through the same `approve_exact_proposal` the admin review page
+uses, so every guard is the admin guard. The summary counts the batch per rule.
 
 1. Select the batch (read-only): current, pending, exact Yuyu-Tei groups carrying the F1 reason,
    oldest group first. Each is re-checked against a fresh resolver run (same evidence digest,
@@ -33,6 +35,8 @@ import time
 from ops import common
 
 F1_REASON = "unique_listing_kind_resolves_one_release_sibling"
+REVIEW_REASON = "retained_positive_unique_physical_artwork_review"
+RULES = {F1_REASON: "f1", REVIEW_REASON: "physical_review"}
 DEFAULT_COUNT = 500
 MAX_COUNT = 600
 SAMPLE_SIZE = 20
@@ -44,6 +48,12 @@ def _iso(value):
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc).isoformat()
+
+
+def approvable_rule(reasons):
+    """The approvable rule an exact proposal's reasons name (F1 or a physical review), or None."""
+    names = [RULES[r] for r in (reasons or []) if r in RULES]
+    return names[0] if len(names) == 1 else None
 
 
 def check_count(count):
@@ -58,7 +68,7 @@ def pinned_list(entries, count):
     chosen = [{k: e[k] for k in LIST_KEYS} for e in entries[:count]]
     if not chosen:
         raise common.Refused("no eligible F1 proposal to approve")
-    doc = {"runbook": "approve-f1-batch", "reason": F1_REASON, "expected_count": len(chosen), "entries": chosen}
+    doc = {"runbook": "approve-f1-batch", "reasons": sorted(RULES), "expected_count": len(chosen), "entries": chosen}
     data = json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()
     return data, hashlib.sha256(data).hexdigest(), doc
 
@@ -101,7 +111,7 @@ def select_batch(session):
             SourceMappingProposalGroup.superseded_at.is_(None),
             SourceMappingProposalGroup.review_status == "pending",
             SourceMappingProposalGroup.resolution_status == "exact",
-        ).order_by(SourceMappingProposalGroup.id)) if F1_REASON in (g.resolution_reasons_json or [])]
+        ).order_by(SourceMappingProposalGroup.id)) if approvable_rule(g.resolution_reasons_json)]
     excluded = Counter()
     if not groups:
         return [], excluded
@@ -151,7 +161,8 @@ def select_batch(session):
             "source_candidate_id": candidate.id, "card_print_id": print_row.id,
             "evidence_digest": group.evidence_digest, "resolver_version": group.resolver_version,
             "updated_at": _iso(group.updated_at),
-            "detail": {"card_code": canonical.card_code if canonical else None,
+            "detail": {"rule": approvable_rule(group.resolution_reasons_json),
+                       "card_code": canonical.card_code if canonical else None,
                        "print_name": print_row.official_name, "print_rarity": print_row.official_rarity,
                        "print_variant": print_row.official_asset_variant, "print_treatment": print_row.treatment,
                        "print_kind": print_listing_kind(print_row), "release_product_id": print_row.release_product_id,
@@ -240,7 +251,8 @@ def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None)
                "days_to_reserve_planning": round(room / planning, 1) if planning else None,
                "last_24h_mb_s9": rates.get("last_24h_mb_s9")}
 
-    summary = {"mode": "apply" if apply else "dry-run", "status": "DRY_RUN_OK", "reason_rule": F1_REASON,
+    summary = {"mode": "apply" if apply else "dry-run", "status": "DRY_RUN_OK", "reason_rules": sorted(RULES),
+               "rules": dict(Counter(r["detail"]["rule"] for r in chosen)),
                "approved_list_sha256": sha, "batch_size": len(chosen), "eligible_total": len(eligible),
                "excluded": dict(excluded), "kinds": dict(Counter(f"{r['detail']['listing_kind']}->{r['detail']['print_kind']}"
                                                             for r in chosen)),

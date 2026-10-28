@@ -643,6 +643,14 @@ class F1Approve(unittest.TestCase):
         with self.assertRaisesRegex(common.Refused, "no eligible"):
             f1_approve.pinned_list([], 500)
 
+    def test_approvable_rules_are_f1_and_a_physical_review_never_both(self):
+        f1, review = f1_approve.F1_REASON, f1_approve.REVIEW_REASON
+        sibling = "multiple_eligible_sibling_prints_in_resolved_release"
+        self.assertEqual(f1_approve.approvable_rule([f1]), "f1")
+        self.assertEqual(f1_approve.approvable_rule([sibling, review]), "physical_review")
+        for reasons in (None, [], [sibling], ["exactly_one_eligible_print_in_resolved_release"], [f1, review]):
+            self.assertIsNone(f1_approve.approvable_rule(reasons), reasons)
+
     def test_sample_is_reproducible(self):
         rows = [self.entry(i) for i in range(1, 501)]
         sha = f1_approve.pinned_list(rows, 500)[1]
