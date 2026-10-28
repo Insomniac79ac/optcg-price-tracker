@@ -37,14 +37,12 @@
         "services/snkrdunk_collector/tests/test_condition_prices_wait.py",
         "services/snkrdunk_collector/tests/test_metered_browser_close.py",
         "services/snkrdunk_collector/tests/test_retained_gallery.py",
-        "services/api/tests/test_freshness_adapters_postgres.py",
-        "docs/agent/missions/claude-snkr-prices-after-load.json"
+        "services/api/tests/test_freshness_adapters_postgres.py"
       ],
       "effects": [
-        "tests",
-        "documentation"
+        "tests"
       ],
-      "reason": "Tests from the live page shapes (each failed on the previous code) and this mission."
+      "reason": "Tests from the live page shapes; each new case failed on the previous code."
     }
   ],
   "safeguards": {
