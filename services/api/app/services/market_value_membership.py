@@ -6,7 +6,9 @@ had a scope. It is frozen when a day is first published and never changes after.
 
 - ``live_membership``: today's catalogue, as the next new day will use it. Its
   revision (``card-print-release-coded-v2:``) digests the prints and the coded
-  release set, so two different memberships never share a revision.
+  release set, so two different v2 memberships never share a revision. (A v1
+  revision digests the prints only; storing a different coded set under an
+  existing v1 revision is refused.)
 - ``load_membership``: the frozen membership a stored revision names.
 - ``store_membership``: insert-only; refuses to overwrite a different one.
 - ``rebuild_legacy_membership``: the days published before this ledger carry
@@ -130,7 +132,7 @@ class FrozenMembership:
         )
 
 
-def revision_v2(prints, coded_releases) -> str:
+def _payload(prints, coded_releases) -> str:
     print_lines = "\n".join(
         f"{row.card_print_id}:{row.release_product_id}"
         for row in sorted(prints, key=lambda row: row.card_print_id)
@@ -139,7 +141,11 @@ def revision_v2(prints, coded_releases) -> str:
         f"{row.release_product_id}:{row.official_code}"
         for row in sorted(coded_releases, key=lambda row: row.release_product_id)
     )
-    payload = print_lines + "\n#coded\n" + release_lines
+    return print_lines + "\n#coded\n" + release_lines
+
+
+def revision_v2(prints, coded_releases) -> str:
+    payload = _payload(prints, coded_releases)
     return REVISION_V2_PREFIX + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -339,11 +345,7 @@ def rebuild_legacy_membership(db: Session, revision: str) -> LegacyRebuild:
 
 
 def _content_sha(value: FrozenMembership) -> str:
-    payload = "\n".join(f"{r.card_print_id}:{r.release_product_id}" for r in value.prints)
-    payload += "\n#coded\n" + "\n".join(
-        f"{r.release_product_id}:{r.official_code}" for r in value.coded_releases
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return hashlib.sha256(_payload(value.prints, value.coded_releases).encode("utf-8")).hexdigest()
 
 
 def legacy_freeze_plan(db: Session):

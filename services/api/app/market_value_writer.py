@@ -306,7 +306,12 @@ def _execute(
 
         # Every stored point names a frozen membership (owner plan A, 2026-10-28):
         # a recovery replay freezes the catalogue membership it replayed with.
-        if plan.membership is not None and membership.schema_present(db):
+        if plan.membership is not None:
+            if not membership.schema_present(db):
+                raise WriterAbort(
+                    "market value membership schema is absent; apply its migration "
+                    "before a recovery write (every point must name a frozen membership)"
+                )
             membership.store_membership(db, plan.membership, origin="recovery")
         write_result: MarketValueWriteResult = persist_market_value_points(
             db, plan.drafts

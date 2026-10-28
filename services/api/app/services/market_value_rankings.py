@@ -87,14 +87,28 @@ def _selected_scope(db: Session, release_product_id: int | None):
     return latest, identity
 
 
+def _undefined_table(exc) -> bool:
+    code = getattr(getattr(exc, "orig", None), "sqlstate", None) or getattr(
+        getattr(exc, "orig", None), "pgcode", None
+    )
+    if code is not None:
+        return code == "42P01"
+    return "no such table" in str(exc).lower()  # SQLite
+
+
 def _membership(db: Session, point: MarketValuePoint):
     """The frozen membership this point was published with (owner plan A,
     2026-10-28); today's catalogue never decides an old point's basket."""
     try:
         frozen = load_membership(db, point.membership_revision)
-    except (MembershipError, ProgrammingError, OperationalError) as exc:
-        # A contradicted ledger, or (before its migration) no ledger at all.
+    except MembershipError as exc:
         raise MarketValueIntegrityError("membership_revision_mismatch") from exc
+    except (ProgrammingError, OperationalError) as exc:
+        # Only a missing ledger table (before its migration) is an integrity
+        # refusal; a timeout or dropped connection propagates as itself.
+        if _undefined_table(exc):
+            raise MarketValueIntegrityError("membership_revision_mismatch") from exc
+        raise
     if frozen is None:
         raise MarketValueIntegrityError("membership_revision_mismatch")
     return frozen

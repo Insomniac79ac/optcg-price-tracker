@@ -560,3 +560,20 @@ def test_movers_across_a_membership_change_use_each_days_own_basket(ranked_db):
     assert not service.get_market_value_movers(ranked_db, release_product_id=2).available
     most = service.get_market_value_most_valuable(ranked_db, limit=50)
     assert most.as_of == AS_OF and most.total_eligible == point(ranked_db).priced_print_count
+
+
+def test_without_the_membership_tables_rankings_refuse_with_a_typed_integrity_error(ranked_db):
+    """Before the ledger's migration is applied: a typed 503, not a 500."""
+    from sqlalchemy import text
+
+    for table in (
+        "market_value_membership_prints",
+        "market_value_membership_releases",
+        "market_value_memberships",
+    ):
+        ranked_db.execute(text(f"DROP TABLE {table}"))
+    ranked_db.commit()
+    for fn in (service.get_market_value_movers, service.get_market_value_most_valuable):
+        with pytest.raises(service.MarketValueIntegrityError, match="membership_revision_mismatch"):
+            fn(ranked_db)
+        ranked_db.rollback()

@@ -240,19 +240,9 @@ def _memberships_for(db: Session, published_dates, new_dates):
         new_membership = None if existing is not None else live
         for point_date in new_dates:
             by_date[point_date] = live
-    for value in {id(v): v for v in by_date.values()}.values():
-        _validate_membership(value)
+    # FrozenMembership validates itself (distinct prints, positive ids, coded
+    # releases with prints); a live membership that fails raises MembershipError.
     return by_date, new_membership
-
-
-def _validate_membership(value) -> None:
-    if not value.prints:
-        raise WriterAbort("a membership has no prints")
-    if any(row.release_product_id <= 0 for row in value.prints):
-        raise WriterAbort("membership contains an invalid release_product_id")
-    counts = value.release_counts
-    if any(counts.get(row.release_product_id, 0) <= 0 for row in value.coded_releases):
-        raise WriterAbort("membership coded release has no prints")
 
 
 def run_publisher(

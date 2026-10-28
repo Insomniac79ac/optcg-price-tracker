@@ -185,11 +185,13 @@ step keeps its ordered A2 reason tuple and a nonpublishable flag; it never
 stores a fabricated return. A factor of `1` on such a row is only the frozen
 A2 new-segment base, not `0%` movement.
 
-Each point also freezes the current-corrected catalogue membership digest and
-canonical index/source-semantics version-pair sets used by replay. It does not
-copy constituent IDs into aggregate rows or create another historical card
-catalogue. The immutable `market_index_snapshots` archive remains the detailed
-source evidence.
+Each point also records the membership revision and canonical
+index/source-semantics version-pair sets used by replay. It does not copy
+constituent IDs into aggregate rows. The membership itself (each print with the
+release it belonged to, plus the coded releases that had a scope) is frozen once
+per revision in the append-only `market_value_memberships` ledger (owner plan A,
+2026-10-28), so every published day is replayed with its own basket. The
+immutable `market_index_snapshots` archive remains the detailed source evidence.
 
 The writer accepts already-derived drafts; it contains no basket arithmetic or
 membership decisions. Drafts are sorted by natural key, inserted with `ON
@@ -357,13 +359,16 @@ confidence/investment score, or internal snapshot ID.
 
 ### Membership, images, and integrity failures
 
-Initial replay froze a **global** digest of active verified JP print IDs and
-release FKs, including uncoded releases. Both rankings reproduce that same
-digest before using today's identity metadata. Even a change outside the
-selected release conservatively refuses decomposition: the archive has no
-historical membership ledger with which to prove a narrower correction safe.
-The digest algorithm and evidence serializers are shared pure helpers,
-extracted unchanged from A2/A3; HTTP imports neither replay nor persistence.
+Each ranked day uses the membership frozen with its point
+(`market_value_memberships`, owner plan A 2026-10-28): movers decompose the
+prior day with the prior point's basket and the current day with the current
+point's, so a catalogue import or correction after publication changes neither
+the basket nor the values. A point naming no frozen membership, or a frozen
+membership whose rows no longer hash to its revision, refuses with
+`membership_revision_mismatch`. Release labels are today's labels of the release
+frozen for each print. The digest algorithm and evidence serializers are shared
+pure helpers, extracted unchanged from A2/A3; HTTP imports neither replay nor
+persistence.
 
 Names/artwork remain current stored presentation metadata. Only returned
 prints are image-enriched in one batched read using the existing display-image

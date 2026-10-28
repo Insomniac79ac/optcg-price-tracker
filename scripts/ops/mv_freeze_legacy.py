@@ -32,11 +32,15 @@ def check_apply(expected_sha256, sha):
 def default_preview():
     from sqlalchemy.orm import Session
     from ops import db as ops_db
-    from app.services.market_value_membership import legacy_freeze_plan
+    from app.services.market_value_membership import MembershipError, legacy_freeze_plan
 
     with Session(ops_db.engine()) as session:
-        result = legacy_freeze_plan(session)
-        session.rollback()
+        try:
+            result = legacy_freeze_plan(session)
+        except MembershipError as exc:
+            raise common.Refused(f"market-value-freeze-legacy: {exc}") from None
+        finally:
+            session.rollback()
     return result
 
 
@@ -71,7 +75,7 @@ def _write_plan(p):
     transaction (refused while a publication or recovery holds it, and none can start until this
     commits), as the publisher guards the snapshot producer."""
     from sqlalchemy import select
-    from sqlalchemy.exc import OperationalError
+    from sqlalchemy.exc import IntegrityError, OperationalError
     from sqlalchemy.orm import Session
     from ops import apply_migration, db as ops_db
     from app.market_value_writer import LOCK_NAME
@@ -91,11 +95,13 @@ def _write_plan(p):
                 status = session.scalar(
                     select(JobLock.status).where(JobLock.lock_name == LOCK_NAME)
                     .with_for_update(nowait=True))
+                if status is None:
+                    raise MembershipError("the market value writer lock row is missing; cannot guard the freeze")
                 if status == "active":
                     raise MembershipError("a market value publication or recovery is running")
                 frozen = apply_legacy_freeze(session, p)
                 session.commit()
-            except (MembershipError, OperationalError) as exc:
+            except (MembershipError, OperationalError, IntegrityError) as exc:
                 session.rollback()
                 raise common.Refused(f"market-value-freeze-legacy refused: {exc}") from None
     finally:

@@ -99,7 +99,7 @@ def pg_session(pg_engine, monkeypatch):
     )
     # The synthetic catalogue has no card_prints rows, so its membership cannot be
     # frozen here; freezing is covered by the publication tests on a real catalogue.
-    monkeypatch.setattr(writer.membership, "schema_present", lambda _db: False)
+    monkeypatch.setattr(writer.membership, "store_membership", lambda *_a, **_k: True)
     with Session(pg_engine) as session:
         yield session
         session.rollback()

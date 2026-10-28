@@ -517,3 +517,15 @@ def test_the_legacy_freeze_runbook_plan_unblocks_publication(db_session):
     assert membership.legacy_freeze_plan(db_session)[1] == ["every stored revision already has a frozen membership"]
     db_session.rollback()
     assert publish(db_session).inserted == 3
+
+
+def test_a_recovery_write_refuses_without_the_membership_ledger(db_session, monkeypatch):
+    """Every stored point must name a frozen membership: before the ledger's
+    migration a recovery write refuses instead of writing unfrozen points."""
+    from app.services import market_value_membership as membership
+
+    seed(db_session, receipt_days=(), published=False)
+    monkeypatch.setattr(membership, "schema_present", lambda _db: False)
+    with pytest.raises(recovery.WriterAbort, match="membership schema is absent"):
+        recovery.run_writer(db_session, mode="write", through=D26, skip_lock=True)
+    assert db_session.scalar(select(func.count()).select_from(MarketValuePoint)) == 0
