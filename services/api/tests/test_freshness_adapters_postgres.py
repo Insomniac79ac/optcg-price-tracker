@@ -3,6 +3,7 @@
 from datetime import timedelta
 from pathlib import Path
 from types import SimpleNamespace
+import re
 import sys
 from unittest.mock import MagicMock
 
@@ -334,7 +335,26 @@ class Transport:
         self.handler(route)
         if route.abort.called:
             raise RuntimeError("transport aborted before dispatch")
+        self.condition_prices(url)
         return self.response(url)
+
+    # The size-chips body schema is not known from stored evidence; this one is illustrative
+    # (snkrdunk_collector.browser.body_listings only reads keys that name a price).
+    chips_body = b'{"sizeChips": [{"name": "A", "minPrice": 3500}]}'
+
+    def condition_prices(self, url):
+        """The product page's own price request comes back, as the live page's does (it
+        names that request; snkrdunk_collector.browser.PRICE_CHIPS_PATH)."""
+        found = re.search(r"/apparels/(\d+)", url)
+        if not found:
+            return
+        path = f"/v2/products/{found.group(1)}/size-chips"
+        self.body += f"<!-- {path} -->"
+        response = SimpleNamespace(url="https://snkrdunk.com" + path, status=200,
+                                   body=lambda: self.chips_body)
+        for call in self.page.on.call_args_list:
+            if call.args and call.args[0] == "response":
+                call.args[1](response)
 
 
 def run(factory, source, **kwargs):
@@ -420,6 +440,52 @@ def test_independent_categories_and_high_interest(db, monkeypatch, missing):
         assert facts[other]["captured_at"] == T0
         assert facts[other]["expires_at"] == T0 + timedelta(hours=4)
         assert {r["next_due_at"] for r in facts.values()} == {T0 + timedelta(hours=3)}
+
+
+def _all_awaiting(html):
+    """Every condition chip as 出品待ち: how the live page arrives before its prices load."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    for price in soup.find_all("p", class_="css3__price"):
+        price.replace_with(BeautifulSoup('<p class="css3__awaiting">出品待ち</p>', "html.parser"))
+    return str(soup)
+
+
+@pytest.mark.parametrize("prices", ["not_seen", "dom_not_rendered", "body_unconfirmed"])
+def test_placeholders_are_never_recorded_as_no_listing(db, monkeypatch, prices):
+    """2026-10-26: SNKRDUNK fills condition prices in after load. A page on which no chip shows
+    a price is never 'nothing listed' (the price response's schema cannot vouch for it yet):
+    the capture is retried later (transient) with the reason recorded, and the price response
+    body is kept beside the page as evidence."""
+    from snkrdunk_collector import browser
+
+    factory, source, mid, _ = db
+    work = seed(factory, mid)
+    transport = Transport(monkeypatch, _all_awaiting(HTML))
+    if prices == "not_seen":
+        transport.condition_prices = lambda url: None
+        monkeypatch.setattr(browser, "PRICE_CHIPS_WAIT_S", 0.05)
+    elif prices == "dom_not_rendered":
+        monkeypatch.setattr(browser, "PRICE_CHIPS_RENDER_MAX_S", 0.05)
+    else:  # a body that looks empty still cannot confirm it
+        transport.chips_body = b'{"sizeChips": [{"name": "A", "minPrice": null}]}'
+    assert len(run(factory, source)) == 1
+    with factory() as session:
+        row = session.get(FreshnessWork, work)
+        attempt = session.scalar(select(FreshnessAttempt))
+        chips = session.scalars(select(RawSnapshot).where(RawSnapshot.source_url.like("%/size-chips"))).all()
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        assert attempt.raw_snapshot_id is not None  # the page is kept as evidence either way
+        assert "/apparels/" in session.get(RawSnapshot, attempt.raw_snapshot_id).source_url
+        assert (attempt.outcome, row.state) == ("transient_failure", "pending")
+        assert f"prices_not_loaded;condition_prices:{prices}" in row.last_failure
+        assert not attempt.category_outcomes or "no_listing" not in attempt.category_outcomes.values()
+        if prices == "not_seen":
+            assert chips == []
+        else:
+            assert [c.raw_content for c in chips] == [transport.chips_body.decode()]
+            assert f"size_chips_sha256:{chips[0].content_hash[:16]}" in row.last_failure
 
 
 def test_partial_absence_keeps_deadline_and_does_not_recapture_in_same_run(
@@ -1452,6 +1518,7 @@ class TurnTransport(Transport):
         self.handler(route)
         if route.abort.called:
             raise RuntimeError("transport aborted before dispatch")
+        self.condition_prices(url)
         return self.response(url)
 
 

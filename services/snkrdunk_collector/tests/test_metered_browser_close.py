@@ -52,7 +52,7 @@ def test_metered_close_settles_before_context_disposal_or_result_writer(
     )
     html = (Path(__file__).parent / "fixtures/product_page_reduced.html").read_text()
 
-    def capture(page, url, *, before_parse):
+    def capture(page, url, *, before_parse, **kwargs):
         step = dict(
             html=html,
             http_status=200 if homepage_ok else 403,
