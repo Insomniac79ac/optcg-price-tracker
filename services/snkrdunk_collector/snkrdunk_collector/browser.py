@@ -309,6 +309,102 @@ def classify_page(status: int | None, html: str, title: str) -> tuple[str, list[
     return "error", [f"http_status:{status}"]
 
 
+# Diagnostic (owner 2026-10-28, option A): the first live captures after #231 never saw the
+# page's size-chips response (condition_prices:not_seen after 15 s). Until the price request is
+# understood from evidence, a product capture whose prices did not load logs what the page
+# actually requested: every non-asset request, response and failure (time since navigation,
+# type, method, host, path, query keys, status), the browser's own fetch/XHR resource timings,
+# and the page's visibility and picker position. Logging only: it changes no outcome.
+NETWORK_TRACE_MAX = 80
+NETWORK_TRACE_SKIP_TYPES = frozenset({"image", "font", "media", "stylesheet", "script"})
+PAGE_STATE_JS = """() => {
+  const chip = document.querySelector('button[class*="chip"]');
+  const box = chip ? chip.getBoundingClientRect() : null;
+  const perf = performance.getEntriesByType('resource')
+    .filter(e => e.initiatorType === 'fetch' || e.initiatorType === 'xmlhttprequest')
+    .map(e => { try { const u = new URL(e.name); return [u.hostname, u.pathname.slice(0, 120), Math.round(e.startTime)]; } catch (_) { return [null, null, Math.round(e.startTime)]; } });
+  return {visibility: document.visibilityState, ready: document.readyState,
+          scroll_y: window.scrollY, viewport_h: window.innerHeight,
+          picker_top: box ? Math.round(box.top) : null, perf_fetch: perf.slice(0, 40), perf_fetch_total: perf.length};
+}"""
+
+
+class NetworkTrace:
+    """Compact record of what a product page requests (diagnostic; see NETWORK_TRACE_MAX)."""
+
+    def __init__(self, clock=None):
+        self.clock = clock or time.monotonic
+        self.start = self.clock()
+        self.entries: list[dict] = []
+        self.dropped = 0
+        self.counts: dict[str, int] = {}
+
+    def _add(self, event, request, *, status=None, failure=None):
+        try:
+            rtype = request.resource_type
+            method = request.method
+            parsed = urlsplit(request.url)
+        except Exception:  # noqa: BLE001 - a diagnostic never breaks a capture
+            return
+        key = f"{event}:{rtype}"
+        self.counts[key] = self.counts.get(key, 0) + 1
+        if rtype in NETWORK_TRACE_SKIP_TYPES:
+            return
+        if len(self.entries) >= NETWORK_TRACE_MAX:
+            self.dropped += 1
+            return
+        entry = {"ms": int((self.clock() - self.start) * 1000), "ev": event, "type": rtype,
+                 "m": method, "host": parsed.hostname, "path": (parsed.path or "")[:120]}
+        if parsed.query:
+            entry["q"] = sorted({part.split("=", 1)[0] for part in parsed.query.split("&") if part})[:6]
+        if status is not None:
+            entry["status"] = status
+        if failure:
+            entry["fail"] = str(failure)[:80]
+        self.entries.append(entry)
+
+    def on_request(self, request):
+        self._add("req", request)
+
+    def on_response(self, response):
+        try:
+            request = response.request
+            status = response.status
+        except Exception:  # noqa: BLE001
+            return
+        self._add("resp", request, status=status)
+
+    def on_failed(self, request):
+        try:
+            failure = request.failure
+        except Exception:  # noqa: BLE001
+            failure = "unknown"
+        self._add("fail", request, failure=failure or "unknown")
+
+    def attach(self, page):
+        page.on("request", self.on_request)
+        page.on("response", self.on_response)
+        page.on("requestfailed", self.on_failed)
+
+    def detach(self, page):
+        for event, handler in (("request", self.on_request), ("response", self.on_response),
+                               ("requestfailed", self.on_failed)):
+            try:
+                page.remove_listener(event, handler)
+            except Exception:  # noqa: BLE001 - a closed page has no listeners left
+                pass
+
+    def summary(self, page=None) -> dict:
+        out = {"entries": self.entries, "dropped": self.dropped, "counts": self.counts}
+        if page is not None:
+            try:
+                state = page.evaluate(PAGE_STATE_JS)
+                out["page"] = json.loads(json.dumps(state)) if isinstance(state, dict) else {"error": "unexpected"}
+            except Exception as exc:  # noqa: BLE001
+                out["page"] = {"error": type(exc).__name__}
+        return out
+
+
 def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_prices=False,
                      should_stop=None) -> dict:
     """One bounded navigation attempt. Returns a dict with either an "error"
@@ -319,6 +415,7 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
     start = time.monotonic()
     seen: list = []
     listener = None
+    trace = None
     try:
         if condition_prices:
             def listener(response):
@@ -326,6 +423,8 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
                 if found:
                     seen.append((*found, response))
             page.on("response", listener)
+            trace = NetworkTrace()
+            trace.attach(page)
         response = page.goto(url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(1500)
         status = response.status if response else None
@@ -358,6 +457,8 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
                 # The body is kept where the page showed no price: the evidence for why.
                 **({"price_chips": chips} if keep_chips else {}),
             })
+        if trace is not None and prices is not None and prices["status"] not in EXTRACTABLE_PRICE_STATUSES:
+            prices = {**prices, "network": trace.summary(page)}
         if (prices is not None and classification == "normal_page"
                 and prices["status"] not in EXTRACTABLE_PRICE_STATUSES):
             classification = {"http_403": "static_403", "http_429": "static_429",
@@ -385,6 +486,8 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
                 page.remove_listener("response", listener)
             except Exception:  # noqa: BLE001 - a closed page has no listeners left
                 pass
+        if trace is not None:
+            trace.detach(page)
 
 
 def _settle_condition_prices(page: Page, seen: list, status, classification, should_stop=None):
