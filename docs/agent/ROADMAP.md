@@ -1,6 +1,7 @@
 # Card Pirate roadmap (single source of truth)
 
-As of 2026-10-18 23:00Z, staging `99844c6` (after #174). Staging only; production RED; PSA10 OFF.
+As of 2026-10-28 15:20Z, staging `7df197b` (after #237). Staging only; production RED; PSA10 OFF.
+Previous revision: 2026-10-18 23:00Z (`99844c6`, after #174).
 
 This file is the one place that says what Card Pirate is building, in what order, and where each item
 stands. Plan branches (`plan/*`), handoffs and reports are the detail behind it.
@@ -29,67 +30,80 @@ stands. Plan branches (`plan/*`), handoffs and reports are the detail behind it.
 | 2026-10-17 | Repo stays public. The legal opinion is not a gate. | `plan/data-platform` G-actions 6, §G6 (second half), §H2 and §F step 9 gate wording; `plan/official-channels` §6 (SNKRDUNK hold); `plan/cardrush-source` §A external-delivery hold. RED still applies to new commitments: contracts, paying for data, publishing Terms and Privacy. |
 | 2026-10-18 | Identity captures resumed; no storage cut built (captures are a one-off of about 300 MB against 2,825 MB free). Storage watch: flag the owner below 45 days to the 3 GiB reserve. | The 2026-10-17 capture pause; capture-day storage options A to G (D9 report, 2026-10-18); #172 (closed unmerged); the 90-day storage-fit rule in `plan/source-survey` §4, `plan/cardrush-source` §F3 and the session 14 handoff. |
 | 2026-10-18 | Collector PRs are delivered only by the `staging-automerge` CI job, never hand-merged. | Hand merges of `hold-for-owner` PRs that change a collector (#171 left the shards on old code: [plans/coverage-gap-d9/F1-ROLLOUT.md](plans/coverage-gap-d9/F1-ROLLOUT.md)). |
+| 2026-10-23 | The coordinator merges owner-approved queue PRs itself; `.github` changes stay `hold-for-owner` (owner merges by hand). | The owner hand-merging every queue PR ([AUTONOMY_POLICY.md](AUTONOMY_POLICY.md)). |
+| 2026-10-24 | Domain `cardpirate.app` bought (Vercel Pro). Staging is `staging.cardpirate.app`, kept out of search engines; `cardpirate.app` is reserved for launch. | Item 18 "owner purchase". |
+| 2026-10-26 | Yuyu-Tei after a challenge pause: one owner-approved probe, never a blind unpause (`yuyu-source-probe`). | Clearing a source pause by hand. |
+| 2026-10-27 | SNKRDUNK parser-bug refusals return through `snkr-parser-requeue`: one canary, then the rest only after the canary captures a price. | Bulk unquarantine (still never done). |
+| 2026-10-28 | Market Value plan A: each published day keeps the membership frozen with it; new prints count from the day they arrive; a release's chain restarts only when its own prints change (#235). | `docs/market_value.md` "one digest of today's catalogue" replay for forward publication. |
+| 2026-10-28 | SNKRDUNK option A: log what the product page requests before changing the price wait again (#237). | Guessing the price request's address or timing. |
 
 Earlier owner decisions that still stand are recorded in the plans themselves: collector v1 §I
 (2026-10-11), onchain owner decisions (2026-10-09), data-platform G1 (2026-10-11, now partly
 superseded above), production deprecation (2026-10-09 and 2026-10-12), and the F1 foil rule
 (2026-10-17/18, `plan/new-sources` header item 1).
 
-## 2. KPIs (read-only runs, 2026-10-18 22:49 to 23:00Z)
+## 2. KPIs (read-only runs, 2026-10-28 15:07 to 15:20Z)
 
-Population: 4,316 active verified JP prints (`yuyu-coverage-gap`). Coverage target: 3,237 (75%).
+Population: **4,528** active verified JP prints (was 4,316 on 2026-10-18; about 212 added by the
+2026-10-26 catalogue imports, incl. new coded release EB-05). Coverage target: 75% = 3,396.
 
 | KPI | Value | Evidence |
 |---|---|---|
-| Operational coverage (a source checked the print within 24 h) | **60.6% to 67.2%** (2,616 to 2,902 prints). Yuyu-Tei alone is 2,616; SNKRDUNK adds at most 286. The exact union is NOT MEASURED. | MEASURED: `degraded-signals` 39174056368, `freshness-not-met` 39173908861 |
-| Fresh usable coverage (listed price within 24 h) | **60.6% to 61.8%** (2,616 to 2,666). Yuyu-Tei 2,616; SNKRDUNK 50 (28 high-rarity + 22 other). | MEASURED: `yuyu-coverage-gap` 39174286814, `snkrdunk-coverage-gap` 39174353160 |
-| Dual-source coverage (fresh) | **At most 50 prints (1.2%)**: only 50 prints have a fresh SNKRDUNK price. Exact count NOT MEASURED. Mapped dual-source was 334 on 2026-10-15 (CARRIED FORWARD, `plan/new-sources` §6). | as above |
-| Checks within 23 h | **97.9%** of non-quarantined refresh items (2,840 of 2,902); 62 Yuyu-Tei items were past the 23 h dispatch point and not yet claimed. | MEASURED: `work-by-state` 39174132869 (`due_now`) |
-| Checks within 24 h | **100%** of non-quarantined items (2,902 of 2,902; oldest Yuyu-Tei 23.3 h, SNKRDUNK 18.8 h). 97.7% of all 2,969 eligible items. The `freshness-deadline-deficit` blocker is gone. | MEASURED: `freshness-not-met` 39173908861, `staging-state` 39173902607 |
-| Mappings older than 24 h | **67**, all SNKRDUNK and all quarantined by identity refusal (22 never checked, 45 last success over 24 h; oldest blocked since 2026-10-02). Plus 3 inactive Yuyu-Tei items. | MEASURED: `degraded-signals` 39174056368 |
-| Zero-source prints (no fresh price) | **1,650 to 1,700 (38.2% to 39.4%)**. Zero mapped sources: NOT MEASURED. | derived from the two coverage-gap runs |
-| Exact candidate backlog | Yuyu-Tei F1: sized at 775 strict matches (about 762 accepted by the owner), but F1 proposals are written only when Yuyu-Tei discovery revisits a set, and 0 existed at 22:55Z; the approval dry run measures the real count. SNKRDUNK: **82** exact candidates whose listing is not mapped. | `snkrdunk-coverage-gap-discovery` 39174490534 |
-| Ambiguous backlog | Yuyu-Tei: **1,324** ambiguous candidates (1,293 prints); 830 more candidates whose release or card code does not resolve. SNKRDUNK: **218** ambiguous candidates (201 prints). | `yuyu-coverage-gap` 39174286814, SNKRDUNK runs above |
-| Discovery yield | Yuyu-Tei: 67 discovery runs in 24 h, all completed; every gap print already has a Yuyu-Tei candidate for its code (class a = 0). SNKRDUNK: **2 new candidates in 14 days, last discovery attempt 2026-10-07**; 1,085 of 1,451 high-rarity prints have no SNKRDUNK candidate. | `work-by-state` 39174132869, `snkrdunk-coverage-gap-discovery` 39174490534 |
-| Source failure rates (24 h) | Yuyu-Tei refresh: 2,763 captured, **0 failures**. SNKRDUNK refresh: 287 attempts, 50 captured, 236 no listing, 1 identity refusal, **0 denials or transient failures**. | `work-by-state` 39174132869 |
-| Storage | Volume 3,980.4 MB; **2,798.3 MB** to the 3 GiB reserve. Planning 33.24 MB/day = **84 days**; last 24 h 26.81 MB = 104 days; worst 24 h 131.84 MB/day = 21 days. Database 3,112 MB, `raw_snapshots` 2,848 MB (92%). | MEASURED: `storage-rates` 39173904392, `table-sizes` 39174211637 |
-| Market Value coverage | **NOT MEASURED.** Market Index snapshots write 2,626 rows a day (flat since 2026-10-11, 60.8% of prints), but no runbook reads the priced count or the receipt's expected count. | `capture-day-storage` 39174564306 |
-| Health | Yuyu-Tei and SNKRDUNK HEALTHY, 0 raw-health actions. Blockers: `snkrdunk-identity-quarantine`, `quarantined-refresh-work` (70). Signed-out web smoke passed. Official images 4,316 of 4,316 mirrored. | `staging-state` 39173902607, `web-smoke` 39173905846, `official-images-status` 39173907292 |
+| Fresh usable coverage (listed price within 24 h) | **78.8%** (3,569 of 4,528), all Yuyu-Tei. SNKRDUNK fresh: **0** (down since the 2026-10-26 page change, item 24). The 75% target is met by Yuyu-Tei alone. | MEASURED: `yuyu-coverage-gap` 40713172523, `snkrdunk-coverage-gap` 40713438280 |
+| Dual-source coverage (fresh) | **0** while SNKRDUNK is down. SNKRDUNK has 353 mapped refresh items; 352 are quarantined, 1 (the requeue canary) is retrying. | MEASURED: `work-by-state` 40714288258 |
+| Checks within 24 h | Yuyu-Tei: all 3,569 non-quarantined items (oldest 24.0 h); 162 due now at 15:19Z. SNKRDUNK: the 1 open item at 59.8 h, so the `freshness-deadline-deficit` blocker is back. | MEASURED: `freshness-not-met` 40713902705, `staging-state` 40712497491 |
+| Quarantined refresh work | **355**: SNKRDUNK 352 (283 from the 2026-10-26 parser bug, 69 older), Yuyu-Tei 3 inactive. | MEASURED: `degraded-signals` 40713642431 |
+| Source activity (24 h) | Yuyu-Tei refresh: 3,695 captured, 0 failures; 68 discovery runs. SNKRDUNK refresh: 4 attempts, all transient (`prices_not_loaded`). | MEASURED: `work-by-state` 40714288258 |
+| Yuyu-Tei gap (959 prints) | b ambiguous/pending 483, code listed only in another category 327, capture intent pending 34, release never enumerated 61, all release listings mapped to siblings 54 (ESTIMATE). | MEASURED: `yuyu-coverage-gap` 40713172523 |
+| SNKRDUNK gap (1,556 high-rarity targets) | release has no SNKRDUNK anchor 1,139; ambiguous proposals 228; quarantined 53; all code listings mapped to siblings 116. Last new candidate 2026-10-20. | MEASURED: `snkrdunk-coverage-gap` 40713438280 |
+| Storage | Volume 4,308.8 MB; **2,469.9 MB** to the 3 GiB reserve. Planning 33.61 MB/day = **73 days**; last 24 h 30.25 MB = 82 days; worst 24 h 131.84 MB/day = 19 days. Database 3,410 MB, `raw_snapshots` 3,060 MB (90%). | MEASURED: `storage-rates` 40712789101, `table-sizes` 40714636747 |
+| Official images | **212 of 4,528 prints have no mirrored copy** (the 2026-10-26 imports); last mirrored 2026-10-12; check unhealthy (item 26). | MEASURED: `official-images-status` 40712963235 |
+| Market Value | Publication halted 2026-10-26 to 2026-10-28 (catalogue imports broke the replay); fixed by #235, migration `001d92ba8eb9` and the legacy freeze (2026-10-28). Last published day 2026-10-25 (64 days, 60 scopes); catch-up expected at the 2026-10-28 20:00Z run. | MEASURED: `db-diagnostic market-value-membership` 40672545623 |
+| Health | Yuyu-Tei HEALTHY; SNKRDUNK **DEGRADED**; 1 raw-health action. Blockers: `freshness-deadline-deficit`, `snkrdunk-identity-quarantine`, `quarantined-refresh-work`. | MEASURED: `staging-state` 40712497491 |
 
-To make the NOT MEASURED rows measurable: add the state generator's coverage block (mapped, one or
-more sources, both sources, zero sources) and the latest Market Value receipt counts to the
-`staging-state` ops summary, or add a `coverage-kpis` diagnostic (item 11d).
+Still NOT MEASURED: the exact union with both sources (SNKRDUNK adds 0 today), Market Value priced
+coverage (item 11d).
 
 ## 3. Roadmap
 
 | # | Item | Status | Class (next step) | Main blocker |
 |---|---|---|---|---|
-| 1 | RAW coverage to 75% | in progress (60.6% fresh) | AMBER | F1 approval runbook in #176; owner approves each batch |
-| 2 | Freshness (24 h target, 23 h dispatch) | in progress (met outside quarantine) | AMBER | 67 SNKRDUNK items in identity quarantine |
-| 3 | Continuous discovery | in progress (Yuyu-Tei running, SNKRDUNK stalled) | AMBER | SNKRDUNK discovery fix not approved |
+| 1 | RAW coverage to 75% | target met by Yuyu-Tei alone (78.8% fresh); second source down | AMBER | SNKRDUNK recovery (item 24); remaining Yuyu-Tei gap is identity |
+| 2 | Freshness (24 h target, 23 h dispatch) | in progress (Yuyu-Tei met; SNKRDUNK deficit) | AMBER | 352 SNKRDUNK items quarantined (283 parser bug, item 24) |
+| 3 | Continuous discovery | in progress (Yuyu-Tei running, SNKRDUNK stalled; last candidate 2026-10-20) | AMBER | SNKRDUNK discovery fix not approved |
 | 4 | PSA10 (separate category, never in Index) | planned (OFF) | owner decision, then AMBER | owner switch-on; six build pieces missing |
 | 5 | Card pages | done | GREEN | none |
 | 6 | Collection | done | GREEN | owner's signed-in check of `/account` |
 | 7 | Watchlist | done | GREEN | owner choice on 7D change |
-| 8 | Market intelligence | in progress (no plan for the next slice) | GREEN/AMBER | no plan |
+| 8 | Market intelligence | in progress (Market Value frozen-membership fix delivered 2026-10-28; no plan for the next slice) | GREEN/AMBER | catch-up publish to confirm; no plan |
 | 9 | Sharing | blocked | GREEN | Next.js 16.3 |
 | 10 | AI/search discoverability | done (staging) | GREEN | domain and public launch for indexing |
 | 11 | Admin/ops (exception-driven) | in progress | AMBER (data lane) | KPI gaps in runbook summaries |
 | 12 | Production | planned | RED | explicit owner authorization; domain |
-| 13 | Additional sources (Dorasuta, CardRush) | planned (plan rev 2, nothing built) | owner decisions N1 to N16, then AMBER | plan approval (P0) |
+| 13 | Additional sources (Dorasuta, CardRush) | in progress (S1 migration `7a52e9b48e8a` applied; nothing collects) | owner decisions N1 to N16, then AMBER | plan approval (P0) |
 | 14 | Data service (incl. §H first customer) | planned | AMBER (sandbox) | real values need PSA10 and production |
 | 15 | Onchain Phase 1 (sessions 1 to 10, incl. Packs) | planned (plan only) | AMBER (session 1) | not scheduled |
 | 16 | Partnerships (PCG, Collector Crypt) | planned | RED (external) | no PCG plan; CC outreach not sent |
 | 17 | Production deprecation step 2 | done (2026-10-12) | none | none |
-| 18 | Domain | planned (owner) | RED (paid) | owner purchase |
-| 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | F15 owner check; L1 needs a collector release |
+| 18 | Domain | done (`cardpirate.app`, 2026-10-24; staging on `staging.cardpirate.app`) | none | none |
+| 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | F15 owner check; L1 still open (missed #224, #231 and #237) |
 | 20 | Currency selector | planned (later) | RED (invariant amendment) | deferred |
 | 21 | English-edition catalogue | planned (later) | AMBER | deferred |
-| 22 | Per-PR mission files (stop manifest conflicts) | in progress (built, draft PR, delivers last) | AMBER (policy tooling, `.github/`) | queue #180, #179, #178, #181, #182 first; owner merge |
+| 22 | Per-PR mission files (stop manifest conflicts) | done (in use on every PR since 2026-10-19) | none | none |
+| 24 | SNKRDUNK recovery after the 2026-10-26 page change | in progress | AMBER (collector release) | the page's price request is not seen (diagnostic #237 live) |
+| 25 | Catalogue Phase 2 (official series import) | in progress (steps A to C, family batches, promo consensus) | AMBER (owner-approved imports) | remaining batches and step D |
+| 26 | Official image mirror for new prints | blocked (212 prints unmirrored) | GREEN/AMBER | mirror run logs not read yet |
+| 27 | RAW storage compression (sibling dictionaries) | on (`collector-sibling-on` applied 2026-10-25 08:23Z) | AMBER | none; measure its effect on the planning rate |
 
 ### 1. RAW coverage to 75%
 
-- **Status: in progress.** Fresh 60.6%, operational 60.6% to 67.2% (KPIs). Target 3,237 of 4,316.
+- **Update 2026-10-28: target met by Yuyu-Tei alone.** Fresh 78.8% (3,569 of 4,528; target 3,396).
+  F1 batches 1 to 3 applied (2026-10-19, 2026-10-20, 2026-10-24 13:14Z); the batch 3 refresh-backfill
+  dry run failed on 2026-10-25 06:41Z, but every eligible Yuyu-Tei mapping (3,569) is fresh, so no
+  backfill is outstanding. `enqueue-capture-batch` dry runs failed on 2026-10-19 and were not retried.
+  The second source is down (item 24), so dual-source coverage is 0. Remaining Yuyu-Tei gap (959) is
+  identity, not discovery (KPIs).
+- **Status (2026-10-18): in progress.** Fresh 60.6%, operational 60.6% to 67.2% (KPIs). Target 3,237 of 4,316.
 - **Source:** [PROJECT_HANDOVER.md](PROJECT_HANDOVER.md) §36, §39, §46; capacity75 handoffs (newest:
   [handoff/2026-10-16/capacity75-session14](handoff/2026-10-16/capacity75-session14/HANDOFF.md));
   D9 coverage gap ([plans/coverage-gap-d9](plans/coverage-gap-d9/F1-ROLLOUT.md), owned by the
@@ -113,7 +127,10 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 
 ### 2. Freshness
 
-- **Status: in progress.** Every non-quarantined refresh item was checked within 24 h; 97.9% within
+- **Update 2026-10-28:** Yuyu-Tei met (all 3,569 within 24 h). SNKRDUNK: 352 quarantined (283 from
+  the 2026-10-26 parser bug, returning through `snkr-parser-requeue` once item 24 lands; 69 older,
+  still per-item review), 1 open requeue canary at 59.8 h; `freshness-deadline-deficit` is back.
+- **Status (2026-10-18): in progress.** Every non-quarantined refresh item was checked within 24 h; 97.9% within
   23 h. The `freshness-deadline-deficit` blocker of the 2026-10-06 snapshot is gone.
 - **Source:** [DECISIONS.md](DECISIONS.md) 2026-10-04; handover §13 to §15, §37.
 - **States (24 h):** listed (captured) Yuyu-Tei 2,763, SNKRDUNK 50; no_listing SNKRDUNK 236;
@@ -173,7 +190,13 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 
 ### 8. Market intelligence
 
-- **Status: in progress.** Live: Market page, Card Pirate Index, receipt-gated Market Value, Sets on
+- **Update 2026-10-28:** Market Value stopped publishing on 2026-10-26: the 2026-10-26 catalogue
+  imports changed the one catalogue digest the nightly replay checked every published day against
+  (`missing=64 mismatched=3840`). Fixed by plan A (#235): each day is replayed with its own frozen
+  membership (`market_value_memberships`, migration `001d92ba8eb9` applied 2026-10-28 11:15Z, legacy
+  membership frozen 11:37Z after its digest matched exactly). Rankings use each day's frozen basket.
+  Expected: the 2026-10-28 20:00Z run publishes 2026-10-26 onward.
+- **Status (2026-10-18): in progress.** Live: Market page, Card Pirate Index, receipt-gated Market Value, Sets on
   the Move. The legacy market workflow and intelligence pages were deleted in S1 (#110, collector-v1
   Q7).
 - **Blocker:** no plan exists for the next slice. Methodology changes are RED.
@@ -223,7 +246,9 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 
 ### 13. Additional sources
 
-- **Status: planned.** `plan/new-sources` revision 2 (2026-10-18, owned by the cardpirate-data
+- **Update 2026-10-28:** S1 migration `7a52e9b48e8a` (new-source tables, inert `dorasuta` and
+  `cardrush` source rows) is applied; nothing else is built. N1 to N16 still open.
+- **Status (2026-10-18): planned.** `plan/new-sources` revision 2 (2026-10-18, owned by the cardpirate-data
   project): foundations S0 to S4, then Dorasuta asks (D0 to D4), Dorasuta buyback (B0, B1), then
   CardRush (C0 to C4). Nothing built.
 - **Rules:** honest bot name with a contact address, robots.txt read every run, one request at a time,
@@ -284,14 +309,19 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 
 ### 18. Domain
 
-- **Status: planned (owner).** Collector-v1 Q1 (2026-10-11): yes, name to be decided. No domain is
+- **Update 2026-10-28: done.** `cardpirate.app` bought 2026-10-24 (Vercel Pro); staging serves
+  `staging.cardpirate.app`, kept out of search engines; `cardpirate.app` waits for launch.
+- **Status (2026-10-18): planned (owner).** Collector-v1 Q1 (2026-10-11): yes, name to be decided. No domain is
   recorded as bought. It gates Google sign-in publishing, the public launch, production and the R2
   image domain.
 - **Class:** RED (paid).
 
 ### 19. Security audit 2026-10-16 open items
 
-- **Status: in progress.** Fixed and live: A1 to A3, F1, D2, D3, F5, F8, F9, F11, F12, F13 and F14 web
+- **Update 2026-10-28:** L1 (`hide_parameters=True` in `app/db.py`) is still open: it missed the
+  collector releases #224, #231 and #237. Attach it to the next one. Other open items unchanged (not
+  re-verified).
+- **Status (2026-10-18): in progress.** Fixed and live: A1 to A3, F1, D2, D3, F5, F8, F9, F11, F12, F13 and F14 web
   parts, CSP enforced (#136 to #165, #170).
 - **Open:** F15 `CORS_ALLOW_ORIGIN_REGEX` on Railway (owner checking); F13 and F14 API parts, F2, F3,
   F4, F10, S1, I1 (data lane); F6, F7 (migrations on protected tables); D4 (npm); L1
@@ -313,7 +343,12 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 
 ### 22. Per-PR mission files (stop manifest conflicts)
 
-- **Status: in progress.** Owner GO 2026-10-19 09:24Z: build now, deliver last (after #180, #179,
+- **Update 2026-10-28: done.** Every PR since 2026-10-19 carries `docs/agent/missions/<branch>.json`;
+  the fleet lives in `STAGING_FLEET.json`. One gap remains: GitHub refuses to arm native auto-merge
+  on a PR that is already clean, so a PR whose delivery job waits behind another delivery fails at
+  "Refuse missing safeguards" (#224, #233). Workaround: draft, then ready. Fix: a small `ci.yml`
+  change (owner decision).
+- **Status (2026-10-19): in progress.** Owner GO 2026-10-19 09:24Z: build now, deliver last (after #180, #179,
   #178, #181 and #182 merge or close), draft with hold-for-owner. The first collector PR on the new
   layout is the live test: staging-automerge in an allowed collector window, with "Deploy
   mission-scoped staging collectors" and the delivery verification passing. Built as planned below,
@@ -376,6 +411,44 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 - **Effort:** S, about 150 lines (ESTIMATE). Class AMBER, `hold-for-owner` (touches `.github/`).
 - **Blocker:** owner go. Not started.
 
+### 24. SNKRDUNK recovery after the 2026-10-26 page change
+
+- **Status: in progress.** SNKRDUNK changed its product page on 2026-10-26 ~08:29Z in three ways:
+  CSS-module class names (fixed by #223, released by #224), the photo component named by reference,
+  and condition prices that arrive after load (both addressed by #231, released 2026-10-28 06:49Z).
+- **Safety held:** a page with no rendered price is never recorded as no listing (#231); it retries
+  as `prices_not_loaded`.
+- **Open:** on the live page the price request the page names (`/v2/products/<id>/size-chips`) is
+  never seen within 15 s (`condition_prices:not_seen`, work 196, 2026-10-28). #237 (live 13:34Z) logs
+  what the page actually requests; the next attempt of work 196 gives the evidence for the fix.
+- **Then:** fix the price wait (collector release), re-run the canary, then `snkr-parser-requeue`
+  rest (283 items, owner-approved), then the fleet pin.
+- **Owner decisions open:** audit and clear no-listing facts recorded between 2026-10-26 ~08:29Z and
+  the fix (likely false); re-enabling no listing for products with no price in any chip once a real
+  price response has been seen.
+
+### 25. Catalogue Phase 2 (official series import)
+
+- **Status: in progress.** `catalogue-import` runbook (#217), step C rules and family batches
+  (#219), promo consensus (#221). Applied on 2026-10-26: EB-05, family deck set, flagship battle,
+  standard battle and its promos (about 212 prints).
+- **Next:** remaining batches (promotion packs, premium card collections, magazines, events and
+  prizes, other limited), then step D (Asia Mini-tin, TC-01/02, DON!!).
+- **Side effect learned:** an import changes the Market Value membership. Since #235 that starts the
+  affected release's segment and no longer breaks publication.
+
+### 26. Official image mirror for new prints
+
+- **Status: blocked.** 212 prints (the 2026-10-26 imports) have no mirrored official image; the
+  check has been unhealthy since then and nothing has been mirrored since 2026-10-12.
+- **Next:** read the newest `official-images-mirror` run's deploy logs (owner, Railway), then fix.
+
+### 27. RAW storage compression (sibling dictionaries)
+
+- **Status: on.** `RAW_DICTIONARY_SIBLING` behind `collector-sibling-on/off` (commit `a773762`, 2026-10-25),
+  applied 2026-10-25 08:23Z. Planning rate 33.61 MB/day (2026-10-28) against 33.24 (2026-10-18), with
+  more prints and more Yuyu-Tei refreshes; its own saving is NOT MEASURED.
+
 ## 4. Done and not to repeat
 
 Collector v1 S1 to S8 (#110 to #135); the 2026-10-16 security pass and follow-ups (#136 to #170);
@@ -396,28 +469,32 @@ production deletion (#107, #108). Never-replay list: session 14 handoff "Session
   and the next one needs a runbook that plans uncaptured listings (`enqueue-remaining-50` only replays
   NEW100).
 
-## 6. Next 10 (highest value)
+## 6. Next 10 (highest value, 2026-10-28)
 
-1. F1 approval runbook and the first batch of about 500 (item 1). Biggest coverage step.
-2. A runbook for the next identity-capture batch, then the batch, dry run first (items 1 and 5).
-3. Owner decisions on `plan/new-sources` N1 to N16, then build the foundations and Dorasuta asks
-   (item 13).
-4. SNKRDUNK discovery fix decision and build (item 3).
-5. Review the 67 quarantined SNKRDUNK items one by one (item 2).
-6. Ops readability PR: KPI fields in the staging-state summary, the #173 rollout receipt, the
-   remaining-50 storage step (item 11).
-7. Security data-lane batch (F2, F3, F4, F10, F13/F14 API) plus F15 owner check; L1 with the next
-   collector release (item 19).
-8. Next.js 16.3 retry by the written plan, then restore share cards (items 9 and 19).
-9. Data service sandbox H-2 and the owner's reply to the requesting website (item 14).
-10. Domain and the public launch gate, the path to production (items 18 and 12).
-
-Delivery throughput: item 22 (per-PR mission files) removes the rebase-and-regenerate step between
-queued PRs. Do it before the next multi-PR queue.
+1. SNKRDUNK price fix from the #237 evidence, canary, then requeue the 283 (item 24). Restores the
+   second source.
+2. Confirm the Market Value catch-up publish and rankings after the 2026-10-28 20:00Z run (item 8).
+3. Audit the possibly false SNKRDUNK no-listing facts recorded since 2026-10-26 (item 24, owner).
+4. Official image mirror for the 212 new prints (item 26).
+5. Catalogue Phase 2 remaining batches, then step D (item 25).
+6. Yuyu-Tei identity backlog: 483 ambiguous, 327 listed only in another category (item 1).
+7. SNKRDUNK discovery fix decision (item 3) and the 69 older quarantined items, one by one (item 2).
+8. Owner decisions on `plan/new-sources` N1 to N16, then Dorasuta (item 13).
+9. Ops readability: KPI fields in the staging-state summary, `fleet-vs-receipt` against the newest
+   receipts, the auto-merge-on-clean-PR fix (items 11, 22, 23).
+10. Security data-lane batch, L1 with the next collector release (item 19); then the launch gate
+    toward production (item 12).
 
 ## 7. Sources read for this revision
 
-`plan/collector-v1` (d5b292f), `plan/data-platform` (f7e8ecd), `plan/new-sources` (7cf782d),
+2026-10-28 revision: `ops-readonly` runs 40712497491 (staging-state), 40712789101 (storage-rates),
+40712963235 (official-images-status), 40713172523 (yuyu-coverage-gap), 40713438280
+(snkrdunk-coverage-gap), 40713642431 (degraded-signals), 40713902705 (freshness-not-met),
+40714288258 (work-by-state), 40714636747 (table-sizes), 40672545623 (market-value-membership);
+`ops-write` run history (F1, sibling, catalogue-import, apply-migration, market-value-freeze-legacy,
+snkr-parser-requeue); merged PRs #175 to #237.
+
+2026-10-18 revision: `plan/collector-v1` (d5b292f), `plan/data-platform` (f7e8ecd), `plan/new-sources` (7cf782d),
 `plan/cardrush-source` (96e7d19), `plan/source-survey` (f3061f9), `plan/official-channels` (fae9375),
 `plan/onchain-phase1` (c2279e4), `plan/production-deprecation` (9b4857c),
 `plan/profile-overview-number-input` (2fad635); [STAGING_MISSION.json](STAGING_MISSION.json) at
