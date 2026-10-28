@@ -55,7 +55,7 @@
         "none (database read only)"
       ],
       "dependencies": [
-        "staging after #232"
+        "staging after #233"
       ],
       "deployment_impact": "None: a read-only report.",
       "database_writes": 0,
@@ -83,5 +83,5 @@
       "observation_window": "One ops-readonly db-diagnostic market-value-membership run after merge."
     }
   },
-  "diff_sha256": "ef27558ed4e5215bc7ca8ee56f3dcb1b4327d47ccfee807ea09ac4feb1e3252f"
+  "diff_sha256": "7005179764e9d698f2c2abe7475bfe226582a070cf53f8303055b92c09d26f08"
 }
