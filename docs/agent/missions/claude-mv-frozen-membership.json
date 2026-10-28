@@ -15,7 +15,7 @@
     "significant_recurring_cost": false,
     "yuyu_sale_policy": false
   },
-  "mission": "Market Value plan A (owner decision 2026-10-28, after the nightly publisher stopped on 2026-10-26: 'persisted publication history conflicts with deterministic replay: missing=64 unexpected=0 mismatched=3840'). Publication verified every published day against ONE digest of today's catalogue, so the 2026-10-26 catalogue imports (about 212 prints, new coded release EB-05) made all history mismatch. Each published day is now verified against the membership frozen with it (new append-only ledger, additive migration 001d92ba8eb9); new days are published with today's membership, frozen in the same transaction; rankings use each day's frozen basket. Formulas, thresholds, gates and the methodology version are unchanged and no published row is rewritten; the owner chose this behaviour (new prints count from the day they arrive; a release's chain restarts only when its own prints change), as docs/market_value.md already required ('future published points must freeze their own membership revision'). The pre-ledger membership is frozen by the new owner-approved market-value-freeze-legacy runbook only when it hashes exactly to the stored digest. Order after merge: owner runs apply-migration (dry run, apply), then market-value-freeze-legacy (dry run, apply); the next 20:00Z run publishes the waiting days. Delivery verify reports the revision until apply-migration runs (intended signal).",
+  "mission": "Market Value plan A (owner decision 2026-10-28, after the nightly publisher stopped on 2026-10-26: 'persisted publication history conflicts with deterministic replay: missing=64 unexpected=0 mismatched=3840'). Publication verified every published day against ONE digest of today's catalogue, so the 2026-10-26 catalogue imports (about 212 prints, new coded release EB-05) made all history mismatch. Each published day is now verified against the membership frozen with it (new append-only ledger, additive migration 001d92ba8eb9); new days are published with today's membership, frozen in the same transaction; rankings use each day's frozen basket. Formulas, thresholds, gates and the methodology version are unchanged and no published row is rewritten; the owner chose this behaviour (new prints count from the day they arrive; a release's chain restarts only when its own prints change), as docs/market_value.md already required ('future published points must freeze their own membership revision'). The pre-ledger membership is frozen by the new owner-approved market-value-freeze-legacy runbook only when it hashes exactly to the stored digest. Order after merge: owner runs apply-migration (dry run, apply), then market-value-freeze-legacy (dry run, apply); the next 20:00Z run publishes the waiting days. The fleet keeps revision 7a52e9b48e8a until apply-migration runs; a fleet PR then records 001d92ba8eb9.",
   "classification": "AMBER",
   "impacts": [
     {
@@ -99,7 +99,7 @@
       ],
       "dependencies": [
         "staging after #234",
-        "then apply-migration 001d92ba8eb9 (owner), market-value-freeze-legacy (owner), fleet revision bump"
+        "then apply-migration 001d92ba8eb9 (owner), market-value-freeze-legacy (owner), fleet revision PR"
       ],
       "deployment_impact": "API, market-index-snapshot and official-images-mirror rebuild from Git (API image). Until the migration and legacy freeze run, market value publication keeps refusing (as it does today) and rankings return a typed 503 (as today). No collector release.",
       "database_writes": 3700,
@@ -131,9 +131,6 @@
       ],
       "observation_window": "apply-migration and freeze runs; the next 20:00Z market-index-snapshot run publishes 10-26 onward (Deploy Logs: market_value.status succeeded); rankings 200."
     }
-  },
-  "deployment_verification": {
-    "revision": "001d92ba8eb9"
   },
   "diff_sha256": "37b43579428adf3f69e9e9fc20b1ee87e0b3bd6ddb83f0c55e1912050279d5f4"
 }
