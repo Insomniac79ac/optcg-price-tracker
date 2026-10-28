@@ -456,7 +456,9 @@ def test_review_survives_a_market_change_since_its_capture(evidence, monkeypatch
 
 @pytest.mark.parametrize("field,value", [("eligible_print_identity", [{"card_print_id": 11}]),
                                          ("name_jp", "other"), ("image_url", "https://x/other.jpg"),
-                                         ("detected_rarity", "SR"), ("candidate_id", 2)])
+                                         ("detected_rarity", "SR"), ("candidate_id", 2),
+                                         ("detected_card_code", "OP01-121"),
+                                         ("resolved_canonical_card_id", 77)])
 def test_review_bound_under_1_2_never_transfers_across_real_evidence_change(
     evidence, monkeypatch, field, value
 ):
@@ -529,6 +531,8 @@ def test_history_binding_fails_closed(evidence, monkeypatch, defect):
     ("claude_visual_review_of_unique_full_physical_artwork", "codex:test-review", False),
     ("codex_visual_review_of_unique_full_physical_artwork", "claude:retained-review", False),
     ("claude_visual_review_of_unique_full_physical_artwork", "claude:", False),
+    ("claude_visual_review_of_unique_full_physical_artwork", "claude: ", False),
+    ("claude_visual_review_of_unique_full_physical_artwork", "claude:review\n", False),
     ("claude_visual_review_of_unique_full_physical_artwork", None, False),
 ])
 def test_reviewer_method_and_actor_namespace_come_as_a_pair(evidence, monkeypatch, method, actor, ok):
@@ -571,6 +575,8 @@ def test_identity_check_against_the_real_resolver_and_proposal_history(db_sessio
     db_session.commit()
     moved = current()
     assert moved.evidence_digest != planned.evidence_digest
+    persist_proposals(db_session, [moved])  # the planned version is now superseded history
+    db_session.commit()
     assert yuyu_identity_unchanged_since(db_session, moved, planned.evidence_digest)
     assert not yuyu_identity_unchanged_since(db_session, moved, "e" * 64)
     assert not yuyu_identity_unchanged_since(db_session, moved, None)
@@ -582,3 +588,18 @@ def test_identity_check_against_the_real_resolver_and_proposal_history(db_sessio
     _print(db_session, family, release, "p2")  # the sibling set changed
     db_session.commit()
     assert not yuyu_identity_unchanged_since(db_session, current(), planned.evidence_digest)
+
+
+def test_a_1_2_digest_found_through_the_proposal_history_binds(evidence, monkeypatch):
+    from app.services.source_mapping_proposals import evidence_digest, legacy_evidence_digest
+
+    monkeypatch.setattr(settings, "ENVIRONMENT", "staging")
+    monkeypatch.setattr(proof_module, "registry", lambda: [evidence.proof])
+    stored = {**LISTING, "discovery_run_id": 143}
+    current = {**LISTING, "price_jpy": 1980, "discovery_run_id": 900}
+    baseline = legacy_evidence_digest(stored)
+    evidence.plan.evidence_summary, evidence.plan.evidence_digest = current, evidence_digest(current)
+    evidence.proof["baseline_evidence_digest"] = baseline
+    evidence.work.resume_cursor["evidence_digest"] = baseline
+    evidence.history.append(stored)
+    assert proof_module.resolve(evidence.session, evidence.plan, evidence.siblings)[0] == 11

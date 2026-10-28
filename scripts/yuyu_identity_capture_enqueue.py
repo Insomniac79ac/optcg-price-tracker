@@ -87,7 +87,7 @@ def intent_cursor(entry):
 
 
 def check_entry(session, entry, source_id):
-    """Return (scope_key, existing_identical) or raise Refused with the reason."""
+    """Return (scope_key, existing_identical, live evidence summary) or raise Refused with the reason."""
     from sqlalchemy import select, text
     from opcg_source_identity import yuyutei_listing_identity
     from app.models import CardPrint, YuyuteiCandidate
@@ -144,14 +144,14 @@ def check_entry(session, entry, source_id):
         {"sid": source_id, "legacy": f"yuyu-identity:{cid}", "pattern": f"yuyu-identity:{cid}:%"},
     ).mappings().all()
     if not existing:
-        return scope, False
+        return scope, False, plan.evidence_summary
     if (
         len(existing) == 1
         and existing[0]["scope_key"] == scope
         and existing[0]["kind"] == "discovery"
         and {k: (existing[0]["resume_cursor"] or {}).get(k) for k in intent_cursor(entry)} == intent_cursor(entry)
     ):
-        return scope, True  # this exact intent is already queued (or done): never touched again
+        return scope, True, plan.evidence_summary  # this exact intent is already queued (or done): never touched again
     raise Refused(f"{cid}: another capture scope already exists for this candidate")
 
 
@@ -171,11 +171,11 @@ def enqueue(session, approved, *, apply, now=None):
         raise Refused("a print is shared between approved candidates")
     checked = [(entry, *check_entry(session, entry, source.id)) for entry in entries]
     report = {"apply": apply, "checked": len(checked), "already_enqueued": [], "to_enqueue": [], "written": []}
-    for entry, scope, identical in checked:
+    for entry, scope, identical, _ in checked:
         (report["already_enqueued"] if identical else report["to_enqueue"]).append(scope)
     if not apply:
         return report
-    for entry, scope, identical in checked:
+    for entry, scope, identical, summary in checked:
         if identical:
             continue
         work = plan_discovery_scope(
@@ -183,7 +183,10 @@ def enqueue(session, approved, *, apply, now=None):
         )
         if work.state != "pending" or work.attempt_count != 0 or work.resume_cursor:
             raise Refused(f"{scope}: writer returned an existing or progressed work row")
-        work.resume_cursor = intent_cursor(entry)
+        # The evidence it was planned under travels with the intent (owner 2026-10-29), so the
+        # capture and its review can prove "same listing" after a price change without relying
+        # on that version having been persisted as a proposal group.
+        work.resume_cursor = {**intent_cursor(entry), "evidence_summary": summary}
         session.flush()
         report["written"].append({"work_id": work.id, "scope_key": scope})
     stored = session.scalars(

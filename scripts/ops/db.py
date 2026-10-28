@@ -24,11 +24,28 @@ def connect_kwargs(proxy, variables, statement_timeout_ms=60000):
                 options=options(statement_timeout_ms))
 
 
+def adopt_staging_app_environment():
+    """Tell the app code a runbook runs that it is on staging, once the destination is proven.
+
+    Staging-only evidence (retained physical artwork reviews, app.services.physical_artwork_proof)
+    resolves only when the app environment is staging. Runbook jobs set none, so the resolver
+    they run reported every review-resolved listing as still ambiguous (owner 2026-10-29). Called
+    only after staging_environment() has pinned the staging project; any other set value refuses.
+    """
+    from app.settings import settings
+
+    current = (settings.ENVIRONMENT or settings.APP_ENV or "").strip().lower()
+    if current not in ("", "staging"):
+        raise common.Refused(f"app environment {current!r} is not staging")
+    settings.ENVIRONMENT = "staging"
+
+
 def resolve():
     """(proxy, variables) for the pinned staging Postgres. Caller must clear variables."""
     import generate_staging_state as state
 
     state.staging_environment()
+    adopt_staging_app_environment()
     proxies = state.railway(
         f'query {{ tcpProxies(environmentId:"{state.ENVIRONMENT}", serviceId:"{state.POSTGRES}") '
         "{ domain proxyPort applicationPort } }")["tcpProxies"]

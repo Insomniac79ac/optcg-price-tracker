@@ -51,7 +51,7 @@ outcomes: the post-enqueue progress check. Older items (500+ on staging) stay ou
 Its `review_pack` (second, so it fits the summary budget) lists up to 40 completed captures whose
 listing is still an ambiguous pending proposal, with the retained lineage a review proof names
 (evidence digest and product content hash in full, image snapshot ids with 12-hex body SHA-256
-prefixes): the input of a visual review (see "Physical artwork reviews" in
+prefixes, and whether the listing's proposal digest moved since the capture): the input of a visual review (see "Physical artwork reviews" in
 `docs/agent/IDENTITY_REVIEWS.md`).
 `market-value-membership` compares stored Market Value points with today's catalogue: points per
 membership revision, whether the legacy membership can be rebuilt exactly (digest of the prints

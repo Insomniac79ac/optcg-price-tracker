@@ -117,7 +117,10 @@ def test_apply_writes_the_intent_the_collector_accepts_and_never_a_decision(one)
         work = session.get(FreshnessWork, report["written"][0]["work_id"])
         assert (work.kind, work.state, work.attempt_count, work.lane) == ("discovery", "pending", 0, "discovery")
         assert work.scope_key == f"yuyu-identity:{entry['candidate_id']}:sha256:{entry['evidence_digest']}"
+        summary = work.resume_cursor.pop("evidence_summary")
         assert work.resume_cursor == {**entry, "version": 2, "explicit_identity_capture": True}
+        from app.services.source_mapping_proposals import evidence_digest
+        assert evidence_digest(summary) == entry["evidence_digest"]  # the planned evidence travels with it
         assert counts(session)[1:] == (groups, mappings)  # no proposal or mapping write
         source_id = work.source_id
     with factory() as session:
@@ -126,6 +129,34 @@ def test_apply_writes_the_intent_the_collector_accepts_and_never_a_decision(one)
         session.commit()
         candidate, plan, prints, urls = load_intent(session, granted)
         assert candidate.id == entry["candidate_id"] and sorted(urls) == entry["considered_print_ids"]
+
+
+@pytest.mark.parametrize("change, captures", [
+    ({"price_jpy": 1980, "availability": "out_of_stock", "raw_listing_text": "1,980円 売切"}, True),
+    ({"name_jp": "別の商品"}, False),
+])
+def test_a_price_change_before_the_claim_keeps_the_capture(one, change, captures):
+    """Owner 2026-10-29: no proposal group holds the planned evidence here, so only the summary
+    the intent carries can prove the listing is the same one; a price change must not void it."""
+    from app.services.freshness_queue import claim_due
+    from yuyutei_collector.identity_evidence import load_intent
+
+    factory, entry = one
+    with factory() as session:
+        report = tool.enqueue(session, approved([entry]), apply=True, now=T0)
+        for key, value in change.items():
+            setattr(session.get(YuyuteiCandidate, entry["candidate_id"]), key, value)
+        session.commit()
+        source_id = session.get(FreshnessWork, report["written"][0]["work_id"]).source_id
+    with factory() as session:
+        granted = claim_due(session, source_id, "fixture-shard", limit=1, lease=timedelta(minutes=4),
+                            clock=lambda: T0 + timedelta(seconds=1), supported_kinds={"discovery"})[0]
+        session.commit()
+        if captures:
+            assert load_intent(session, granted)[0].id == entry["candidate_id"]
+        else:
+            with pytest.raises(ValueError, match="current ambiguous"):
+                load_intent(session, granted)
 
 
 def test_rerun_is_a_no_op(one):

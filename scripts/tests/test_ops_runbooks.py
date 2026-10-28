@@ -233,6 +233,38 @@ class ReadOnlyConnection(unittest.TestCase):
             ops_db.verify(conn, guard)
 
 
+class StagingAppEnvironment(unittest.TestCase):
+    def setUp(self):
+        from app.settings import settings
+        self.settings = settings
+        self.saved = (settings.ENVIRONMENT, settings.APP_ENV)
+
+    def tearDown(self):
+        self.settings.ENVIRONMENT, self.settings.APP_ENV = self.saved
+
+    def test_a_proven_staging_destination_makes_staging_only_evidence_resolve(self):
+        from app.env import get_app_env
+        self.settings.ENVIRONMENT, self.settings.APP_ENV = None, None
+        self.assertEqual(get_app_env(), "development")
+        ops_db.adopt_staging_app_environment()
+        self.assertEqual(get_app_env(), "staging")
+        for other in ("production", "development"):
+            self.settings.ENVIRONMENT = other
+            with self.assertRaisesRegex(common.Refused, "not staging"):
+                ops_db.adopt_staging_app_environment()
+
+    def test_resolve_adopts_staging_only_after_the_destination_is_pinned(self):
+        calls = []
+        state = SimpleNamespace(
+            staging_environment=lambda: calls.append("pinned"), ENVIRONMENT="e", POSTGRES="p",
+            railway=lambda q: {"tcpProxies": [{"domain": "h", "proxyPort": 1, "applicationPort": 5432}]},
+            service_variables=lambda s: {"PGPASSWORD": "x"})
+        with mock.patch.dict(sys.modules, {"generate_staging_state": state}), \
+                mock.patch.object(ops_db, "adopt_staging_app_environment", lambda: calls.append("adopted")):
+            ops_db.resolve()
+        self.assertEqual(calls, ["pinned", "adopted"])
+
+
 class Diagnostics(unittest.TestCase):
     def test_every_committed_file_parses(self):
         self.assertGreaterEqual(len(diagnostic.available()), 5)

@@ -18,13 +18,14 @@ cap as (
     and w.attempt_count = 1 and w.last_outcome = 'completed'
     and w.resume_cursor::jsonb ? 'source_image_snapshot_id'),
 g as (
-  select distinct on (source_candidate_id) source_candidate_id, resolution_status, review_status
+  select distinct on (source_candidate_id) source_candidate_id, resolution_status, review_status, evidence_digest
   from source_mapping_proposal_groups
   where source_candidate_type = 'yuyutei_candidate' and superseded_at is null
   order by source_candidate_id, id desc)
 select (cap.c ->> 'candidate_id')::int cand, cap.work_id work, y.set_slug || '/' || y.product_id listing,
   y.detected_card_code code, (cap.c ->> 'release_product_id')::int rp, coalesce((cap.c ->> 'version')::int, 1) v,
-  cap.c ->> 'evidence_digest' digest, (cap.c ->> 'source_product_snapshot_id')::int psnap, ps.content_hash phash,
+  cap.c ->> 'evidence_digest' digest, left(nullif(g.evidence_digest, cap.c ->> 'evidence_digest'), 12) moved,
+  (cap.c ->> 'source_product_snapshot_id')::int psnap, ps.content_hash phash,
   (cap.c ->> 'source_image_snapshot_id')::int isnap,
   left(substring(left(isn.raw_content, 200) from '"body_sha256":"([0-9a-f]{64})"'), 12) isha,
   (select string_agg((o ->> 'card_print_id') || ':' || (o ->> 'raw_snapshot_id') || ':'

@@ -7,6 +7,7 @@ images. Same-art physical twins are refused even when a review names one.
 import base64
 import hashlib
 import json
+import re
 import io
 from datetime import datetime, timezone
 from pathlib import Path
@@ -111,8 +112,10 @@ def validate(session, plan, siblings, proof):
         or proof.get("review_method") not in REVIEWERS
         or not proof.get("reviewed_at")
         or not isinstance(proof.get("actor"), str)
-        or not proof["actor"].startswith(REVIEWERS[proof["review_method"]])
-        or proof["actor"] == REVIEWERS[proof["review_method"]]
+        or not re.fullmatch(
+            re.escape(REVIEWERS[proof["review_method"]]) + r"[a-z0-9][a-z0-9._-]*",
+            proof["actor"],
+        )
         or not proof.get("positive_physical_basis")
         or proof.get("selected_card_print_id") not in {p.id for p in siblings}
     ):

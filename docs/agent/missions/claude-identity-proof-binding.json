@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Identity reviews bound to listing identity, not price (owner 2026-10-29, perfectionist). A retained physical artwork review, and the identity capture it reviews, were bound to the listing's full evidence digest, which hashes the Yuyu-Tei price, stock flag and row text; prices move most days, so a review went stale unless it landed the same day (34 prints captured 2026-10-16 still wait). One shared check, source_mapping_proposals.yuyu_identity_unchanged_since, now decides 'same listing' for both: the evidence the capture was planned under (the capture's own summary, or the listing's proposal history, which keeps every group's summary) must hash to the capture's digest and equal today's evidence in every field except run provenance and YUYU_MARKET_EVIDENCE. Any identity change (code, rarity, name, image, release, family, sibling set) still refuses. Claude becomes an attributable reviewer beside Codex (method/actor pair). approve-f1-batch also approves proposals a review resolved, each through the admin guard with an owner-approved dry run. identity-capture-work gains a review_pack statement (read-only). Released to all ten collectors by staging-automerge: the Yuyu shards run the capture check and the resolver; snkrdunk-collector imports the changed resolver module (behaviour unchanged) and its component check covers it.",
+  "mission": "Identity reviews bound to listing identity, not price (owner 2026-10-29, perfectionist). A retained physical artwork review, and the identity capture it reviews, were bound to the listing's full evidence digest, which hashes the Yuyu-Tei price, stock flag and row text; prices move most days, so a review went stale unless it landed the same day (34 prints captured 2026-10-16 still wait). One shared check, source_mapping_proposals.yuyu_identity_unchanged_since, now decides 'same listing' for both: the evidence the capture was planned under (the capture's own summary, or the listing's proposal history, which keeps every group's summary) must hash to the capture's digest and equal today's evidence in every field except run provenance and YUYU_MARKET_EVIDENCE. Any identity change (code, rarity, name, image, release, family, sibling set) still refuses. Claude becomes an attributable reviewer beside Codex (method/actor pair). approve-f1-batch also approves proposals a review resolved, each through the admin guard with an owner-approved dry run. New capture intents carry the evidence summary they were planned under, so a capture never depends on that version having been persisted. Runbooks adopt the staging app environment once the ops bootstrap has pinned the staging database (independent review finding: without it the resolver a runbook runs never applies staging-only reviews, so approve-f1-batch and capture-batch-preview saw review-resolved listings as still ambiguous). identity-capture-work gains a review_pack statement (read-only). Released to all ten collectors by staging-automerge: the Yuyu shards run the capture check and the resolver; snkrdunk-collector imports the changed resolver module (behaviour unchanged) and its component check covers it.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -32,6 +32,16 @@
     },
     {
       "files": [
+        "scripts/ops/db.py",
+        "scripts/yuyu_identity_capture_enqueue.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "adopt_staging_app_environment runs right after staging_environment() pins the staging project (any other set environment refuses), so runbooks resolve staging-only reviews like the API and collectors do. The enqueue tool stores the live plan's evidence_summary in each new intent cursor; idempotency still compares INTENT_KEYS only."
+    },
+    {
+      "files": [
         "scripts/ops/f1_approve.py"
       ],
       "effects": [
@@ -51,13 +61,14 @@
     {
       "files": [
         "services/api/tests/test_physical_artwork_proof.py",
+        "services/api/tests/test_yuyu_identity_capture_enqueue_postgres.py",
         "services/yuyutei_collector/tests/test_identity_evidence.py",
         "scripts/tests/test_ops_runbooks.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Market change keeps a review and a capture; identity change, missing or non-hashing history and a capture planned under another digest refuse; reviewer pairs; real resolver plus proposal history end to end; approvable rules."
+      "reason": "Market change keeps a review and a capture; identity change, missing or non-hashing history and a capture planned under another digest refuse; reviewer pairs; real resolver plus proposal history end to end; approvable rules. Enqueue-to-capture across a price change with no persisted group; staging environment adoption and its order; 1.2 history binding; actor format."
     },
     {
       "files": [
@@ -95,6 +106,7 @@
       "validation": [
         "services/api/tests/test_physical_artwork_proof.py",
         "services/api/tests/test_source_mapping_proposals.py",
+        "services/api/tests/test_yuyu_identity_capture_enqueue_postgres.py",
         "services/api/tests/test_yuyu_identity_capture_enqueue_postgres.py",
         "services/yuyutei_collector/tests/test_identity_evidence.py",
         "scripts/tests/test_ops_runbooks.py",
