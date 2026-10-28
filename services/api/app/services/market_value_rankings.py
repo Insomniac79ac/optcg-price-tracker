@@ -2,14 +2,15 @@
 
 Only the selected two snapshot dates (movers), or one persisted as_of date
 (Most Valuable), are read. No replay, writer, current resolver or source I/O.
-Catalogue labels are current; membership must match the frozen global A2
-digest. Archive prices and persisted aggregate facts remain authoritative.
+Catalogue labels are current; each day's basket is the membership frozen with
+its published point (owner plan A, 2026-10-28), never today's catalogue. Archive prices and persisted aggregate facts remain authoritative.
 """
 
 from datetime import date, datetime, timezone
 from decimal import Decimal, localcontext
 
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session, load_only
 
 from app.market_value_ranking_schemas import (
@@ -25,6 +26,10 @@ from app.market_value_ranking_schemas import (
 from app.models.canonical_card import CanonicalCard
 from app.models.card_print import CardPrint
 from app.models.market_index_snapshot import MarketIndexSnapshot
+from app.models.market_value_membership import (
+    MarketValueMembership,
+    MarketValueMembershipPrint,
+)
 from app.models.market_value_point import MarketValuePoint
 from app.models.release_product import ReleaseProduct
 from app.services.display_image import get_display_images_for_prints
@@ -38,9 +43,8 @@ from app.services.market_value import (
     compute_monetary_step,
     evaluate_market_value_publication,
 )
+from app.services.market_value_membership import MembershipError, load_membership
 from app.services.market_value_provenance import (
-    ActivePrintIdentity,
-    membership_revision,
     publication_reasons_text,
     version_pairs_text,
 )
@@ -83,9 +87,48 @@ def _selected_scope(db: Session, release_product_id: int | None):
     return latest, identity
 
 
-def _catalogue(db: Session, point: MarketValuePoint):
-    # The initial replay's digest is GLOBAL, even for a release point. Do not
-    # narrow it to the requested release, or accept today's reassignment.
+def _undefined_table(exc) -> bool:
+    code = getattr(getattr(exc, "orig", None), "sqlstate", None) or getattr(
+        getattr(exc, "orig", None), "pgcode", None
+    )
+    if code is not None:
+        return code == "42P01"
+    return "no such table" in str(exc).lower()  # SQLite
+
+
+def _membership(db: Session, point: MarketValuePoint):
+    """The frozen membership this point was published with (owner plan A,
+    2026-10-28); today's catalogue never decides an old point's basket."""
+    try:
+        frozen = load_membership(db, point.membership_revision)
+    except MembershipError as exc:
+        raise MarketValueIntegrityError("membership_revision_mismatch") from exc
+    except (ProgrammingError, OperationalError) as exc:
+        # Only a missing ledger table (before its migration) is an integrity
+        # refusal; a timeout or dropped connection propagates as itself.
+        if _undefined_table(exc):
+            raise MarketValueIntegrityError("membership_revision_mismatch") from exc
+        raise
+    if frozen is None:
+        raise MarketValueIntegrityError("membership_revision_mismatch")
+    return frozen
+
+
+def _catalogue(db: Session, point: MarketValuePoint, frozen=None):
+    """{print id: (print, card, release)} for the point's scope, from its frozen
+    membership. The release is the one frozen for that print; labels are current."""
+    frozen = frozen or _membership(db, point)
+    scope = (
+        MarketValueScope.release(point.release_product_id)
+        if point.release_product_id is not None
+        else MarketValueScope.overall()
+    )
+    ids = frozen.scope_print_ids(scope)
+    if len(ids) != point.total_physical_print_count:
+        raise MarketValueIntegrityError("membership_revision_mismatch")
+    release_by_print = frozen.release_by_print
+    # One SELECT: each print with its card and the release FROZEN for it (labels current).
+    frozen_release = MarketValueMembershipPrint.release_product_id
     rows = db.execute(
         select(CardPrint, CanonicalCard, ReleaseProduct)
         .options(
@@ -110,30 +153,26 @@ def _catalogue(db: Session, point: MarketValuePoint):
                 ReleaseProduct.display_name,
             ),
         )
+        .join(MarketValueMembershipPrint, MarketValueMembershipPrint.card_print_id == CardPrint.id)
+        .join(MarketValueMembership, MarketValueMembership.id == MarketValueMembershipPrint.membership_id)
         .join(CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id)
-        .join(ReleaseProduct, ReleaseProduct.id == CardPrint.release_product_id)
+        .join(ReleaseProduct, ReleaseProduct.id == frozen_release)
         .where(
-            CardPrint.is_active.is_(True),
-            CardPrint.verification_status == "verified",
-            CardPrint.language == "jp",
-            CardPrint.release_product_id.is_not(None),
+            MarketValueMembership.revision == frozen.revision,
+            *(
+                (frozen_release == point.release_product_id,)
+                if point.release_product_id is not None
+                else ()
+            ),
         )
         .order_by(CardPrint.id)
     ).all()
-    revision = membership_revision(
-        ActivePrintIdentity(p.id, p.release_product_id) for p, _, _ in rows
-    )
-    if revision != point.membership_revision:
+    catalogue = {p.id: (p, card, release) for p, card, release in rows}
+    if list(catalogue) != list(ids) or any(
+        catalogue[i][2].id != release_by_print[i] for i in ids
+    ):
         raise MarketValueIntegrityError("membership_revision_mismatch")
-    selected = {
-        p.id: (p, card, release)
-        for p, card, release in rows
-        if point.release_product_id is None
-        or p.release_product_id == point.release_product_id
-    }
-    if len(selected) != point.total_physical_print_count:
-        raise MarketValueIntegrityError("membership_revision_mismatch")
-    return selected
+    return catalogue
 
 
 def _snapshots(db: Session, dates: tuple[date, ...], catalogue):
@@ -161,7 +200,7 @@ def _snapshots(db: Session, dates: tuple[date, ...], catalogue):
 def _day(point_date: date, snapshots, catalogue, revision: str) -> MarketValueDay:
     observations = []
     for row in snapshots:
-        if row.snapshot_date != point_date:
+        if row.snapshot_date != point_date or row.card_print_id not in catalogue:
             continue
         provenance = row.provenance if isinstance(row.provenance, dict) else {}
         observations.append(
@@ -171,7 +210,7 @@ def _day(point_date: date, snapshots, catalogue, revision: str) -> MarketValueDa
                 index_version=row.index_version,
                 source_semantics_version=row.source_semantics_version,
                 contributors=eligible_contributor_set(provenance.get("source_values")),
-                release_product_id=catalogue[row.card_print_id][0].release_product_id,
+                release_product_id=catalogue[row.card_print_id][2].id,
             )
         )
     return MarketValueDay(point_date, tuple(observations), len(catalogue), revision)
@@ -197,12 +236,9 @@ def _validate_step(point: MarketValuePoint, step: MonetaryStep, scope):
         "publication_reasons": publication_reasons_text(decision.reasons),
         "prior_version_pairs": version_pairs_text(step.prior_version_pairs),
         "current_version_pairs": version_pairs_text(step.current_version_pairs),
-        "membership_revision": step.current_membership_revision,
     }
-    if (
-        not decision.publishable
-        or step.prior_membership_revision != point.membership_revision
-        or any(getattr(point, key) != value for key, value in expected.items())
+    if not decision.publishable or any(
+        getattr(point, key) != value for key, value in expected.items()
     ):
         raise MarketValueIntegrityError("persisted_step_mismatch")
 
@@ -318,24 +354,48 @@ def get_market_value_movers(
             )
         if point.prior_point_date is None:
             raise MarketValueIntegrityError("persisted_step_mismatch")
-        catalogue = _catalogue(db, point)
-        snapshots = _snapshots(
-            db, (point.prior_point_date, point.point_date), catalogue
+        prior_point = db.scalar(
+            select(MarketValuePoint).where(
+                *_scope(release_product_id),
+                MarketValuePoint.methodology_version == point.methodology_version,
+                MarketValuePoint.point_date == point.prior_point_date,
+            )
         )
+        if prior_point is None:
+            raise MarketValueIntegrityError("persisted_step_mismatch")
         scope = (
             MarketValueScope.release(release_product_id)
             if release_product_id
             else MarketValueScope.overall()
+        )
+        # Each day uses the membership it was published with.
+        frozen = _membership(db, point)
+        prior_frozen = (
+            frozen
+            if prior_point.membership_revision == point.membership_revision
+            else _membership(db, prior_point)
+        )
+        catalogue = _catalogue(db, point, frozen)
+        prior_catalogue = (
+            catalogue
+            if prior_frozen is frozen
+            and prior_point.total_physical_print_count == point.total_physical_print_count
+            else _catalogue(db, prior_point, prior_frozen)
+        )
+        snapshots = _snapshots(
+            db,
+            (point.prior_point_date, point.point_date),
+            {**prior_catalogue, **catalogue},
         )
         try:
             step = compute_monetary_step(
                 _day(
                     point.prior_point_date,
                     snapshots,
-                    catalogue,
-                    point.membership_revision,
+                    prior_catalogue,
+                    prior_frozen.scope_revision(scope),
                 ),
-                _day(point.point_date, snapshots, catalogue, point.membership_revision),
+                _day(point.point_date, snapshots, catalogue, frozen.scope_revision(scope)),
                 scope=scope,
             )
         except ValueError as exc:

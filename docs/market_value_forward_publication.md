@@ -41,13 +41,26 @@ other unpublished earlier dates behind; subsequent runs never backfill them.
    Full receipt populations are verified before applying the unchanged Market
    Value active/verified/JP/release-FK eligibility rules.
 4. Recompute the existing persisted history and require an exact match for every
-   scope and deterministic field. Legacy already-published dates may lack receipts;
-   they are accepted only as verified existing history, never as new candidates.
-   Partial days, obsolete scopes, changed catalogue membership or conflicting
-   values abort. There is no automatic repair, overwrite, or membership migration.
+   scope and deterministic field. Each published date is recomputed with the
+   membership frozen with it (`market_value_memberships`, owner plan A
+   2026-10-28), never today's catalogue, so a catalogue import or correction does
+   not disturb published history. A published revision without a frozen
+   membership, or a frozen membership whose rows no longer hash to its revision,
+   aborts. Legacy already-published dates may lack receipts; they are accepted
+   only as verified existing history, never as new candidates. Partial days,
+   obsolete scopes or conflicting values abort. There is no automatic repair or
+   overwrite.
 5. Derive and insert only the new dates with the existing formulas, thresholds,
-   release rules, methodology version and natural keys. Verify the complete result
-   before a single commit. An identical retry verifies and inserts zero rows.
+   release rules, methodology version and natural keys, using today's membership
+   (`card-print-release-coded-v2:` revision: prints with their release, plus the
+   coded releases that have a scope). A write freezes that membership once, in the
+   same transaction, before its points. Overall counts new prints from the day they
+   arrive; a coded release first appears on the day its membership gives it a
+   scope; a release whose own prints changed starts a new segment
+   (`membership_revision_changed`), while a release whose prints did not change
+   keeps its chain. Catch-up dates published in one run share that run's
+   membership. Verify the complete result before a single commit. An identical
+   retry verifies and inserts zero rows.
 
 For the staging example, persisted history ends September 26; September 27–28
 have snapshots but no receipts; September 29 has a valid receipt. Only September

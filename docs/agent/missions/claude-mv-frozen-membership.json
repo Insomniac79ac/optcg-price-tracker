@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Market Value plan A (owner decision 2026-10-28, after the nightly publisher stopped on 2026-10-26: 'persisted publication history conflicts with deterministic replay: missing=64 unexpected=0 mismatched=3840'). Publication verified every published day against ONE digest of today's catalogue, so the 2026-10-26 catalogue imports (about 212 prints, new coded release EB-05) made all history mismatch. Each published day is now verified against the membership frozen with it (new append-only ledger, additive migration 001d92ba8eb9); new days are published with today's membership, frozen in the same transaction; rankings use each day's frozen basket. Formulas, thresholds, gates and the methodology version are unchanged and no published row is rewritten; the owner chose this behaviour (new prints count from the day they arrive; a release's chain restarts only when its own prints change), as docs/market_value.md already required ('future published points must freeze their own membership revision'). The pre-ledger membership is frozen by the new owner-approved market-value-freeze-legacy runbook only when it hashes exactly to the stored digest. Order after merge: owner runs apply-migration (dry run, apply), then market-value-freeze-legacy (dry run, apply); the next 20:00Z run publishes the waiting days. The fleet keeps revision 7a52e9b48e8a until apply-migration runs; a fleet PR then records 001d92ba8eb9.",
+  "classification": "AMBER",
+  "impacts": [
+    {
+      "files": [
+        "services/api/alembic/versions/001d92ba8eb9_add_market_value_memberships.py",
+        "services/api/app/models/market_value_membership.py",
+        "services/api/alembic/env.py"
+      ],
+      "effects": [
+        "migration"
+      ],
+      "reason": "Three new empty append-only tables (memberships, membership prints, membership releases) with FKs to card_prints and release_products; nothing existing changes. Applied after merge by the owner-approved apply-migration runbook. Models not imported by app.models, so no collector loads them."
+    },
+    {
+      "files": [
+        "services/api/app/services/market_value_membership.py",
+        "services/api/app/services/market_value_replay.py",
+        "services/api/app/market_value_publisher.py",
+        "services/api/app/market_value_writer.py",
+        "services/api/app/services/market_value_rankings.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Frozen membership read/freeze/rebuild; per-date replay loader and draft builder (legacy builder unchanged, proven equal for a single membership); publisher replays each day with its own membership and freezes today's before new points; recovery writer freezes its membership and refuses without the ledger; rankings rank each day with its own frozen basket (typed 503 when a point names no frozen membership)."
+    },
+    {
+      "files": [
+        "scripts/ops/mv_freeze_legacy.py",
+        "scripts/ops/run.py",
+        "scripts/ops/apply_migration.py",
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure",
+        "bulk_data"
+      ],
+      "reason": "market-value-freeze-legacy ops-write runbook (dry run plan + SHA; apply writes about 3,600 membership rows only, under the writer job-lock row; not collector-affecting); apply-migration allowlists 001d92ba8eb9 on 7a52e9b48e8a; ops-write choice list. No secret, gate, permission or timeout change."
+    },
+    {
+      "files": [
+        "services/api/tests/_market_value_ranking_helpers.py",
+        "services/api/tests/test_market_value_frozen_equivalence.py",
+        "services/api/tests/test_market_value_membership_migration_postgres.py",
+        "services/api/tests/test_market_value_publisher.py",
+        "services/api/tests/test_market_value_publisher_postgres.py",
+        "services/api/tests/test_market_value_rankings.py",
+        "services/api/tests/test_market_value_rankings_api.py",
+        "services/api/tests/test_market_value_writer.py",
+        "services/api/tests/test_market_value_writer_postgres.py",
+        "scripts/tests/test_ops_apply_migration.py",
+        "scripts/tests/test_ops_mv_freeze_legacy.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Import between published days; new coded release; release whose prints change; missing or tampered ledger; legacy rebuild exact-digest only; freeze runbook gate; movers across a membership change; migration schema, constraints and downgrade; legacy/frozen builder equivalence."
+    },
+    {
+      "files": [
+        "docs/market_value.md",
+        "docs/market_value_forward_publication.md",
+        "docs/agent/OPS_RUNBOOKS.md",
+        "CLAUDE.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Methodology ledger, forward publication steps, runbooks."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "market_value_memberships tables (new)",
+        "Market Value publication and rankings",
+        "ops-write market-value-freeze-legacy"
+      ],
+      "routes": [
+        "/market-value movers and most-valuable read the frozen membership; no source route"
+      ],
+      "dependencies": [
+        "staging after #234",
+        "then apply-migration 001d92ba8eb9 (owner), market-value-freeze-legacy (owner), fleet revision PR"
+      ],
+      "deployment_impact": "API, market-index-snapshot and official-images-mirror rebuild from Git (API image). Until the migration and legacy freeze run, market value publication keeps refusing (as it does today) and rankings return a typed 503 (as today). No collector release.",
+      "database_writes": 3700,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 60
+    },
+    "recovery": {
+      "artifact": "f4ab8af226c75372e003c30633447440671f73f9",
+      "procedure": "Native revert PR with its own mission file; the membership tables are additive and can stay (downgrade only by a separate decision). Points published with frozen memberships stay valid history.",
+      "trigger": "Publication or rankings refuse after the migration and legacy freeze, or the freeze dry run cannot rebuild the legacy membership exactly.",
+      "backup": "Railway Postgres backup under 24 h (required by apply-migration).",
+      "validation": [
+        "services/api/tests/test_market_value_publisher.py",
+        "services/api/tests/test_market_value_frozen_equivalence.py",
+        "services/api/tests/test_market_value_rankings.py",
+        "services/api/tests/test_market_value_membership_migration_postgres.py",
+        "scripts/tests/test_ops_mv_freeze_legacy.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/market_value_publisher.py",
+        "services/api/app/services/market_value_rankings.py"
+      ],
+      "observation_window": "apply-migration and freeze runs; the next 20:00Z market-index-snapshot run publishes 10-26 onward (Deploy Logs: market_value.status succeeded); rankings 200."
+    }
+  },
+  "diff_sha256": "bc77c25bff98f08e0df33ac562c20dee738dd9ba169e69646612cf254571b179"
+}

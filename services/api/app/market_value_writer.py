@@ -34,6 +34,7 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models.market_value_point import MarketValuePoint
 from app.services.job_locks import LockHeldError, with_job_lock
+from app.services import market_value_membership as membership
 from app.services.market_value import METHODOLOGY_VERSION
 from app.services.market_value_persistence import (
     MarketValuePointDraft,
@@ -68,6 +69,7 @@ class MarketValueWriterPlan:
     last_date: date | None
     membership_revision: str
     methodology_version: int
+    membership: "membership.FrozenMembership | None" = None
 
     @property
     def expected_points(self) -> int:
@@ -235,6 +237,16 @@ def _build_plan(db: Session, through: date | None) -> MarketValueWriterPlan:
         last_date=loaded.archive_dates[-1] if loaded.archive_dates else None,
         membership_revision=loaded.catalogue_membership_revision,
         methodology_version=METHODOLOGY_VERSION,
+        membership=membership.FrozenMembership(
+            loaded.catalogue_membership_revision,
+            loaded.active_prints,
+            tuple(
+                membership.CodedRelease(row.release_product_id, row.official_code)
+                for row in loaded.coded_releases
+            ),
+        )
+        if loaded.active_prints
+        else None,
     )
 
 
@@ -292,6 +304,15 @@ def _execute(
                 verification=plan.verification,
             )
 
+        # Every stored point names a frozen membership (owner plan A, 2026-10-28):
+        # a recovery replay freezes the catalogue membership it replayed with.
+        if plan.membership is not None:
+            if not membership.schema_present(db):
+                raise WriterAbort(
+                    "market value membership schema is absent; apply its migration "
+                    "before a recovery write (every point must name a frozen membership)"
+                )
+            membership.store_membership(db, plan.membership, origin="recovery")
         write_result: MarketValueWriteResult = persist_market_value_points(
             db, plan.drafts
         )

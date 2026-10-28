@@ -25,7 +25,6 @@ from app.market_value_writer import (
     _date_argument,
     _require_schema,
     _require_supported_methodology,
-    _validate_release_identity,
 )
 from app.models.job_lock import JobLock
 from app.models.market_index_snapshot_completion import MarketIndexSnapshotCompletion
@@ -40,9 +39,10 @@ from app.services.market_value_persistence import (
     persist_market_value_points,
     verify_market_value_points,
 )
+from app.services import market_value_membership as membership
 from app.services.market_value_replay import (
-    build_market_value_point_drafts,
-    load_market_value_replay_input,
+    build_frozen_point_drafts,
+    load_frozen_replay_input,
 )
 
 Mode = Literal["dry-run", "write"]
@@ -57,6 +57,8 @@ class ForwardPublicationPlan:
     new_drafts: tuple[MarketValuePointDraft, ...]
     existing_verified: int
     receipts: tuple[SnapshotCompletionVerification, ...]
+    new_membership: membership.FrozenMembership | None = None
+    membership_revisions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -76,6 +78,15 @@ class ForwardPublicationResult:
             f"receipts_verified: {len(self.plan.receipts)}",
             f"existing_verified: {self.plan.existing_verified}",
             f"planned_new_points: {len(self.plan.new_drafts)}",
+            "memberships: " + (", ".join(self.plan.membership_revisions) or "none"),
+            "new_membership: "
+            + (
+                f"{self.plan.new_membership.revision} prints="
+                f"{len(self.plan.new_membership.prints)} coded_releases="
+                f"{len(self.plan.new_membership.coded_releases)}"
+                if self.plan.new_membership
+                else "none"
+            ),
             f"inserted: {self.inserted}",
         ]
 
@@ -157,13 +168,14 @@ def _build_plan(db: Session, requested_date: date | None) -> ForwardPublicationP
         receipts.append(evidence)
 
     dates = tuple(sorted(referenced_dates))
-    loaded = load_market_value_replay_input(
-        db, archive_dates=dates, include_current=False
-    )
-    _validate_release_identity(loaded)
+    # Owner plan A (2026-10-28): every published day is replayed with its OWN
+    # frozen membership, never today's catalogue; new days are published with
+    # today's membership, which this run freezes (write mode) before its points.
+    memberships, new_membership = _memberships_for(db, published_dates, new_dates)
+    loaded = load_frozen_replay_input(db, memberships)
     if loaded.archive_dates != dates:
         raise WriterAbort("publication dates lack eligible archived snapshot inputs")
-    drafts = build_market_value_point_drafts(loaded)
+    drafts = build_frozen_point_drafts(loaded)
     # The unchanged engine receives only actual publication dates. Its existing
     # gap rule resets movement segments; receipt-less days never bridge a gap.
     historical = tuple(row for row in drafts if row.point_date in published_dates)
@@ -183,7 +195,54 @@ def _build_plan(db: Session, requested_date: date | None) -> ForwardPublicationP
         new_drafts,
         prefix.verified,
         tuple(receipts),
+        new_membership if new_drafts else None,
+        tuple(sorted({m.revision for m in memberships.values()})),
     )
+
+
+def _memberships_for(db: Session, published_dates, new_dates):
+    """({date: FrozenMembership}, membership to freeze or None). Fails closed."""
+    if not membership.schema_present(db):
+        raise WriterAbort("market value membership schema is absent")
+    revisions: dict[date, set[str]] = {}
+    for point_date, revision in db.execute(
+        select(MarketValuePoint.point_date, MarketValuePoint.membership_revision).distinct()
+    ):
+        revisions.setdefault(point_date, set()).add(revision)
+    frozen: dict[str, membership.FrozenMembership] = {}
+    by_date: dict[date, membership.FrozenMembership] = {}
+    for point_date in published_dates:
+        day_revisions = revisions.get(point_date, set())
+        if len(day_revisions) != 1:
+            raise WriterAbort(f"published date {point_date} carries {len(day_revisions)} membership revisions")
+        revision = next(iter(day_revisions))
+        if revision not in frozen:
+            try:
+                found = membership.load_membership(db, revision)
+            except membership.MembershipError as exc:
+                raise WriterAbort(str(exc)) from exc
+            if found is None:
+                raise WriterAbort(
+                    f"membership_not_frozen: {revision} (published before the membership "
+                    "ledger; freeze it with the market-value-freeze-legacy runbook)"
+                )
+            frozen[revision] = found
+        by_date[point_date] = frozen[revision]
+    new_membership = None
+    if new_dates:
+        try:
+            live = membership.live_membership(db)
+            existing = membership.load_membership(db, live.revision)
+        except membership.MembershipError as exc:
+            raise WriterAbort(str(exc)) from exc
+        if existing is not None and existing != live:
+            raise WriterAbort(f"membership {live.revision} is frozen differently")
+        new_membership = None if existing is not None else live
+        for point_date in new_dates:
+            by_date[point_date] = live
+    # FrozenMembership validates itself (distinct prints, positive ids, coded
+    # releases with prints); a live membership that fails raises MembershipError.
+    return by_date, new_membership
 
 
 def run_publisher(
@@ -222,6 +281,8 @@ def run_publisher(
             if mode == "dry-run" or not plan.new_drafts:
                 db.rollback()
                 return ForwardPublicationResult(mode, plan, 0)
+            if plan.new_membership is not None:
+                membership.store_membership(db, plan.new_membership, origin="publication")
             result = persist_market_value_points(db, plan.new_drafts)
             verified = verify_market_value_points(db, plan.drafts, exact_archive=True)
             if not verified.ok:

@@ -8,6 +8,7 @@ from alembic import context
 import app.models  # noqa: F401  (registers models on Base.metadata)
 import app.official_images.models  # noqa: F401  (API-only; collectors never import it)
 import app.accounts.models  # noqa: F401  (API-only; collectors never import it)
+import app.models.market_value_membership  # noqa: F401  (API-only; collectors never import it)
 from app.db import Base
 from app.settings import settings
 

@@ -62,14 +62,14 @@ def test_dry_run_has_repeatable_read_only_and_no_job_lock_writes(
     db_session, pg_engine, monkeypatch
 ):
     seed(db_session)
-    real_loader = publisher.load_market_value_replay_input
+    real_loader = publisher.load_frozen_replay_input
 
-    def loader(db, **kwargs):
+    def loader(db, *args, **kwargs):
         assert db.scalar(text("SHOW transaction_read_only")) == "on"
         assert db.scalar(text("SHOW transaction_isolation")) == "repeatable read"
-        return real_loader(db, **kwargs)
+        return real_loader(db, *args, **kwargs)
 
-    monkeypatch.setattr(publisher, "load_market_value_replay_input", loader)
+    monkeypatch.setattr(publisher, "load_frozen_replay_input", loader)
     result = publisher.run_publisher(db_session, mode="dry-run")
     assert result.inserted == 0 and len(result.plan.new_drafts) == 2
     with pg_engine.connect() as connection:
@@ -88,10 +88,10 @@ def test_producer_cannot_start_after_gate_until_publication_transaction_ends(
     db_session, pg_engine, monkeypatch
 ):
     seed(db_session)
-    real_loader = publisher.load_market_value_replay_input
+    real_loader = publisher.load_frozen_replay_input
     attempted = []
 
-    def loader(db, **kwargs):
+    def loader(db, *args, **kwargs):
         assert db.scalar(text("SHOW transaction_isolation")) == "repeatable read"
         assert db.scalar(text("SHOW transaction_read_only")) == "off"
         with pg_engine.connect() as producer:
@@ -104,9 +104,9 @@ def test_producer_cannot_start_after_gate_until_publication_transaction_ends(
                 )
             producer.rollback()
         attempted.append(True)
-        return real_loader(db, **kwargs)
+        return real_loader(db, *args, **kwargs)
 
-    monkeypatch.setattr(publisher, "load_market_value_replay_input", loader)
+    monkeypatch.setattr(publisher, "load_frozen_replay_input", loader)
     result = publisher.run_publisher(db_session, mode="write")
     assert result.inserted == 2 and attempted == [True]
     # The guard is released by commit, not left behind as an active job lock.
@@ -161,9 +161,9 @@ def test_receipt_and_replay_inputs_share_one_consistent_snapshot(
     db_session, pg_engine, monkeypatch
 ):
     seed(db_session)
-    real_loader = publisher.load_market_value_replay_input
+    real_loader = publisher.load_frozen_replay_input
 
-    def loader(db, **kwargs):
+    def loader(db, *args, **kwargs):
         # A malicious/noncooperating external edit after the receipt gate must
         # not alter what this already-verified transaction derives from.
         with pg_engine.begin() as external:
@@ -172,9 +172,9 @@ def test_receipt_and_replay_inputs_share_one_consistent_snapshot(
                     "UPDATE market_index_snapshots SET index_value_jpy=999999 WHERE snapshot_date='2026-09-29'"
                 )
             )
-        return real_loader(db, **kwargs)
+        return real_loader(db, *args, **kwargs)
 
-    monkeypatch.setattr(publisher, "load_market_value_replay_input", loader)
+    monkeypatch.setattr(publisher, "load_frozen_replay_input", loader)
     result = publisher.run_publisher(db_session, mode="write")
     assert result.inserted == 2
     with pg_engine.connect() as connection:

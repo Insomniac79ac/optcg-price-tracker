@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from ops import apply_migration as am, common, run  # noqa: E402
 from ops import db as ops_db  # noqa: E402
 
-REV, PARENT = "7a52e9b48e8a", "3b7d9c1a5e20"
+REV, PARENT = "001d92ba8eb9", "7a52e9b48e8a"
 FRESH = {"id": "backup-1", "created_at": "2026-10-19T03:00:00Z", "age_hours": 2.5}
 STEP = '''    op.create_table("am_new", sa.Column("id", sa.Integer, primary_key=True),
                     sa.Column("old_id", sa.Integer, sa.ForeignKey("am_old.id")))
@@ -70,9 +70,9 @@ class Refusals(unittest.TestCase):
         self.assertEqual(am.ALLOWED, {REV: PARENT})
         am.check_pair(REV, PARENT)
         for revision, parent, why in ((PARENT, "", "not allowlisted"), ("", PARENT, "not allowlisted"),
-                                      ("7a52e9b48e8b", PARENT, "not allowlisted"),
+                                      ("001d92ba8eba", PARENT, "not allowlisted"),
                                       (REV, "", "applies only on parent"),
-                                      (REV, "3b7d9c1a5e21", "applies only on parent"), (REV, REV, "applies only")):
+                                      (REV, "7a52e9b48e8b", "applies only on parent"), (REV, REV, "applies only")):
             with self.subTest(revision=revision, parent=parent), self.assertRaisesRegex(common.Refused, why):
                 self.run_am(revision=revision, parent=parent)
 
@@ -118,7 +118,7 @@ class Refusals(unittest.TestCase):
 
     def test_plan_locks(self):
         sql, _ = am.sql_plan(self.script, REV, PARENT)
-        self.assertIn("UPDATE alembic_version SET version_num='7a52e9b48e8a'", sql)
+        self.assertIn("UPDATE alembic_version SET version_num='001d92ba8eb9'", sql)
         self.assertNotIn("CREATE TABLE alembic_version", sql)
         existing, new = am.locks(sql)
         self.assertEqual(new, ["am_new"])

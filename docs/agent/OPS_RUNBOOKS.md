@@ -9,7 +9,7 @@ the results over the GitHub REST API without ever seeing a secret.
 | Workflow | Approval | Credentials | Runbooks |
 |---|---|---|---|
 | `ops-readonly` | none | `staging-delivery` | read-only, below |
-| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import`, `yuyu-source-probe`, `snkr-parser-requeue` |
+| `ops-write` | owner (Environment `staging-ops`, required reviewer) | `staging-delivery`, only after approval | `enqueue-remaining-50`, `approve-f1-batch`, `enqueue-capture-batch`, `plan-refresh-backfill`, `apply-migration`, `collector-redeploy`, `collector-sibling-on`, `collector-sibling-off`, `catalogue-import`, `yuyu-source-probe`, `snkr-parser-requeue`, `market-value-freeze-legacy` |
 
 Code: `scripts/ops/` (`run.py` holds the allowlist `RUNBOOKS`), SQL: `scripts/diagnostics/`,
 tests: `scripts/tests/test_ops_runbooks.py` (in CI `agent-state-tests`, with a Postgres service).
@@ -145,7 +145,8 @@ before (the 97 of F1 batch 1 among them).
 staging. Nobody runs `alembic upgrade` against staging by hand, and agents never do.
 
 1. Inputs `revision` and `parent`. Only allowlisted pairs (`ALLOWED`, a reviewed code change)
-   are accepted: today exactly `7a52e9b48e8a` on parent `3b7d9c1a5e20` (new-sources S1, #181).
+   are accepted: today exactly `001d92ba8eb9` on parent `7a52e9b48e8a` (frozen Market Value
+   membership, owner plan A 2026-10-28).
    The checkout on `staging` must carry that migration as its single Alembic head on top of
    `parent`, so dispatch it only after the migration's PR has merged. Anything else is refused at
    dispatch (preflight) and again in the runbook job.
@@ -313,6 +314,18 @@ older quarantine and genuine mismatches are never touched. Dry run lists the wor
 pending, due now, the original reason kept behind a requeue marker in `last_failure`). No source
 request.
 
+`market-value-freeze-legacy` (`scripts/ops/mv_freeze_legacy.py`, plan in
+`app.services.market_value_membership`): owner plan A (2026-10-28). Market Value days published
+before the membership ledger carry only the v1 digest of their prints, so the publisher refuses
+them (`membership_not_frozen`) until their membership is frozen. The dry run (read-only, verified
+connection) rebuilds each such revision from today's catalogue restricted to prints created by its
+last publication and plans it only when the rebuild hashes to exactly the stored digest and
+reproduces every stored scope and count; otherwise it lists the facts that disagree and plans
+nothing. Apply with the dry run's `plan_sha256` re-plans and writes only that plan, while holding the
+market value writer's job-lock row (refused while a publication runs). Writes only the three
+membership tables; no point, snapshot or catalogue row changes; no source request. Not
+collector-affecting. Needs migration `001d92ba8eb9` applied first.
+
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:
 
@@ -367,7 +380,7 @@ gh api $R/actions/runs/$RUN/artifacts --jq '.artifacts[] | {id, name, size_in_by
   and `inputs[expected_sha256]=<that sha>`, and the owner approves it.
   `apply-migration` takes `inputs[revision]` and `inputs[parent]` instead of `count`, and its
   sha is `sql_plan_sha256`:
-  `-f 'inputs[runbook]=apply-migration' -f 'inputs[revision]=7a52e9b48e8a' -f 'inputs[parent]=3b7d9c1a5e20'`.
+  `-f 'inputs[runbook]=apply-migration' -f 'inputs[revision]=001d92ba8eb9' -f 'inputs[parent]=7a52e9b48e8a'`.
 - Agents never approve a waiting run (`pending_deployments` is blocked by `.claude/hooks/guard.py`).
 - Is a staging delivery running? The same check the runbooks use:
   `gh api "$R/actions/workflows/ci.yml/runs?status=in_progress" --jq '.workflow_runs[].id'`, then

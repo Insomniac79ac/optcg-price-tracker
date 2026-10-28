@@ -7,11 +7,12 @@ edge in ``app.market_value_replay_report`` additionally requires PostgreSQL to
 confirm ``transaction_read_only=on`` before calling this module.
 
 Historical limitation, made explicit: the snapshot archive does not store a
-release/status membership revision.  Initial A2 replay therefore uses one
-digest of today's corrected active, verified Japanese physical-print
-catalogue for every historical day.  That digest records the replay basis; it
-does not claim the same membership was historically published.  A future
-persisted series needs the immutable membership ledger specified by A1.
+release/status membership revision.  The diagnostic report and recovery replay
+(``load_market_value_replay_input``) therefore use one digest of today's
+corrected active, verified Japanese physical-print catalogue for every
+historical day.  Forward publication and the rankings use the immutable
+membership ledger instead (``load_frozen_replay_input``,
+app.services.market_value_membership; owner plan A, 2026-10-28).
 """
 
 from __future__ import annotations
@@ -105,6 +106,7 @@ def _load_archive_rows(
     *,
     through: date | None = None,
     archive_dates: tuple[date, ...] | None = None,
+    live_catalogue: bool = True,
 ) -> list[Any]:
     """Load exact archive inputs without shipping unrelated JSON over the wire.
 
@@ -128,6 +130,18 @@ def _load_archive_rows(
             "AND snapshot.snapshot_date IN :archive_dates"
             if archive_dates is not None
             else ""
+        )
+        # Frozen-membership callers filter by each date's own membership in
+        # Python; only the legacy projection filters by today's catalogue.
+        catalogue_clause = (
+            """JOIN card_prints AS print
+                        ON print.id = snapshot.card_print_id
+                    WHERE print.is_active IS TRUE
+                    AND print.verification_status = 'verified'
+                    AND print.language = 'jp'
+                    AND print.release_product_id IS NOT NULL"""
+            if live_catalogue
+            else "WHERE TRUE"
         )
         statement = text(f"""
                     SELECT
@@ -181,12 +195,7 @@ def _load_archive_rows(
                             )
                         END AS contributor_pairs
                     FROM market_index_snapshots AS snapshot
-                    JOIN card_prints AS print
-                        ON print.id = snapshot.card_print_id
-                    WHERE print.is_active IS TRUE
-                    AND print.verification_status = 'verified'
-                    AND print.language = 'jp'
-                    AND print.release_product_id IS NOT NULL
+                    {catalogue_clause}
                     {through_clause}
                     {dates_clause}
                     ORDER BY snapshot.snapshot_date, snapshot.card_print_id
@@ -199,27 +208,33 @@ def _load_archive_rows(
 
     # SQLite/local-test fallback. It intentionally uses the same Python
     # helper as existing Market Index change calculations.
-    conditions = [
-        CardPrint.is_active.is_(True),
-        CardPrint.verification_status == "verified",
-        CardPrint.language == "jp",
-        CardPrint.release_product_id.is_not(None),
-    ]
+    conditions = (
+        [
+            CardPrint.is_active.is_(True),
+            CardPrint.verification_status == "verified",
+            CardPrint.language == "jp",
+            CardPrint.release_product_id.is_not(None),
+        ]
+        if live_catalogue
+        else []
+    )
     if through is not None:
         conditions.append(MarketIndexSnapshot.snapshot_date <= through)
     if archive_dates is not None:
         conditions.append(MarketIndexSnapshot.snapshot_date.in_(archive_dates))
+    query = select(
+        MarketIndexSnapshot.snapshot_date,
+        MarketIndexSnapshot.card_print_id,
+        MarketIndexSnapshot.index_value_jpy,
+        MarketIndexSnapshot.index_version,
+        MarketIndexSnapshot.source_semantics_version,
+        MarketIndexSnapshot.provenance,
+    )
+    if live_catalogue:
+        query = query.join(CardPrint, CardPrint.id == MarketIndexSnapshot.card_print_id)
     return list(
         db.execute(
-            select(
-                MarketIndexSnapshot.snapshot_date,
-                MarketIndexSnapshot.card_print_id,
-                MarketIndexSnapshot.index_value_jpy,
-                MarketIndexSnapshot.index_version,
-                MarketIndexSnapshot.source_semantics_version,
-                MarketIndexSnapshot.provenance,
-            )
-            .join(CardPrint, CardPrint.id == MarketIndexSnapshot.card_print_id)
+            query
             .where(*conditions)
             .order_by(
                 MarketIndexSnapshot.snapshot_date,
@@ -434,6 +449,22 @@ def _scope_point_drafts(
         scope=scope,
         total_physical_print_count=total_physical_print_count,
     )
+    return _drafts_for_days(
+        days,
+        scope=scope,
+        stored_revision={day.point_date: day.membership_revision for day in days},
+    )
+
+
+def _drafts_for_days(
+    days: tuple[MarketValueDay, ...],
+    *,
+    scope: MarketValueScope,
+    stored_revision: dict[date, str],
+) -> tuple[MarketValuePointDraft, ...]:
+    """Point drafts for one scope's days. `stored_revision` is the membership
+    revision each point records (the day's own membership); the engine compares
+    each day's scope revision (MarketValueDay.membership_revision)."""
     days_by_date = {day.point_date: day for day in days}
     replay = replay_market_value(days, scope=scope)
     scope_kind = "overall" if scope.release_product_id is None else "release"
@@ -495,7 +526,7 @@ def _scope_point_drafts(
                 performance_factor=point.performance_factor,
                 step_publication_eligible=step_publication_eligible,
                 publication_reasons=publication_reasons,
-                membership_revision=days_by_date[point.point_date].membership_revision,
+                membership_revision=stored_revision[point.point_date],
                 prior_version_pairs=prior_version_pairs,
                 current_version_pairs=version_pairs_text(current_pairs),
             )
@@ -523,6 +554,112 @@ def build_market_value_point_drafts(
                 loaded,
                 scope=MarketValueScope.release(release.release_product_id),
                 total_physical_print_count=release.active_physical_print_count,
+            )
+        )
+    return tuple(
+        sorted(
+            drafts,
+            key=lambda row: (
+                row.scope_kind,
+                row.release_product_id or 0,
+                row.methodology_version,
+                row.point_date,
+            ),
+        )
+    )
+
+
+@dataclass(frozen=True)
+class FrozenReplayInput:
+    """Archive days, each projected onto the membership it was (or will be)
+    published with (owner plan A, 2026-10-28). `memberships` maps a date to a
+    FrozenMembership (app.services.market_value_membership)."""
+
+    archive_dates: tuple[date, ...]
+    observations_by_date: dict[date, tuple[MarketValueObservation, ...]]
+    memberships: dict[date, Any]
+
+
+def load_frozen_replay_input(db: Session, memberships: dict[date, Any]) -> FrozenReplayInput:
+    """SELECT only. Each date's observations are its archive rows for prints in
+    that date's membership, tagged with that membership's release; today's
+    catalogue is not read."""
+    dates = tuple(sorted(memberships))
+    snapshots = _load_archive_rows(db, archive_dates=dates, live_catalogue=False)
+    grouped: dict[date, list[MarketValueObservation]] = defaultdict(list)
+    for snapshot in snapshots:
+        release_by_print = memberships[snapshot.snapshot_date].release_by_print
+        release = release_by_print.get(snapshot.card_print_id)
+        if release is None:
+            continue
+        grouped[snapshot.snapshot_date].append(
+            MarketValueObservation(
+                card_print_id=snapshot.card_print_id,
+                value_jpy=snapshot.index_value_jpy,
+                index_version=snapshot.index_version,
+                source_semantics_version=snapshot.source_semantics_version,
+                contributors=(
+                    _compact_contributors(snapshot.contributor_pairs)
+                    if hasattr(snapshot, "contributor_pairs")
+                    else _contributors(
+                        snapshot.provenance.get("source_values")
+                        if isinstance(snapshot.provenance, dict)
+                        else None
+                    )
+                ),
+                release_product_id=release,
+            )
+        )
+    archive_dates = tuple(day for day in dates if grouped.get(day))
+    return FrozenReplayInput(
+        archive_dates=archive_dates,
+        observations_by_date={
+            day: tuple(sorted(grouped[day], key=lambda row: row.card_print_id))
+            for day in archive_dates
+        },
+        memberships={day: memberships[day] for day in archive_dates},
+    )
+
+
+def build_frozen_point_drafts(
+    loaded: FrozenReplayInput,
+) -> tuple[MarketValuePointDraft, ...]:
+    """Overall on every date; each coded release on the dates whose membership
+    gives it a scope. Every point records its date's membership revision; the
+    engine sees each scope's own revision, so a release's chain breaks only when
+    its own prints change."""
+    scopes = [MarketValueScope.overall()] + [
+        MarketValueScope.release(release_id)
+        for release_id in sorted(
+            {
+                release_id
+                for day in loaded.archive_dates
+                for release_id in loaded.memberships[day].coded_release_ids
+            }
+        )
+    ]
+    drafts: list[MarketValuePointDraft] = []
+    for scope in scopes:
+        dates = tuple(
+            day
+            for day in loaded.archive_dates
+            if scope.release_product_id is None
+            or scope.release_product_id in loaded.memberships[day].coded_release_ids
+        )
+        days = tuple(
+            MarketValueDay(
+                point_date=day,
+                observations=_scope_observations(loaded.observations_by_date[day], scope),
+                total_physical_print_count=loaded.memberships[day].scope_total(scope),
+                membership_revision=loaded.memberships[day].scope_revision(scope),
+            )
+            for day in dates
+        )
+        drafts.extend(
+            _drafts_for_days(
+                days,
+                scope=scope,
+                stored_revision={day: loaded.memberships[day].revision for day in dates},
             )
         )
     return tuple(

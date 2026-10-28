@@ -124,7 +124,12 @@ def test_maximum_and_stable_pagination(seeded, client):
 
 @pytest.mark.parametrize("route", ["movers", "most-valuable"])
 def test_typed_integrity_503_contains_no_ranking(seeded, client, route):
-    seeded.get(CardPrint, 300).is_active = False
+    # A point naming no frozen membership (a catalogue change no longer does this).
+    from sqlalchemy import update
+
+    from app.models.market_value_point import MarketValuePoint
+
+    seeded.execute(update(MarketValuePoint).values(membership_revision="unfrozen"))
     seeded.commit()
     response = client.get(f"{BASE}/{route}")
     assert response.status_code == 503
@@ -201,8 +206,10 @@ def test_http_select_only_bounded_archive_and_no_external_calls(
     assert "snapshot_date IN" in archive[0][0]
     assert tuple(archive[0][1][: len(dates)]) == dates
     # 8 = the original 7 plus one batched card_print_image_assets read (the
-    # verified R2 copies of the official images, app.services.display_image).
-    assert len(statements) <= 8
+    # verified R2 copies of the official images, app.services.display_image);
+    # + 3 to read and verify the day's frozen membership (row, prints, coded
+    # releases; owner plan A, 2026-10-28); movers + 1 for its prior point.
+    assert len(statements) <= 8 + 3 + (route == "movers")
     assert sum("source_card_mappings" in sql for sql, _ in statements) == 1
 
 
