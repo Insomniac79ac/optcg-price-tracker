@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "mission": "snkr-parser-requeue second window (owner 'go' 2026-10-27, perfectionist). The first canary (work 196) was refused again on 2026-10-27 12:00Z by the second page change (photo named by reference, prices after load), which #231 fixed (snkrdunk-collector on it 2026-10-28 06:49Z). The runbook now covers two parser windows, each with its own exact reason set, and treats only work claimed after 06:49Z as the new code. Canary first, then the rest, each owner-approved.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/snkr_parser_requeue.py"
+      ],
+      "effects": [
+        "application",
+        "bulk_data"
+      ],
+      "reason": "Eligibility: window 1 [10-26 08:00Z, 10-27 07:04Z) main_image_not_found reasons (unchanged); window 2 [10-27 07:04Z, 10-28 06:49Z) placeholder_image_url;no_raw_condition_price_available. New code = claimed at or after 10-28 06:49Z. Still at most the ~285 parser-bug rows, only through the owner-approved runbook. Not imported by any collector path."
+    },
+    {
+      "files": [
+        "scripts/ops/snkr_requeue.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Docstring only."
+    },
+    {
+      "files": [
+        "services/api/tests/test_snkr_parser_requeue_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Second-window reason eligible; each window accepts only its own reasons; a window-2 refusal is not new code; a refusal after 06:49Z still locks both modes."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook section."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "SNKRDUNK freshness_work rows refused by the two parser windows (about 285)"
+      ],
+      "routes": [
+        "The scheduled SNKRDUNK collector refreshes the reopened work; no new route"
+      ],
+      "dependencies": [
+        "staging after #232 (snkrdunk-collector on #231, fleet pinned)"
+      ],
+      "deployment_impact": "No collector rollout. Behaviour changes only after an owner-approved apply: the reopened items are refreshed by the next SNKRDUNK turns.",
+      "database_writes": 290,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "368864fc9e20e9cc0fffd2472ceabb5c09363833",
+      "procedure": "Native revert PR with its own mission file; reopened rows that refuse again block themselves (identity_refusal), so no manual row repair is needed.",
+      "trigger": "The canary or reopened items refused again on the new code, or prices mis-parsed.",
+      "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
+      "validation": [
+        "services/api/tests/test_snkr_parser_requeue_postgres.py",
+        "scripts/tests/test_ops_snkr_requeue.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/snkr_parser_requeue.py",
+        "scripts/ops/snkr_requeue.py"
+      ],
+      "observation_window": "Canary dry run and apply, the next SNKRDUNK turn (db-diagnostic snkrdunk-quarantine, staging-state), then the rest."
+    }
+  },
+  "diff_sha256": "pending"
+}
