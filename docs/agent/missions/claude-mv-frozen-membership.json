@@ -132,5 +132,5 @@
       "observation_window": "apply-migration and freeze runs; the next 20:00Z market-index-snapshot run publishes 10-26 onward (Deploy Logs: market_value.status succeeded); rankings 200."
     }
   },
-  "diff_sha256": "37b43579428adf3f69e9e9fc20b1ee87e0b3bd6ddb83f0c55e1912050279d5f4"
+  "diff_sha256": "bc77c25bff98f08e0df33ac562c20dee738dd9ba169e69646612cf254571b179"
 }
