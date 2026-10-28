@@ -2,7 +2,7 @@
   "schema_version": 1,
   "deployment_verification": {
     "api_sha": "merge",
-    "revision": "7a52e9b48e8a",
+    "revision": "001d92ba8eb9",
     "checks": [
       "scripts/verify_snkr_published_discovery_component.py",
       "scripts/verify_yuyu_raw_reader_component.py"
