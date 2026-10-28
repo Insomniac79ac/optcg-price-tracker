@@ -48,6 +48,10 @@ the rest are named in `rows_omitted` and stay in the artifact).
 `identity-capture-work` gives Yuyu identity-capture work totals by state (with id range), the newest
 100 items (state, attempts, denials, transient failures) and the last 24 h of their attempt
 outcomes: the post-enqueue progress check. Older items (500+ on staging) stay out of the summary.
+`market-value-membership` compares stored Market Value points with today's catalogue: points per
+membership revision, whether the legacy membership can be rebuilt exactly (digest of the prints
+created by the last publication vs the stored revision), prints and coded releases touched since,
+and per-release count drift. Evidence for the frozen-membership fix (owner plan A, 2026-10-28).
 
 Nothing here is collector-affecting or a write, so no quiet window applies.
 

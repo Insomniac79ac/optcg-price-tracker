@@ -38,6 +38,7 @@ on:
           - degraded-signals
           - freshness-not-met
           - identity-capture-work
+          - market-value-membership
           - new-source-coverage
           - official-image-assets
           - snkrdunk-coverage-gap
