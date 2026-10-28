@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK diagnostic release (owner option A, 2026-10-28). The first live captures after #231 never saw the product page's size-chips response (condition_prices:not_seen after 15 s; work 196 retries, nothing recorded). Before changing the wait again, a capture whose prices did not load logs what the page actually requested (non-asset requests, responses, failures, the browser's fetch/XHR resource timings, page visibility and picker position) on its product_result line. Logging only: no outcome, request or write changes. Released to snkrdunk-collector only, by staging-automerge.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/browser.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "NetworkTrace listeners on the product page (request, response, requestfailed; bounded to 80 entries, assets only counted) and one page.evaluate of page state, attached to condition_prices evidence only when prices did not load. No new request; no outcome change. The infrastructure effect is the mission-scoped release of snkrdunk-collector."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/tests/test_condition_prices_wait.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Trace content, bounds, no trace on a loaded capture, every listener removed."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (sequential CI release, one service)"
+      ],
+      "routes": [
+        "SNKRDUNK product pages, unchanged; no new request"
+      ],
+      "dependencies": [
+        "staging after #236"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback. Behaviour unchanged; product_result lines for captures whose prices did not load gain a network trace.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "4405970209b703e6d582fe27f9c5f661dac7e4d4",
+      "procedure": "The rollout captures the live snkrdunk-collector deployment before upload and restores it on failure; afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "Collector errors or log ingestion problems after release.",
+      "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_condition_prices_wait.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/browser.py"
+      ],
+      "observation_window": "Delivery verify; the next SNKRDUNK turn's product_result for work 196 carries the network trace."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "e4942d80-d246-43a4-8722-ef9a6c46c506"
+      }
+    ]
+  },
+  "diff_sha256": "a74c249410a2e816365bdc4dffdae66ea924ebb0d4f8603338e7429988b77884"
+}

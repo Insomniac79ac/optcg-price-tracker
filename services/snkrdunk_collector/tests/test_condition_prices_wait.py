@@ -61,15 +61,25 @@ class FakePage:
                  title="OP01-001"):
         self.status, self.responses, self.renders = status, list(responses), list(renders)
         self.goto_raises, self._title = goto_raises, title
-        self.listeners, self.calls, self.waits = [], [], 0
+        self.handlers, self.calls, self.waits = {}, [], 0
         self.url = None
 
     def on(self, event, callback):
-        assert event == "response"
-        self.listeners.append(callback)
+        assert event in {"response", "request", "requestfailed"}
+        self.handlers.setdefault(event, []).append(callback)
 
     def remove_listener(self, event, callback):
-        self.listeners.remove(callback)
+        self.handlers[event].remove(callback)
+
+    @property
+    def listeners(self):
+        return self.handlers.get("response", [])
+
+    def all_listeners(self):
+        return [h for hs in self.handlers.values() for h in hs]
+
+    def evaluate(self, script):
+        return {"visibility": "visible", "perf_fetch": [], "perf_fetch_total": 0}
 
     def _fire(self):
         for response, after in list(self.responses):
@@ -370,3 +380,48 @@ def test_body_listings_is_telemetry_and_never_says_nothing_is_listed(body, price
 @pytest.mark.parametrize("text", ["<html>", "", None, "[" * 100_000])
 def test_body_listings_rejects_non_json(text):
     assert browser.body_listings(text) == {"body_json": False, "body_listings": "unconfirmed"}
+
+
+def test_a_capture_whose_prices_did_not_load_logs_what_the_page_requested():
+    """Diagnostic (owner 2026-10-28): the trace of non-asset requests rides on the evidence."""
+    page = FakePage()
+    xhr = SimpleNamespace(url="https://snkrdunk.com/v1/apparels/142630/sizes?lang=ja&x=1",
+                          resource_type="fetch", method="GET", failure=None)
+    img = SimpleNamespace(url="https://cdn.snkrdunk.com/a.webp", resource_type="image", method="GET")
+    original = page.goto
+
+    def goto(url, **kwargs):
+        result = original(url, **kwargs)
+        for handler in page.handlers.get("request", []):
+            handler(xhr)
+            handler(img)
+        for handler in page.handlers.get("requestfailed", []):
+            handler(SimpleNamespace(url=xhr.url, resource_type="fetch", method="GET", failure="net::ERR_ABORTED"))
+        return result
+
+    page.goto = goto
+    step, _ = capture(page)
+    network = step["condition_prices"]["network"]
+    assert [(e["ev"], e["path"], e.get("q")) for e in network["entries"]] == [
+        ("req", "/v1/apparels/142630/sizes", ["lang", "x"]),
+        ("fail", "/v1/apparels/142630/sizes", ["lang", "x"]),
+    ]
+    assert network["entries"][1]["fail"] == "net::ERR_ABORTED"
+    assert network["counts"] == {"req:fetch": 1, "req:image": 1, "fail:fetch": 1}
+    assert network["page"]["visibility"] == "visible"
+    assert page.all_listeners() == []
+
+
+def test_a_loaded_capture_carries_no_trace():
+    page = FakePage(responses=[(FakeResponse(), 1)], renders=[(0, page_html(AWAITING)), (2, page_html(RENDERED))])
+    step, _ = capture(page)
+    assert step["condition_prices"]["status"] == "loaded" and "network" not in step["condition_prices"]
+    assert page.all_listeners() == []
+
+
+def test_the_trace_is_bounded():
+    trace = browser.NetworkTrace(clock=lambda: 0.0)
+    for n in range(browser.NETWORK_TRACE_MAX + 5):
+        trace.on_request(SimpleNamespace(url=f"https://snkrdunk.com/v2/x/{n}", resource_type="xhr", method="GET"))
+    summary = trace.summary()
+    assert len(summary["entries"]) == browser.NETWORK_TRACE_MAX and summary["dropped"] == 5
