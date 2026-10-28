@@ -152,6 +152,13 @@ def _snkr_requeue(args, out):
     return snkr_requeue.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
 
 
+def _mv_freeze_legacy(args, out):
+    from ops import mv_freeze_legacy
+    if args.count is not None:
+        raise common.Refused("market-value-freeze-legacy takes no count: it plans every unfrozen revision")
+    return mv_freeze_legacy.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
+
+
 def _catalogue_import(args, out):
     from ops import catalogue_import
     if args.count is not None:
@@ -190,6 +197,7 @@ RUNBOOKS = {
     # SNKRDUNK refresh work refused by the 2026-10-26 class-name parser bug, back to the queue
     # (canary with count 1, then the rest); the collectors serve it.
     "snkr-parser-requeue": ("write", True, _snkr_requeue),
+    "market-value-freeze-legacy": ("write", False, _mv_freeze_legacy),
 }
 
 

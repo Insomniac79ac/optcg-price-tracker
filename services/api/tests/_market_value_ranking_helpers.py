@@ -105,5 +105,25 @@ def seed_rankings(db, *, prior_shift=0, identity_offset=0, flat=False):
         for draft in build_market_value_point_drafts(loaded)
     ]
     db.add_all(points)
+    freeze_replayed_membership(db, loaded)
     db.commit()
     return points
+
+
+def freeze_replayed_membership(db, loaded):
+    """Freeze the catalogue membership a replay was built with, as every writer
+    of points does (owner plan A, 2026-10-28)."""
+    from app.services import market_value_membership as membership
+
+    membership.store_membership(
+        db,
+        membership.FrozenMembership(
+            loaded.catalogue_membership_revision,
+            loaded.active_prints,
+            tuple(
+                membership.CodedRelease(row.release_product_id, row.official_code)
+                for row in loaded.coded_releases
+            ),
+        ),
+        origin="recovery",
+    )

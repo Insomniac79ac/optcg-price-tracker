@@ -37,9 +37,11 @@ parameters:
   thresholds as movement, applied to currently priced prints. It does not use
   the 80% comparable-value test because no prior/current panel is involved.
 - Existing archive replay uses one explicitly named digest of the current
-  corrected active catalogue and release FKs. Future published points must
-  freeze their own membership revision; a later correction applies forward
-  and cannot silently rewrite already published history.
+  corrected active catalogue and release FKs. Published points freeze their own
+  membership (`market_value_memberships`, owner plan A 2026-10-28); a later
+  correction applies forward and cannot silently rewrite already published
+  history. The engine compares each release scope's own member digest, so only
+  a release whose prints changed starts a new segment.
 
 ## Two separate measurements
 

@@ -5,7 +5,7 @@ from datetime import timedelta
 from decimal import Decimal, localcontext
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete as sa_delete, select
 
 from app.models import CardPrint, MarketIndexSnapshot
 from app.models.market_value_point import MarketValuePoint
@@ -218,11 +218,15 @@ def test_archive_change_fails_closed_without_reimplementing_comparability(
     "fn", [service.get_market_value_movers, service.get_market_value_most_valuable]
 )
 @pytest.mark.parametrize("release_id", [None, 1])
-@pytest.mark.parametrize("change", ["fk", "active", "verified", "language", "digest"])
-def test_frozen_membership_mismatch_fails_closed(ranked_db, fn, release_id, change):
-    p = ranked_db.get(
-        CardPrint, 300
-    )  # Outside OP-01: initial replay used a GLOBAL digest.
+@pytest.mark.parametrize("change", ["fk", "active", "verified", "language", "new_print"])
+def test_catalogue_changes_after_publication_do_not_change_the_frozen_basket(
+    ranked_db, fn, release_id, change
+):
+    """Owner plan A (2026-10-28): a published day keeps the membership it was
+    published with; a later catalogue import or correction no longer turns the
+    rankings into a 503."""
+    before = fn(ranked_db, release_product_id=release_id).model_dump()
+    p = ranked_db.get(CardPrint, 30 if release_id else 300)
     if change == "fk":
         p.release_product_id = 5
     elif change == "active":
@@ -232,7 +236,57 @@ def test_frozen_membership_mismatch_fails_closed(ranked_db, fn, release_id, chan
     elif change == "language":
         p.language = "en"
     else:
+        ranked_db.add(
+            CardPrint(
+                id=999,
+                canonical_card_id=300,
+                language="jp",
+                release_product_id=1,
+                official_asset_variant="base",
+                artwork_key="b" * 64,
+                verification_status="verified",
+                is_active=True,
+            )
+        )
+    ranked_db.commit()
+    after = fn(ranked_db, release_product_id=release_id).model_dump()
+    if change == "fk" and fn is service.get_market_value_movers:
+        # Labels are current: a moved print shows its new release's label, but
+        # the ranked basket, values and panel are the frozen ones.
+        for row in (*before["movers"], *after["movers"]):
+            row.pop("release_product_id"), row.pop("release_code"), row.pop("release_name")
+    if change == "fk" and fn is service.get_market_value_most_valuable:
+        for row in (*before["items"], *after["items"]):
+            row.pop("release_product_id"), row.pop("release_code"), row.pop("release_name")
+    assert after == before
+
+
+@pytest.mark.parametrize(
+    "fn", [service.get_market_value_movers, service.get_market_value_most_valuable]
+)
+@pytest.mark.parametrize("release_id", [None, 1])
+@pytest.mark.parametrize("change", ["digest", "tampered", "missing"])
+def test_frozen_membership_mismatch_fails_closed(ranked_db, fn, release_id, change):
+    from app.models.market_value_membership import (
+        MarketValueMembership,
+        MarketValueMembershipPrint,
+        MarketValueMembershipRelease,
+    )
+
+    if change == "digest":
         point(ranked_db, release_id).membership_revision = "wrong"
+    elif change == "tampered":
+        ranked_db.delete(
+            ranked_db.scalars(
+                select(MarketValueMembershipPrint).where(
+                    MarketValueMembershipPrint.card_print_id == 300
+                )
+            ).one()
+        )
+    else:
+        ranked_db.execute(sa_delete(MarketValueMembershipPrint))
+        ranked_db.execute(sa_delete(MarketValueMembershipRelease))
+        ranked_db.execute(sa_delete(MarketValueMembership))
     ranked_db.commit()
     with pytest.raises(
         service.MarketValueIntegrityError, match="membership_revision_mismatch"
@@ -455,3 +509,54 @@ def test_membership_serializer_is_byte_identical_and_order_independent():
         membership_revision([ActivePrintIdentity(3, 4), ActivePrintIdentity(1, 2)])
         == expected
     )
+
+
+def test_movers_across_a_membership_change_use_each_days_own_basket(ranked_db):
+    """Owner plan A (2026-10-28): the prior day is ranked with its own frozen
+    membership and the current day with its own, so an import between the two
+    days neither breaks nor alters the Overall movers."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.services import market_value_membership as membership
+    from app.services.market_value_replay import (
+        build_frozen_point_drafts,
+        load_frozen_replay_input,
+    )
+
+    before = service.get_market_value_movers(ranked_db).model_dump()
+    prior_revision = point(ranked_db).membership_revision
+    m1 = membership.load_membership(ranked_db, prior_revision)
+    ranked_db.add(  # imported after the prior day; never priced
+        CardPrint(
+            id=999,
+            canonical_card_id=300,
+            language="jp",
+            release_product_id=2,
+            official_asset_variant="p9",
+            artwork_key="c" * 64,
+            verification_status="verified",
+            is_active=True,
+            created_at=datetime.now(timezone.utc) + timedelta(days=1),
+        )
+    )
+    ranked_db.execute(sa_delete(MarketValuePoint).where(MarketValuePoint.point_date == AS_OF))
+    ranked_db.flush()
+    m2 = membership.live_membership(ranked_db)
+    membership.store_membership(ranked_db, m2, origin="publication")
+    drafts = build_frozen_point_drafts(
+        load_frozen_replay_input(ranked_db, {PRIOR: m1, AS_OF: m2})
+    )
+    ranked_db.add_all(
+        MarketValuePoint(**d.values()) for d in drafts if d.point_date == AS_OF
+    )
+    ranked_db.commit()
+    assert point(ranked_db).membership_revision == m2.revision != prior_revision
+    after = service.get_market_value_movers(ranked_db).model_dump()
+    assert after["available"] and after["prior_date"] == PRIOR
+    assert after["movers"] == before["movers"] and after["panel"] == before["panel"]
+    # Release 1 did not change: still publishable. Release 2 gained a print: its
+    # chain restarts, so it has no publishable step to rank.
+    assert service.get_market_value_movers(ranked_db, release_product_id=1).available
+    assert not service.get_market_value_movers(ranked_db, release_product_id=2).available
+    most = service.get_market_value_most_valuable(ranked_db, limit=50)
+    assert most.as_of == AS_OF and most.total_eligible == point(ranked_db).priced_print_count

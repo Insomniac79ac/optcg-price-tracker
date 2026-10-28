@@ -40,6 +40,9 @@ def replay_loader(monkeypatch):
         return _bounded_fixture(through)
 
     monkeypatch.setattr(writer, "load_market_value_replay_input", load)
+    # Synthetic catalogue (no card_prints rows): nothing to freeze; covered by the
+    # publication tests on a real catalogue.
+    monkeypatch.setattr(writer.membership, "schema_present", lambda _db: False)
     return calls
 
 
