@@ -1,6 +1,6 @@
-"""snkr-parser-requeue: reopen SNKRDUNK refresh work refused by the class-name parser bug (owner-gated).
+"""snkr-parser-requeue: reopen SNKRDUNK refresh work refused by the 2026-10-26 parser bugs (owner-gated).
 
-Owner decision 2026-10-27 (perfectionist): a canary first, then the rest. The plan is
+Owner decisions 2026-10-27/28 (perfectionist): a canary first, then the rest. The plan is
 app.services.snkr_parser_requeue.preview (read-only, verified staging connection); the apply
 re-runs it under row locks and writes only the approved plan. No source request.
 

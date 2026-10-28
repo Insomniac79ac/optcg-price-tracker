@@ -290,19 +290,28 @@ clearing the pause blindly (owner decision 2026-10-26, perfectionist).
    `db-diagnostic work-by-state`.
 
 `snkr-parser-requeue` (`scripts/ops/snkr_requeue.py`, plan in `app.services.snkr_parser_requeue`):
-SNKRDUNK renamed its CSS-module classes on 2026-10-26 ~08:29Z; until #223's fix reached every
-collector (#224, 2026-10-27 07:04Z) each refresh was refused `main_image_not_found` and its work
-blocked, and blocked work is never retried on its own. Owner decision 2026-10-27 (perfectionist):
+SNKRDUNK changed its product page on 2026-10-26 ~08:29Z. Refused work is blocked, and blocked work
+is never retried on its own. Two parser windows refused work:
+
+- 2026-10-26 08:00Z to 2026-10-27 07:04Z: renamed CSS-module classes, refused
+  `main_image_not_found` (#223, released by #224).
+- 2026-10-27 07:04Z to 2026-10-28 06:49Z: photo named by reference and prices loaded after the
+  page, refused `artwork_not_confirmed_match:placeholder_image_url;no_raw_condition_price_available`
+  (#231, snkrdunk-collector on it at 06:49Z).
+
+Owner decisions 2026-10-27/28 (perfectionist):
 
 1. `count=1` (canary): reopens the one refused item with the newest earlier clean capture. Refused
    while an earlier requeue is still open or once the fix is already proven.
 2. `count` empty (rest): needs proof (a refused item has captured a price on the new code since
-   07:04Z) and nothing refused again on the new code; reopens every remaining refused item.
+   2026-10-28 06:49Z) and nothing refused again on the new code; reopens every remaining refused
+   item.
 
-Only work refused for exactly that reason between 2026-10-26 08:00Z and 2026-10-27 07:04Z is
-eligible; older quarantine is never touched. Dry run lists the work ids and `plan_sha256`; apply
-with that SHA re-runs the plan under row locks and writes only it (state pending, due now, the
-original reason kept behind a requeue marker in `last_failure`). No source request.
+Only work whose latest refusal falls in one window with exactly that window's reasons is eligible;
+older quarantine and genuine mismatches are never touched. Dry run lists the work ids and
+`plan_sha256`; apply with that SHA re-runs the plan under row locks and writes only it (state
+pending, due now, the original reason kept behind a requeue marker in `last_failure`). No source
+request.
 
 Every run waits for the owner's approval in `staging-ops` before it gets credentials. Checked at
 dispatch and again right before the runbook runs:

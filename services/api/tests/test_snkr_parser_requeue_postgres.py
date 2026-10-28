@@ -194,3 +194,39 @@ def test_bad_inputs_are_refused(db):
     factory, source, mapping_id, print_id = db
     assert preview(factory, "everything")[1] == ["mode must be canary or rest"]
     assert preview(factory, "rest", count=0)[1][0].startswith("count must be")
+
+
+WINDOW_2 = rq.RELEASE_1 + timedelta(hours=5)
+PLACEHOLDER = rq.PLACEHOLDER_REASON + ";" + rq.NO_PRICE  # the first canary's refusal (2026-10-27 12:00Z)
+
+
+def test_the_second_windows_placeholder_refusal_is_eligible(db):
+    factory, source, mapping_id, print_id = db
+    first = refuse(factory, source, mapping_id)
+    second = refuse(factory, source, mapping(factory, source, print_id, 5001), at=WINDOW_2, reason=PLACEHOLDER)
+    plan_, problems, facts = preview(factory, "canary")
+    assert problems == [] and facts["candidates"] == 2 and facts["refused_on_new_code"] == []
+    assert set(plan_["work_ids"]) <= {first, second}
+
+
+def test_each_window_accepts_only_its_own_reasons(db):
+    factory, source, mapping_id, print_id = db
+    refuse(factory, source, mapping_id, at=WINDOW_2)  # window-1 reason, refused in window 2
+    refuse(factory, source, mapping(factory, source, print_id, 5101), reason=PLACEHOLDER)  # window-2 reason in window 1
+    refuse(factory, source, mapping(factory, source, print_id, 5102), at=WINDOW_2,
+           reason=PLACEHOLDER + ";title_mismatch:other card")
+    refuse(factory, source, mapping(factory, source, print_id, 5103), at=rq.RELEASE_AT + timedelta(minutes=5),
+           reason=PLACEHOLDER)  # on the new code
+    good = refuse(factory, source, mapping(factory, source, print_id, 5104), at=WINDOW_2, reason=PLACEHOLDER)
+    plan_, problems, facts = preview(factory, "canary")
+    assert plan_ is None and any("refused again on the new code" in p for p in problems)
+    assert facts["candidates"] == 1
+    with factory() as session:
+        assert [w.id for w in rq._candidates(session, rq._source_id(session))] == [good]
+
+
+def test_a_refusal_in_the_second_window_is_not_on_the_new_code(db):
+    factory, source, mapping_id, print_id = db
+    refuse(factory, source, mapping_id, at=WINDOW_2, reason=PLACEHOLDER)
+    _, problems, facts = preview(factory, "canary")
+    assert problems == [] and facts["refused_on_new_code"] == []
