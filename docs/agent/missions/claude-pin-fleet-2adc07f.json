@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "mission": "Pin snkr_component in STAGING_FLEET.json to 2adc07f (the #231 merge), whose staging-automerge rolled the SNKRDUNK prices-after-load fix out to snkrdunk-collector (deployed 2026-10-28 06:48Z) and passed its delivery verify. Required as the next staging merge after a collector delivery.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "snkr_component 64961a0 -> 2adc07f; nothing else changes (yuyu_reader_component stays 64961a0: the Yuyu collectors were not released)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Verify staging merge expectations for the collector fleet"
+      ],
+      "routes": [
+        "Fleet state only; no runtime route"
+      ],
+      "dependencies": [
+        "staging at 2adc07f (#231 delivered)"
+      ],
+      "deployment_impact": "No collector rollout, no service change: records the fleet the #231 delivery produced.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "2adc07f97d22bb04c44d8cb78a319ffc7c78eb1a",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "Verify staging merge reports an unexpected collector source after this merge.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "observation_window": "This merge's delivery verify (SNKR component check at 2adc07f)."
+    }
+  },
+  "diff_sha256": "pending"
+}
