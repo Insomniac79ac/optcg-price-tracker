@@ -1,12 +1,19 @@
-"""Return SNKRDUNK refresh work refused by the class-name parser bug to the queue (owner-gated).
+"""Return SNKRDUNK refresh work refused by the 2026-10-26 parser bugs to the queue (owner-gated).
 
-SNKRDUNK renamed its CSS-module classes on 2026-10-26 (~08:29Z). Until the fix (#223, released
-by #224; every collector on it by 2026-10-27 07:04Z) the parser found no main image, so every
-refresh was settled as identity_refusal, and identity_refusal blocks its work: 284 items, all with
-the reason main_image_not_found:expected_exactly_one_mainImage_img. Blocked work is never retried
-on its own, so SNKRDUNK had nothing left to refresh.
+SNKRDUNK changed its product page on 2026-10-26 (~08:29Z), in two ways that the collector fixed
+in two releases. Refused work is blocked (identity_refusal blocks its work) and never retried on
+its own, so each refusal stays until this runbook reopens it.
 
-Owner decision 2026-10-27 (perfectionist): one canary first, then the rest.
+- Window 1, [CHANGE_AT, RELEASE_1): the CSS-module classes were renamed and the parser found no
+  main image. 284 items read REASON;artwork_not_confirmed_match:missing_image_url;
+  no_raw_condition_price_available. Fixed by #223, released by #224 (every collector on it by
+  2026-10-27 07:04Z).
+- Window 2, [RELEASE_1, RELEASE_AT): the photo component was named by reference and every price
+  arrived after load, so the page read as a placeholder photo with no price
+  (artwork_not_confirmed_match:placeholder_image_url;no_raw_condition_price_available; the first
+  canary, work 196). Fixed by #231 (snkrdunk-collector on it at 2026-10-28 06:49Z).
+
+Owner decisions 2026-10-27/28 (perfectionist): one canary first, then the rest.
 
 - canary (count 1): reopens the one refused item whose last clean capture is newest. Refused while
   an earlier requeue has not settled, once the fix is proven, or after any refusal on the new code.
@@ -14,13 +21,13 @@ Owner decision 2026-10-27 (perfectionist): one canary first, then the rest.
   captured a price on the new code) and refuses if anything was refused on the new code. Reopens
   the remaining refused items.
 
-Only work refused between CHANGE_AT and RELEASE_AT whose reason holds REASON and nothing beyond
-the parser bug's own companions is eligible: older quarantine, genuine mismatches and any refusal
-on the new code are never touched. A refusal on the new code stops both modes for good (it needs
-investigating; this runbook does not get past it). Reopening sets the work pending and
-due now; nothing else changes and no request is made. The work's last_failure records the requeue
-(the original reason stays in it) so an open requeue is visible. preview() is read-only; apply()
-re-runs it under row locks and writes only the approved plan.
+Only work whose latest refusal falls in one window and whose reason is exactly that window's
+parser-bug reason set is eligible: older quarantine, genuine mismatches and any refusal on the
+new code (claimed at or after RELEASE_AT) are never touched. A refusal on the new code stops both
+modes for good (it needs investigating; this runbook does not get past it). Reopening sets the
+work pending and due now; nothing else changes and no request is made. The work's last_failure
+records the requeue (the original reason stays in it) so an open requeue is visible. preview()
+is read-only; apply() re-runs it under row locks and writes only the approved plan.
 """
 
 from __future__ import annotations
@@ -35,15 +42,20 @@ from app.services.freshness_policy import require_utc, utc_now
 
 SOURCE = "snkrdunk"
 CHANGE_AT = datetime(2026, 10, 26, 8, 0, tzinfo=timezone.utc)
-RELEASE_AT = datetime(2026, 10, 27, 7, 4, tzinfo=timezone.utc)
+RELEASE_1 = datetime(2026, 10, 27, 7, 4, tzinfo=timezone.utc)
+RELEASE_AT = datetime(2026, 10, 28, 6, 49, tzinfo=timezone.utc)
 REASON = "main_image_not_found:expected_exactly_one_mainImage_img"
-# Every reason the broken parser produced alongside REASON (measured on staging 2026-10-27: all 284
-# rows read REASON;artwork_not_confirmed_match:missing_image_url;no_raw_condition_price_available).
-# A row whose reason carries anything else (a genuine title or card-code mismatch) is not reopened.
-PARSER_BUG_REASONS = frozenset({
-    REASON, "artwork_not_confirmed_match:missing_image_url", "no_raw_condition_price_available",
-})
-MARKER = "requeued after SNKRDUNK class-name fix (owner 2026-10-27): "
+PLACEHOLDER_REASON = "artwork_not_confirmed_match:placeholder_image_url"
+NO_PRICE = "no_raw_condition_price_available"
+# (start, end, leading reason, every reason the broken parser produced in that window). Measured
+# on staging: window 1 all 284 rows; window 2 the canary (2026-10-27 12:00Z). A row whose reason
+# carries anything else (a genuine title or card-code mismatch) is not reopened.
+WINDOWS = (
+    (CHANGE_AT, RELEASE_1, REASON,
+     frozenset({REASON, "artwork_not_confirmed_match:missing_image_url", NO_PRICE})),
+    (RELEASE_1, RELEASE_AT, PLACEHOLDER_REASON, frozenset({PLACEHOLDER_REASON, NO_PRICE})),
+)
+MARKER = "requeued after SNKRDUNK parser fixes (owner 2026-10-28): "
 MAX_COUNT = 500
 PLAN_KEYS = ("source_id", "mode", "work_ids")
 
@@ -64,13 +76,19 @@ def _attempted_on_new_code(outcomes):
     )
 
 
-def _parser_bug_reason(failure):
+def _parser_bug_reason(failure, at):
+    """Exactly the parser bug's reasons for the window this refusal fell in. A reason that carries
+    the requeue MARKER is not a refusal (the item was reopened since), so it never matches."""
     parts = (failure or "").split(";")
-    return parts[0] == REASON and set(parts) <= PARSER_BUG_REASONS
+    return at is not None and any(
+        start <= at < end and parts[0] == lead and set(parts) <= allowed
+        for start, end, lead, allowed in WINDOWS
+    )
 
 
 def _refused_in_window():
-    """A refresh work row with an identity_refusal attempt finished in [CHANGE_AT, RELEASE_AT)."""
+    """A refresh work row with an identity_refusal attempt finished in [CHANGE_AT, RELEASE_AT)
+    (either window)."""
     return exists().where(
         FreshnessAttempt.work_id == FreshnessWork.id,
         FreshnessAttempt.outcome == "identity_refusal",
@@ -91,7 +109,6 @@ def _candidates(db, source_id, *, lock=False):
             FreshnessWork.state == "blocked",
             FreshnessWork.claim_token.is_(None),
             FreshnessWork.last_outcome == "identity_refusal",
-            FreshnessWork.last_failure.startswith(REASON, autoescape=True),
             FreshnessWork.last_failure_at >= CHANGE_AT,
             FreshnessWork.last_failure_at < RELEASE_AT,
         )
@@ -99,7 +116,7 @@ def _candidates(db, source_id, *, lock=False):
     )
     if lock:
         query = query.with_for_update()
-    return [w for w in db.scalars(query) if _parser_bug_reason(w.last_failure)]
+    return [w for w in db.scalars(query) if _parser_bug_reason(w.last_failure, w.last_failure_at)]
 
 
 def _eligible(db, work):
