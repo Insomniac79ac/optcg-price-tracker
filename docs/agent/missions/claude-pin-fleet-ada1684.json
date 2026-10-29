@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "mission": "Pin snkr_component and yuyu_reader_component in STAGING_FLEET.json to ada1684 (the #242 merge), whose staging-automerge released all ten collectors (13 Claude identity proofs) and passed its delivery verify (CI run 40847357978, staging-automerge success 2026-10-29 10:05Z). Required as the next staging merge after a collector delivery.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "snkr_component and yuyu_reader_component 9ec8b32 -> ada1684; nothing else changes (both were released by #242)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Verify staging merge expectations for the collector fleet"
+      ],
+      "routes": [
+        "Fleet state only; no runtime route"
+      ],
+      "dependencies": [
+        "staging at ada1684 or later (#242 delivered)"
+      ],
+      "deployment_impact": "No collector rollout, no service change: records the fleet the #242 delivery produced.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "ada16845b9152fb9b4140cbb224a9db7fb08dc10",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "Verify staging merge reports an unexpected collector source after this merge.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "observation_window": "This merge's delivery verify (SNKR and Yuyu reader component checks at ada1684)."
+    }
+  },
+  "diff_sha256": "2456097346689639f67a19293af9cbc96bd0fde7e3fdfd891c76130487ded872"
+}
