@@ -22862,6 +22862,662 @@
         ],
         "new_visual_review_claimed": false
       }
+    },
+    {
+      "capture_scope": "yuyu-identity:157:sha256:20dd050fc04d9d731742593e017bc965d79ed950faaf63307fd47da4dd20a40b",
+      "source_candidate_id": 157,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10152",
+      "baseline_evidence_digest": "20dd050fc04d9d731742593e017bc965d79ed950faaf63307fd47da4dd20a40b",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4308,
+      "considered_print_ids": [
+        4307,
+        4308,
+        4309,
+        4310,
+        4311
+      ],
+      "positive_physical_basis": "Source shows Luffy three-quarter turned with arms crossed and a wide grin, over a pink-red map-textured background with a large Straw Hat jolly roger at upper left, in a green character frame. This full-card illustration and background are official p1.",
+      "excluded_sibling_basis": {
+        "4307": "Base is a different illustration: Luffy throwing a stretched fist toward the viewer over a yellow-green energy background.",
+        "4309": "p2 shares the pose but sits on black-and-white manga panels with speech balloons; the source has no manga panels.",
+        "4310": "p3 shares the pose but has a solid red background with speech balloons and flame motifs and no jolly roger; the source shows the jolly roger and map texture.",
+        "4311": "p4 is a sepia WANTED poster with DEAD OR ALIVE lettering; the source is a full-colour character frame."
+      },
+      "work_id": 3736,
+      "source_product_snapshot_id": 64566,
+      "source_product_content_hash": "8600dfb1307f478f9e1866f279d230718b657f50bce69529dcfe45fee4b96553",
+      "source_image_snapshot_id": 64567,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10152.jpg",
+      "source_body_sha256": "1dbb789edfc5ec79f53a03b5d9ac88fc2adf52ba01823a38945b96f6ea3d625f",
+      "official_images": [
+        {
+          "card_print_id": 4307,
+          "raw_snapshot_id": 64568,
+          "official_asset_variant": "base",
+          "body_sha256": "b2c627ffcc41fb13dd94bf9432ec76955453198e10b527c6bf68a31f27843f57"
+        },
+        {
+          "card_print_id": 4308,
+          "raw_snapshot_id": 64569,
+          "official_asset_variant": "p1",
+          "body_sha256": "eeece4740cd51d7d9e9416ca767f5f2b81da09aa3be0ae3d173caea1c036eaaf"
+        },
+        {
+          "card_print_id": 4309,
+          "raw_snapshot_id": 64570,
+          "official_asset_variant": "p2",
+          "body_sha256": "1216da9ca90ba4c61c9be37a7d0cbb08cd1a62bfd8251d1f5eceedcd91a62467"
+        },
+        {
+          "card_print_id": 4310,
+          "raw_snapshot_id": 64571,
+          "official_asset_variant": "p3",
+          "body_sha256": "2c54bb54e5cce4eb212a48518693285dd6649886bbaf26c62cc7a88cf4b37926"
+        },
+        {
+          "card_print_id": 4311,
+          "raw_snapshot_id": 64572,
+          "official_asset_variant": "p4",
+          "body_sha256": "28b0007d7b2416f8121567aca0e2b5ec9ff305a7843c176d8f241b4196c35680"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:160:sha256:41068c95b52130211e674eb20a31bb2431fe170da8123549e2622902eeec6a03",
+      "source_candidate_id": 160,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10156",
+      "baseline_evidence_digest": "41068c95b52130211e674eb20a31bb2431fe170da8123549e2622902eeec6a03",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4313,
+      "considered_print_ids": [
+        4312,
+        4313,
+        4314,
+        4315,
+        4316
+      ],
+      "positive_physical_basis": "Source shows Ace with one hand on his goggled hat brim, bead necklace, over a pale map-textured background with the Whitebeard jolly roger at upper left, in a blue character frame. This full-card illustration and background are official p1.",
+      "excluded_sibling_basis": {
+        "4312": "Base is a different illustration: Ace shouting with one arm thrust out through orange flame streaks.",
+        "4314": "p2 shares the pose but sits on black-and-white manga panels with speech balloons; the source has no manga panels.",
+        "4315": "p3 shares the pose but has a solid red background with speech balloons and flame motifs and no jolly roger; the source shows the jolly roger and map texture.",
+        "4316": "p4 is a sepia WANTED poster with DEAD OR ALIVE lettering; the source is a full-colour character frame."
+      },
+      "work_id": 3737,
+      "source_product_snapshot_id": 64574,
+      "source_product_content_hash": "f5aec5bcdce4897f0141e8f27856bbe4e27088080c3050bd5e6d58ce3cc4c270",
+      "source_image_snapshot_id": 64575,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10156.jpg",
+      "source_body_sha256": "d565818b6d005859836e0ae9c05a6c66edfd350e27fe6db724a8eea3cb5a8918",
+      "official_images": [
+        {
+          "card_print_id": 4312,
+          "raw_snapshot_id": 64576,
+          "official_asset_variant": "base",
+          "body_sha256": "02dcf38a81c441fc150092996f3335f7cfaa32aae68b2b7c2436f2b326c25f0c"
+        },
+        {
+          "card_print_id": 4313,
+          "raw_snapshot_id": 64577,
+          "official_asset_variant": "p1",
+          "body_sha256": "337738ca73f6673c500c478281dc96302d6d5a8238d4855a3e1e2074d6663318"
+        },
+        {
+          "card_print_id": 4314,
+          "raw_snapshot_id": 64578,
+          "official_asset_variant": "p2",
+          "body_sha256": "cb1d5a5c0b5f44d1182c293f9e4b845295f5a87f1c9b5fda3492135e7b6f87f6"
+        },
+        {
+          "card_print_id": 4315,
+          "raw_snapshot_id": 64579,
+          "official_asset_variant": "p3",
+          "body_sha256": "3615907a31c6bf8fd2ec8938d2192f781c7b43de49d60627dac52fe36bd7b77a"
+        },
+        {
+          "card_print_id": 4316,
+          "raw_snapshot_id": 64580,
+          "official_asset_variant": "p4",
+          "body_sha256": "f8e12bb0d0b39e5ca77abefa5dd6a86d8192bc3ecbcc89035b1127c0a9930193"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:163:sha256:b24cd575d2d57c84416eadb097212bce6f504e30c28d9f75433752c7746080f3",
+      "source_candidate_id": 163,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10160",
+      "baseline_evidence_digest": "b24cd575d2d57c84416eadb097212bce6f504e30c28d9f75433752c7746080f3",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4318,
+      "considered_print_ids": [
+        4317,
+        4318,
+        4319,
+        4320,
+        4321
+      ],
+      "positive_physical_basis": "Source shows Sabo standing with a pipe over his shoulder and goggles at his neck, over a pale blue map-textured background with the Revolutionary Army emblem at upper left, in a black character frame. This full-card illustration and background are official p1.",
+      "excluded_sibling_basis": {
+        "4317": "Base is a different illustration: Sabo in a top hat lunging through red and gold flame streaks.",
+        "4319": "p2 shares the pose but sits on black-and-white manga panels with speech balloons; the source has no manga panels.",
+        "4320": "p3 shares the pose but has a solid red background with speech balloons and flame motifs and no emblem; the source shows the emblem and map texture.",
+        "4321": "p4 is a sepia WANTED poster with DEAD OR ALIVE lettering; the source is a full-colour character frame."
+      },
+      "work_id": 3738,
+      "source_product_snapshot_id": 64582,
+      "source_product_content_hash": "5bd7a4f38c53edfaa1f62b08654569d57b96443b50ba3e2f2f6c289709e99b0b",
+      "source_image_snapshot_id": 64583,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10160.jpg",
+      "source_body_sha256": "d7b8c2fe7233e63374887b25f3d6a1d7d4bdc46458ee3f657976a3dcf7148f82",
+      "official_images": [
+        {
+          "card_print_id": 4317,
+          "raw_snapshot_id": 64584,
+          "official_asset_variant": "base",
+          "body_sha256": "7b282fa611b0841f2ea621994c54bf1210ef08a6a6777d71dfc861a44ac20bf3"
+        },
+        {
+          "card_print_id": 4318,
+          "raw_snapshot_id": 64585,
+          "official_asset_variant": "p1",
+          "body_sha256": "32d77613c0db7760e4618fb125c766b78c378fd93471c63d3bd2acf5001098a6"
+        },
+        {
+          "card_print_id": 4319,
+          "raw_snapshot_id": 64586,
+          "official_asset_variant": "p2",
+          "body_sha256": "0ddbb13c9a643ec49abc6ca2d3a6f895d6bbdab2bd6f93bd6322a09e03c4c9d2"
+        },
+        {
+          "card_print_id": 4320,
+          "raw_snapshot_id": 64587,
+          "official_asset_variant": "p3",
+          "body_sha256": "a3637f5111b8b5627f37b61e02e78ecb5c7bb3eb5d51f98fcb21f31537a69940"
+        },
+        {
+          "card_print_id": 4321,
+          "raw_snapshot_id": 64588,
+          "official_asset_variant": "p4",
+          "body_sha256": "b4efa8f14afa2297c90ead6aad50a274256fe79602bef6b740b1fefc7471f5c8"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:194:sha256:2f511e4a17d493d05e03108b8217ad4eefb14666ed19738626e5a81fc044c3a9",
+      "source_candidate_id": 194,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10098",
+      "baseline_evidence_digest": "2f511e4a17d493d05e03108b8217ad4eefb14666ed19738626e5a81fc044c3a9",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4254,
+      "considered_print_ids": [
+        4253,
+        4254,
+        4255
+      ],
+      "positive_physical_basis": "Source shows the monstrous form with red mane and skeletal jaw on a dark blue background, with a plain black cost circle, plain grey border and a black name plate with white name text. Official p1 is this full card.",
+      "excluded_sibling_basis": {
+        "4253": "Base is a different illustration: the bald human figure in round glasses drawing a sword, in a white frame.",
+        "4255": "p2 shares the illustration but has the cost in red inside a compass-star emblem, red lightning lines across the art, a patterned border and a red name plate; the source has none of these."
+      },
+      "work_id": 3754,
+      "source_product_snapshot_id": 64679,
+      "source_product_content_hash": "5bef336e4c54e4ff7b3a7872419024f98a5e41b73c9db6b0c41bae86d46e5263",
+      "source_image_snapshot_id": 64680,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10098.jpg",
+      "source_body_sha256": "893d4095b275716df466a400e60c2dbed0f7f7a7c3e252a9fccf8d307bbf1216",
+      "official_images": [
+        {
+          "card_print_id": 4253,
+          "raw_snapshot_id": 64681,
+          "official_asset_variant": "base",
+          "body_sha256": "b65f1b70836e0adf4899d4bcc4498828c186fdb3012595d23942b7a5806d366f"
+        },
+        {
+          "card_print_id": 4254,
+          "raw_snapshot_id": 64682,
+          "official_asset_variant": "p1",
+          "body_sha256": "c1fbf331b795837581a0afeccbe679e90b04cd99e24b3b9960cfd7f502302ff2"
+        },
+        {
+          "card_print_id": 4255,
+          "raw_snapshot_id": 64683,
+          "official_asset_variant": "p2",
+          "body_sha256": "61b3307eba2b9d9abe5e99d72917148dd8a6a0c0d0e082a217f9f83cc1059c02"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:196:sha256:38934f72ee7f71ae78c4398969e36b464fe9b01350bd72a76d128e370822ab84",
+      "source_candidate_id": 196,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10104",
+      "baseline_evidence_digest": "38934f72ee7f71ae78c4398969e36b464fe9b01350bd72a76d128e370822ab84",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4260,
+      "considered_print_ids": [
+        4259,
+        4260,
+        4261
+      ],
+      "positive_physical_basis": "Source shows the purple many-legged creature form with a yellow eye and orange flame accents, with a plain black cost circle, plain grey border and a black name plate with white name text. Official p1 is this full card.",
+      "excluded_sibling_basis": {
+        "4259": "Base is a different illustration: the human figure with white curled hair leaning on a cane against a blue background.",
+        "4261": "p2 shares the illustration but has the cost in red inside a compass-star emblem, red lightning lines across the art, a patterned border and a red name plate; the source has none of these."
+      },
+      "work_id": 3755,
+      "source_product_snapshot_id": 64685,
+      "source_product_content_hash": "0ba604df97193796dbfe32f1849d2482c6d562882c7db421e6d7fe919ab0d686",
+      "source_image_snapshot_id": 64686,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10104.jpg",
+      "source_body_sha256": "b8d798262eb59f12dd55c1f9f12f98fefc58ea798b16b94b5f5679cc2e81fd2c",
+      "official_images": [
+        {
+          "card_print_id": 4259,
+          "raw_snapshot_id": 64687,
+          "official_asset_variant": "base",
+          "body_sha256": "f8f3b2a6abda785ebf02d05d2b14e3ed4b0ee296240a0c442597769aeed60f4c"
+        },
+        {
+          "card_print_id": 4260,
+          "raw_snapshot_id": 64688,
+          "official_asset_variant": "p1",
+          "body_sha256": "e62234ef584586fbf0a723c131124e10e0e6c313273ca7e249f8b0aec0c2e0e2"
+        },
+        {
+          "card_print_id": 4261,
+          "raw_snapshot_id": 64689,
+          "official_asset_variant": "p2",
+          "body_sha256": "f315ec67ed419f8ab23beb2d00e8563192822be6e6eacdaaa3e4be21469df24d"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:198:sha256:aad8e16e071e96c1200c5f358c893a5dfb0504df4c5adc9976b4cd19acba8971",
+      "source_candidate_id": 198,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10107",
+      "baseline_evidence_digest": "aad8e16e071e96c1200c5f358c893a5dfb0504df4c5adc9976b4cd19acba8971",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4263,
+      "considered_print_ids": [
+        4262,
+        4263,
+        4264
+      ],
+      "positive_physical_basis": "Source shows the giant red-orange worm form with a wide toothed mouth and the small human figure at right on purple, with a plain black cost circle, plain grey border and a black name plate with white name text. Official p1 is this full card.",
+      "excluded_sibling_basis": {
+        "4262": "Base is a different illustration: the human figure in a fur-collared coat holding papers in a hall with arched windows.",
+        "4264": "p2 shares the illustration but has the cost in red inside a compass-star emblem, red lightning lines across the art, a patterned border and a red name plate; the source has none of these."
+      },
+      "work_id": 3756,
+      "source_product_snapshot_id": 64691,
+      "source_product_content_hash": "7c4729baa5701eae68c72339f045e294d0c7fca4e965881a4970bd7bc6b4ddc1",
+      "source_image_snapshot_id": 64692,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10107.jpg",
+      "source_body_sha256": "03e82330d1d1b2ecf7e7f15c266cdf14b7161eb539af6b71dde8c39997d8054e",
+      "official_images": [
+        {
+          "card_print_id": 4262,
+          "raw_snapshot_id": 64693,
+          "official_asset_variant": "base",
+          "body_sha256": "8f82bc28fa7cae8e30a56ddba67eba475b8ef4f7423916a22b08804661ada5da"
+        },
+        {
+          "card_print_id": 4263,
+          "raw_snapshot_id": 64694,
+          "official_asset_variant": "p1",
+          "body_sha256": "52823397fd00e4a61e70db6aa402745572bfcdbc79ec389bfc14e8c567af2436"
+        },
+        {
+          "card_print_id": 4264,
+          "raw_snapshot_id": 64695,
+          "official_asset_variant": "p2",
+          "body_sha256": "c32d445236224d2a046d78de4bd559a9c23438895fd956fe24c8d62b4dc6ac7c"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:200:sha256:8fdc7e447b701d4bf362630bc556cd2dbf317ed701129d43e0e68f360fde1bbf",
+      "source_candidate_id": 200,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10114",
+      "baseline_evidence_digest": "8fdc7e447b701d4bf362630bc556cd2dbf317ed701129d43e0e68f360fde1bbf",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4270,
+      "considered_print_ids": [
+        4269,
+        4270,
+        4271
+      ],
+      "positive_physical_basis": "Source shows the tusked boar creature with a teal mane against dark red, with the human face above, a plain black cost circle, plain grey border and a black name plate with white name text. Official p1 is this full card.",
+      "excluded_sibling_basis": {
+        "4269": "Base is a different illustration: the human figure with a white moustache in a suit, a large face behind him, on grey.",
+        "4271": "p2 shares the illustration but has the cost in red inside a compass-star emblem, red lightning lines across the art, a patterned border and a red name plate; the source has none of these."
+      },
+      "work_id": 3757,
+      "source_product_snapshot_id": 64697,
+      "source_product_content_hash": "03a6e136b9d3a83dc0a0133438fb7e5bd9cf142c5c9772686c50d5314f6726bd",
+      "source_image_snapshot_id": 64698,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10114.jpg",
+      "source_body_sha256": "6d4cb88bcbddd3c52e2fd73f6b48b9eb89d81c5eee8be05def5b6147a6cd8b80",
+      "official_images": [
+        {
+          "card_print_id": 4269,
+          "raw_snapshot_id": 64699,
+          "official_asset_variant": "base",
+          "body_sha256": "0e464f99e2ce0abfab15c5b9c72c937813c8740d078aa9e30a02faf589f4c363"
+        },
+        {
+          "card_print_id": 4270,
+          "raw_snapshot_id": 64700,
+          "official_asset_variant": "p1",
+          "body_sha256": "5d5ec29e478b655cc12ebfe2c053742ae774ca07dad56e0b409e5c942e2f73bd"
+        },
+        {
+          "card_print_id": 4271,
+          "raw_snapshot_id": 64701,
+          "official_asset_variant": "p2",
+          "body_sha256": "3c5b8bf4bfe1a5c0ad5e7929c3b3928d671ba68ceceb778e73370a7b0bdf8714"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:202:sha256:7dadf81c87eaf4e4e385dafd1280850bc3e51cd18c87a9eb3caf8a2465734fad",
+      "source_candidate_id": 202,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10118",
+      "baseline_evidence_digest": "7dadf81c87eaf4e4e385dafd1280850bc3e51cd18c87a9eb3caf8a2465734fad",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4274,
+      "considered_print_ids": [
+        4273,
+        4274,
+        4275
+      ],
+      "positive_physical_basis": "Source shows the multicoloured bird creature (red, purple and green feathers, yellow beak) on red, with a plain black cost circle, plain grey border and a black name plate with white name text. Official p1 is this full card.",
+      "excluded_sibling_basis": {
+        "4273": "Base is a different illustration: the white-haired human figure in a long coat against blue.",
+        "4275": "p2 shares the illustration but has the cost in red inside a compass-star emblem, red lightning lines across the art, a patterned border and a red name plate; the source has none of these."
+      },
+      "work_id": 3758,
+      "source_product_snapshot_id": 64703,
+      "source_product_content_hash": "1e11b8ab2e0b5da2b3f1d167c07a0649cd57699af0e6788cef3a21b8420ed989",
+      "source_image_snapshot_id": 64704,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10118.jpg",
+      "source_body_sha256": "a904ccf5443c13f234e376fa710a68b54c2a489320d83c63a4df84698dc85fe2",
+      "official_images": [
+        {
+          "card_print_id": 4273,
+          "raw_snapshot_id": 64705,
+          "official_asset_variant": "base",
+          "body_sha256": "c1f79693e9fbbfc6048826f6acb5714623ecf8bfdb0f20de99e94bcd5339ed76"
+        },
+        {
+          "card_print_id": 4274,
+          "raw_snapshot_id": 64706,
+          "official_asset_variant": "p1",
+          "body_sha256": "9ac8a9beec98b990211d3bac2802542178f436fcdf09d841b0bbf87966c910d4"
+        },
+        {
+          "card_print_id": 4275,
+          "raw_snapshot_id": 64707,
+          "official_asset_variant": "p2",
+          "body_sha256": "50d01acda373afde59360adfbcacd755040da43883d2ab5861935c8e3d1c552b"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:329:sha256:798dd5ba9dbbab63a0805e104a6b70fe006df1b97b9bc54937136f29fb9191b0",
+      "source_candidate_id": 329,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op13/10175",
+      "baseline_evidence_digest": "798dd5ba9dbbab63a0805e104a6b70fe006df1b97b9bc54937136f29fb9191b0",
+      "release_product_id": 182,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4325,
+      "considered_print_ids": [
+        4325,
+        4326
+      ],
+      "positive_physical_basis": "Source shows Shanks with one arm raised in a black cloak inside a red art-nouveau frame with roses, printed in full colour: flesh-tone skin, white shirt, beige trousers with gold roses and green leaves, gold sword hilt, gold CHARACTER and type text. Official p5 is this full-colour gold version.",
+      "excluded_sibling_basis": {
+        "4326": "p6 is the same composition rendered as red line art on white: skin, shirt and trousers drawn in red outline, no green leaves, silver cost number. The source shows full colour."
+      },
+      "work_id": 3767,
+      "source_product_snapshot_id": 64772,
+      "source_product_content_hash": "e15b07f5256093f13d76eb5edfb638b47ce3672273335cf4d38ae8a7761f6d0a",
+      "source_image_snapshot_id": 64773,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op13/10175.jpg",
+      "source_body_sha256": "2c262fa9f0f2090acc99e905d884c381cef292f983208a2aaa04a1c9c6fa1056",
+      "official_images": [
+        {
+          "card_print_id": 4325,
+          "raw_snapshot_id": 64774,
+          "official_asset_variant": "p5",
+          "body_sha256": "e961fef04da8d1f1279db906a66c19520e088915ac92c25c3d41fa82ab4721fe"
+        },
+        {
+          "card_print_id": 4326,
+          "raw_snapshot_id": 64775,
+          "official_asset_variant": "p6",
+          "body_sha256": "4f565a5adada78997d300a0eadc4939e843372bc13891da80e3ef3247676e291"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:564:sha256:b08bbde71251b98b31276d00ccd2485662cfcef654cf03452968fceecf42aae5",
+      "source_candidate_id": 564,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10143",
+      "baseline_evidence_digest": "b08bbde71251b98b31276d00ccd2485662cfcef654cf03452968fceecf42aae5",
+      "release_product_id": 181,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4473,
+      "considered_print_ids": [
+        4472,
+        4473,
+        4474
+      ],
+      "positive_physical_basis": "Source shows Bonney mid-leap with a fist raised and a green cap, among rainbow streaks and soap bubbles, in a green frame. This full-card illustration is official p1.",
+      "excluded_sibling_basis": {
+        "4472": "Base is a different illustration: Bonney eating, surrounded by pizza and other food, in a gold frame.",
+        "4474": "p2 is a different illustration: Bonney carrying a wooden staff over black-and-white manga panels."
+      },
+      "work_id": 3709,
+      "source_product_snapshot_id": 54140,
+      "source_product_content_hash": "a41dfd7cca82d5eef72edd087fedce62bb60a58a994b4b6c837ded3edeadfd80",
+      "source_image_snapshot_id": 54141,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op12/10143.jpg",
+      "source_body_sha256": "c4d888b9c7ad858a82b5e5dd55d1cb899240ce20aceb21abede92bfe68d4020f",
+      "official_images": [
+        {
+          "card_print_id": 4472,
+          "raw_snapshot_id": 54144,
+          "official_asset_variant": "base",
+          "body_sha256": "636f4823613914d147a2f3cc9dd7e2132d7bea5a7a4d52a8686ca38f12f650e9"
+        },
+        {
+          "card_print_id": 4473,
+          "raw_snapshot_id": 54145,
+          "official_asset_variant": "p1",
+          "body_sha256": "c9a65b5a2abb3927c73103a19de0da9d2b3e7cc12243c3c245b47df167bc04a9"
+        },
+        {
+          "card_print_id": 4474,
+          "raw_snapshot_id": 54147,
+          "official_asset_variant": "p2",
+          "body_sha256": "77a7faa6bb7cb5382d2bdd0e19da7992815806ba4421c0e13ef0d40c871387aa"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:716:sha256:5eeac3b55eb5c97e09093fa1391f25a8e3123e7c3b394b84ea86064e6ad2a8ec",
+      "source_candidate_id": 716,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op12/10154",
+      "baseline_evidence_digest": "5eeac3b55eb5c97e09093fa1391f25a8e3123e7c3b394b84ea86064e6ad2a8ec",
+      "release_product_id": 181,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4480,
+      "considered_print_ids": [
+        4480,
+        4481
+      ],
+      "positive_physical_basis": "Source shows Teach with a barrel on a black diamond-pattern background, with gold foil line work along the diagonal bands, gold CHARACTER text, gold type line and gold SP mark. Official p4 is this gold version.",
+      "excluded_sibling_basis": {
+        "4481": "p5 is the same composition with every foil line and text element in silver-grey and no gold; the source shows gold."
+      },
+      "work_id": 3735,
+      "source_product_snapshot_id": 64561,
+      "source_product_content_hash": "a392319e19ab39124e5dac68961e633e9339b8442da7f977d21e2d4ede973987",
+      "source_image_snapshot_id": 64562,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op12/10154.jpg",
+      "source_body_sha256": "5878e618fdb1a57e514dc62ab15138d61c05b55c46a7811e1cbe78cb6322d368",
+      "official_images": [
+        {
+          "card_print_id": 4480,
+          "raw_snapshot_id": 64563,
+          "official_asset_variant": "p4",
+          "body_sha256": "f912d5c1485830d9233ddb9cdba190d0914bc064a1f7d4b9de4fe509dcc620f1"
+        },
+        {
+          "card_print_id": 4481,
+          "raw_snapshot_id": 64564,
+          "official_asset_variant": "p5",
+          "body_sha256": "c0fff5a18282d454931fb77a5f696acb87dd1db0721e87f267587f9af8602f3f"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:719:sha256:5705e1c3e2f3aa53099d6b575d8bfd8a2a21596cf2c8c38fa600dd6df43e1003",
+      "source_candidate_id": 719,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op14/10145",
+      "baseline_evidence_digest": "5705e1c3e2f3aa53099d6b575d8bfd8a2a21596cf2c8c38fa600dd6df43e1003",
+      "release_product_id": 183,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4145,
+      "considered_print_ids": [
+        4144,
+        4145,
+        4146
+      ],
+      "positive_physical_basis": "Source shows Mihawk with his sword raised overhead, red coat and feathered hat, among ice shards over a dark blue sea, in a green frame. This full-card illustration is official p1.",
+      "excluded_sibling_basis": {
+        "4144": "Base is a different illustration: Mihawk in a crouched sword stance with teal slashes, in a gold frame.",
+        "4146": "p2 is a different illustration: Mihawk adjusting his hat over black-and-white manga panels with speech balloons."
+      },
+      "work_id": 3768,
+      "source_product_snapshot_id": 64783,
+      "source_product_content_hash": "3800576b53ef360d1101901dcc5886768c17deb57a952adc545c4b63cd198a2e",
+      "source_image_snapshot_id": 64784,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op14/10145.jpg",
+      "source_body_sha256": "1229fece5a808d8d09ea1505360dd18c603c683afc0cf87338007a9a9e06eae6",
+      "official_images": [
+        {
+          "card_print_id": 4144,
+          "raw_snapshot_id": 64785,
+          "official_asset_variant": "base",
+          "body_sha256": "d1b2e4a70d3f83e30765b43053e96c3a6cb6e5f5675597a7ec59462f059875a1"
+        },
+        {
+          "card_print_id": 4145,
+          "raw_snapshot_id": 64786,
+          "official_asset_variant": "p1",
+          "body_sha256": "09d4d0c467819d15bfed9ea1c26eb120aab332ff1c6cc19f73e9dd528bf5b3e1"
+        },
+        {
+          "card_print_id": 4146,
+          "raw_snapshot_id": 64787,
+          "official_asset_variant": "p2",
+          "body_sha256": "e81df2726dac92e5be9860a7fbdc5a12eb202d8e52fa62df1267ed2e391b6a43"
+        }
+      ]
+    },
+    {
+      "capture_scope": "yuyu-identity:2731:sha256:64f8ac2dfe829da8187e63d1a3b7d3a70de49fb9d07016863b07fe9a8b7db34a",
+      "source_candidate_id": 2731,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op11/10144",
+      "baseline_evidence_digest": "64f8ac2dfe829da8187e63d1a3b7d3a70de49fb9d07016863b07fe9a8b7db34a",
+      "release_product_id": 180,
+      "language": "jp",
+      "review_method": "claude_visual_review_of_unique_full_physical_artwork",
+      "actor": "claude:retained-full-image-visual-review-2026-10-29",
+      "reviewed_at": "2026-10-29T08:33:32+00:00",
+      "selected_card_print_id": 4628,
+      "considered_print_ids": [
+        4627,
+        4628,
+        4629
+      ],
+      "positive_physical_basis": "Source shows Gear Fourth Luffy facing forward with a giant red-pink fist at upper left and red lightning, in a blue frame. This full-card illustration is official p1.",
+      "excluded_sibling_basis": {
+        "4627": "Base is a different illustration: Luffy punching toward the viewer with flames, in a gold frame.",
+        "4629": "p2 is a different illustration: Luffy over black-and-white manga panels with gear lettering."
+      },
+      "work_id": 3681,
+      "source_product_snapshot_id": 53998,
+      "source_product_content_hash": "ea786aaaa4b73fe71fa4747044a544dc813a7e0c02bb97ca14278440bfc24198",
+      "source_image_snapshot_id": 53999,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op11/10144.jpg",
+      "source_body_sha256": "24e875d80da5b0cbb8c28b8c41c7495054b4a2c0fc2f96ef6ea566fcc75d05f8",
+      "official_images": [
+        {
+          "card_print_id": 4627,
+          "raw_snapshot_id": 54000,
+          "official_asset_variant": "base",
+          "body_sha256": "ccd0bf54d60bbc7ff1cfba72c6f7976a12371fa80455e1a15104a33710b0cc02"
+        },
+        {
+          "card_print_id": 4628,
+          "raw_snapshot_id": 54001,
+          "official_asset_variant": "p1",
+          "body_sha256": "c4f41bf32fb361e9628b69ebb73f0b72483ae188e38fdf4489688bbf6d1564a1"
+        },
+        {
+          "card_print_id": 4629,
+          "raw_snapshot_id": 54002,
+          "official_asset_variant": "p2",
+          "body_sha256": "d3386b7724745ecdc7fb80c9323b965e8f5e84423d0c8f259941c6f41a2385e5"
+        }
+      ]
     }
   ]
 }

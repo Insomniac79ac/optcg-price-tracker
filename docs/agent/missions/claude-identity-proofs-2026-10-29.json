@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "mission": "First Claude identity proofs (owner 2026-10-29, perfectionist, 'every card priced'). 13 retained physical artwork reviews of ambiguous Yuyu-Tei listings captured 2026-10-16 (review_pack of identity-capture-work run 40842064693), added to positive_physical_artwork.json under claude_visual_review_of_unique_full_physical_artwork / claude:retained-full-image-visual-review-2026-10-29. For each, the listing image and every official sibling image were fetched once with an honest User-Agent (59 requests, all HTTP 200), each body's SHA-256 matched the retained 12-hex prefix, no sibling pair is pixel-identical, and the reviewer named the one print whose full artwork the listing shows and why each other sibling is excluded. Candidate 2884 (OP05-119 SP p6/p7) is skipped: its foil colour fits neither sibling cleanly. The registry is a collector runtime input (resolver runs in the collectors), so all ten collectors are released; on the next Yuyu discovery turn per category the 13 listings re-resolve to exact (reason retained_positive_unique_physical_artwork_review). No mapping is written by this PR: approval stays an owner-approved approve-f1-batch dry run and apply.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/evidence/positive_physical_artwork.json"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "13 appended proofs, existing 298 untouched. Each is validated on every resolver run by physical_artwork_proof.validate (staging only), which refuses unless capture, snapshots, full hashes, release, sibling set and listing identity still match; a refused proof leaves the listing ambiguous. identity_weakening and ambiguous_approval are false: these are positive reviews of retained bytes under the existing validator, and mappings still need the owner-approved approval batch. The infrastructure effect is the mission-scoped release of the ten collectors (both collector images import the registry: collector_runtime_inputs import-graph)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "10 staging collectors (sequential CI release)"
+      ],
+      "routes": [
+        "no new source request: discovery fetches what it fetched before; the review fetches ran from the reviewer's session, not from staging"
+      ],
+      "dependencies": [
+        "staging after #241 (fleet pin 9ec8b32)"
+      ],
+      "deployment_impact": "All ten collectors re-uploaded on the merge commit, one at a time with automatic rollback. Behaviour change: on the next discovery turn of op11, op12, op13 and op14, up to 13 ambiguous Yuyu-Tei proposals become exact proposals. No mapping, price or Market Value change until an owner-approved approval batch.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 150
+    },
+    "recovery": {
+      "artifact": "9ec8b329bdb348860b5f7f6d782fc099a15fae72",
+      "procedure": "The rollout captures each collector's live deployment before upload and restores it on failure (recovery_deployment_id rows are reference only, carried from the #239 mission because #239's delivery receipt is not readable from the session); afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file; a reverted proof only returns its listing to ambiguous.",
+      "trigger": "A collector failing after release, a proposal refresh raising, or a listing resolving to a print its proof does not name.",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/api/tests/test_physical_artwork_proof.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/evidence/positive_physical_artwork.json"
+      ],
+      "observation_window": "Delivery verify; then identity-capture-work review_pack no longer lists the 13 candidates after the next discovery turn per category, and an approve-f1-batch dry run counts them under rule retained_positive_unique_physical_artwork_review."
+    }
+  },
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "838a810d-37a0-4bd4-9290-16d64e68ee45"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "856b32ee-ab55-4983-800a-63eba4dba0d6"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "740ec58c-25fa-423c-8b4c-b60b5566a103"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "71686eff-e9f9-4ccc-83e1-c048ca06299d"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "be2a309f-3397-41fe-98be-c3eb1c504e4c"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "4420042e-53de-42a4-9c67-aa4b9c063004"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "633b333b-f051-4fb9-b9ff-a43c9191aa57"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "a706daa2-644a-49e8-9108-ae1acd37c922"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "fdea2a73-8d8b-4c1c-a40f-adaa2dd62fc9"
+      },
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "e4942d80-d246-43a4-8722-ef9a6c46c506"
+      }
+    ]
+  },
+  "diff_sha256": "ee77db9e0b225b28da6795c7c0e74b4cf1833306acb14f927f432beccaaa3c2f"
+}
