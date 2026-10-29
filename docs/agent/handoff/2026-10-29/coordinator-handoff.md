@@ -5,6 +5,15 @@ then [ROADMAP.md](../../ROADMAP.md) (sections 1 and 6), [OPS_RUNBOOKS.md](../../
 [IDENTITY_REVIEWS.md](../../IDENTITY_REVIEWS.md) and [AUTONOMY_POLICY.md](../../AUTONOMY_POLICY.md)
 before acting. Numbers here are MEASURED at the run ids given and go stale.
 
+Historical context (owner instruction): when the reasoning behind a decision, a rejected option or
+an earlier finding is not in the repo, check the previous coordinator chat before asking the owner
+or re-deriving it. It is the Claude chat "Card Pirate" coordinator session of 2026-10-27 to
+2026-10-29 (https://claude.ai/code/session_014AJNwYXaDit6nqBbKqhy1x). Use the past-chat search
+tools if this session has them (search terms such as "frozen membership", "identity proof
+binding", "SNKRDUNK not_seen", "every card priced"); otherwise ask the owner to paste the part you
+need. The repo stays the source of truth: anything the chat decided that matters is in
+ROADMAP.md, DECISIONS.md or a mission file, and the chat never overrides them.
+
 ## Owner and standing rules
 
 - Owner: Insomniac (Malaysia, UTC+8, "not a dev"). Terse, plain English, no em-dashes.
