@@ -151,6 +151,62 @@ def legacy_evidence_digest(evidence: dict[str, Any]) -> str:
     return _digest(evidence)
 
 
+# Yuyu-Tei market state (owner 2026-10-29): the price, the stock flag and the
+# listing row text (which carries both) change most days, and none of them says
+# which physical print a listing is. Every other evidence field does.
+YUYU_MARKET_EVIDENCE = frozenset({"price_jpy", "availability", "raw_listing_digest"})
+
+
+def identity_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
+    """The evidence that identifies the listing: no run provenance, no market state."""
+    return {
+        key: value
+        for key, value in evidence.items()
+        if key not in RUN_SCOPED_EVIDENCE and key not in YUYU_MARKET_EVIDENCE
+    }
+
+
+def yuyu_identity_unchanged_since(
+    db: Session, plan: "ProposalPlan", digest: str | None, stored: dict[str, Any] | None = None
+) -> bool:
+    """Is this Yuyu-Tei plan's listing identity what it was under evidence ``digest``?
+
+    The one test of "same listing" for an identity capture (at claim time) and for a
+    retained physical artwork review: both are about the listing's artwork, so a price
+    or stock change must not void them, and any identity change must. The evidence
+    behind ``digest`` comes from ``stored`` (a capture's own summary, when it kept one)
+    or from this listing's proposal history (every group keeps its evidence summary),
+    and it must hash to ``digest`` under 1.3 or 1.2. Fails closed: evidence that cannot
+    be found or does not hash to ``digest`` is never "unchanged".
+    """
+    if not isinstance(digest, str) or len(digest) != 64 or plan.source_name != "yuyutei":
+        return False
+    if digest == plan.evidence_digest:
+        return True
+    current = plan.evidence_summary
+    if not isinstance(current, dict):
+        return False
+    summaries = [stored] if isinstance(stored, dict) else []
+    summaries.extend(
+        db.scalars(
+            select(SourceMappingProposalGroup.evidence_summary_json).where(
+                SourceMappingProposalGroup.source_id == plan.source_id,
+                SourceMappingProposalGroup.source_candidate_type == "yuyutei_candidate",
+                SourceMappingProposalGroup.source_candidate_id == plan.source_candidate_id,
+                SourceMappingProposalGroup.canonical_source_listing_identity
+                == plan.canonical_source_listing_identity,
+                SourceMappingProposalGroup.evidence_digest == digest,
+            )
+        ).all()
+    )
+    return any(
+        isinstance(summary, dict)
+        and digest in (evidence_digest(summary), legacy_evidence_digest(summary))
+        and identity_evidence(summary) == identity_evidence(current)
+        for summary in summaries
+    )
+
+
 def _text_digest(value: str | None) -> str | None:
     return hashlib.sha256(value.encode("utf-8")).hexdigest() if value else None
 

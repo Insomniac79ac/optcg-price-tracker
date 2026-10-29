@@ -48,6 +48,11 @@ the rest are named in `rows_omitted` and stay in the artifact).
 `identity-capture-work` gives Yuyu identity-capture work totals by state (with id range), the newest
 100 items (state, attempts, denials, transient failures) and the last 24 h of their attempt
 outcomes: the post-enqueue progress check. Older items (500+ on staging) stay out of the summary.
+Its `review_pack` (second, so it fits the summary budget) lists up to 40 completed captures whose
+listing is still an ambiguous pending proposal, with the retained lineage a review proof names
+(evidence digest and product content hash in full, image snapshot ids with 12-hex body SHA-256
+prefixes, and whether the listing's proposal digest moved since the capture): the input of a visual review (see "Physical artwork reviews" in
+`docs/agent/IDENTITY_REVIEWS.md`).
 `market-value-membership` compares stored Market Value points with today's catalogue: points per
 membership revision, whether the legacy membership can be rebuilt exactly (digest of the prints
 created by the last publication vs the stored revision), prints and coded releases touched since,
@@ -96,9 +101,12 @@ candidate judged; its SHA-256 equals a dry run's on unchanged state, and the app
 owner's approval in `staging-ops`.
 
 `approve-f1-batch` (D9 F1, `scripts/ops/f1_approve.py`): approves current exact Yuyu-Tei
-proposals made by the F1 rule (reason `unique_listing_kind_resolves_one_release_sibling`) in
-batches of about 500 (`count`, default 500, at most 600), through the admin page's own
-`approve_exact_proposal`, so every admin guard applies.
+proposals made by the F1 rule (reason `unique_listing_kind_resolves_one_release_sibling`) or
+resolved by a retained physical artwork review (reason
+`retained_positive_unique_physical_artwork_review`, owner 2026-10-29) in batches of about 500
+(`count`, default 500, at most 600), through the admin page's own `approve_exact_proposal`, so
+every admin guard applies. Each proposal names exactly one of the two rules; the summary counts
+the batch per rule (`rules`) and each `batch-detail.json` row carries its `rule`.
 
 1. Selects the batch read-only, oldest proposal first. Each proposal is re-checked against a fresh
    resolver run (same evidence digest, resolver version and sole recommended print), the candidate

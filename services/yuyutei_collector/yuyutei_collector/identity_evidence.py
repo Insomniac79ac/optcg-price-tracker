@@ -16,7 +16,10 @@ from PIL import Image
 from opcg_source_identity import yuyutei_listing_identity
 from app.models import CardPrint, FreshnessWork, YuyuteiCandidate
 from app.services.freshness_integration import CaptureResult, AdmissionStopped
-from app.services.source_mapping_proposals import resolve_current_candidate_proposal
+from app.services.source_mapping_proposals import (
+    resolve_current_candidate_proposal,
+    yuyu_identity_unchanged_since,
+)
 from app.services.official_asset_variant import parse_official_asset_variant
 from app.services.identity_evidence_scope import identity_evidence_scope
 from yuyutei_collector.browser import (
@@ -96,7 +99,11 @@ def load_intent(session, claim):
         candidate is None
         or plan is None
         or plan.resolution_status != "ambiguous"
-        or plan.evidence_digest != cursor.get("evidence_digest")
+        # Same listing identity as when the capture was planned; a price or stock
+        # change since then does not void it (owner 2026-10-29).
+        or not yuyu_identity_unchanged_since(
+            session, plan, cursor.get("evidence_digest"), cursor.get("evidence_summary")
+        )
         or plan.release_product_id != cursor.get("release_product_id")
         or plan.source_id != work.source_id
         or yuyutei_listing_identity(candidate.source_url)

@@ -233,6 +233,38 @@ class ReadOnlyConnection(unittest.TestCase):
             ops_db.verify(conn, guard)
 
 
+class StagingAppEnvironment(unittest.TestCase):
+    def setUp(self):
+        from app.settings import settings
+        self.settings = settings
+        self.saved = (settings.ENVIRONMENT, settings.APP_ENV)
+
+    def tearDown(self):
+        self.settings.ENVIRONMENT, self.settings.APP_ENV = self.saved
+
+    def test_a_proven_staging_destination_makes_staging_only_evidence_resolve(self):
+        from app.env import get_app_env
+        self.settings.ENVIRONMENT, self.settings.APP_ENV = None, None
+        self.assertEqual(get_app_env(), "development")
+        ops_db.adopt_staging_app_environment()
+        self.assertEqual(get_app_env(), "staging")
+        for other in ("production", "development"):
+            self.settings.ENVIRONMENT = other
+            with self.assertRaisesRegex(common.Refused, "not staging"):
+                ops_db.adopt_staging_app_environment()
+
+    def test_resolve_adopts_staging_only_after_the_destination_is_pinned(self):
+        calls = []
+        state = SimpleNamespace(
+            staging_environment=lambda: calls.append("pinned"), ENVIRONMENT="e", POSTGRES="p",
+            railway=lambda q: {"tcpProxies": [{"domain": "h", "proxyPort": 1, "applicationPort": 5432}]},
+            service_variables=lambda s: {"PGPASSWORD": "x"})
+        with mock.patch.dict(sys.modules, {"generate_staging_state": state}), \
+                mock.patch.object(ops_db, "adopt_staging_app_environment", lambda: calls.append("adopted")):
+            ops_db.resolve()
+        self.assertEqual(calls, ["pinned", "adopted"])
+
+
 class Diagnostics(unittest.TestCase):
     def test_every_committed_file_parses(self):
         self.assertGreaterEqual(len(diagnostic.available()), 5)
@@ -642,6 +674,14 @@ class F1Approve(unittest.TestCase):
         self.assertEqual(f1_approve.pinned_list(rows, 500)[2]["expected_count"], 5)
         with self.assertRaisesRegex(common.Refused, "no eligible"):
             f1_approve.pinned_list([], 500)
+
+    def test_approvable_rules_are_f1_and_a_physical_review_never_both(self):
+        f1, review = f1_approve.F1_REASON, f1_approve.REVIEW_REASON
+        sibling = "multiple_eligible_sibling_prints_in_resolved_release"
+        self.assertEqual(f1_approve.approvable_rule([f1]), "f1")
+        self.assertEqual(f1_approve.approvable_rule([sibling, review]), "physical_review")
+        for reasons in (None, [], [sibling], ["exactly_one_eligible_print_in_resolved_release"], [f1, review]):
+            self.assertIsNone(f1_approve.approvable_rule(reasons), reasons)
 
     def test_sample_is_reproducible(self):
         rows = [self.entry(i) for i in range(1, 501)]
