@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Coordinator handoff 2026-10-29 (owner request: move to a new session with browser access). Open work in order, the 14-row identity review pack, working notes, and a standalone ops-readonly result reader; roadmap next-10 statuses for items 2 and 6. Documentation only.",
+  "classification": "GREEN",
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/handoff/2026-10-29/coordinator-handoff.md",
+        "docs/agent/handoff/2026-10-29/ops_result.py"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Handoff for the next coordinator session; the helper is an operator tool kept with the handoff (not imported anywhere)."
+    },
+    {
+      "files": [
+        "docs/agent/ROADMAP.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Next-10 items 2 (done) and 6 (progress) updated from evidence."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "docs only"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "none"
+      ],
+      "deployment_impact": "None.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 1
+    },
+    "recovery": {
+      "artifact": "9ec8b329bdb348860b5f7f6d782fc099a15fae72",
+      "procedure": "Native revert.",
+      "trigger": "Wrong status.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/handoff/2026-10-29/coordinator-handoff.md",
+        "docs/agent/ROADMAP.md"
+      ],
+      "observation_window": "None."
+    }
+  },
+  "diff_sha256": "46369a5c4382c03f0585dc97a0a04fccfe38329624e39103fd3fccacb5a85216"
+}

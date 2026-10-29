@@ -473,11 +473,15 @@ production deletion (#107, #108). Never-replay list: session 14 handoff "Session
 
 1. SNKRDUNK price fix from the #237 evidence, canary, then requeue the 283 (item 24). Restores the
    second source.
-2. Confirm the Market Value catch-up publish and rankings after the 2026-10-28 20:00Z run (item 8).
+2. ~~Confirm the Market Value catch-up publish and rankings after the 2026-10-28 20:00Z run
+   (item 8).~~ Done 2026-10-29: 2026-10-26..28 published under the frozen v2 membership
+   (market-value-membership 40762476093); 7D view live.
 3. Audit the possibly false SNKRDUNK no-listing facts recorded since 2026-10-26 (item 24, owner).
 4. Official image mirror for the 212 new prints (item 26).
 5. Catalogue Phase 2 remaining batches, then step D (item 25).
 6. Yuyu-Tei identity backlog: 483 ambiguous, 327 listed only in another category (item 1).
+   2026-10-29: #239 binds reviews to listing identity, not price, and adds Claude as a reviewer;
+   14 captures await review (handoff/2026-10-29/coordinator-handoff.md).
 7. SNKRDUNK discovery fix decision (item 3) and the 69 older quarantined items, one by one (item 2).
 8. Owner decisions on `plan/new-sources` N1 to N16, then Dorasuta (item 13).
 9. Ops readability: KPI fields in the staging-state summary, `fleet-vs-receipt` against the newest
