@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK recovery (owner 2026-10-30, 'A-only'). Since about 2026-10-29 the SNKRDUNK product page carries its size-chips response in a React Query stream script and makes no price request, so every capture failed prices_not_loaded (seen live on /apparels/93511 and /apparels/142630). The collector now reads that embedded response for the page's own product id, requires every rendered chip to agree with it (listed: same yen price and enabled; unlisted: 出品待ち and disabled), and keeps the network wait only as the fallback. The raw price is the best listed grade with its label, restricted to grade A until a spliced SOURCE_SEMANTICS step can keep B to D out of the index; a page with no grade-A listing is a confident no listing. Log lines carry a readable message. Released to snkrdunk-collector only; no Yuyu-Tei runtime input changes.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/browser.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "embedded_size_chips/rendered_chip_states/confirm_embedded_prices replace the 15 s wait for a request that no longer happens; any disagreement, ambiguity or unusable payload fails closed (prices_not_loaded with evidence). log_event adds a message key. The infrastructure effect is the mission-scoped release of snkrdunk-collector only."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/extractor.py",
+        "services/snkrdunk_collector/snkrdunk_collector/due.py",
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "RAW_GRADE_PREFERENCE ('A',) replaces the cheapest-grade min(); raw_price_grades_unlisted defines a confident no listing (coherent A-D picker, no grade-A listing) for the due and validate paths. pricing_methodology is assessed false: the owner decided the grade rule on 2026-10-30 (DECISIONS.md), and the index rule change it implies is deferred to a spliced step; SNKRDUNK fed no index input since 2026-10-26."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/tests/test_embedded_size_chips.py",
+        "services/snkrdunk_collector/tests/test_extractor.py",
+        "services/snkrdunk_collector/tests/test_css_module_naming.py",
+        "services/snkrdunk_collector/tests/test_psa10.py",
+        "services/snkrdunk_collector/tests/test_validate_only_never_writes.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Live-shaped embedded payloads and chips: read without waiting, nothing-listed reaches extraction, rendered/embedded disagreement and unusable payloads refuse, other products' payloads are ignored, A-only price, no grade-A listing is no listing, readable log line. Fixtures with a cheaper B now expect the A price."
+    },
+    {
+      "files": [
+        "docs/agent/DECISIONS.md",
+        "docs/agent/ROADMAP.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Owner decisions 2026-10-30 and roadmap item 24."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (one CI release)"
+      ],
+      "routes": [
+        "no new source request: the product page is fetched exactly as before; the 15 s price wait no longer runs when the page carries its prices"
+      ],
+      "dependencies": [
+        "staging after #244"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback. Behaviour change: SNKRDUNK raw captures resume with grade-A asks; a card with no grade-A listing records no listing; the open retry (mapping 230, nothing listed) records no listing. The 352 blocked items stay blocked until the owner-approved snkr-parser-requeue.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 45
+    },
+    "recovery": {
+      "artifact": "ada16845b9152fb9b4140cbb224a9db7fb08dc10",
+      "procedure": "The rollout captures snkrdunk-collector's live deployment before upload and restores it on failure (recovery_deployment_id is reference only); afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "Captures failing on the new code, a capture whose price differs from the rendered grade-A chip, or any source denial.",
+      "backup": "Not applicable: no schema change; observations are append-only.",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_embedded_size_chips.py",
+        "services/snkrdunk_collector/tests/test_condition_prices_wait.py",
+        "services/snkrdunk_collector/tests/test_extractor.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/browser.py",
+        "services/snkrdunk_collector/snkrdunk_collector/extractor.py"
+      ],
+      "observation_window": "Delivery verify; then mapping 230's next attempt records no listing, and the canary requeue's card captures a grade-A price (work-by-state attempts_24h captured for snkrdunk)."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "e4942d80-d246-43a4-8722-ef9a6c46c506"
+      }
+    ]
+  },
+  "diff_sha256": ""
+}
