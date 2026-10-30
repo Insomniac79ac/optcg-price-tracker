@@ -29,8 +29,11 @@ SELECTOR_VERSION = "v1"
 # raw; everything else in the same condition-chip picker (PSA*, BGS*, ARS*,
 # 他鑑定品) is a graded-slab category and must never be treated as raw.
 RAW_CONDITION_LABELS = ("A", "B", "C", "D")
-# Best grade first (owner 2026-10-30): A nearly unused, B slight defect, C, D.
-RAW_GRADE_PREFERENCE = ("A", "B", "C", "D")
+# Grades a raw price may come from, best first (owner 2026-10-30). A only for now: the owner's
+# rule is the best listed grade with its label (B = slight defect such as whitening), but B, C and
+# D stay out of prices until the index can exclude them under a spliced SOURCE_SEMANTICS step
+# (DECISIONS.md 2026-10-30). Widen this tuple only with that cutover.
+RAW_GRADE_PREFERENCE = ("A",)
 AWAITING_LISTING_TEXT = "出品待ち"
 
 PRICE_DIGITS_RE = re.compile(r"([\d,]+)")
@@ -152,15 +155,30 @@ def extract_raw_conditions(soup: BeautifulSoup) -> dict[str, Any]:
         conditions[label] = {"condition": label, "price_jpy": price_jpy, "raw_text": raw_text}
 
     result["conditions"] = conditions
-    # Owner 2026-10-30: the raw price is the BEST listed grade (A, else B, else C, else D), never
-    # the cheapest grade, and it keeps its grade label (B = slight defect such as whitening).
-    # raw_floor_* keep their names for the writer; they now mean "best listed grade".
+    # Owner 2026-10-30: the raw price is the best listed grade in RAW_GRADE_PREFERENCE (today A
+    # only), never the cheapest grade, and keeps its grade label. raw_floor_* keep their names for
+    # the writer; they now mean "best listed grade".
     available = {c["condition"]: c["price_jpy"] for c in conditions.values() if c["price_jpy"] is not None}
     best = next((grade for grade in RAW_GRADE_PREFERENCE if grade in available), None)
     if best is not None:
         result["raw_floor_jpy"] = available[best]
         result["raw_floor_condition"] = best
     return result
+
+
+def raw_price_grades_unlisted(conditions: dict[str, Any]) -> bool:
+    """A confident raw no listing: the picker shows all four raw grades coherently (each a yen
+    price or 出品待ち) and every grade a raw price may come from (RAW_GRADE_PREFERENCE) is
+    出品待ち. Under the A-only rule (owner 2026-10-30) a card with only B, C or D listed has no
+    grade-A listing; its other grades stay in the retained page as evidence."""
+    if not set(RAW_CONDITION_LABELS) <= conditions.keys():
+        return False
+    def unlisted(label):
+        c = conditions[label]
+        return c.get("price_jpy") is None and c.get("raw_text") == AWAITING_LISTING_TEXT
+    coherent = all(unlisted(label) or conditions[label].get("price_jpy") is not None
+                   for label in RAW_CONDITION_LABELS)
+    return coherent and all(unlisted(label) for label in RAW_GRADE_PREFERENCE)
 
 
 def extract_psa10(soup: BeautifulSoup) -> dict[str, Any]:

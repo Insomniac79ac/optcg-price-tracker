@@ -181,10 +181,25 @@ def test_the_evidence_names_the_embedded_response_hash_not_the_chips():
     assert "chips" not in step["condition_prices"]
 
 
-def test_best_grade_falls_back_to_b_and_keeps_its_label():
+def test_only_grade_a_is_a_raw_price_for_now():
+    """Owner 2026-10-30: A only until the spliced cutover adds B to D with their labels."""
     html = page({**YAMATO, "A": None})
     raw = extract_raw_conditions(BeautifulSoup(html, "html.parser"))
-    assert (raw["raw_floor_jpy"], raw["raw_floor_condition"]) == (3480, "B")
+    assert raw["raw_floor_jpy"] is None and raw["raw_floor_condition"] is None
+    assert raw["conditions"]["B"]["price_jpy"] == 3480  # kept as evidence, not a price
+
+
+@pytest.mark.parametrize("prices,unlisted", [
+    (PENGUIN, True),                                        # nothing listed at all
+    ({**YAMATO, "A": None}, True),                          # B listed, no grade-A listing
+    (YAMATO, False),                                        # A listed
+    ({"A": None, "B": None, "C": None}, False),             # incomplete picker
+])
+def test_no_grade_a_listing_is_a_confident_no_listing(prices, unlisted):
+    from snkrdunk_collector.extractor import raw_price_grades_unlisted
+
+    conditions = extract_raw_conditions(BeautifulSoup(page(prices), "html.parser"))["conditions"]
+    assert raw_price_grades_unlisted(conditions) is unlisted
 
 
 def test_best_grade_is_a_even_when_b_is_cheaper():
