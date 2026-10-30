@@ -46,7 +46,8 @@
         "services/snkrdunk_collector/tests/test_css_module_naming.py",
         "services/snkrdunk_collector/tests/test_psa10.py",
         "services/snkrdunk_collector/tests/test_validate_only_never_writes.py",
-        "scripts/tests/test_ops_snkr_page_check.py"
+        "scripts/tests/test_ops_snkr_page_check.py",
+        "services/api/tests/test_freshness_adapters_postgres.py"
       ],
       "effects": [
         "tests"

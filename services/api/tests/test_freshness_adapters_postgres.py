@@ -654,7 +654,7 @@ def test_raw_valuation_input_and_snapshot_selection_exclude_psa10(db, monkeypatc
         before = get_market_index_for_print(session, pid).model_dump(
             exclude={"calculated_at"}
         )
-        assert before["index_value_jpy"] == 24500
+        assert before["index_value_jpy"] == 29000  # grade A (owner 2026-10-30), not the cheaper B
         psa = session.scalar(
             select(PriceObservation).where(
                 PriceObservation.price_type == "psa10_asking"
