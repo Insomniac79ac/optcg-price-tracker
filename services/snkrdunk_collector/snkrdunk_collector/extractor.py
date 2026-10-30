@@ -29,6 +29,11 @@ SELECTOR_VERSION = "v1"
 # raw; everything else in the same condition-chip picker (PSA*, BGS*, ARS*,
 # 他鑑定品) is a graded-slab category and must never be treated as raw.
 RAW_CONDITION_LABELS = ("A", "B", "C", "D")
+# Grades a raw price may come from, best first (owner 2026-10-30). A only for now: the owner's
+# rule is the best listed grade with its label (B = slight defect such as whitening), but B, C and
+# D stay out of prices until the index can exclude them under a spliced SOURCE_SEMANTICS step
+# (DECISIONS.md 2026-10-30). Widen this tuple only with that cutover.
+RAW_GRADE_PREFERENCE = ("A",)
 AWAITING_LISTING_TEXT = "出品待ち"
 
 PRICE_DIGITS_RE = re.compile(r"([\d,]+)")
@@ -118,17 +123,25 @@ def extract_raw_conditions(soup: BeautifulSoup) -> dict[str, Any]:
         return result
 
     conditions: dict[str, Any] = {}
+    # Raw-grade coherence (independent review 2026-10-30): a chip with no label could be a raw
+    # grade, and a raw grade shown twice or with other than one value vouches for nothing. A
+    # malformed graded chip (PSA10 ...) does not touch raw.
+    raw_coherent = True
     for chip in container.find_all("button", recursive=False):
         if not _has_module_class(chip, "chip"):
             continue
-        variant_el = next(
-            (p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "variant")), None
-        )
-        if variant_el is None:
+        cells = chip.find_all("p", recursive=False)
+        variants = [p for p in cells if _has_module_class(p, "variant")]
+        if len(variants) != 1 or not variants[0].get_text(strip=True):
+            raw_coherent = False
             continue
+        variant_el = variants[0]
         label = variant_el.get_text(strip=True)
         if label not in RAW_CONDITION_LABELS:
             continue
+        values = [p for p in cells if _has_module_class(p, "price") or _has_module_class(p, "awaiting")]
+        if label in conditions or len(values) != 1:
+            raw_coherent = False
 
         price_el = next(
             (p for p in chip.find_all("p", recursive=False) if _has_module_class(p, "price")), None
@@ -150,12 +163,31 @@ def extract_raw_conditions(soup: BeautifulSoup) -> dict[str, Any]:
         conditions[label] = {"condition": label, "price_jpy": price_jpy, "raw_text": raw_text}
 
     result["conditions"] = conditions
-    available = [(c["price_jpy"], c["condition"]) for c in conditions.values() if c["price_jpy"] is not None]
-    if available:
-        floor_price, floor_condition = min(available, key=lambda x: x[0])
-        result["raw_floor_jpy"] = floor_price
-        result["raw_floor_condition"] = floor_condition
+    diagnostics["raw_labels_coherent"] = raw_coherent
+    # Owner 2026-10-30: the raw price is the best listed grade in RAW_GRADE_PREFERENCE (today A
+    # only), never the cheapest grade, and keeps its grade label. raw_floor_* keep their names for
+    # the writer; they now mean "best listed grade".
+    available = {c["condition"]: c["price_jpy"] for c in conditions.values() if c["price_jpy"] is not None}
+    best = next((grade for grade in RAW_GRADE_PREFERENCE if grade in available), None)
+    if best is not None and raw_coherent:
+        result["raw_floor_jpy"] = available[best]
+        result["raw_floor_condition"] = best
     return result
+
+
+def raw_price_grades_unlisted(conditions: dict[str, Any], container_diagnostics: dict[str, Any]) -> bool:
+    """A confident raw no listing: the picker shows all four raw grades coherently (each a yen
+    price or 出品待ち) and every grade a raw price may come from (RAW_GRADE_PREFERENCE) is
+    出品待ち. Under the A-only rule (owner 2026-10-30) a card with only B, C or D listed has no
+    grade-A listing; its other grades stay in the retained page as evidence."""
+    if not container_diagnostics.get("raw_labels_coherent") or not set(RAW_CONDITION_LABELS) <= conditions.keys():
+        return False
+    def unlisted(label):
+        c = conditions[label]
+        return c.get("price_jpy") is None and c.get("raw_text") == AWAITING_LISTING_TEXT
+    coherent = all(unlisted(label) or conditions[label].get("price_jpy") is not None
+                   for label in RAW_CONDITION_LABELS)
+    return coherent and all(unlisted(label) for label in RAW_GRADE_PREFERENCE)
 
 
 def extract_psa10(soup: BeautifulSoup) -> dict[str, Any]:

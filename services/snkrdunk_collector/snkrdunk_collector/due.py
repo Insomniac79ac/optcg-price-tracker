@@ -16,6 +16,7 @@ from snkrdunk_collector.run_lock import (
     pinned_session,
     assert_lock_owned,
 )
+from snkrdunk_collector.extractor import raw_price_grades_unlisted
 from snkrdunk_collector.writer import validate_and_write_observation
 
 
@@ -54,15 +55,9 @@ def write_capture(session, mapping, holder, attempt):
                 category_outcomes[category] = psa["outcome"]
             else:
                 conditions = extraction["extracted"]["conditions"]
-                expected = {"A", "B", "C", "D"}
                 category_outcomes[category] = (
                     "no_listing"
-                    if expected <= conditions.keys()
-                    and all(
-                        conditions[label]["price_jpy"] is None
-                        and conditions[label]["raw_text"] == "出品待ち"
-                        for label in expected
-                    )
+                    if raw_price_grades_unlisted(conditions, extraction["raw"]["condition_container"])
                     else (
                         "absent"
                         if not conditions

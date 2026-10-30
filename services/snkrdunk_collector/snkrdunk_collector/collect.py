@@ -560,10 +560,10 @@ def run_one_mapping_detailed(
             conditions = (holder["extraction"].get("extracted") or {}).get(
                 "conditions"
             ) or {}
-            no_listing = {"A", "B", "C", "D"} <= conditions.keys() and all(
-                conditions[k].get("price_jpy") is None
-                and conditions[k].get("raw_text") == "出品待ち"
-                for k in ("A", "B", "C", "D")
+            from snkrdunk_collector.extractor import raw_price_grades_unlisted
+
+            no_listing = raw_price_grades_unlisted(
+                conditions, (holder["extraction"].get("raw") or {}).get("condition_container") or {}
             )
             verified = write_result.identity_verified and (
                 write_result.written or no_listing

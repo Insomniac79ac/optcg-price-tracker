@@ -56,7 +56,7 @@ def test_both_live_naming_shapes_parse_exactly_as_the_fixture(style):
     if style == "from-2026-10-26":
         assert 'class="slWKSa_mainImage"' in reshaped
     assert parsed(reshaped) == parsed(FIXTURE)
-    assert parsed(FIXTURE)["status"] == "extracted" and parsed(FIXTURE)["raw_floor_jpy"] == 24500
+    assert parsed(FIXTURE)["status"] == "extracted" and parsed(FIXTURE)["raw_floor_jpy"] == 29000
 
 
 @pytest.mark.parametrize(

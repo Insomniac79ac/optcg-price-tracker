@@ -38,6 +38,7 @@ stands. Plan branches (`plan/*`), handoffs and reports are the detail behind it.
 | 2026-10-28 | SNKRDUNK option A: log what the product page requests before changing the price wait again (#237). | Guessing the price request's address or timing. |
 | 2026-10-30 | New sources: no new-source code until Yuyu-Tei and SNKRDUNK are healthy again; then the coordinator rebases and drives D0 (#185) and the Dorasuta rollout. | ROADMAP item 13 "N1 to N16 still open" (all answered 2026-10-19). |
 | 2026-10-30 | Source health monitor: a daily report (lands about 10:00 MYT) and a 4-hourly change alert, both read-only Claude scheduled tasks, push only. | None (new). |
+| 2026-10-30 | SNKRDUNK prices: best listed grade with its label, never the cheapest; grade A only until a spliced cutover lets the index count A only while B to D stay visible (DECISIONS.md). No grade-A listing is a confident no listing. | Cheapest-grade SNKRDUNK floor (`extract_raw_conditions` min over A to D). |
 
 Earlier owner decisions that still stand are recorded in the plans themselves: collector v1 §I
 (2026-10-11), onchain owner decisions (2026-10-09), data-platform G1 (2026-10-11, now partly
@@ -418,19 +419,19 @@ coverage (item 11d).
 
 ### 24. SNKRDUNK recovery after the 2026-10-26 page change
 
-- **Status: in progress.** SNKRDUNK changed its product page on 2026-10-26 ~08:29Z in three ways:
-  CSS-module class names (fixed by #223, released by #224), the photo component named by reference,
-  and condition prices that arrive after load (both addressed by #231, released 2026-10-28 06:49Z).
-- **Safety held:** a page with no rendered price is never recorded as no listing (#231); it retries
-  as `prices_not_loaded`.
-- **Open:** on the live page the price request the page names (`/v2/products/<id>/size-chips`) is
-  never seen within 15 s (`condition_prices:not_seen`, work 196, 2026-10-28). #237 (live 13:34Z) logs
-  what the page actually requests; the next attempt of work 196 gives the evidence for the fix.
-- **Then:** fix the price wait (collector release), re-run the canary, then `snkr-parser-requeue`
-  rest (283 items, owner-approved), then the fleet pin.
-- **Owner decisions open:** audit and clear no-listing facts recorded between 2026-10-26 ~08:29Z and
-  the fix (likely false); re-enabling no listing for products with no price in any chip once a real
-  price response has been seen.
+- **Status: in progress.** SNKRDUNK changed its product page on 2026-10-26 ~08:29Z (CSS-module class
+  names, fixed by #223/#224; photo by reference and prices after load, #231) and again around
+  2026-10-29: the page now carries its size-chips response in a React Query stream script and makes no
+  price request, so every capture failed `prices_not_loaded` (#237 trace and a live check of
+  /apparels/93511 and /apparels/142630, 2026-10-30).
+- **Fix (collector release, SNKRDUNK only):** read the embedded size-chips for the page's own product,
+  require every rendered chip to agree with it, keep the network wait as a fallback; raw price is grade A
+  only (owner 2026-10-30); no grade-A listing is a confident no listing; readable Railway log lines.
+- **Then:** canary requeue of a listed card, `snkr-parser-requeue` rest (283), fleet pin.
+- **Later:** the full grade rule (B to D with labels, index A only) at a spliced SOURCE_SEMANTICS step,
+  built with Dorasuta's cutover (CPI, Market Value, collection valuation, charts and splice creation
+  still need splice wiring).
+- **Owner decision open:** audit the no-listing facts recorded between 2026-10-26 ~08:29Z and the fix.
 
 ### 25. Catalogue Phase 2 (official series import)
 

@@ -61,7 +61,8 @@ CHALLENGE_DOM_MARKERS = [
 ]
 WEAK_MARKERS = ["cloudflare", "captcha", "cf-error", "ray id"]
 
-# Since 2026-10-26 a SNKRDUNK product page arrives with every condition chip reading
+# (Fallback, see RQ_PUSH above for the current page.) From 2026-10-26 to about 2026-10-29 a
+# SNKRDUNK product page arrived with every condition chip reading
 # 出品待ち and fills the real prices in from its own price request
 # (GET /v2/products/<id>/size-chips, <id> = the /apparels/<id> of the page) after load. A
 # snapshot taken before that response is placeholders, which would read as "nothing listed".
@@ -92,6 +93,128 @@ EXTRACTABLE_PRICE_STATUSES = frozenset({"loaded", PRICES_NO_PICKER})
 WARM_SAFE_PRICE_STATUSES = frozenset({"dom_not_rendered", "body_unconfirmed"})
 _PRICE_KEY = re.compile("price", re.I)
 _YEN = re.compile(r"[¥￥]\s*([1-9][0-9]*(?:,[0-9]{3})*)")
+
+
+# Since about 2026-10-29 the product page carries its size-chips response itself (seen live
+# 2026-10-30 on /apparels/93511 and /apparels/142630): the server fetches
+# /v2/products/<id>/size-chips and dehydrates it into a React Query stream script,
+#   window["__RQ_<id>"].push({"queries": [{"queryKey": ["/v2/products/<id>/size-chips", {...}],
+#     "state": {"status": "success", "data": {"status": 200, "data": {"chips": [...]}}}}]})
+# and no price request follows on the client, so the network wait below never sees one. Each chip
+# names its grade (`text`, `conditionCode`), whether anything is listed (`hasListing`) and, when
+# listed, the lowest ask (`usedMinPrice`). The rendered chips must say the same thing, chip by
+# chip, or the page is refused: a listed grade shows exactly that yen price and is enabled; an
+# unlisted grade shows 出品待ち and is disabled (owner 2026-10-30: all raw grades unlisted and
+# disabled is a confident no listing). The network wait stays as the fallback when the page
+# carries no embedded response.
+RQ_PUSH = re.compile(r'window\[\s*"(__RQ_[A-Za-z0-9_]+)"\s*\]\.push\(')
+EMBEDDED_STATUS = "embedded"
+
+
+def embedded_size_chips(html: str | None, product_id: str) -> dict:
+    """This product's size-chips response as the page embedded it, validated, or why not."""
+    decoder = json.JSONDecoder()
+    wanted = f"/v2/products/{product_id}/size-chips"
+    found = []
+    text = html or ""
+    for match in RQ_PUSH.finditer(text):
+        try:
+            payload, _ = decoder.raw_decode(text, match.end())
+        except (ValueError, RecursionError):
+            continue
+        queries = payload.get("queries") if isinstance(payload, dict) else None
+        for query in queries if isinstance(queries, list) else []:
+            key = query.get("queryKey") if isinstance(query, dict) else None
+            if isinstance(key, list) and key and key[0] == wanted:
+                found.append(query)
+    evidence = {"product_id": product_id}
+    if not found:
+        return {**evidence, "status": "embedded_absent"}
+    if len(found) != 1:
+        return {**evidence, "status": "embedded_ambiguous", "embedded_count": len(found)}
+    state = found[0].get("state") if isinstance(found[0].get("state"), dict) else {}
+    data = state.get("data") if isinstance(state.get("data"), dict) else {}
+    inner = data.get("data") if isinstance(data.get("data"), dict) else {}
+    chips = inner.get("chips")
+    if state.get("status") != "success":
+        # The server's own fetch did not succeed; the client refetches, so wait for that request.
+        return {**evidence, "status": "embedded_absent", "embedded_state": str(state.get("status"))[:32]}
+    if data.get("status") != 200 or not isinstance(chips, list) or not chips:
+        return {**evidence, "status": "embedded_unusable"}
+    normalised = []
+    for chip in chips:
+        if not isinstance(chip, dict):
+            return {**evidence, "status": "embedded_unusable"}
+        label, listed, price = chip.get("text"), chip.get("hasListing"), chip.get("usedMinPrice")
+        valid_price = isinstance(price, int) and not isinstance(price, bool) and price > 0
+        if (not isinstance(label, str) or not label or not isinstance(listed, bool)
+                or (listed and not valid_price) or (not listed and price is not None)):
+            return {**evidence, "status": "embedded_unusable"}
+        normalised.append({"label": label, "listed": listed, "price_jpy": price if listed else None,
+                           "condition_code": chip.get("conditionCode")})
+    labels = [c["label"] for c in normalised]
+    if len(labels) != len(set(labels)):
+        return {**evidence, "status": "embedded_unusable"}
+    digest = hashlib.sha256(json.dumps(chips, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
+    return {**evidence, "status": EMBEDDED_STATUS, "chips": normalised, "embedded_sha256": digest}
+
+
+INCOHERENT_PICKER = "incoherent"
+
+
+def rendered_chip_states(html: str | None) -> dict[str, dict] | str | None:
+    """Each rendered condition chip by label: shown yen price, 出品待ち, disabled. None when the
+    page has no chip picker at all; INCOHERENT_PICKER when it has one but a chip is malformed
+    (no label, two labels, a repeated label, no single value), which is never extractable."""
+    from bs4 import BeautifulSoup
+
+    from snkrdunk_collector.extractor import _has_module_class, find_condition_chip_container
+
+    container, _ = find_condition_chip_container(BeautifulSoup(html or "", "html.parser"))
+    if container is None:
+        return None
+    states: dict[str, dict] = {}
+    for chip in container.find_all("button", recursive=False):
+        if not _has_module_class(chip, "chip"):
+            continue
+        cells = chip.find_all("p", recursive=False)
+        labels = [p.get_text(strip=True) for p in cells if _has_module_class(p, "variant")]
+        prices = [p.get_text(strip=True) for p in cells if _has_module_class(p, "price")]
+        awaiting = [p.get_text(strip=True) for p in cells if _has_module_class(p, "awaiting")]
+        if len(labels) != 1 or not labels[0] or labels[0] in states or len(prices) + len(awaiting) != 1:
+            return INCOHERENT_PICKER
+        match = _YEN.search(prices[0]) if len(prices) == 1 else None
+        states[labels[0]] = {
+            "price_jpy": int(match.group(1).replace(",", "")) if match and not awaiting else None,
+            "awaiting": awaiting == ["出品待ち"] and not prices,
+            "disabled": chip.has_attr("disabled") or _has_module_class(chip, "disabled"),
+        }
+    return states
+
+
+def confirm_embedded_prices(embedded: dict, html: str | None) -> dict:
+    """'loaded' only when every embedded chip and every rendered chip agree; the evidence keeps
+    counts, not the chips (the page itself is the retained snapshot)."""
+    rendered = rendered_chip_states(html)
+    evidence = {k: v for k, v in embedded.items() if k != "chips"}
+    if rendered is None:
+        return {**evidence, "status": PRICES_NO_PICKER}
+    if rendered == INCOHERENT_PICKER:
+        return {**evidence, "status": "embedded_dom_incoherent"}
+    chips = {c["label"]: c for c in embedded["chips"]}
+    mismatched = sorted(set(chips) ^ set(rendered))
+    for label in sorted(set(chips) & set(rendered)):
+        chip, shown = chips[label], rendered[label]
+        agrees = (
+            (chip["listed"] and shown["price_jpy"] == chip["price_jpy"] and not shown["awaiting"] and not shown["disabled"])
+            or (not chip["listed"] and shown["price_jpy"] is None and shown["awaiting"] and shown["disabled"])
+        )
+        if not agrees:
+            mismatched.append(label)
+    if mismatched:
+        return {**evidence, "status": "embedded_dom_mismatch", "mismatched": mismatched[:16]}
+    return {**evidence, "status": "loaded", "source": EMBEDDED_STATUS,
+            "listed": sorted(label for label, c in chips.items() if c["listed"])}
 
 
 def _price_chips_response(response) -> tuple[str, int] | None:
@@ -228,7 +351,14 @@ def log_event(event: str, **fields) -> None:
     yuyutei_collector.browser.log_event (a pretty dump previously exceeded
     Railway's log ingestion rate cap in the spike that pattern was moved
     from)."""
-    print(json.dumps({"event": event, **fields}, separators=(",", ":"), ensure_ascii=False))
+    # `message` is the line Railway shows; without it every line appears empty and the fields
+    # are searchable only as attributes (@event:...). The full fields stay alongside it.
+    summary = " ".join(
+        f"{key}={fields[key]}" for key in ("mapping_id", "classification", "work_id", "reason")
+        if key in fields and fields[key] is not None
+    )
+    message = f"{event} {summary}".strip()
+    print(json.dumps({"message": message, "event": event, **fields}, separators=(",", ":"), ensure_ascii=False))
 
 
 class DeadlineExceeded(Exception):
@@ -432,7 +562,17 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
         title = page.title()
         classification, evidence = classify_page(status, html, title)
         prices = chips = None
-        if condition_prices:
+        embedded = None
+        if condition_prices and status == 200 and classification == "normal_page":
+            product_id = expected_price_product(page.url)
+            if product_id is not None:
+                embedded = embedded_size_chips(html, product_id)
+                if embedded["status"] == "embedded_absent":
+                    embedded = None  # an older page shape: wait for its request below
+        if embedded is not None:
+            prices = (confirm_embedded_prices(embedded, html) if embedded["status"] == EMBEDDED_STATUS
+                      else embedded)
+        elif condition_prices:
             prices, chips = _settle_condition_prices(page, seen, status, classification, should_stop)
             if prices["status"] == "response_200":
                 html = page.content()
@@ -466,6 +606,8 @@ def goto_and_capture(page: Page, url: str, *, before_parse=None, condition_price
             evidence = [f"condition_prices:{prices['status']}"]
             if prices.get("body_sha256"):
                 evidence.append(f"size_chips_sha256:{prices['body_sha256']}")
+            if prices.get("embedded_sha256"):
+                evidence.append(f"embedded_size_chips_sha256:{prices['embedded_sha256']}")
         return {
             "final_url": page.url,
             "http_status": status,

@@ -250,8 +250,8 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
         outcome, _, _ = self._run(validate_only=True)
         self.assertTrue(outcome.identity_verified, outcome.identity_reasons)
         self.assertEqual(outcome.identity_classification, "PASS")
-        self.assertEqual(outcome.price_jpy, 24500)
-        self.assertEqual(outcome.condition_label, "B")
+        self.assertEqual(outcome.price_jpy, 29000)
+        self.assertEqual(outcome.condition_label, "A")
 
     def test_validate_only_retains_complete_a_to_d_conditions(self):
         outcome, _, _ = self._run(validate_only=True)
