@@ -562,7 +562,9 @@ def run_one_mapping_detailed(
             ) or {}
             from snkrdunk_collector.extractor import raw_price_grades_unlisted
 
-            no_listing = raw_price_grades_unlisted(conditions)
+            no_listing = raw_price_grades_unlisted(
+                conditions, (holder["extraction"].get("raw") or {}).get("condition_container") or {}
+            )
             verified = write_result.identity_verified and (
                 write_result.written or no_listing
             )

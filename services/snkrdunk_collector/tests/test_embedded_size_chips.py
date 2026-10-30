@@ -154,8 +154,38 @@ def test_only_this_products_embedded_response_counts():
     assert pg.waits > 1
 
 
+def test_a_failed_server_fetch_falls_back_to_waiting_for_the_clients_request():
+    step, pg = capture(page(YAMATO, status="error"))
+    assert step["condition_prices"]["status"] == "not_seen"
+    assert pg.waits > 1
+
+
+def _with_extra_chip(html, chip):
+    return html.replace("</div><script>", chip + "</div><script>", 1)
+
+
+@pytest.mark.parametrize("extra", [
+    '<button class="YOqw-G_chip"><p class="YOqw-G_price">¥1,000~</p></button>',              # no label
+    '<button class="YOqw-G_chip"><p class="YOqw-G_variant">A</p><p class="YOqw-G_price">¥1,000~</p></button>',  # repeated A
+    '<button class="YOqw-G_chip"><p class="YOqw-G_variant">PSA9</p></button>',                # no value
+])
+def test_a_malformed_chip_picker_is_never_extracted(extra):
+    """Independent review 2026-10-30: a malformed picker must not skip the agreement check."""
+    step, _ = capture(_with_extra_chip(page(PENGUIN), extra))
+    assert step["classification"] == browser.PRICES_NOT_LOADED
+    assert step["condition_prices"]["status"] == "embedded_dom_incoherent"
+
+
+def test_a_repeated_grade_label_never_yields_a_price_or_a_no_listing():
+    from snkrdunk_collector.extractor import raw_price_grades_unlisted
+
+    html = _with_extra_chip(page(YAMATO), chip_html("A", 1000))
+    raw = extract_raw_conditions(BeautifulSoup(html, "html.parser"))
+    assert raw["raw_floor_jpy"] is None
+    assert raw_price_grades_unlisted(raw["conditions"], raw["container_diagnostics"]) is False
+
+
 @pytest.mark.parametrize("kwargs", [
-    {"status": "error"},
     {"http": 500},
     {"chips": []},
     {"chips": [{"text": "A", "hasListing": True}]},                       # listed without a price
@@ -198,8 +228,8 @@ def test_only_grade_a_is_a_raw_price_for_now():
 def test_no_grade_a_listing_is_a_confident_no_listing(prices, unlisted):
     from snkrdunk_collector.extractor import raw_price_grades_unlisted
 
-    conditions = extract_raw_conditions(BeautifulSoup(page(prices), "html.parser"))["conditions"]
-    assert raw_price_grades_unlisted(conditions) is unlisted
+    raw = extract_raw_conditions(BeautifulSoup(page(prices), "html.parser"))
+    assert raw_price_grades_unlisted(raw["conditions"], raw["container_diagnostics"]) is unlisted
 
 
 def test_best_grade_is_a_even_when_b_is_cheaper():

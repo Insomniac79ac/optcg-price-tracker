@@ -136,7 +136,10 @@ def embedded_size_chips(html: str | None, product_id: str) -> dict:
     data = state.get("data") if isinstance(state.get("data"), dict) else {}
     inner = data.get("data") if isinstance(data.get("data"), dict) else {}
     chips = inner.get("chips")
-    if state.get("status") != "success" or data.get("status") != 200 or not isinstance(chips, list) or not chips:
+    if state.get("status") != "success":
+        # The server's own fetch did not succeed; the client refetches, so wait for that request.
+        return {**evidence, "status": "embedded_absent", "embedded_state": str(state.get("status"))[:32]}
+    if data.get("status") != 200 or not isinstance(chips, list) or not chips:
         return {**evidence, "status": "embedded_unusable"}
     normalised = []
     for chip in chips:
@@ -156,9 +159,13 @@ def embedded_size_chips(html: str | None, product_id: str) -> dict:
     return {**evidence, "status": EMBEDDED_STATUS, "chips": normalised, "embedded_sha256": digest}
 
 
-def rendered_chip_states(html: str | None) -> dict[str, dict] | None:
+INCOHERENT_PICKER = "incoherent"
+
+
+def rendered_chip_states(html: str | None) -> dict[str, dict] | str | None:
     """Each rendered condition chip by label: shown yen price, 出品待ち, disabled. None when the
-    page has no coherent chip picker."""
+    page has no chip picker at all; INCOHERENT_PICKER when it has one but a chip is malformed
+    (no label, two labels, a repeated label, no single value), which is never extractable."""
     from bs4 import BeautifulSoup
 
     from snkrdunk_collector.extractor import _has_module_class, find_condition_chip_container
@@ -174,8 +181,8 @@ def rendered_chip_states(html: str | None) -> dict[str, dict] | None:
         labels = [p.get_text(strip=True) for p in cells if _has_module_class(p, "variant")]
         prices = [p.get_text(strip=True) for p in cells if _has_module_class(p, "price")]
         awaiting = [p.get_text(strip=True) for p in cells if _has_module_class(p, "awaiting")]
-        if len(labels) != 1 or labels[0] in states:
-            return None
+        if len(labels) != 1 or not labels[0] or labels[0] in states or len(prices) + len(awaiting) != 1:
+            return INCOHERENT_PICKER
         match = _YEN.search(prices[0]) if len(prices) == 1 else None
         states[labels[0]] = {
             "price_jpy": int(match.group(1).replace(",", "")) if match and not awaiting else None,
@@ -192,6 +199,8 @@ def confirm_embedded_prices(embedded: dict, html: str | None) -> dict:
     evidence = {k: v for k, v in embedded.items() if k != "chips"}
     if rendered is None:
         return {**evidence, "status": PRICES_NO_PICKER}
+    if rendered == INCOHERENT_PICKER:
+        return {**evidence, "status": "embedded_dom_incoherent"}
     chips = {c["label"]: c for c in embedded["chips"]}
     mismatched = sorted(set(chips) ^ set(rendered))
     for label in sorted(set(chips) & set(rendered)):

@@ -57,7 +57,7 @@ def write_capture(session, mapping, holder, attempt):
                 conditions = extraction["extracted"]["conditions"]
                 category_outcomes[category] = (
                     "no_listing"
-                    if raw_price_grades_unlisted(conditions)
+                    if raw_price_grades_unlisted(conditions, extraction["raw"]["condition_container"])
                     else (
                         "absent"
                         if not conditions
