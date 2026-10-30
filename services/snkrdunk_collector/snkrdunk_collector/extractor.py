@@ -29,6 +29,8 @@ SELECTOR_VERSION = "v1"
 # raw; everything else in the same condition-chip picker (PSA*, BGS*, ARS*,
 # 他鑑定品) is a graded-slab category and must never be treated as raw.
 RAW_CONDITION_LABELS = ("A", "B", "C", "D")
+# Best grade first (owner 2026-10-30): A nearly unused, B slight defect, C, D.
+RAW_GRADE_PREFERENCE = ("A", "B", "C", "D")
 AWAITING_LISTING_TEXT = "出品待ち"
 
 PRICE_DIGITS_RE = re.compile(r"([\d,]+)")
@@ -150,11 +152,14 @@ def extract_raw_conditions(soup: BeautifulSoup) -> dict[str, Any]:
         conditions[label] = {"condition": label, "price_jpy": price_jpy, "raw_text": raw_text}
 
     result["conditions"] = conditions
-    available = [(c["price_jpy"], c["condition"]) for c in conditions.values() if c["price_jpy"] is not None]
-    if available:
-        floor_price, floor_condition = min(available, key=lambda x: x[0])
-        result["raw_floor_jpy"] = floor_price
-        result["raw_floor_condition"] = floor_condition
+    # Owner 2026-10-30: the raw price is the BEST listed grade (A, else B, else C, else D), never
+    # the cheapest grade, and it keeps its grade label (B = slight defect such as whitening).
+    # raw_floor_* keep their names for the writer; they now mean "best listed grade".
+    available = {c["condition"]: c["price_jpy"] for c in conditions.values() if c["price_jpy"] is not None}
+    best = next((grade for grade in RAW_GRADE_PREFERENCE if grade in available), None)
+    if best is not None:
+        result["raw_floor_jpy"] = available[best]
+        result["raw_floor_condition"] = best
     return result
 
 

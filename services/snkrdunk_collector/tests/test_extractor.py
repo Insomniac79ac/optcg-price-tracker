@@ -46,10 +46,11 @@ def test_extracts_all_four_raw_conditions_with_correct_prices_and_nulls():
     assert conditions["D"]["price_jpy"] is None
 
 
-def test_raw_floor_chooses_lowest_available_raw_condition():
+def test_raw_price_is_the_best_listed_grade_not_the_cheapest():
+    """Owner 2026-10-30: A (¥29,000) wins over the cheaper B (¥24,500)."""
     result = extract_raw_conditions(_load_soup())
-    assert result["raw_floor_jpy"] == 24500
-    assert result["raw_floor_condition"] == "B"
+    assert result["raw_floor_jpy"] == 29000
+    assert result["raw_floor_condition"] == "A"
 
 
 def test_graded_conditions_never_appear_in_raw_conditions():
@@ -121,7 +122,7 @@ class TestExtractProductIntegration:
         assert extracted["rarity"] == "L"
         assert extracted["treatment"] == "parallel"
         assert extracted["page_language"] == "ja"
-        assert extracted["raw_floor_jpy"] == 24500
+        assert extracted["raw_floor_jpy"] == 29000
 
     def test_card_code_conflict_fails_closed(self):
         result = extract_product(_load_html(), PRODUCT_URL, expected_card_code="OP01-002", expected_treatment="parallel")

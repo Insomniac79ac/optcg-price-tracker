@@ -32,8 +32,8 @@ def alter(label, content):
 
 def test_mixed_grades_exact_psa10_and_raw_floor_share_extraction():
     values = parse(HTML)
-    assert values["raw_floor_jpy"] == 24500
-    assert values["raw_floor_condition"] == "B"
+    assert values["raw_floor_jpy"] == 29000
+    assert values["raw_floor_condition"] == "A"
     assert values["psa10"] == {"outcome": "captured", "price_jpy": 50000}
 
 
@@ -53,7 +53,7 @@ def test_mixed_grades_exact_psa10_and_raw_floor_share_extraction():
 )
 def test_psa10_unavailable_never_suppresses_raw(content, outcome):
     values = parse(alter("PSA10", content))
-    assert values["raw_floor_jpy"] == 24500
+    assert values["raw_floor_jpy"] == 29000
     assert values["psa10"] == {"outcome": outcome, "price_jpy": None}
 
 
