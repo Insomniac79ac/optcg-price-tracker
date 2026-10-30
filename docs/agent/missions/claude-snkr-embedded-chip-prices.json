@@ -26,7 +26,7 @@
         "application",
         "infrastructure"
       ],
-      "reason": "embedded_size_chips/rendered_chip_states/confirm_embedded_prices replace the 15 s wait for a request that no longer happens; any disagreement, ambiguity or unusable payload fails closed (prices_not_loaded with evidence). log_event adds a message key. The infrastructure effect is the mission-scoped release of snkrdunk-collector only."
+      "reason": "embedded_size_chips/rendered_chip_states/confirm_embedded_prices replace the 15 s wait for a request that no longer happens; any disagreement, ambiguity or unusable payload fails closed (prices_not_loaded with evidence). log_event adds a message key. The infrastructure effect is the mission-scoped release of snkrdunk-collector only. A picker with an unlabelled, double-valued or repeated chip is embedded_dom_incoherent and never extracted (independent review 2026-10-30); a non-success server fetch falls back to the network wait."
     },
     {
       "files": [
@@ -37,7 +37,7 @@
       "effects": [
         "application"
       ],
-      "reason": "RAW_GRADE_PREFERENCE ('A',) replaces the cheapest-grade min(); raw_price_grades_unlisted defines a confident no listing (coherent A-D picker, no grade-A listing) for the due and validate paths. pricing_methodology is assessed false: the owner decided the grade rule on 2026-10-30 (DECISIONS.md), and the index rule change it implies is deferred to a spliced step; SNKRDUNK fed no index input since 2026-10-26."
+      "reason": "RAW_GRADE_PREFERENCE ('A',) replaces the cheapest-grade min(); raw_price_grades_unlisted defines a confident no listing (coherent A-D picker, no grade-A listing) for the due and validate paths. pricing_methodology is assessed false: the owner decided the grade rule on 2026-10-30 (DECISIONS.md), and the index rule change it implies is deferred to a spliced step; SNKRDUNK fed no index input since 2026-10-26. The raw price and the no-listing verdict both require coherent raw grades (raw_labels_coherent)."
     },
     {
       "files": [
@@ -114,5 +114,5 @@
       }
     ]
   },
-  "diff_sha256": "86231c364b3de67f06ed588150915ee2f43400797247bd382acc764caef09ec2"
+  "diff_sha256": ""
 }
