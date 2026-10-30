@@ -45,12 +45,13 @@
         "services/snkrdunk_collector/tests/test_extractor.py",
         "services/snkrdunk_collector/tests/test_css_module_naming.py",
         "services/snkrdunk_collector/tests/test_psa10.py",
-        "services/snkrdunk_collector/tests/test_validate_only_never_writes.py"
+        "services/snkrdunk_collector/tests/test_validate_only_never_writes.py",
+        "scripts/tests/test_ops_snkr_page_check.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Live-shaped embedded payloads and chips: read without waiting, nothing-listed reaches extraction, rendered/embedded disagreement and unusable payloads refuse, other products' payloads are ignored, A-only price, no grade-A listing is no listing, readable log line. Fixtures with a cheaper B now expect the A price."
+      "reason": "Live-shaped embedded payloads and chips: read without waiting, nothing-listed reaches extraction, rendered/embedded disagreement and unusable payloads refuse, other products' payloads are ignored, A-only price, no grade-A listing is no listing, readable log line. Fixtures with a cheaper B now expect the A price. snkr-page-check's offline parser trace now expects the grade-A price too."
     },
     {
       "files": [
@@ -114,5 +115,5 @@
       }
     ]
   },
-  "diff_sha256": "55d5c95c87d0338e7976ce77dbd20850829536f929d4bae69661ea9779484c3d"
+  "diff_sha256": ""
 }

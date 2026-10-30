@@ -44,7 +44,7 @@ class Describe(unittest.TestCase):
     def test_parse_trace_runs_the_collector_parser_offline(self):
         fixture = (ROOT / "services/snkrdunk_collector/tests/fixtures/product_page_reduced.html").read_text()
         trace = spc.parse_trace(fixture)
-        self.assertEqual((trace["raw_floor_jpy"], trace["chip_container"]), (24500, True))
+        self.assertEqual((trace["raw_floor_jpy"], trace["chip_container"]), (29000, True))
         self.assertEqual(trace["raw_conditions"], ["A", "B", "C", "D"])
         self.assertTrue(trace["image"].endswith("20221121015111-0.webp?size=l"))
         self.assertIn("出品待ち", trace["chip_excerpt"])
