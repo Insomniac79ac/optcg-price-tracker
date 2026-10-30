@@ -36,6 +36,8 @@ stands. Plan branches (`plan/*`), handoffs and reports are the detail behind it.
 | 2026-10-27 | SNKRDUNK parser-bug refusals return through `snkr-parser-requeue`: one canary, then the rest only after the canary captures a price. | Bulk unquarantine (still never done). |
 | 2026-10-28 | Market Value plan A: each published day keeps the membership frozen with it; new prints count from the day they arrive; a release's chain restarts only when its own prints change (#235). | `docs/market_value.md` "one digest of today's catalogue" replay for forward publication. |
 | 2026-10-28 | SNKRDUNK option A: log what the product page requests before changing the price wait again (#237). | Guessing the price request's address or timing. |
+| 2026-10-30 | New sources: no new-source code until Yuyu-Tei and SNKRDUNK are healthy again; then the coordinator rebases and drives D0 (#185) and the Dorasuta rollout. | ROADMAP item 13 "N1 to N16 still open" (all answered 2026-10-19). |
+| 2026-10-30 | Source health monitor: a daily report (lands about 10:00 MYT) and a 4-hourly change alert, both read-only Claude scheduled tasks, push only. | None (new). |
 
 Earlier owner decisions that still stand are recorded in the plans themselves: collector v1 §I
 (2026-10-11), onchain owner decisions (2026-10-09), data-platform G1 (2026-10-11, now partly
@@ -246,20 +248,23 @@ coverage (item 11d).
 
 ### 13. Additional sources
 
-- **Update 2026-10-28:** S1 migration `7a52e9b48e8a` (new-source tables, inert `dorasuta` and
-  `cardrush` source rows) is applied; nothing else is built. N1 to N16 still open.
-- **Status (2026-10-18): planned.** `plan/new-sources` revision 2 (2026-10-18, owned by the cardpirate-data
-  project): foundations S0 to S4, then Dorasuta asks (D0 to D4), Dorasuta buyback (B0, B1), then
-  CardRush (C0 to C4). Nothing built.
+- **Update 2026-10-30:** all owner decisions N1 to N16 were answered on 2026-10-19 (`plan/new-sources`
+  b3a75d8f, §7.1); none is open. N2 (CardRush acceptance) recorded in writing; N3 yes (admit a source
+  only if days to reserve stay 60 or more); N14 superseded (SNKRDUNK first); N16 supplied, never
+  committed, set by the owner as Railway variable `SOURCE_COLLECTOR_CONTACT` before D1.
+- **Built:** S0 (#178), S1 (#181, migration `7a52e9b48e8a` applied 2026-10-28), S2 (#182), S3 (#183),
+  S4 (#184), all merged 2026-10-19/20 and inert. **D0** (#185, collector kit and Dorasuta collector, no
+  rollout) is a draft stacked on the old S3 branch, untouched since 2026-10-20; it needs a rebase onto
+  `staging`. The coordinator drives it (owner 2026-10-30).
+- **Order (owner 2026-10-30, perfectionist):** no new-source code until Yuyu-Tei and SNKRDUNK are both
+  healthy again (Yuyu-Tei source pause since 2026-10-29 07:36Z; SNKRDUNK price fix, item 24). Then D0
+  rebase, then D1 (Dorasuta collector rollout only, after the N3 storage re-check and the owner's Railway
+  service and contact variable), then D2 to D4 per plan; then buyback (B0, B1), then CardRush (C0 to C4).
 - **Rules:** honest bot name with a contact address, robots.txt read every run, one request at a time,
   no images, full stop on any 403, 429, challenge or notice (§2.4). No Yuyu-Tei or SNKRDUNK redeploy
   (§2.7). The three rollout PRs (D1, B1, C2) merge only through `staging-automerge`.
 - **ESTIMATE:** coverage about 91% with Dorasuta, about 96% with CardRush; storage about 68 days to the
-  reserve with both (§4, §6).
-- **Owner decisions open:** N1 to N16 (§7), in particular N1 plan approval, N8 allowing
-  `buy.dorasuta.jp` in the cloud environment, N16 a contact address, N14 order against the SNKRDUNK
-  discovery fix. N2 (CardRush acceptance) is covered by the 2026-10-16 and 2026-10-17 decisions; a
-  one-line owner confirmation closes it.
+  reserve with both (§4, §6), to be re-measured at D1 and C0.
 - **Superseded:** `plan/cardrush-source` (by `plan/new-sources`, 2026-10-16); `plan/source-survey` §5
   order, §6 D4 to D6 and its email drafts; the "no third source" rule.
 - **Class:** AMBER per new source; each cutover (SOURCE_SEMANTICS bump, D4 and C4) is RED.

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Roadmap update 2026-10-30 (documentation only): item 13 records that all new-source owner decisions N1 to N16 were answered 2026-10-19, what is built (S0 to S4) and the owner's 2026-10-30 order (no new-source code until Yuyu-Tei and SNKRDUNK are healthy; coordinator drives D0 #185). Section 1 gains the 2026-10-30 owner decisions (new-source order, source health monitor).",
+  "classification": "GREEN",
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/ROADMAP.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Item 13 status corrected from plan/new-sources b3a75d8f §7.1 and merged PRs #178, #181 to #184; two owner decision rows added."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "docs only"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "none"
+      ],
+      "deployment_impact": "None.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 1
+    },
+    "recovery": {
+      "artifact": "e95c6d32a8585ddb92242471c7f4c3811b1e5615",
+      "procedure": "Native revert.",
+      "trigger": "Wrong status.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/handoff/2026-10-29/coordinator-handoff.md",
+        "docs/agent/ROADMAP.md"
+      ],
+      "observation_window": "None."
+    }
+  },
+  "diff_sha256": "cd95491b9ed52ce9c3e670e2bd628d72a82370fdc0e5b6d2f9c0deaad6ce8380"
+}
