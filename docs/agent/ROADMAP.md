@@ -447,7 +447,12 @@ coverage (item 11d).
 
 - **Status: blocked.** 212 prints (the 2026-10-26 imports) have no mirrored official image; the
   check has been unhealthy since then and nothing has been mirrored since 2026-10-12.
-- **Next:** read the newest `official-images-mirror` run's deploy logs (owner, Railway), then fix.
+- **Found 2026-10-31:** every pending print fetched from Bandai, then failed at R2 with a bare
+  `ClientError`; each run cost one Bandai request per pending print, and the multi-line summary hit
+  Railway's 500 logs/s cap, hiding the end. Reads from the bucket still work (site images load).
+- **Fix (owner, perfectionist):** R2 preflight before any Bandai request, stop at the first R2 error,
+  reasons name operation, code and HTTP status, one bounded summary line. Then the owner checks the
+  R2 token the mirror uses (expiry, Object Read & Write on the assets bucket) against the logged code.
 
 ### 27. RAW storage compression (sibling dictionaries)
 

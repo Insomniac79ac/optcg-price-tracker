@@ -223,6 +223,65 @@ def test_run_records_permanent_failures_and_continues(db_session):
     assert report.summary()["problems"] == [{"card_print_id": bad.id, "status": "failed", "reason": "source: http 404"}]
 
 
+def client_error(code, status, operation):
+    from botocore.exceptions import ClientError
+
+    return ClientError({"Error": {"Code": code, "Message": "secret detail"},
+                        "ResponseMetadata": {"HTTPStatusCode": status}}, operation)
+
+
+class DeniedWrites(FakeStorage):
+    """A token that can read the bucket but not write to it (seen 2026-10-12 to 10-31)."""
+
+    def put_object(self, key, body, **kwargs):
+        raise client_error("AccessDenied", 403, "PutObject")
+
+
+class DeniedEverything(FakeStorage):
+    def head_object(self, key):
+        raise client_error("InvalidAccessKeyId", 403, "HeadObject")
+
+
+def test_a_storage_failure_stops_the_run_after_one_source_request(db_session):
+    """Owner 2026-10-31: a broken R2 token must not cost one Bandai request per pending print."""
+    rows = [official_print(db_session, f"OP04-00{i}", body=png_bytes(color=(i, 1, 1))) for i in range(1, 4)]
+    bodies = {r.image_url: b for r, b in rows}
+    calls = []
+
+    def fetch(url):
+        calls.append(url)
+        return bodies[url]
+
+    report = run_mirror(db_session, DeniedWrites(), [target(r) for r, _ in rows], fetcher=fetch,
+                        public_fetch=lambda url: (404, b""), sleep=lambda s: None)
+
+    assert len(calls) == 1 and report.source_requests == 1 and not report.ok
+    reason = "storage PutObject: AccessDenied (http 403)"
+    assert report.stopped == f"{reason} (print {rows[0][0].id}); later prints not fetched"
+    assert report.summary()["problems"] == [{"card_print_id": rows[0][0].id, "status": "failed", "reason": reason}]
+    assert "secret detail" not in str(report.summary())
+    assert db_session.scalars(select(CardPrintImageAsset)).all() == []
+
+
+def test_storage_preflight_runs_before_any_source_request(db_session):
+    row, body = official_print(db_session, "OP04-010")
+    calls = []
+    report = run_mirror(db_session, DeniedEverything(), [target(row)], fetcher=lambda url: calls.append(url) or body,
+                        public_fetch=lambda url: (404, b""), sleep=lambda s: None)
+    assert calls == [] and report.source_requests == 0
+    assert report.stopped == "preflight storage HeadObject: InvalidAccessKeyId (http 403)"
+
+
+def test_the_summary_stays_bounded(db_session):
+    from app.official_images.mirror import SUMMARY_PROBLEMS, Outcome, RunReport
+
+    report = RunReport(selected=212, failed=212,
+                       outcomes=[Outcome(i, "failed", "source: http 404") for i in range(212)])
+    summary = report.summary()
+    assert len(summary["problems"]) == SUMMARY_PROBLEMS and summary["problems_omitted"] == 212 - SUMMARY_PROBLEMS
+    assert summary["problem_reasons"] == {"source: http 404": 212}
+
+
 def test_read_path_serves_verified_copy_of_the_current_version_only(db_session):
     row, body = official_print(db_session)
     storage = FakeStorage()
