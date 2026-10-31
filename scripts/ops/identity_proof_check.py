@@ -66,7 +66,8 @@ def check(session, proofs=None):
             verdict = f"not_ambiguous_now:{final}"
         else:
             verdict = "never_reached_validator"
-        rows.append({"source_candidate_id": cid, "selected_card_print_id": proof.get("selected_card_print_id"),
+        rows.append({"source_candidate_id": cid, "actor": proof.get("actor"),
+                     "selected_card_print_id": proof.get("selected_card_print_id"),
                      "work_id": proof.get("work_id"), "verdict": verdict,
                      "pre_proof_status": entry.get("pre_proof_status"), "final_status": final,
                      "refusal": entry.get("refusal"), "resolution_reasons": reasons[-3:]})
@@ -84,6 +85,9 @@ def run(out_dir):
         rows = check(session)
     summary = {"reviews": len(rows), "verdicts": dict(Counter(r["verdict"] for r in rows)),
                "refusals": dict(Counter(r["refusal"][:120] for r in rows if r["refusal"])),
-               "rows": rows, "source_requests": 0, "database_writes": 0}
+               # Rows already exact by another rule need no review: counted, not listed, so the
+               # summary stays inside the annotation budget (311 rows overflowed it on 2026-10-31).
+               "rows": [r for r in rows if not r["verdict"].startswith("not_ambiguous_now:")],
+               "source_requests": 0, "database_writes": 0}
     common.write_json(Path(out_dir) / OUTPUT, summary)
     return summary
