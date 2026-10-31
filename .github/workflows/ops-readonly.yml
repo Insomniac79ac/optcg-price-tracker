@@ -24,6 +24,7 @@ on:
           - capture-batch-preview
           - official-series-index
           - snkr-page-check
+          - identity-proof-check
       ledger_floor:
         description: "verify-lossless: exclusive ledger id floor"
         type: string

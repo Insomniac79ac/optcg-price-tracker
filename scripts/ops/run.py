@@ -84,6 +84,11 @@ def _snkr_page_check(args, out):
     return snkr_page_check.run(out)
 
 
+def _identity_proof_check(args, out):
+    from ops import identity_proof_check
+    return identity_proof_check.run(out)
+
+
 def _web_smoke(args, out):
     receipt = Path(out) / "web-smoke.json"
     status = subprocess.run([sys.executable, str(common.ROOT / "scripts/staging_web_smoke.py"), "--output", str(receipt)],
@@ -179,6 +184,8 @@ RUNBOOKS = {
     "capture-batch-preview": ("read", False, _capture_preview),
     "official-series-index": ("read", False, _official_series),
     "snkr-page-check": ("read", False, _snkr_page_check),
+    # Why each registered physical artwork review resolves or is refused (no source request).
+    "identity-proof-check": ("read", False, _identity_proof_check),
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
     "enqueue-capture-batch": ("write", True, _capture),

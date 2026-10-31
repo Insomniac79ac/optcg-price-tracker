@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "mission": "Owner 'go' 2026-10-31: find out why the 13 Claude physical artwork reviews merged in #242 never resolved. resolve() swallows every refusal, so a read-only ops-readonly runbook identity-proof-check runs the same resolver over exactly the registry's candidates and records each review's verdict and the validator's own refusal message. No write, no source request.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/identity_proof_check.py",
+        "scripts/ops/run.py",
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New read runbook: analyse_source_mapping_proposals(yuyutei, candidate_ids=registry, ignore_existing_mappings) with validate wrapped to record its refusal, the staging gate forced on for this verified staging session only, all patches restored and the session rolled back."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_identity_proof_check.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Verdicts (resolved, refused with message, not ambiguous now, not analysed), patches restored, rollback; registered read-only."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook row."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #249"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "d966fa270ba83f7fe42c65191da7b180c9803e3d",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/identity_proof_check.py"
+      ],
+      "observation_window": "First ops-readonly identity-proof-check run."
+    }
+  },
+  "diff_sha256": "4c053a78c31de699c9d22a92c58b30846dc131bcd76456e0ce309e690a3b9bc2"
+}
