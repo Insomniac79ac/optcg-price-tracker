@@ -149,7 +149,8 @@ def _yuyu_probe(args, out):
 
 def _snkr_requeue(args, out):
     from ops import snkr_requeue
-    return snkr_requeue.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
+    return snkr_requeue.run(out, apply=args.apply, count=args.count, work_id=getattr(args, "work_id", None),
+                            expected_sha256=args.expected_sha256)
 
 
 def _mv_freeze_legacy(args, out):
@@ -242,6 +243,8 @@ def preflight(args, now=None, read=gh_json):
     if args.runbook == "apply-migration":
         from ops import apply_migration
         apply_migration.check_pair(args.revision, args.parent)
+    if isinstance(getattr(args, "work_id", None), int) and args.runbook != "snkr-parser-requeue":
+        raise common.Refused("--work-id is only for snkr-parser-requeue")
     if args.runbook == "catalogue-import":
         from ops import catalogue_import
         catalogue_import.resolve_scope(args.scope, catalogue_import.load_scopes())
@@ -298,6 +301,7 @@ def main(argv=None):
     parser.add_argument("--revision", default="", help="apply-migration: Alembic revision to apply")
     parser.add_argument("--parent", default="", help="apply-migration: live revision it must apply on")
     parser.add_argument("--scope", default="", help="catalogue-import: scope name in docs/agent/CATALOGUE_IMPORT_SCOPES.json")
+    parser.add_argument("--work-id", type=int, help="snkr-parser-requeue canary: the one refused item to reopen")
     args = parser.parse_args(argv)
     summary = {"runbook": args.runbook, "workflow": args.workflow, "apply": args.apply,
                "started_at": common.now_utc().isoformat()}

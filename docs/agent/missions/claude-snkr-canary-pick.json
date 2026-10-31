@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "mission": "snkr-parser-requeue canary pick (owner option B, 2026-10-31). Canaries 196 and 195 settled as correct no_listing on the #245 code (both checked against the live page), which proves nothing; the runbook's own order keeps picking cheap cards with no listing. The canary dry run now lists the first 20 eligible items with listing URLs (eligible_sample) and a canary may name one (work_id), so the owner approves one whose live page shows a grade-A listing. Every other gate is unchanged.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/snkr_parser_requeue.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "preview(work_id=...) for the canary only; the pick must be eligible; plan gains key picked (in the SHA) and apply re-checks a picked item's eligibility, while an unpicked plan naming another item is still refused. eligible_sample (20 rows: work id, listing URL, code, rarity, variant). Same population and windows; not imported by any collector path."
+    },
+    {
+      "files": [
+        "scripts/ops/snkr_requeue.py",
+        "scripts/ops/run.py",
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "work_id input (ops-write, --work-id) passed only to snkr-parser-requeue (refused elsewhere and with the rest mode); summary carries work_id and eligible_sample; run name shows work=<id>."
+    },
+    {
+      "files": [
+        "services/api/tests/test_snkr_parser_requeue_postgres.py",
+        "scripts/tests/test_ops_snkr_requeue.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Picked canary reopens exactly the named item; unpicked plan with another item still refused; non-eligible or rest-mode pick refused; apply refuses a pick that became ineligible; work_id refused for other runbooks. Postgres suite 17 passed locally (Postgres 16)."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/DECISIONS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook section and the owner decision."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "One SNKRDUNK freshness_work row per owner-approved canary"
+      ],
+      "routes": [
+        "The scheduled SNKRDUNK collector refreshes the reopened work; no new route"
+      ],
+      "dependencies": [
+        "staging after #246"
+      ],
+      "deployment_impact": "No collector rollout. Behaviour changes only after an owner-approved apply naming one item.",
+      "database_writes": 1,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "b3469e4070814eed69d6eaca9f535fb94afb2f0f",
+      "procedure": "Native revert PR with its own mission file; reopened rows that refuse again block themselves (identity_refusal), so no manual row repair is needed.",
+      "trigger": "A picked canary was reopened that should not have been, or the dry run misreports.",
+      "backup": "Railway Postgres backup under 24 h (daily 09:22Z).",
+      "validation": [
+        "services/api/tests/test_snkr_parser_requeue_postgres.py",
+        "scripts/tests/test_ops_snkr_requeue.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/snkr_parser_requeue.py",
+        "scripts/ops/snkr_requeue.py",
+        ".github/workflows/ops-write.yml"
+      ],
+      "observation_window": "Canary dry run (eligible_sample), owner-picked apply, the next SNKRDUNK turn (db-diagnostic snkrdunk-quarantine requeued)."
+    }
+  },
+  "diff_sha256": "74425dd4bd83ace7af43bd53aa92b962ccb778d10b29cee615cd1aa046e73435"
+}

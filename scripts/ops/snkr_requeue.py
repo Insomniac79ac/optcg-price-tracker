@@ -4,8 +4,11 @@ Owner decisions 2026-10-27/28 (perfectionist): a canary first, then the rest. Th
 app.services.snkr_parser_requeue.preview (read-only, verified staging connection); the apply
 re-runs it under row locks and writes only the approved plan. No source request.
 
-- count=1: canary. Reopens the one refused item with the newest earlier clean capture. Wait for
-  the next SNKRDUNK turn to capture it (staging-state, db-diagnostic snkrdunk-quarantine).
+- count=1: canary. Reopens the one refused item with the newest earlier clean capture, or the one
+  named by work_id (owner 2026-10-31, option B: a no_listing canary settles but proves nothing, so
+  the owner may pick an item whose live page shows a grade-A listing). The dry run lists the first
+  eligible items with their listing URLs (eligible_sample). Wait for the next SNKRDUNK turn to
+  capture it (db-diagnostic snkrdunk-quarantine, statement requeued).
 - count empty: rest. Needs an attempt on a refused item that captured a price on the new code, and
   nothing refused again on it. Reopens every remaining refused item.
 """
@@ -41,21 +44,23 @@ def mode_for(count):
     raise common.Refused("snkr-parser-requeue: count 1 is the canary; leave it empty for the rest")
 
 
-def default_preview(mode):
+def default_preview(mode, work_id=None):
     """preview on a verified read-only staging session."""
     from sqlalchemy.orm import Session
     from ops import db as ops_db
     from app.services.snkr_parser_requeue import preview
 
     with Session(ops_db.engine()) as session:
-        result = preview(session, mode=mode)
+        result = preview(session, mode=mode, work_id=work_id)
         session.rollback()
     return result
 
 
-def run(out_dir, *, apply=False, count=None, expected_sha256="", preview=None, write=None):
+def run(out_dir, *, apply=False, count=None, work_id=None, expected_sha256="", preview=None, write=None):
     mode = mode_for(count)
-    p, problems, facts = (preview or default_preview)(mode)
+    if work_id is not None and mode != "canary":
+        raise common.Refused("snkr-parser-requeue: work_id names one canary item; it needs count 1")
+    p, problems, facts = (preview or default_preview)(mode, work_id)
     sha = plan_sha(p) if p else None
     summary = {"mode": mode, "apply": bool(apply), "reopen": len(p["work_ids"]) if p else 0,
                "work_ids_sample": (p["work_ids"][:10] if p else []), "problems": problems,
@@ -64,6 +69,10 @@ def run(out_dir, *, apply=False, count=None, expected_sha256="", preview=None, w
                "open_requeues": facts.get("open_requeues", [])[:10],
                "refused_on_new_code": len(facts.get("refused_on_new_code") or []),
                "plan_sha256": sha, "source_requests": 0}
+    if work_id is not None:
+        summary["work_id"] = work_id
+    if "eligible_sample" in facts:
+        summary["eligible_sample"] = facts["eligible_sample"]
     common.write_json(Path(out_dir) / "snkr-parser-requeue.json", {**summary, "plan": p, "facts": facts})
     if problems:
         summary["ok"] = False

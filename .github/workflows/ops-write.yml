@@ -1,5 +1,5 @@
 name: ops-write
-run-name: ops-write ${{ inputs.runbook }} apply=${{ inputs.apply }} ${{ inputs.scope }} ${{ inputs.request_id }}
+run-name: ops-write ${{ inputs.runbook }} apply=${{ inputs.apply }} ${{ inputs.scope }}${{ inputs.work_id && format(' work={0}', inputs.work_id) || '' }} ${{ inputs.request_id }}
 
 # Owner-gated staging write runbooks. The first job waits in the `staging-ops` Environment for
 # the owner's approval (required reviewer) and holds no credential; only then does the runbook
@@ -52,6 +52,10 @@ on:
         description: "catalogue-import only: scope name from docs/agent/CATALOGUE_IMPORT_SCOPES.json (e.g. eb-05)"
         type: string
         default: ""
+      work_id:
+        description: "snkr-parser-requeue canary only (count 1): the refused item to reopen, from the dry run's eligible_sample"
+        type: string
+        default: ""
       request_id:
         description: Free text shown in the run name, to find this run again
         type: string
@@ -91,6 +95,7 @@ jobs:
       REVISION: ${{ inputs.revision }}
       PARENT: ${{ inputs.parent }}
       SCOPE: ${{ inputs.scope }}
+      WORK_ID: ${{ inputs.work_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -107,6 +112,7 @@ jobs:
           if [ -n "$PARENT" ]; then args+=(--parent "$PARENT"); fi
           if [ -n "$SCOPE" ]; then args+=(--scope "$SCOPE"); fi
           if [ -n "$COUNT" ]; then args+=(--count "$COUNT"); fi
+          if [ -n "$WORK_ID" ]; then args+=(--work-id "$WORK_ID"); fi
           if [ "$APPLY" = true ]; then args+=(--apply); fi
           python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
 
@@ -129,6 +135,7 @@ jobs:
       REVISION: ${{ inputs.revision }}
       PARENT: ${{ inputs.parent }}
       SCOPE: ${{ inputs.scope }}
+      WORK_ID: ${{ inputs.work_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -155,6 +162,7 @@ jobs:
           if [ -n "$PARENT" ]; then args+=(--parent "$PARENT"); fi
           if [ -n "$SCOPE" ]; then args+=(--scope "$SCOPE"); fi
           if [ -n "$COUNT" ]; then args+=(--count "$COUNT"); fi
+          if [ -n "$WORK_ID" ]; then args+=(--work-id "$WORK_ID"); fi
           if [ "$APPLY" = true ]; then args+=(--apply); fi
           python scripts/ops/run.py "$RUNBOOK" "${args[@]}"
       - uses: actions/upload-artifact@v4

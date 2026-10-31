@@ -35,9 +35,9 @@ def seed(factory, source, first_mapping, print_id, n=3):
     return ids
 
 
-def preview(factory, mode, count=None):
+def preview(factory, mode, count=None, work_id=None):
     with factory() as session:
-        return rq.preview(session, mode=mode, count=count, clock=lambda: NOW)
+        return rq.preview(session, mode=mode, count=count, work_id=work_id, clock=lambda: NOW)
 
 
 def apply(factory, plan_):
@@ -188,6 +188,39 @@ def test_apply_writes_only_the_approved_plan(db):
         apply(factory, {**plan_, "extra": 1})
     with factory() as session:
         assert {session.get(FreshnessWork, i).state for i in ids} == {"blocked"}
+
+
+def test_a_canary_can_name_an_eligible_item_and_apply_rechecks_it(db):
+    """Owner 2026-10-31 option B: a no_listing canary settles but proves nothing, so the owner may
+    pick an item whose live page shows a grade-A listing, from the dry run's eligible sample."""
+    factory, source, mapping_id, print_id = db
+    ids = seed(factory, source, mapping_id, print_id)
+    default, _, facts = preview(factory, "canary")
+    sample = facts["eligible_sample"]
+    assert {s["work_id"] for s in sample} == set(ids)
+    assert all(s["source_url"].startswith("https://snkrdunk.com/apparels/") for s in sample)
+    other = next(i for i in ids if i not in default["work_ids"])
+    picked, problems, _ = preview(factory, "canary", work_id=other)
+    assert problems == [] and picked == {**default, "work_ids": [other], "picked": True}
+    # An unpicked plan naming another item is still refused; the picked plan is written.
+    with pytest.raises(ValueError, match="differs"):
+        apply(factory, {**default, "work_ids": [other]})
+    assert apply(factory, picked) == [other]
+    with factory() as session:
+        assert {i: session.get(FreshnessWork, i).state for i in ids} == {
+            i: ("pending" if i == other else "blocked") for i in ids}
+
+
+def test_a_named_canary_must_be_eligible_and_a_canary(db):
+    factory, source, mapping_id, print_id = db
+    ids = seed(factory, source, mapping_id, print_id, n=2)
+    assert preview(factory, "canary", work_id=max(ids) + 99)[1] == [f"work {max(ids) + 99} is not an eligible refused item"]
+    assert preview(factory, "rest", work_id=ids[0])[1] == ["work_id names one canary item (count 1)"]
+    picked = preview(factory, "canary", work_id=ids[0])[0]
+    with factory.begin() as session:
+        session.get(SourceCardMapping, session.get(FreshnessWork, ids[0]).source_card_mapping_id).review_status = "needs_review"
+    with pytest.raises(ValueError, match="not an eligible"):
+        apply(factory, picked)
 
 
 def test_bad_inputs_are_refused(db):
