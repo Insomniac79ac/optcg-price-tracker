@@ -22,6 +22,12 @@ seconds apart) and transient failures back off exponentially, honouring
 Retry-After. Repeated transient failures stop the run: a struggling source is
 contained, not retried harder. Reruns skip prints that already have a row for
 their current image_url, so the backfill is resume-safe and idempotent.
+
+Storage failures stop the run too (owner 2026-10-31): a HEAD on a key no image
+can have runs before any Bandai request, and the first R2 error during a print
+ends the run, so a broken token or bucket costs at most one Bandai request
+instead of one per pending print. The reason names the R2 operation, error
+code and HTTP status, never just the exception class.
 """
 
 from __future__ import annotations
@@ -34,6 +40,7 @@ from typing import Callable
 from urllib.parse import urlparse
 
 import httpx
+from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -58,6 +65,10 @@ BACKOFF_CAP_SECONDS = 300.0
 # Decoded Pillow format -> object-key extension (whose media type is fixed by
 # OBJECT_KEY_MEDIA_TYPES, the single source of that pairing).
 FORMAT_EXTENSIONS = {"PNG": "png", "JPEG": "jpg", "WEBP": "webp"}
+# A content-addressed key no image can have (an all-zero digest): HEAD on it proves the token can
+# reach the bucket before any Bandai request. Absent is the expected answer.
+PREFLIGHT_KEY = object_key("0" * 64, "png")
+SUMMARY_PROBLEMS = 20  # Railway drops lines past 500/s: the summary stays one bounded line
 
 
 class TransientSourceError(Exception):
@@ -105,6 +116,10 @@ class RunReport:
         return self.stopped is None and self.failed == 0 and self.digest_mismatch == 0
 
     def summary(self) -> dict:
+        problems = [o for o in self.outcomes if o.status in ("digest_mismatch", "failed")]
+        reasons: dict[str, int] = {}
+        for o in problems:
+            reasons[o.reason or o.status] = reasons.get(o.reason or o.status, 0) + 1
         return {
             "selected": self.selected,
             "mirrored": self.mirrored,
@@ -114,12 +129,22 @@ class RunReport:
             "uploaded_bytes": self.uploaded_bytes,
             "source_requests": self.source_requests,
             "stopped": self.stopped,
+            "problem_reasons": reasons,
             "problems": [
                 {"card_print_id": o.card_print_id, "status": o.status, "reason": o.reason}
-                for o in self.outcomes
-                if o.status in ("digest_mismatch", "failed")
+                for o in problems[:SUMMARY_PROBLEMS]
             ],
+            "problems_omitted": max(len(problems) - SUMMARY_PROBLEMS, 0),
         }
+
+
+def storage_error_reason(exc: Exception) -> str:
+    """The R2 operation, error code and HTTP status of a storage failure (no message text)."""
+    if isinstance(exc, ClientError):
+        error = exc.response.get("Error", {}) or {}
+        status = (exc.response.get("ResponseMetadata", {}) or {}).get("HTTPStatusCode")
+        return f"storage {exc.operation_name or '?'}: {error.get('Code') or '?'} (http {status or '?'})"
+    return f"storage: {type(exc).__name__}"
 
 
 def is_official_url(url: str | None) -> bool:
@@ -294,6 +319,12 @@ def run_mirror(
         fetch = fetcher or (lambda url: fetch_official(url, client))
         pub = public_fetch or (lambda url: public_get(url, client))
         consecutive_transient = 0
+        if targets:
+            try:
+                storage.head_object(PREFLIGHT_KEY)
+            except (ClientError, BotoCoreError) as exc:
+                report.stopped = f"preflight {storage_error_reason(exc)}"
+                return report
         for target in targets:
             body, last = None, None
             for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -321,7 +352,11 @@ def run_mirror(
             else:
                 try:
                     outcome = mirror_one(db, target, storage, body, public_fetch=pub)
-                except Exception as exc:  # storage/database failure: record and continue
+                except (ClientError, BotoCoreError) as exc:  # storage failure: stop, it is not per-print
+                    db.rollback()
+                    outcome = Outcome(target.card_print_id, "failed", storage_error_reason(exc))
+                    report.stopped = f"{outcome.reason} (print {target.card_print_id}); later prints not fetched"
+                except Exception as exc:  # database failure: record and continue
                     db.rollback()
                     outcome = Outcome(target.card_print_id, "failed", f"{type(exc).__name__}")
             report.outcomes.append(outcome)
@@ -336,4 +371,6 @@ def run_mirror(
                 report.failed += 1
             if progress:
                 progress(outcome)
+            if report.stopped:
+                break
     return report

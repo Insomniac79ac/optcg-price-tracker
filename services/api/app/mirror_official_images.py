@@ -66,7 +66,7 @@ def _write(args: argparse.Namespace) -> int:
                                   "reason": outcome.reason, "object_key": outcome.object_key}), flush=True)
 
         report = run_mirror(db, storage, targets, min_interval=args.min_interval, progress=progress)
-    print(json.dumps(report.summary(), indent=1))
+    print(json.dumps(report.summary(), separators=(",", ":")), flush=True)  # one bounded line
     return 0 if report.ok else 1
 
 
