@@ -322,6 +322,8 @@ older quarantine and genuine mismatches are never touched. Dry run lists the wor
 pending, due now, the original reason kept behind a requeue marker in `last_failure`). No source
 request.
 
+To check a requeued item against the live page: `db-diagnostic snkrdunk-quarantine`, statement `requeued` (owner 2026-10-31): every window-refused SNKRDUNK refresh item no longer blocked, with its listing URL, raw price states and its attempts on the #245 code (claimed after 2026-10-30 14:00Z).
+
 `market-value-freeze-legacy` (`scripts/ops/mv_freeze_legacy.py`, plan in
 `app.services.market_value_membership`): owner plan A (2026-10-28). Market Value days published
 before the membership ledger carry only the v1 digest of their prints, so the publisher refuses
