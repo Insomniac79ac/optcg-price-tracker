@@ -11,15 +11,17 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 from ops import common, run, snkr_requeue as sr  # noqa: E402
 
-PLAN = {"source_id": 1, "mode": "canary", "work_ids": [4711]}
-FACTS = {"candidates": 284, "ineligible": [], "proven_captures": [], "open_requeues": [], "refused_on_new_code": []}
+PLAN = {"source_id": 1, "mode": "canary", "work_ids": [4711], "picked": False}
+FACTS = {"candidates": 284, "ineligible": [], "proven_captures": [], "open_requeues": [], "refused_on_new_code": [],
+         "eligible_sample": [{"work_id": 4711, "source_url": "https://snkrdunk.com/apparels/1", "code": "OP01-001",
+                              "rarity": "L", "variant": "base"}]}
 
 
 def preview(plan=PLAN, problems=()):
     seen = []
 
-    def fake(mode):
-        seen.append(mode)
+    def fake(mode, work_id=None):
+        seen.append(mode if work_id is None else (mode, work_id))
         return (dict(plan) if plan else None, list(problems), FACTS)
     fake.seen = seen
     return fake
@@ -36,7 +38,8 @@ class Plan(unittest.TestCase):
 
         self.assertEqual(set(PLAN), set(PLAN_KEYS))
         base = sr.plan_sha(PLAN)
-        for changed in ({**PLAN, "source_id": 2}, {**PLAN, "mode": "rest"}, {**PLAN, "work_ids": [4712]}):
+        for changed in ({**PLAN, "source_id": 2}, {**PLAN, "mode": "rest"}, {**PLAN, "work_ids": [4712]},
+                        {**PLAN, "picked": True}):
             self.assertNotEqual(sr.plan_sha(changed), base)
 
     def test_registered_as_collector_affecting_write(self):
@@ -68,6 +71,24 @@ class RunFlow(unittest.TestCase):
                 sr.run(tmp, apply=True, count=None, expected_sha256=sha, preview=preview(None, ["no proof"]),
                        write=written.append)
         self.assertEqual(len(written), 1)
+
+    def test_a_canary_can_name_its_item_and_the_dry_run_lists_listings(self):
+        """Owner 2026-10-31 option B: pick a canary whose live page shows a grade-A listing."""
+        fake = preview({**PLAN, "picked": True})
+        with tempfile.TemporaryDirectory() as tmp:
+            out = sr.run(tmp, count=1, work_id=4711, preview=fake)
+            with self.assertRaises(common.Refused):
+                sr.run(tmp, count=None, work_id=4711, preview=preview())
+        self.assertEqual((out["work_id"], fake.seen), (4711, [("canary", 4711)]))
+        self.assertEqual(out["eligible_sample"][0]["source_url"], "https://snkrdunk.com/apparels/1")
+
+    def test_work_id_belongs_to_snkr_parser_requeue_only(self):
+        from types import SimpleNamespace
+
+        args = SimpleNamespace(runbook="enqueue-remaining-50", workflow="ops-write", apply=False, work_id=5,
+                               revision="", parent="", scope="", count=None, expected_sha256="")
+        with self.assertRaisesRegex(common.Refused, "only for snkr-parser-requeue"):
+            run.preflight(args, read=lambda path: {"workflow_runs": []})
 
     def test_dry_run_with_a_problem_reports_not_ok(self):
         with tempfile.TemporaryDirectory() as tmp:

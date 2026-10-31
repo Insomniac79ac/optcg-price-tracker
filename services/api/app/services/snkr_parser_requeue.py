@@ -36,7 +36,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy import exists, select
 
-from app.models import FreshnessAttempt, FreshnessWork, Source
+from app.models import (
+    CanonicalCard, CardPrint, FreshnessAttempt, FreshnessWork, Source, SourceCardMapping,
+)
 from app.services import freshness_queue as queue
 from app.services.freshness_policy import require_utc, utc_now
 
@@ -57,7 +59,11 @@ WINDOWS = (
 )
 MARKER = "requeued after SNKRDUNK parser fixes (owner 2026-10-28): "
 MAX_COUNT = 500
-PLAN_KEYS = ("source_id", "mode", "work_ids")
+PLAN_KEYS = ("source_id", "mode", "work_ids", "picked")
+# Owner 2026-10-31 (option B): the canary's dry run lists this many eligible items with their
+# listings, and a canary may name one of them (work_id) so its live page can be checked first for a
+# grade-A listing: a no_listing canary settles but proves nothing.
+SAMPLE = 20
 
 
 def _source_id(db):
@@ -158,14 +164,28 @@ def _facts(db, source_id):
     return {"open_requeues": open_requeues, "proven_captures": proven, "refused_on_new_code": refused_again}
 
 
-def preview(db, *, mode, count=None, clock=utc_now):
+def _listing(db, work):
+    """What an owner needs to open the item's live page: its listing URL and card."""
+    mapping = db.get(SourceCardMapping, work.source_card_mapping_id)
+    card_print = db.get(CardPrint, work.card_print_id) if work.card_print_id else None
+    card = db.get(CanonicalCard, card_print.canonical_card_id) if card_print else None
+    return {"work_id": work.id, "source_url": mapping.source_url if mapping else None,
+            "code": card.card_code if card else None,
+            "rarity": (card_print.official_rarity or (card.rarity if card else None)) if card_print else None,
+            "variant": card_print.official_asset_variant if card_print else None}
+
+
+def preview(db, *, mode, count=None, work_id=None, clock=utc_now):
     """(plan or None, problems, facts). Read only: no lock, no write. mode "canary" reopens one
-    item; "rest" reopens every remaining one (at most count)."""
+    item (the first eligible, or work_id when named); "rest" reopens every remaining one (at
+    most count)."""
     require_utc(clock())
     if mode not in {"canary", "rest"}:
         return None, ["mode must be canary or rest"], {}
     if count is not None and (type(count) is not int or not 1 <= count <= MAX_COUNT):
         return None, [f"count must be 1..{MAX_COUNT} or empty"], {}
+    if work_id is not None and (mode != "canary" or type(work_id) is not int or work_id < 1):
+        return None, ["work_id names one canary item (count 1)"], {}
     source_id = _source_id(db)
     facts = _facts(db, source_id)
     problems = []
@@ -184,12 +204,19 @@ def preview(db, *, mode, count=None, clock=utc_now):
         why = _eligible(db, work)
         (skipped if why else eligible).append({"work_id": work.id, "why": why} if why else work.id)
     facts.update(candidates=len(eligible) + len(skipped), ineligible=skipped)
+    if mode == "canary":
+        facts["eligible_sample"] = [_listing(db, db.get(FreshnessWork, i)) for i in eligible[:SAMPLE]]
     if not eligible:
         problems.append("no refused item is eligible to reopen")
+    elif work_id is not None and work_id not in eligible:
+        problems.append(f"work {work_id} is not an eligible refused item")
     if problems:
         return None, problems, facts
-    chosen = eligible[:1] if mode == "canary" else eligible[: count or len(eligible)]
-    return {"source_id": source_id, "mode": mode, "work_ids": chosen}, [], facts
+    if work_id is not None:
+        chosen = [work_id]
+    else:
+        chosen = eligible[:1] if mode == "canary" else eligible[: count or len(eligible)]
+    return {"source_id": source_id, "mode": mode, "work_ids": chosen, "picked": work_id is not None}, [], facts
 
 
 def apply(db, approved, *, clock=utc_now):
@@ -198,8 +225,10 @@ def apply(db, approved, *, clock=utc_now):
         raise ValueError("an approved plan with exactly the plan keys is required")
     now = require_utc(clock())
     _candidates(db, approved["source_id"], lock=True)  # lock every candidate row first
+    canary = approved["mode"] == "canary"
     plan, problems, _ = preview(db, mode=approved["mode"],
-                                count=None if approved["mode"] == "canary" else len(approved["work_ids"]),
+                                count=None if canary else len(approved["work_ids"]),
+                                work_id=approved["work_ids"][0] if canary and approved["picked"] else None,
                                 clock=clock)
     if problems:
         raise ValueError("; ".join(problems))

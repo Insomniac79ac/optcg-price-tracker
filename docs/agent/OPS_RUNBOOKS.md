@@ -310,8 +310,12 @@ is never retried on its own. Two parser windows refused work:
 
 Owner decisions 2026-10-27/28 (perfectionist):
 
-1. `count=1` (canary): reopens the one refused item with the newest earlier clean capture. Refused
-   while an earlier requeue is still open or once the fix is already proven.
+1. `count=1` (canary): reopens the one refused item with the newest earlier clean capture, or the
+   one named by `work_id` (owner 2026-10-31, option B). The dry run lists the first 20 eligible
+   items with their listing URLs (`eligible_sample`); a canary that settles as no_listing proves
+   nothing, so pick one whose live page shows a grade-A listing. The pick is part of the plan and
+   its SHA; the apply re-checks that the named item is still eligible. Refused while an earlier
+   requeue is still open or once the fix is already proven.
 2. `count` empty (rest): needs proof (a refused item has captured a price on the new code since
    2026-10-28 06:49Z) and nothing refused again on the new code; reopens every remaining refused
    item.
