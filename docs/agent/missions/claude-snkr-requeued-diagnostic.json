@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "mission": "Owner 2026-10-31 (option A): confirm SNKRDUNK requeue canary work 196's no_listing against the live page. Adds a read-only statement `requeued` to db-diagnostic snkrdunk-quarantine: window-refused SNKRDUNK refresh items no longer blocked, with listing URL, raw price states and attempts on the #245 code. No new runbook, no workflow change.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/snkrdunk-quarantine.sql"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "One more SELECT-only statement in an existing diagnostic; runs in the read-only ops session; covered by DiagnosticsOnPostgres (passed locally on Postgres 16)."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Names the statement under snkr-parser-requeue."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #245"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "2e676e9868535db1ef1535486e468c3ca7811e54",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/snkrdunk-quarantine.sql"
+      ],
+      "observation_window": "First ops-readonly db-diagnostic snkrdunk-quarantine run."
+    }
+  },
+  "diff_sha256": "7b5a43844c328913a3a1aeb6ba4b357c54662aa2fe8326e593299ad55f94508b"
+}

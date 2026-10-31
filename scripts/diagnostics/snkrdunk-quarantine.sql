@@ -35,3 +35,27 @@ select w.id work_id, w.scope_key, left(regexp_replace(coalesce(w.last_failure, '
 from freshness_work w join sources s on s.id = w.source_id
 where s.name = 'snkrdunk' and w.state = 'blocked' and w.kind = 'validation'
 order by w.id;
+
+-- Requeued items (owner 2026-10-31, option A): SNKRDUNK refresh work refused in the parser windows
+-- (identity_refusal finished 2026-10-26 08:00Z to 2026-10-28 06:49Z, as snkr_parser_requeue) and
+-- no longer blocked, with its listing, raw price states and its newest attempts on the #245 code
+-- (claimed after 2026-10-30 14:00Z), so an owner can check a no-listing against the live page.
+-- requeued
+select w.id work_id, w.state, w.last_outcome, m.id mapping_id, m.source_url, c.card_code code,
+  coalesce(nullif(p.official_rarity, ''), c.rarity, '?') rarity, p.official_asset_variant variant,
+  (select json_agg(json_build_object('condition', ps.condition_label, 'type', ps.price_type,
+      'availability', ps.availability, 'checked', ps.last_successfully_checked_at) order by ps.id)
+    from freshness_price_states ps where ps.work_id = w.id and ps.price_category = 'raw') raw_states,
+  (select json_agg(json_build_object('attempt_id', a.id, 'claimed', a.claimed_at, 'finished',
+      a.finished_at, 'outcome', a.outcome, 'categories', a.category_outcomes,
+      'raw_snapshot_id', a.raw_snapshot_id) order by a.id desc)
+    from freshness_attempts a where a.work_id = w.id and a.claimed_at >= '2026-10-30T14:00:00Z') new_code_attempts
+from freshness_work w join sources s on s.id = w.source_id
+left join source_card_mappings m on m.id = w.source_card_mapping_id
+left join card_prints p on p.id = coalesce(w.card_print_id, m.card_print_id)
+left join canonical_cards c on c.id = p.canonical_card_id
+where s.name = 'snkrdunk' and w.kind = 'refresh' and w.state <> 'blocked'
+  and exists (select 1 from freshness_attempts r where r.work_id = w.id
+    and r.outcome = 'identity_refusal'
+    and r.finished_at >= '2026-10-26T08:00:00Z' and r.finished_at < '2026-10-28T06:49:00Z')
+order by w.id;
