@@ -329,6 +329,13 @@ request.
 
 To check a requeued item against the live page: `db-diagnostic snkrdunk-quarantine`, statement `requeued` (owner 2026-10-31): every window-refused SNKRDUNK refresh item no longer blocked, with its listing URL, raw price states and its attempts on the #245 code (claimed after 2026-10-30 14:00Z).
 
+`proposal-refresh` (`scripts/ops/proposal_refresh.py`, owner 2026-10-31): current pending ambiguous
+Yuyu-Tei proposal groups whose fresh resolver run is exact by
+`retained_positive_unique_physical_artwork_review`. The dry run lists them (candidate, card code,
+stored and new digest, selected print) with the plan SHA; apply re-plans in the write transaction,
+refuses on any difference, refreshes exactly those through `refresh_discovery_proposals` and checks
+each is exact. Proposals only, no mapping (`approve-f1-batch` next), no source request.
+
 `market-value-freeze-legacy` (`scripts/ops/mv_freeze_legacy.py`, plan in
 `app.services.market_value_membership`): owner plan A (2026-10-28). Market Value days published
 before the membership ledger carry only the v1 digest of their prints, so the publisher refuses

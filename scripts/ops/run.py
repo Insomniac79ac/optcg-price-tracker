@@ -158,6 +158,13 @@ def _snkr_requeue(args, out):
                             expected_sha256=args.expected_sha256)
 
 
+def _proposal_refresh(args, out):
+    from ops import proposal_refresh
+    if args.count is not None:
+        raise common.Refused("proposal-refresh takes no count: it plans every group a review now resolves")
+    return proposal_refresh.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
+
+
 def _mv_freeze_legacy(args, out):
     from ops import mv_freeze_legacy
     if args.count is not None:
@@ -206,6 +213,9 @@ RUNBOOKS = {
     # (canary with count 1, then the rest); the collectors serve it.
     "snkr-parser-requeue": ("write", True, _snkr_requeue),
     "market-value-freeze-legacy": ("write", False, _mv_freeze_legacy),
+    # Stored Yuyu-Tei proposal groups a physical artwork review now resolves, refreshed through
+    # discovery's own path (owner 2026-10-31). Proposals only; mappings come from approve-f1-batch.
+    "proposal-refresh": ("write", False, _proposal_refresh),
 }
 
 

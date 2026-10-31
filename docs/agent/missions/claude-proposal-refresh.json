@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "mission": "Owner 'perfectionist' 2026-10-31: get the 13 Claude reviews of #242 to mappings. They validate (identity-proof-check, zero refusals) but their stored proposal groups stayed ambiguous, and approve-f1-batch reads stored exact groups only. New owner-gated ops-write runbook proposal-refresh refreshes, through discovery's own persistence, exactly the stored ambiguous groups a review now resolves. Also trims identity-proof-check's summary (311 rows overflowed the annotation budget).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/proposal_refresh.py",
+        "scripts/ops/run.py",
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "infrastructure",
+        "bulk_data"
+      ],
+      "reason": "Write runbook (not collector-affecting: proposals only). Plan = pending ambiguous yuyutei groups whose fresh analysis (refresh_discovery_proposals' filters) is exact by retained_positive_unique_physical_artwork_review; SHA over candidate, new digest, selected print. Apply re-plans in the write transaction, refuses on any difference, calls refresh_discovery_proposals for exactly those ids and requires every result exact. One transaction. Expected 13 groups."
+    },
+    {
+      "files": [
+        "scripts/ops/identity_proof_check.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Summary rows: actor added; rows already exact by another rule counted, not listed."
+    },
+    {
+      "files": [
+        "services/api/tests/test_proposal_refresh.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Only the reviewed group is planned and refreshed to exact; another ambiguous group is untouched; a stale plan is refused; dry run by default, apply needs the SHA. 76 passed with the proof tests on local Postgres 16."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/IDENTITY_REVIEWS.md",
+        "docs/agent/DECISIONS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook, pipeline step 5 (refresh), owner decision."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Yuyu-Tei source_mapping_proposal_groups for listings a review resolves (13 expected)"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #250"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 40,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "20a5ae028f8207590799357049c584eb0e5c1b66",
+      "procedure": "Native revert PR; a refreshed group is an ordinary pending proposal and can be rejected on the admin review page.",
+      "trigger": "A group refreshed that no review resolves, or approve-f1-batch refuses a refreshed group.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/proposal_refresh.py"
+      ],
+      "observation_window": "proposal-refresh dry run (13 candidates), apply, then approve-f1-batch dry run."
+    }
+  },
+  "diff_sha256": "2d0c51ad7ef4d7b44e718adb32c6f3ed356b3c10f1898bcecdca0e8766663390"
+}

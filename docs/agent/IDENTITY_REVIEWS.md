@@ -21,7 +21,11 @@ resolver run by `app.services.physical_artwork_proof` (staging only).
    `selected_card_print_id`, `considered_print_ids`, `positive_physical_basis`,
    `excluded_sibling_basis`, the capture's `work_id`/`capture_scope`/`baseline_evidence_digest`,
    the snapshot ids and full body SHA-256s). It ships with the collectors (the resolver runs there).
-5. **Approval** (`approve-f1-batch`, owner-approved dry run then apply): the now-exact proposals
+5. **Refresh** (`proposal-refresh`, owner-approved dry run then apply, owner 2026-10-31): a merged
+   review resolves a listing only in a fresh resolver run; its stored group stays ambiguous until
+   discovery revisits the listing. This refreshes, through discovery's own persistence, exactly the
+   stored ambiguous groups a review now resolves, so the approval step can see them.
+6. **Approval** (`approve-f1-batch`, owner-approved dry run then apply): the now-exact proposals
    (reason `retained_positive_unique_physical_artwork_review`) become mappings through the admin
    guard, and the collectors price them on their own schedule.
 

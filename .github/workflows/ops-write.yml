@@ -28,12 +28,13 @@ on:
           - yuyu-source-probe
           - snkr-parser-requeue
           - market-value-freeze-legacy
+          - proposal-refresh
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
         default: false
       expected_sha256:
-        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy, catalogue-import, yuyu-source-probe, snkr-parser-requeue, market-value-freeze-legacy: plan) SHA-256 from the dry run the owner reviewed"
+        description: "apply only: approved-list (apply-migration: SQL plan; collector-redeploy, catalogue-import, yuyu-source-probe, snkr-parser-requeue, market-value-freeze-legacy, proposal-refresh: plan) SHA-256 from the dry run the owner reviewed"
         type: string
         default: ""
       count:
