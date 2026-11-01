@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "mission": "Owner 2026-11-01: 'never give your best guess; check and report what actually happened'. SNKRDUNK auto discovery has not planned since #252; two read-only statements in db-diagnostic snkrdunk-discovery-state show the planner's skip guards evaluated now (open intents, last auto scope, 40-minute refresh demand, 24 h peak request cost, spare budget, whether request_budget skips) and SNKRDUNK refresh requests per hour.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/snkrdunk-discovery-state.sql"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Two more SELECT-only statements (planner_guard, refresh_cost_by_hour); read-only ops session; DiagnosticsOnPostgres passed locally on Postgres 16."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #253"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "4288f755f58ef44752ea70acc55a5279bdf2d0f1",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/snkrdunk-discovery-state.sql"
+      ],
+      "observation_window": "First db-diagnostic snkrdunk-discovery-state run after merge."
+    }
+  },
+  "diff_sha256": "e47e237e6bd6d8cad4bbc4ca82d4e88417e5c2c5c6ca820b9621fd987d619177"
+}
