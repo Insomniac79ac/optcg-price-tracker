@@ -118,6 +118,12 @@ def _approve_f1(args, out):
     return f1_approve.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
 
 
+def _approve_snkr(args, out):
+    from ops import f1_approve
+    return f1_approve.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256,
+                          source="snkrdunk")
+
+
 def _refresh_backfill(args, out):
     from ops import refresh_backfill
     return refresh_backfill.run(out, apply=args.apply, count=args.count, expected_sha256=args.expected_sha256)
@@ -216,6 +222,9 @@ RUNBOOKS = {
     # Stored Yuyu-Tei proposal groups a physical artwork review now resolves, refreshed through
     # discovery's own path (owner 2026-10-31). Proposals only; mappings come from approve-f1-batch.
     "proposal-refresh": ("write", False, _proposal_refresh),
+    # SNKRDUNK proposals the title-kind rule resolved become mappings through the admin guard, in
+    # owner-approved batches like approve-f1-batch (owner 2026-11-01). New mappings are priced.
+    "approve-snkr-batch": ("write", True, _approve_snkr),
 }
 
 

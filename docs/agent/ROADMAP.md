@@ -164,6 +164,9 @@ coverage (item 11d).
   "SR-P" parallel). Measured: 210 of 218 ambiguous groups resolve by a SNKRDUNK listing-kind rule
   (part 2); 4 have two parallels and 4 are comic parallels (image review, part 4). Part 3: an
   owner-gated SNKRDUNK refresh and approval runbook.
+- **Update 2026-11-01 (part 3 built):** `proposal-refresh` covers SNKRDUNK title-kind groups and
+  `approve-snkr-batch` maps them in owner-approved batches; the admin gate narrows by the same title
+  kind. Order: refresh dry run and apply, then approval dry run and apply.
 - **Blocker:** owner decision on the SNKRDUNK discovery fix and its order against CardRush (N14).
 - **Class:** AMBER (substantial source-volume increase).
 

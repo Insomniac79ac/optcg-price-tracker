@@ -36,7 +36,12 @@ from ops import common
 
 F1_REASON = "unique_listing_kind_resolves_one_release_sibling"
 REVIEW_REASON = "retained_positive_unique_physical_artwork_review"
+SNKR_TITLE_REASON = "unique_snkrdunk_title_kind_resolves_one_release_sibling"
 RULES = {F1_REASON: "f1", REVIEW_REASON: "physical_review"}
+# approve-snkr-batch (owner 2026-11-01): the same selection, guards and approval for SNKRDUNK
+# proposals the title-kind rule resolved. Each source keeps its own rules and list identity.
+SOURCE_RULES = {"yuyutei": RULES, "snkrdunk": {SNKR_TITLE_REASON: "snkr_title_kind"}}
+RUNBOOK_NAMES = {"yuyutei": "approve-f1-batch", "snkrdunk": "approve-snkr-batch"}
 DEFAULT_COUNT = 500
 MAX_COUNT = 600
 SAMPLE_SIZE = 20
@@ -50,9 +55,10 @@ def _iso(value):
     return value.astimezone(timezone.utc).isoformat()
 
 
-def approvable_rule(reasons):
+def approvable_rule(reasons, source="yuyutei"):
     """The approvable rule an exact proposal's reasons name (F1 or a physical review), or None."""
-    names = [RULES[r] for r in (reasons or []) if r in RULES]
+    rules = SOURCE_RULES[source]
+    names = [rules[r] for r in (reasons or []) if r in rules]
     return names[0] if len(names) == 1 else None
 
 
@@ -63,12 +69,14 @@ def check_count(count):
     return count
 
 
-def pinned_list(entries, count):
+def pinned_list(entries, count, source="yuyutei"):
     """(bytes, sha256, doc) of the first ``count`` eligible entries, in the order given."""
     chosen = [{k: e[k] for k in LIST_KEYS} for e in entries[:count]]
     if not chosen:
-        raise common.Refused("no eligible F1 proposal to approve")
-    doc = {"runbook": "approve-f1-batch", "reasons": sorted(RULES), "expected_count": len(chosen), "entries": chosen}
+        raise common.Refused("no eligible F1 proposal to approve" if source == "yuyutei"
+                             else "no eligible SNKRDUNK title-kind proposal to approve")
+    doc = {"runbook": RUNBOOK_NAMES[source], "reasons": sorted(SOURCE_RULES[source]), "expected_count": len(chosen),
+           "entries": chosen}
     data = json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()
     return data, hashlib.sha256(data).hexdigest(), doc
 
@@ -90,28 +98,42 @@ def check_apply(apply, expected_sha256, sha):
         raise common.Refused("the rebuilt list differs from the dry run's (expected_sha256); dry run again")
 
 
-def select_batch(session):
+def _source_api(source):
+    """The candidate model, approval helpers and listing fields for one source."""
+    from app.models import SnkrdunkCandidate, YuyuteiCandidate
+    from app.services import snkrdunk_candidate_approval as snk, yuyutei_candidate_approval as yuyu
+    from app.services.source_mapping_proposals import snkrdunk_listing_kind, yuyu_listing_kind
+
+    if source == "snkrdunk":
+        return dict(model=SnkrdunkCandidate, approval=snk, get_source=snk.get_snkrdunk_source,
+                    title=lambda c: c.title, kind=lambda c: snkrdunk_listing_kind(c.title, c.detected_rarity))
+    return dict(model=YuyuteiCandidate, approval=yuyu, get_source=yuyu.get_yuyutei_source,
+                title=lambda c: c.name_jp, kind=lambda c: yuyu_listing_kind(c.name_jp, c.detected_rarity))
+
+
+def select_batch(session, source_name="yuyutei"):
     """(eligible entries with detail, Counter of exclusion reasons). Read-only: no locks, no writes."""
     from sqlalchemy import select
     from app.models import (CanonicalCard, CardPrint, SourceCardMapping, SourceMappingProposalAlternative,
-                            SourceMappingProposalGroup, YuyuteiCandidate)
+                            SourceMappingProposalGroup)
     from app.services.exact_print_approval import ExactPrintApprovalError, assert_print_is_priceable
     from app.services.source_mapping_proposal_decision import (ProposalDecisionError, _assert_candidate_state,
                                                                _assert_plan_matches)
     from app.services.source_mapping_proposals import (ProposalFilters, analyse_source_mapping_proposals,
-                                                       print_listing_kind, yuyu_listing_kind)
-    from app.services.yuyutei_candidate_approval import (assert_mapping_may_be_approved, find_mapping_for_listing,
-                                                         get_yuyutei_source)
+                                                       print_listing_kind)
 
-    source = get_yuyutei_source(session)
+    api = _source_api(source_name)
+    find_mapping_for_listing = api["approval"].find_mapping_for_listing
+    assert_mapping_may_be_approved = api["approval"].assert_mapping_may_be_approved
+    source = api["get_source"](session)
     groups = [g for g in session.scalars(
         select(SourceMappingProposalGroup).where(
             SourceMappingProposalGroup.source_id == source.id,
-            SourceMappingProposalGroup.source_candidate_type == "yuyutei_candidate",
+            SourceMappingProposalGroup.source_candidate_type == f"{source_name}_candidate",
             SourceMappingProposalGroup.superseded_at.is_(None),
             SourceMappingProposalGroup.review_status == "pending",
             SourceMappingProposalGroup.resolution_status == "exact",
-        ).order_by(SourceMappingProposalGroup.id)) if approvable_rule(g.resolution_reasons_json)]
+        ).order_by(SourceMappingProposalGroup.id)) if approvable_rule(g.resolution_reasons_json, source_name)]
     excluded = Counter()
     if not groups:
         return [], excluded
@@ -119,9 +141,10 @@ def select_batch(session):
     # One resolver run for every candidate: the same outcomes resolve_current_candidate_proposal
     # gives one at a time (the listing-kind index always spans every candidate).
     analysis = analyse_source_mapping_proposals(
-        session, ProposalFilters(source="yuyutei", candidate_ids=tuple(sorted({g.source_candidate_id for g in groups}))),
+        session, ProposalFilters(source=source_name,
+                                 candidate_ids=tuple(sorted({g.source_candidate_id for g in groups}))),
         ignore_existing_mappings=True, build_report=False)
-    plans = {o.candidate_id: o.proposal for o in analysis.outcomes if o.source_name == "yuyutei"}
+    plans = {o.candidate_id: o.proposal for o in analysis.outcomes if o.source_name == source_name}
 
     rows = []
     for group in groups:
@@ -131,7 +154,7 @@ def select_batch(session):
             excluded["no_single_pending_recommended_alternative"] += 1
             continue
         alternative = alternatives[0]
-        candidate = session.get(YuyuteiCandidate, group.source_candidate_id)
+        candidate = session.get(api["model"], group.source_candidate_id)
         if candidate is None:
             excluded["candidate_missing"] += 1
             continue
@@ -161,14 +184,14 @@ def select_batch(session):
             "source_candidate_id": candidate.id, "card_print_id": print_row.id,
             "evidence_digest": group.evidence_digest, "resolver_version": group.resolver_version,
             "updated_at": _iso(group.updated_at),
-            "detail": {"rule": approvable_rule(group.resolution_reasons_json),
+            "detail": {"rule": approvable_rule(group.resolution_reasons_json, source_name),
                        "card_code": canonical.card_code if canonical else None,
                        "print_name": print_row.official_name, "print_rarity": print_row.official_rarity,
                        "print_variant": print_row.official_asset_variant, "print_treatment": print_row.treatment,
                        "print_kind": print_listing_kind(print_row), "release_product_id": print_row.release_product_id,
                        "listing": group.canonical_source_listing_identity, "listing_url": candidate.source_url,
-                       "listing_title": candidate.name_jp, "listing_rarity": candidate.detected_rarity,
-                       "listing_kind": yuyu_listing_kind(candidate.name_jp, candidate.detected_rarity),
+                       "listing_title": api["title"](candidate), "listing_rarity": candidate.detected_rarity,
+                       "listing_kind": api["kind"](candidate),
                        "listing_price_jpy": candidate.price_jpy, "existing_mapping_id": mapping.id if mapping else None}})
     # One listing prices one print: a print two proposals claim goes to neither.
     claims = Counter(r["card_print_id"] for r in rows)
@@ -178,10 +201,10 @@ def select_batch(session):
     return eligible, excluded
 
 
-def _timed_resolve(session, candidate_id):
+def _timed_resolve(session, candidate_id, source_name="yuyutei"):
     from app.services.source_mapping_proposals import resolve_current_candidate_proposal
     start = time.monotonic()
-    resolve_current_candidate_proposal(session, source_name="yuyutei", candidate_id=candidate_id)
+    resolve_current_candidate_proposal(session, source_name=source_name, candidate_id=candidate_id)
     return time.monotonic() - start
 
 
@@ -223,7 +246,7 @@ def approve(session, entries, *, run_label, now=common.now_utc):
     return approved, stopped
 
 
-def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None):
+def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None, source="yuyutei"):
     import os
     from sqlalchemy.orm import Session
     from ops import db as ops_db, storage_rates
@@ -232,9 +255,9 @@ def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None)
     count = check_count(count)
     out = Path(out_dir)
     with Session(ops_db.engine(statement_timeout_ms=300000)) as session:
-        eligible, excluded = select_batch(session)
-        data, sha, doc = pinned_list(eligible, count)
-        seconds_per_resolve = round(_timed_resolve(session, doc["entries"][0]["source_candidate_id"]), 2)
+        eligible, excluded = select_batch(session, source)
+        data, sha, doc = pinned_list(eligible, count, source)
+        seconds_per_resolve = round(_timed_resolve(session, doc["entries"][0]["source_candidate_id"], source), 2)
         session.rollback()
     (out / "approved-list.json").write_bytes(data)
     chosen = eligible[:len(doc["entries"])]
@@ -251,7 +274,8 @@ def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None)
                "days_to_reserve_planning": round(room / planning, 1) if planning else None,
                "last_24h_mb_s9": rates.get("last_24h_mb_s9")}
 
-    summary = {"mode": "apply" if apply else "dry-run", "status": "DRY_RUN_OK", "reason_rules": sorted(RULES),
+    summary = {"mode": "apply" if apply else "dry-run", "status": "DRY_RUN_OK",
+               "reason_rules": sorted(SOURCE_RULES[source]),
                "rules": dict(Counter(r["detail"]["rule"] for r in chosen)),
                "approved_list_sha256": sha, "batch_size": len(chosen), "eligible_total": len(eligible),
                "excluded": dict(excluded), "kinds": dict(Counter(f"{r['detail']['listing_kind']}->{r['detail']['print_kind']}"
@@ -265,15 +289,15 @@ def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None)
     if not apply:
         return summary
 
-    run_label = run_label or f"ops-write:approve-f1-batch:{os.environ.get('GITHUB_RUN_ID', 'local')}"
+    run_label = run_label or f"ops-write:{RUNBOOK_NAMES[source]}:{os.environ.get('GITHUB_RUN_ID', 'local')}"
     # Mask the database password in the log before the tool opens its own session.
     ops_db.resolve()[1].clear()
     with tool.staging_session(writable=True) as session:
-        live, _ = select_batch(session)
+        live, _ = select_batch(session, source)
         session.rollback()
-        live_sha = pinned_list(live, count)[1] if live else ""
+        live_sha = pinned_list(live, count, source)[1] if live else ""
         check_apply(True, expected_sha256, live_sha)
-        approved, stopped = approve(session, pinned_list(live, count)[2]["entries"], run_label=run_label)
+        approved, stopped = approve(session, pinned_list(live, count, source)[2]["entries"], run_label=run_label)
     common.write_json(out / "approve-receipt.json", {"approved": approved, "stopped": stopped, "run_label": run_label})
     summary.update(status="APPLIED" if stopped is None else "STOPPED", written=len(approved), stopped=stopped,
                    reviewed_by=run_label, approved_group_ids=[a["proposal_group_id"] for a in approved],

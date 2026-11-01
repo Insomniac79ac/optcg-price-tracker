@@ -1,4 +1,7 @@
-"""proposal-refresh: refresh stored Yuyu-Tei proposals a physical artwork review now resolves.
+"""proposal-refresh: refresh stored proposals a new rule now resolves.
+
+Covers Yuyu-Tei physical artwork reviews (2026-10-31) and the SNKRDUNK title-kind rule (owner
+2026-11-01, approve-snkr-batch next); REFRESH_REASONS names the one reason per source.
 
 Owner 2026-10-31 (perfectionist). A merged review resolves a listing only in a fresh resolver run;
 the stored proposal group stays "ambiguous" until Yuyu-Tei discovery revisits that listing and
@@ -24,7 +27,11 @@ from pathlib import Path
 from ops import common
 
 REVIEW_REASON = "retained_positive_unique_physical_artwork_review"
-PLAN_KEYS = ("source_id", "candidates")
+SNKR_TITLE_REASON = "unique_snkrdunk_title_kind_resolves_one_release_sibling"
+# Which rule's resolutions each source refreshes: Yuyu-Tei physical artwork reviews (2026-10-31) and
+# SNKRDUNK title kinds (2026-11-01). Any other ambiguous group stays as discovery left it.
+REFRESH_REASONS = {"yuyutei": REVIEW_REASON, "snkrdunk": SNKR_TITLE_REASON}
+PLAN_KEYS = ("candidates",)
 
 
 def plan_sha(p):
@@ -33,47 +40,53 @@ def plan_sha(p):
 
 
 def build_plan(session):
-    """(plan, facts): ambiguous pending groups a review now resolves, from one fresh resolver run."""
+    """(plan, facts): ambiguous pending groups a rule in REFRESH_REASONS now resolves, from one fresh
+    resolver run per source."""
     from sqlalchemy import select
 
-    from app.models import SourceMappingProposalGroup
+    from app.models import Source, SourceMappingProposalGroup
     from app.services.source_mapping_proposals import ProposalFilters, analyse_source_mapping_proposals
-    from app.services.yuyutei_candidate_approval import get_yuyutei_source
 
-    source = get_yuyutei_source(session)
-    groups = session.scalars(select(SourceMappingProposalGroup).where(
-        SourceMappingProposalGroup.source_id == source.id,
-        SourceMappingProposalGroup.source_candidate_type == "yuyutei_candidate",
-        SourceMappingProposalGroup.superseded_at.is_(None),
-        SourceMappingProposalGroup.review_status == "pending",
-        SourceMappingProposalGroup.resolution_status == "ambiguous",
-    ).order_by(SourceMappingProposalGroup.source_candidate_id)).all()
-    by_candidate = {g.source_candidate_id: g for g in groups}
-    plans = {}
-    if by_candidate:
-        # The same call refresh_discovery_proposals makes (existing mappings respected).
-        analysis = analyse_source_mapping_proposals(
-            session, ProposalFilters(source="yuyutei", candidate_ids=tuple(sorted(by_candidate))),
-            build_report=False)
-        plans = {p.source_candidate_id: p for p in analysis.plans}
-    candidates, still = [], {}
-    for cid, group in by_candidate.items():
-        p = plans.get(cid)
-        if p is None:
-            still["no_plan_now"] = still.get("no_plan_now", 0) + 1
-        elif p.resolution_status != "exact" or REVIEW_REASON not in p.resolution_reasons:
-            key = f"{p.resolution_status}"
+    candidates, still, ambiguous = [], {}, 0
+    for source_name, reason in REFRESH_REASONS.items():
+        source = session.scalar(select(Source).where(Source.name == source_name))
+        if source is None:
+            continue
+        groups = session.scalars(select(SourceMappingProposalGroup).where(
+            SourceMappingProposalGroup.source_id == source.id,
+            SourceMappingProposalGroup.source_candidate_type == f"{source_name}_candidate",
+            SourceMappingProposalGroup.superseded_at.is_(None),
+            SourceMappingProposalGroup.review_status == "pending",
+            SourceMappingProposalGroup.resolution_status == "ambiguous",
+        ).order_by(SourceMappingProposalGroup.source_candidate_id)).all()
+        ambiguous += len(groups)
+        by_candidate = {g.source_candidate_id: g for g in groups}
+        plans = {}
+        if by_candidate:
+            # The same call refresh_discovery_proposals makes (existing mappings respected).
+            analysis = analyse_source_mapping_proposals(
+                session, ProposalFilters(source=source_name, candidate_ids=tuple(sorted(by_candidate))),
+                build_report=False)
+            plans = {p.source_candidate_id: p for p in analysis.plans}
+        for cid, group in by_candidate.items():
+            p = plans.get(cid)
+            if p is None:
+                key = f"{source_name}:no_plan_now"
+            elif p.resolution_status != "exact" or reason not in p.resolution_reasons:
+                key = f"{source_name}:{p.resolution_status}"
+            else:
+                selected = [a.card_print_id for a in p.alternatives if a.recommended]
+                candidates.append({"source": source_name, "candidate_id": cid, "card_code": p.card_code,
+                                   "listing": p.canonical_source_listing_identity,
+                                   "stored_group_id": group.id, "stored_digest": group.evidence_digest[:12],
+                                   "new_digest": p.evidence_digest,
+                                   "selected_card_print_id": selected[0] if len(selected) == 1 else None})
+                continue
             still[key] = still.get(key, 0) + 1
-        else:
-            selected = [a.card_print_id for a in p.alternatives if a.recommended]
-            candidates.append({"candidate_id": cid, "card_code": p.card_code,
-                               "listing": p.canonical_source_listing_identity,
-                               "stored_group_id": group.id, "stored_digest": group.evidence_digest[:12],
-                               "new_digest": p.evidence_digest, "selected_card_print_id": selected[0] if len(selected) == 1 else None})
-    plan = {"source_id": source.id, "candidates": [
-        {"candidate_id": c["candidate_id"], "new_digest": c["new_digest"],
+    plan = {"candidates": [
+        {"source": c["source"], "candidate_id": c["candidate_id"], "new_digest": c["new_digest"],
          "selected_card_print_id": c["selected_card_print_id"]} for c in candidates]}
-    facts = {"ambiguous_pending_groups": len(groups), "resolved_by_review_now": candidates,
+    facts = {"ambiguous_pending_groups": ambiguous, "resolved_by_review_now": candidates,
              "left_as_is": still}
     return plan, facts
 
@@ -105,11 +118,17 @@ def apply_plan(session, approved):
     current, _ = build_plan(session)
     if plan_sha(current) != plan_sha(approved):
         raise ValueError("the refresh plan differs from the approved dry run")
-    ids = [c["candidate_id"] for c in approved["candidates"]]
-    result = refresh_discovery_proposals(session, "yuyutei", ids)
-    if result["resolutions"] != ({"exact": len(ids)} if ids else {}):
-        raise ValueError(f"refresh did not make every approved group exact: {result['resolutions']}")
-    return result
+    results = {}
+    for source_name in REFRESH_REASONS:
+        ids = [c["candidate_id"] for c in approved["candidates"] if c["source"] == source_name]
+        if not ids:
+            continue
+        result = refresh_discovery_proposals(session, source_name, ids)
+        if result["resolutions"] != {"exact": len(ids)}:
+            raise ValueError(f"refresh did not make every approved {source_name} group exact: "
+                             f"{result['resolutions']}")
+        results[source_name] = result
+    return results
 
 
 def _write(p):
@@ -156,5 +175,6 @@ def run(out_dir, *, apply=False, expected_sha256="", preview=None, write=None):
         return summary
     check_apply(expected_sha256, sha)
     result = (write or _write)(p)
-    summary.update(written=result, next_step="approve-f1-batch dry run: the refreshed groups are exact by review")
+    summary.update(written=result, next_step="approve-f1-batch (Yuyu-Tei reviews) or approve-snkr-batch (SNKRDUNK "
+                                             "title kinds) dry run: the refreshed groups are exact")
     return summary
