@@ -29,6 +29,15 @@ T0 = datetime(2026, 10, 19, 6, 27, tzinfo=timezone.utc)
 SIX = timedelta(hours=6)
 
 
+@pytest.fixture(autouse=True)
+def no_committed_seeds(monkeypatch):
+    """Mapping-anchor tests run without the committed seeds; seed tests set their own."""
+    from snkrdunk_collector import discovery, discovery_planner
+
+    monkeypatch.setattr(discovery_planner, "seed_identities", lambda: [])
+    monkeypatch.setattr(discovery, "seed_identities", lambda: [])
+
+
 @pytest.fixture
 def database():
     url = os.environ.get("SNKRDUNK_TEST_PG_URL")
@@ -254,3 +263,48 @@ def test_planner_error_never_blocks_the_turn(database, monkeypatch):
     with factory() as session:
         assert due.plan_auto_discovery(session, source_id, clock=lambda: T0) is None
         assert session.scalar(select(func.count()).select_from(FreshnessWork)) == 0
+
+
+def test_seeds_restart_exhausted_discovery_in_sets_no_mapping_reaches(database, monkeypatch):
+    """Owner 2026-11-01: committed seeds start discovery where no approved mapping sits."""
+    from snkrdunk_collector import discovery, discovery_planner
+
+    factory, source_id, anchors = database
+    now = T0
+    for _ in range(3):
+        work, _ = plan(factory, source_id, now)
+        settle(factory, work.id, now, inspected=())
+        now += SIX
+    assert plan(factory, source_id, now) == (None, "neighbourhoods_exhausted")
+    seeds = ["135438", "158311"]
+    monkeypatch.setattr(discovery_planner, "seed_identities", lambda: seeds)
+    monkeypatch.setattr(discovery, "seed_identities", lambda: seeds)
+    work, reason = plan(factory, source_id, now)
+    assert reason is None
+    cursor = work.resume_cursor
+    # Never-used seeds come before the thrice-used mappings; both kinds fit one intent.
+    assert cursor["anchor_seed_identities"] == seeds
+    assert cursor["anchor_mapping_ids"] == anchors[:2] and cursor["anchor_pool_size"] == 4
+    with factory() as session:
+        claim_like = type("Claim", (), {"work_id": work.id, "scope_key": work.scope_key,
+                                        "resume_cursor": cursor})()
+        session.get(FreshnessWork, work.id).attempt_count = 1
+        _, _, _, identities = intent(session, claim_like)
+    assert identities[-2:] == seeds
+
+
+def test_a_seed_no_longer_committed_is_refused(database, monkeypatch):
+    from snkrdunk_collector import discovery, discovery_planner
+
+    factory, source_id, anchors = database
+    monkeypatch.setattr(discovery_planner, "seed_identities", lambda: ["135438"])
+    work, _ = plan(factory, source_id, T0)
+    assert work.resume_cursor["anchor_seed_identities"] == ["135438"]
+    monkeypatch.setattr(discovery, "seed_identities", lambda: [])  # removed from the file since
+    with factory() as session:
+        claim_like = type("Claim", (), {"work_id": work.id, "scope_key": work.scope_key,
+                                        "resume_cursor": work.resume_cursor})()
+        session.get(FreshnessWork, work.id).attempt_count = 1
+        with pytest.raises(ValueError, match="committed owner-confirmed"):
+            intent(session, claim_like)
+

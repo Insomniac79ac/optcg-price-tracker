@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK coverage, step 1 (owner 'perfectionist' 2026-11-01). Published discovery only inspects sitemap neighbours of approved SNKRDUNK mappings, all in OP-01..OP-04 and EB-01, so it stopped on 2026-10-23 ('neighbourhoods_exhausted') and 19 sets had no starting point (1,139 of 1,528 missing high-rarity prints). A committed file of 41 owner-confirmed SNKRDUNK products (2-3 per set, found with SNKRDUNK's own search) now joins the anchors: starting points only, never mappings, never priced, never identity decisions. The claim re-checks every seed against the committed file.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_seeds.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_seeds.json"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Seeds file reader (fail closed: schema, bound 200, release/url/title/confirmed_by, distinct public product identities) and 41 seeds for OP-05..OP-17, EB-02..EB-05, PRB-01/02. The infrastructure effect is the mission-scoped release of snkrdunk-collector only."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_planner.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Planner: anchors = approved mappings plus committed seeds, least used first, at most 12 per intent; pool size counts both, so new seeds end 'neighbourhoods_exhausted'. Cursor gains anchor_seed_identities. intent(): 1..12 anchors across both kinds, seeds must still be in the committed file. Bounds unchanged (radius 48, 20 products, request cost 300)."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/tests/test_discovery_planner_postgres.py",
+        "services/snkrdunk_collector/tests/test_discovery_seeds.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Seeds restart exhausted discovery and come before used mappings; a seed removed from the file is refused at claim; the committed file is valid; bad files fail closed. Full SNKRDUNK suite 672 passed on local Postgres 16."
+    },
+    {
+      "files": [
+        "docs/agent/ROADMAP.md",
+        "docs/agent/DECISIONS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Item 3 and the owner decision."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (one CI release)",
+        "SNKRDUNK published discovery intents"
+      ],
+      "routes": [
+        "Same published discovery route as before (robots, sitemap index, retained shards, up to 20 product pages per intent); no new route"
+      ],
+      "dependencies": [
+        "staging after #251"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback. Behaviour change: auto discovery resumes (about 4 intents a day, each up to 20 product pages, about 100 requests) around the seeds; new products become candidates only.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 45
+    },
+    "recovery": {
+      "artifact": "377e4a8c5932f479b6d89c5f2189d02b01b55e94",
+      "procedure": "The rollout captures snkrdunk-collector's live deployment before upload and restores it on failure (recovery_deployment_id is reference only); afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "Discovery intents failing on the new code, a source denial, or storage growth above the 100-250 MB one-off estimate (plan/new-sources §4).",
+      "backup": "Not applicable: no schema change; observations are append-only.",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_discovery_planner_postgres.py",
+        "services/snkrdunk_collector/tests/test_discovery_seeds.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_planner.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_seeds.json"
+      ],
+      "observation_window": "Delivery verify; then snkrdunk-discovery-state shows new auto-v1 intents with anchor_seed_identities and new_candidates > 0; storage-rates within the 45-day watch."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "ab3f03bd-3659-4d81-8e31-93792d1347f9"
+      }
+    ]
+  },
+  "diff_sha256": "25627f46e89b8e0570289229b52f0c8a198edbd60170e2f8b3dd8b3380779eb0"
+}
