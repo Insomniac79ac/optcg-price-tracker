@@ -51,12 +51,13 @@
     {
       "files": [
         "services/api/tests/test_approve_snkr_batch.py",
-        "services/api/tests/test_proposal_refresh.py"
+        "services/api/tests/test_proposal_refresh.py",
+        "services/api/tests/test_snkrdunk_print_authoritative_e2e_postgres.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Selection of SNKRDUNK title-kind groups only, approval through the narrowed gate, never widening; SNKRDUNK refresh. Related suites: 204 backend and 93 ops tests pass."
+      "reason": "Selection of SNKRDUNK title-kind groups only, approval through the narrowed gate, never widening; SNKRDUNK refresh. E2E: the 'consistent with both printings' gate test now strips the rarity token too (a bare 'SR' title with no variant is the plain print under the owner's rule, so CI refused it as a contradiction, not as ambiguous); a new test shows the plain title refuses the parallel and approves the base print. Related suites: 204 backend and 93 ops tests, plus 139 gate/e2e/proposal tests, pass."
     },
     {
       "files": [
@@ -96,6 +97,7 @@
       "validation": [
         "services/api/tests/test_approve_snkr_batch.py",
         "services/api/tests/test_proposal_refresh.py",
+        "services/api/tests/test_snkrdunk_print_authoritative_e2e_postgres.py",
         "scripts/tests/test_staging_mission.py"
       ]
     },
@@ -161,5 +163,5 @@
       }
     ]
   },
-  "diff_sha256": "bae143dd8d86c38aeb4cb73fe57585b879a13001bc4999268dbba15010a92b58"
+  "diff_sha256": "d485f03394225b197550d7555280122339c3f978db411dd798842eec428432d2"
 }

@@ -594,7 +594,10 @@ def resolve_exact_print(
     # product this printing shipped in and `official_asset_variant` is which
     # official asset it carries - the two facts that actually separate
     # printings of one card. Rarity is descriptive and is deliberately not a
-    # discriminator here.
+    # discriminator here. One exception (owner 2026-11-01): with no parsed
+    # variant, a SNKRDUNK title's "-P" marker (or its absence on a bare
+    # ordinary rarity) names the parallel or plain asset, and narrows only
+    # when every surviving print's kind is known.
     surviving = list(siblings)
     # Product narrowing has two channels and they are mutually exclusive: a
     # product either has a Bandai code or it does not. The coded channel is
