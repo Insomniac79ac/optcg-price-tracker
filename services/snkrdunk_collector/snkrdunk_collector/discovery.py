@@ -19,6 +19,7 @@ from app.models import (
 )
 from app.services.freshness_integration import CaptureResult, AdmissionStopped
 from opcg_source_identity import canonical_source_listing_identity
+from snkrdunk_collector.discovery_seeds import seed_identities
 from snkrdunk_collector.published_discovery import (
     INDEX,
     MAX_XML_BYTES,
@@ -43,8 +44,10 @@ class RetainedDocument:
     http_status: int
 
 
-def intent(session, claim):
+def intent(session, claim, *, seeds=None):
     cursor = claim.resume_cursor or {}
+    mapping_ids = cursor.get("anchor_mapping_ids", [])
+    seed_ids = cursor.get("anchor_seed_identities", [])
     work = session.get(FreshnessWork, claim.work_id)
     source = session.get(Source, work.source_id)
     if (
@@ -56,8 +59,11 @@ def intent(session, claim):
         or cursor.get("version") != 1
         or cursor.get("explicit_published_discovery") is not True
         or work.source_card_mapping_id is not None
-        or not 1 <= len(cursor.get("anchor_mapping_ids", [])) <= 12
-        or len(set(cursor["anchor_mapping_ids"])) != len(cursor["anchor_mapping_ids"])
+        or not isinstance(mapping_ids, list)
+        or not isinstance(seed_ids, list)
+        or not 1 <= len(mapping_ids) + len(seed_ids) <= 12
+        or len(set(mapping_ids)) != len(mapping_ids)
+        or len(set(seed_ids)) != len(seed_ids)
         or not 1 <= cursor.get("radius_start", 0) <= cursor.get("radius_end", 0) <= 48
         or not 1 <= cursor.get("max_products", 0) <= 20
         or not 1 <= work.estimated_request_cost <= 300
@@ -65,7 +71,7 @@ def intent(session, claim):
         raise ValueError("one bounded explicit published discovery claim required")
     mappings = session.scalars(
         select(SourceCardMapping).where(
-            SourceCardMapping.id.in_(cursor["anchor_mapping_ids"]),
+            SourceCardMapping.id.in_(mapping_ids),
             SourceCardMapping.source_id == source.id,
             SourceCardMapping.is_active.is_(True),
             SourceCardMapping.superseded_at.is_(None),
@@ -73,11 +79,14 @@ def intent(session, claim):
             SourceCardMapping.manual_verified.is_(True),
         )
     ).all()
-    if len(mappings) != len(cursor["anchor_mapping_ids"]):
+    if len(mappings) != len(mapping_ids):
         raise ValueError("current approved manually verified anchors required")
+    # A seed must still be in the committed, owner-confirmed seeds file (owner 2026-11-01).
+    if not set(seed_ids) <= set(seed_identities() if seeds is None else seeds):
+        raise ValueError("committed owner-confirmed discovery seeds required")
     anchors = [
         canonical_source_listing_identity("snkrdunk", m.source_url) for m in mappings
-    ]
+    ] + list(seed_ids)
     if not all(anchors) or len(set(anchors)) != len(anchors):
         raise ValueError("distinct established source identities required")
     return work, source, cursor, anchors

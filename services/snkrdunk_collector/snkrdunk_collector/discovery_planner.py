@@ -18,6 +18,7 @@ from app.models import (
 from app.services.freshness_policy import require_utc
 from app.services.freshness_queue import plan_discovery_scope
 from opcg_source_identity import canonical_source_listing_identity
+from snkrdunk_collector.discovery_seeds import seed_identities
 
 SCOPE_PREFIX = "snkr-published:auto-v1-"
 REQUEST_COST = 300
@@ -45,7 +46,11 @@ def _published(session, source_id):
     ).all()
 
 
-def _anchors(session, source_id, previous):
+def _anchors(session, source_id, previous, seeds=None):
+    """(mapping ids, seed identities, pool size): least used first across both kinds.
+
+    Seeds (owner 2026-11-01) start discovery in sets no approved mapping reaches; a seed whose
+    listing is already an approved mapping counts once, as the mapping."""
     rows = session.scalars(
         select(SourceCardMapping)
         .where(
@@ -57,19 +62,30 @@ def _anchors(session, source_id, previous):
         )
         .order_by(SourceCardMapping.id)
     ).all()
-    used = {}
+    used, seed_used = {}, {}
     for work in previous:
-        for mapping_id in (work.resume_cursor or {}).get("anchor_mapping_ids", []):
+        cursor = work.resume_cursor or {}
+        for mapping_id in cursor.get("anchor_mapping_ids", []):
             used[mapping_id] = used.get(mapping_id, 0) + 1
-    # Least used first; one mapping per listing identity, as intent() requires.
-    chosen, identities = [], set()
-    for row in sorted(rows, key=lambda m: (used.get(m.id, 0), m.id)):
+        for identity in cursor.get("anchor_seed_identities", []):
+            seed_used[identity] = seed_used.get(identity, 0) + 1
+    # Least used first; one entry per listing identity, as intent() requires.
+    entries, identities = [], set()
+    for row in sorted(rows, key=lambda m: m.id):
         identity = canonical_source_listing_identity("snkrdunk", row.source_url)
         if not identity or identity in identities:
             continue
         identities.add(identity)
-        chosen.append(row.id)
-    return chosen, len(identities)
+        entries.append((used.get(row.id, 0), 0, row.id, ("mapping", row.id)))
+    seeds = seed_identities() if seeds is None else seeds
+    for position, identity in enumerate(seeds):
+        if identity in identities:
+            continue
+        identities.add(identity)
+        entries.append((seed_used.get(identity, 0), 1, position, ("seed", identity)))
+    chosen = [entry[3] for entry in sorted(entries)][:MAX_ANCHORS]
+    return ([v for k, v in chosen if k == "mapping"], [v for k, v in chosen if k == "seed"],
+            len(identities))
 
 
 def _planned_at(work):
@@ -156,8 +172,8 @@ def plan_next_discovery(session, source_id, *, now, interval):
     )
     if reason:
         return None, reason
-    anchors, pool = _anchors(session, source_id, previous)
-    if not anchors:
+    anchors, seeds, pool = _anchors(session, source_id, previous)
+    if not anchors and not seeds:
         return None, "no_anchors"
     auto = [w for w in previous if w.scope_key.startswith(SCOPE_PREFIX)]
     recent = auto[:EMPTY_RUN_LIMIT]
@@ -178,7 +194,8 @@ def plan_next_discovery(session, source_id, *, now, interval):
         "version": 1,
         "scope_key": scope,
         "explicit_published_discovery": True,
-        "anchor_mapping_ids": anchors[:MAX_ANCHORS],
+        "anchor_mapping_ids": anchors,
+        "anchor_seed_identities": seeds,
         "radius_start": 1,
         "radius_end": RADIUS_END,
         "max_products": MAX_PRODUCTS,

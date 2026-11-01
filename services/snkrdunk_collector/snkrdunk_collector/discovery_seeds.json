@@ -1,0 +1,252 @@
+{
+ "schema_version": 1,
+ "note": "Starting points for published discovery in sets no approved SNKRDUNK mapping reaches (owner 2026-11-01). Never mappings, never priced.",
+ "seeds": [
+  {
+   "release": "OP-05",
+   "url": "https://snkrdunk.com/apparels/135438",
+   "title": "モンキー・D・ルフィ SEC-P [OP05-119] (ブースターパック 新時代の主役)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-05",
+   "url": "https://snkrdunk.com/apparels/135527",
+   "title": "サボ L [OP05-001] (ブースターパック 新時代の主役)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-06",
+   "url": "https://snkrdunk.com/apparels/158311",
+   "title": "シャンクス SR [OP06-007] (ブースターパック 双璧の覇者)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-06",
+   "url": "https://snkrdunk.com/apparels/159672",
+   "title": "アラマキ SR-P [OP06-043] (ブースターパック 双璧の覇者)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-07",
+   "url": "https://snkrdunk.com/apparels/198733",
+   "title": "嵐脚 R [OP07-096] (ブースターパック 500年後の未来)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-07",
+   "url": "https://snkrdunk.com/apparels/202895",
+   "title": "カリーナ R-P [OP07-005] (ブースターパック 500年後の未来)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-08",
+   "url": "https://snkrdunk.com/apparels/230774",
+   "title": "トニートニー・チョッパー L [OP08-001](ブースターパック「二つの伝説」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-08",
+   "url": "https://snkrdunk.com/apparels/265686",
+   "title": "Pedro R-P [OP08-030] (Booster Pack \"Two Legends\")",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-08",
+   "url": "https://snkrdunk.com/apparels/265716",
+   "title": "Kaido SR-P [OP08-079] (Booster Pack \"Two Legends\")",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-09",
+   "url": "https://snkrdunk.com/apparels/349414",
+   "title": "シャンクス L [OP09-001](ブースターパック「新たなる皇帝」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-09",
+   "url": "https://snkrdunk.com/apparels/349415",
+   "title": "シャンクス L-P [OP09-001](ブースターパック「新たなる皇帝」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-09",
+   "url": "https://snkrdunk.com/apparels/364084",
+   "title": "おれの時代だァ!!!! R [OP09-096](ブースターパック「新たなる皇帝」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-10",
+   "url": "https://snkrdunk.com/apparels/428660",
+   "title": "スモーカー L-P [OP10-001](ブースターパック「王族の血統」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-10",
+   "url": "https://snkrdunk.com/apparels/451348",
+   "title": "スモーカー L [OP10-001](ブースターパック「王族の血統」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-10",
+   "url": "https://snkrdunk.com/apparels/456916",
+   "title": "Divine Punishment UC [OP10-079] (Booster Pack \"Royal Blood\")",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-11",
+   "url": "https://snkrdunk.com/apparels/515451",
+   "title": "Monkey D. Luffy L-P [OP11-040] (A Fist of Divine Speed)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-11",
+   "url": "https://snkrdunk.com/apparels/531841",
+   "title": "コビー L [OP11-001](ブースターパック「神速の拳」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-12",
+   "url": "https://snkrdunk.com/apparels/583602",
+   "title": "ジュエリー・ボニー SEC [OP12-118](ブースターパック「師弟の絆」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-12",
+   "url": "https://snkrdunk.com/apparels/588854",
+   "title": "ジュエリー・ボニー SEC-P [OP12-118](ブースターパック「師弟の絆」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-13",
+   "url": "https://snkrdunk.com/apparels/676024",
+   "title": "モンキー・D・ルフィ SEC-P [OP13-118](ブースターパック「受け継がれる意志」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-13",
+   "url": "https://snkrdunk.com/apparels/676068",
+   "title": "モンキー・D・ルフィ SEC [OP13-118](ブースターパック「受け継がれる意志」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-14",
+   "url": "https://snkrdunk.com/apparels/727672",
+   "title": "わらわ こわい...♡ R [OP14-118](ブースターパック「蒼海の七傑」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-14",
+   "url": "https://snkrdunk.com/apparels/728157",
+   "title": "わらわ こわい...♡ R-P [OP14-118](ブースターパック「蒼海の七傑」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-15",
+   "url": "https://snkrdunk.com/apparels/764636",
+   "title": "エネル SEC-P [OP15-118](ブースターパック「神の島の冒険」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-15",
+   "url": "https://snkrdunk.com/apparels/767168",
+   "title": "エネル SEC [OP15-118](ブースターパック「神の島の冒険」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-16",
+   "url": "https://snkrdunk.com/apparels/822612",
+   "title": "ポートガス・D・エース SEC-P [OP16-118](ブースターパック「決戦の刻」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-16",
+   "url": "https://snkrdunk.com/apparels/828206",
+   "title": "ポートガス・D・エース SEC [OP16-118](ブースターパック「決戦の刻」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-17",
+   "url": "https://snkrdunk.com/apparels/871063",
+   "title": "ロックス・D・ジーベック SEC-P [OP17-118](ブースターパック「世界最強の戦士」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "OP-17",
+   "url": "https://snkrdunk.com/apparels/881671",
+   "title": "ロックス・D・ジーベック SEC [OP17-118](ブースターパック「世界最強の戦士」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-02",
+   "url": "https://snkrdunk.com/apparels/503390",
+   "title": "カルー C [EB02-001](エクストラブースター「アニメ 25th コレクション」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-02",
+   "url": "https://snkrdunk.com/apparels/503426",
+   "title": "Franky R [EB02-037] (Extra Booster \"Anime 25th Collection\")",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-03",
+   "url": "https://snkrdunk.com/apparels/710425",
+   "title": "ネフェルタリ・ビビ L-P [EB03-001](エクストラブースター「ワンピース ヒロインズエディション」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-03",
+   "url": "https://snkrdunk.com/apparels/713665",
+   "title": "ネフェルタリ・ビビ L [EB03-001](エクストラブースター「ワンピース ヒロインズエディション」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-04",
+   "url": "https://snkrdunk.com/apparels/751290",
+   "title": "ジュエリー・ボニー L-P [EB04-001](エクストラブースター「エッグヘッドクライシス」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-04",
+   "url": "https://snkrdunk.com/apparels/754973",
+   "title": "ジュエリー・ボニー L [EB04-001](エクストラブースター「エッグヘッドクライシス」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-05",
+   "url": "https://snkrdunk.com/apparels/911898",
+   "title": "ジュエリー・ボニー SR-P [EB05-001](エクストラブースター「ヒロインズエディション Vol.2」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "EB-05",
+   "url": "https://snkrdunk.com/apparels/925473",
+   "title": "ジュエリー・ボニー SR [EB05-001](エクストラブースター「ヒロインズエディション Vol.2」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "PRB-01",
+   "url": "https://snkrdunk.com/apparels/328654",
+   "title": "サンジ L [PRB01-001](プレミアムブースター「ONE PIECE CARD THE BEST」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "PRB-01",
+   "url": "https://snkrdunk.com/apparels/328655",
+   "title": "サンジ L-P [PRB01-001](プレミアムブースター「ONE PIECE CARD THE BEST」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "PRB-02",
+   "url": "https://snkrdunk.com/apparels/653486",
+   "title": "コビー R [PRB02-001](プレミアムブースター「ONE PIECE CARD THE BEST vol.2」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  },
+  {
+   "release": "PRB-02",
+   "url": "https://snkrdunk.com/apparels/656331",
+   "title": "コビー R-P [PRB02-001](プレミアムブースター「ONE PIECE CARD THE BEST vol.2」)",
+   "confirmed_by": "owner, draft PR review (2026-11-01)"
+  }
+ ]
+}

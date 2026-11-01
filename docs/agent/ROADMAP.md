@@ -154,6 +154,12 @@ coverage (item 11d).
   14:41Z). SNKRDUNK published-sitemap discovery has not run since 2026-10-07.
 - **Source:** handover §19, §33; SNKRDUNK coverage gap diagnostics (#174); `plan/new-sources` §4
   ("SNKRDUNK discovery fix (not approved)", 100 to 250 MB once, about 4 MB/day, ESTIMATE).
+- **Update 2026-11-01:** SNKRDUNK discovery stopped on 2026-10-23 (`neighbourhoods_exhausted`): it only
+  inspects sitemap neighbours of approved mappings, all in OP-01 to OP-04 and EB-01. 1,139 of the 1,528
+  missing high-rarity prints sit in 19 sets with no starting point; 228 more have only ambiguous
+  proposals. Owner chose perfectionist: (1) 41 owner-confirmed seed products (2 to 3 per set) start
+  discovery there; (2) the image-review pipeline extended to SNKRDUNK for the ambiguous proposals,
+  with an SNKRDUNK approval runbook; (3) discovery pace and storage re-measured with the owner.
 - **Blocker:** owner decision on the SNKRDUNK discovery fix and its order against CardRush (N14).
 - **Class:** AMBER (substantial source-volume increase).
 
