@@ -1068,3 +1068,76 @@ def test_listing_kind_rule_exact_proposal_survives_approval_revalidation(db_sess
     assert current.resolution_status == plan.resolution_status == "exact"
     assert current.evidence_digest == plan.evidence_digest
     assert _recommended(current) == [base.id]
+
+
+# SNKRDUNK title kind (owner 2026-11-01): "SR" is the plain print, "SR-P" the parallel; anything
+# that could name a different physical card stays ambiguous for image review.
+def _snk(db, product_id, code, title, rarity):
+    row = SnkrdunkCandidate(
+        source_url=f"https://snkrdunk.com/apparels/{product_id}",
+        title=title,
+        detected_card_code=code,
+        detected_set_code=code.split("-")[0][:2] + "-" + code.split("-")[0][2:],
+        detected_rarity=rarity,
+        match_status="unmatched",
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
+def _snk_plan(db, candidate):
+    return next(p for p in analyse_source_mapping_proposals(db).plans
+                if p.source_name == "snkrdunk" and p.source_candidate_id == candidate.id)
+
+
+def _snk_family(db, code="OP01-016", variants=("base", "p1")):
+    release = _release(db, "OP-" + code[2:4])
+    family = _family(db, code)
+    prints = {}
+    for variant in variants:
+        prints[variant] = _print(db, family, release, variant)
+        prints[variant].official_rarity = "R"
+    return release, family, prints
+
+
+def test_snkrdunk_title_kind_resolves_plain_and_parallel(db_session):
+    _base(db_session)
+    _, family, prints = _snk_family(db_session)
+    plain = _snk(db_session, 1, family.card_code, f"Nami R [{family.card_code}] (Booster Pack ROMANCE DAWN)", "R")
+    parallel = _snk(db_session, 2, family.card_code, f"Nami R-P [{family.card_code}] (Booster Pack ROMANCE DAWN)", "R-P")
+    db_session.commit()
+    for candidate, variant in ((plain, "base"), (parallel, "p1")):
+        plan = _snk_plan(db_session, candidate)
+        assert plan.resolution_status == "exact", plan.resolution_reasons
+        assert _recommended(plan) == [prints[variant].id]
+        assert "unique_snkrdunk_title_kind_resolves_one_release_sibling" in plan.resolution_reasons
+
+
+@pytest.mark.parametrize("title,rarity", [
+    ("Shanks R-SP (Comic Parallel) [{code}] (Booster Pack)", "R-SP"),
+    ("ナミ R-SPC [{code}](ブースターパック)", "R-SPC"),
+    ("ナミ R [{code}]【英語版】(ブースターパック)", "R"),
+    ("ナミ R パラレル [{code}](ブースターパック)", "R"),
+    ("Nami R-Pl [{code}] (Booster Pack)", None),
+])
+def test_snkrdunk_titles_that_could_name_another_card_stay_ambiguous(db_session, title, rarity):
+    _base(db_session)
+    _, family, _ = _snk_family(db_session)
+    candidate = _snk(db_session, 3, family.card_code, title.format(code=family.card_code), rarity)
+    db_session.commit()
+    assert _snk_plan(db_session, candidate).resolution_status == "ambiguous"
+
+
+def test_snkrdunk_two_parallels_or_two_listings_of_a_kind_stay_ambiguous(db_session):
+    _base(db_session)
+    _, family, _ = _snk_family(db_session, variants=("base", "p1", "p2"))
+    two_parallels = _snk(db_session, 4, family.card_code, f"Nami R-P [{family.card_code}] (Booster Pack)", "R-P")
+    db_session.commit()
+    assert _snk_plan(db_session, two_parallels).resolution_status == "ambiguous"
+
+    _, other, _ = _snk_family(db_session, code="OP02-017")
+    first = _snk(db_session, 5, other.card_code, f"Zoro R [{other.card_code}] (Booster Pack)", "R")
+    second = _snk(db_session, 6, other.card_code, f"Zoro R [{other.card_code}] (Booster Pack)", "R")
+    db_session.commit()
+    assert {_snk_plan(db_session, c).resolution_status for c in (first, second)} == {"ambiguous"}

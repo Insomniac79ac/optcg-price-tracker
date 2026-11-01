@@ -160,6 +160,10 @@ coverage (item 11d).
   proposals. Owner chose perfectionist: (1) 41 owner-confirmed seed products (2 to 3 per set) start
   discovery there; (2) the image-review pipeline extended to SNKRDUNK for the ambiguous proposals,
   with an SNKRDUNK approval runbook; (3) discovery pace and storage re-measured with the owner.
+- **Update 2026-11-01 (step 2 revised, owner "go"):** SNKRDUNK titles name the version ("SR" plain,
+  "SR-P" parallel). Measured: 210 of 218 ambiguous groups resolve by a SNKRDUNK listing-kind rule
+  (part 2); 4 have two parallels and 4 are comic parallels (image review, part 4). Part 3: an
+  owner-gated SNKRDUNK refresh and approval runbook.
 - **Blocker:** owner decision on the SNKRDUNK discovery fix and its order against CardRush (N14).
 - **Class:** AMBER (substantial source-volume increase).
 
