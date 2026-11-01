@@ -47,6 +47,7 @@ on:
           - snkrdunk-coverage-gap-releases
           - snkrdunk-coverage-gap-samples
           - snkrdunk-discovery-state
+          - snkrdunk-listing-kinds
           - snkrdunk-quarantine
           - source-bytes-by-source
           - storage-savings
