@@ -52,3 +52,43 @@ order by 1;
 select b.enabled, b.request_limit, b.window_seconds, b.window_started_at, b.used_requests, b.reserved_requests,
   b.paused_until, b.pause_reason
 from source_dispatch_budgets b join sources s on s.id = b.source_id where s.name = 'snkrdunk';
+
+-- planner_guard
+-- The auto planner's skip guards evaluated now, read-only (discovery_planner.skip_reason; owner
+-- 2026-11-01: report what happened, never a guess). request_budget skips when
+-- demand_40m * peak_24h + 300 > spare.
+with ss as (select id from sources where name = 'snkrdunk'),
+b as (select * from source_dispatch_budgets where source_id = (select id from ss)),
+auto as (
+  select w.id, w.scope_key, w.state, w.next_due_at,
+    (select a.outcome from freshness_attempts a where a.work_id = w.id order by a.id desc limit 1) last_outcome
+  from freshness_work w
+  where w.source_id = (select id from ss) and w.kind = 'discovery' and w.scope_key like 'snkr-published:%'),
+demand as (
+  select count(*) n from freshness_work w
+  where w.source_id = (select id from ss) and w.kind = 'refresh' and w.state = 'pending'
+    and w.next_due_at <= now() + interval '40 minutes'),
+peak as (
+  select coalesce(max(a.actual_request_cost), 0) n
+  from freshness_attempts a join freshness_work w on w.id = a.work_id
+  where w.source_id = (select id from ss) and w.kind = 'refresh' and a.finished_at >= now() - interval '1 day'),
+used as (
+  select case when extract(epoch from now() - b.window_started_at) >= b.window_seconds then 0
+              else b.used_requests end n, b.request_limit, b.reserved_requests, b.enabled, b.pause_reason, b.paused_until
+  from b)
+select now() at_now,
+  (select count(*) from auto where state = 'claimed' or (state = 'pending' and next_due_at < now() + interval '365 days')) open_intents,
+  (select max(scope_key) from auto where scope_key like 'snkr-published:auto-v1-%') last_auto_scope,
+  (select n from demand) demand_40m, (select n from peak) peak_24h,
+  used.request_limit - used.n - used.reserved_requests spare,
+  (select n from demand) * (select n from peak) + 300 > used.request_limit - used.n - used.reserved_requests request_budget_skips,
+  used.enabled, used.pause_reason, used.paused_until
+from used;
+
+-- refresh_cost_by_hour
+-- SNKRDUNK refresh attempts and requests per hour over the last 24 h (when the budget is busy).
+select date_trunc('hour', a.finished_at) hour_utc, count(*) attempts, sum(a.actual_request_cost) requests,
+  max(a.actual_request_cost) max_cost
+from freshness_attempts a join freshness_work w on w.id = a.work_id join sources s on s.id = w.source_id
+where s.name = 'snkrdunk' and w.kind = 'refresh' and a.finished_at >= now() - interval '24 hours'
+group by 1 order by 1;
