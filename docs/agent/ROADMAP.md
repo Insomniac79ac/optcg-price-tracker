@@ -167,6 +167,9 @@ coverage (item 11d).
 - **Update 2026-11-02 (seeds unused):** the first run after the seeds (11-01 14:58Z) started from
   12 never-used old-set mappings and inspected 0. Fix (owner, perfectionist): spent anchors last,
   uncovered releases first, seeds before mappings; `snkrdunk-discovery-state` shows `seed_anchors`.
+  #257 merged at 03:33Z, inside the 02:00-06:00 UTC busy window, so its collector rollout refused
+  before any change (snkrdunk-collector stayed on f65a7acc). Delivered by a follow-up PR that
+  touches no collector watch path (STAGING_DELIVERY.md: merged code with no rollout).
 - **Blocker:** owner decision on the SNKRDUNK discovery fix and its order against CardRush (N14).
 - **Class:** AMBER (substantial source-volume increase).
 
