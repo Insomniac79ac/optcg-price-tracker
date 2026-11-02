@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "SNKRDUNK coverage, revised step 2 part 3 (owner 'go ahead' 2026-11-01): turn the SNKRDUNK groups the title-kind rule (#255) resolves into mappings. proposal-refresh also refreshes SNKRDUNK groups stored ambiguous before the rule (REFRESH_REASONS per source). New ops-write runbook approve-snkr-batch: approve-f1-batch's selection, guards, pinned list and dry-run-then-apply for pending exact SNKRDUNK groups with reason unique_snkrdunk_title_kind_resolves_one_release_sibling. The admin exact-print gate (resolve_exact_print) narrows SNKRDUNK siblings by the same title kind, only when every surviving print's kind is known; without it the gate refuses every such group (verified locally: both approve-snkr-batch tests fail with the narrowing disabled). exact_print_approval.py is a Yuyu-Tei collector runtime input (import graph), so the nine Yuyu-Tei shards are re-uploaded; Yuyu-Tei evidence never sets listing_kind, so their behaviour is unchanged. Also pins yuyu_reader_component to #255's merge.",
+  "mission": "SNKRDUNK coverage, revised step 2 part 3 (owner 'go ahead' 2026-11-01): turn the SNKRDUNK groups the title-kind rule (#255) resolves into mappings. proposal-refresh also refreshes SNKRDUNK groups stored ambiguous before the rule (REFRESH_REASONS per source). New ops-write runbook approve-snkr-batch: approve-f1-batch's selection, guards, pinned list and dry-run-then-apply for pending exact SNKRDUNK groups with reason unique_snkrdunk_title_kind_resolves_one_release_sibling. The admin exact-print gate (resolve_exact_print) narrows SNKRDUNK siblings by the same title kind, only when every surviving print's kind is known; without it the gate refuses every such group (verified locally: both approve-snkr-batch tests fail with the narrowing disabled). exact_print_approval.py is a Yuyu-Tei collector runtime input (import graph), so the nine Yuyu-Tei shards are re-uploaded; Yuyu-Tei evidence never sets listing_kind, so their behaviour is unchanged. Also pins yuyu_reader_component to #255's merge (240ff79c) and snkr_component to #258's merge (a789a82a, which delivered #257). #258's delivery verify failed only on Yuyu continuity: staging's fleet still pinned the shards to ada16845 while they run 240ff79c, the pin this PR carries.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -69,7 +69,7 @@
       "effects": [
         "documentation"
       ],
-      "reason": "Runbook paragraph, owner decision, item 3 update; fleet pin yuyu_reader_component to 240ff79c (#255 delivered)."
+      "reason": "Runbook paragraph, owner decision, item 3 update; fleet pins yuyu_reader_component to 240ff79c (#255 delivered) and snkr_component to a789a82a (#258 delivered #257)."
     }
   ],
   "safeguards": {
@@ -82,7 +82,7 @@
         "No source request and no new route"
       ],
       "dependencies": [
-        "staging after #255 and its delivery"
+        "staging after #258 and its delivery"
       ],
       "deployment_impact": "Nine Yuyu-Tei shards re-uploaded on the merge commit with automatic rollback; Yuyu-Tei behaviour unchanged. No row is written by the merge: proposals and mappings change only through owner-approved proposal-refresh and approve-snkr-batch applies.",
       "database_writes": 0,
