@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "mission": "Deliver #257 (SNKRDUNK seed priority, owner 'go perfectionist' 2026-11-02). #257 merged at 2026-11-02 03:33Z (8dfe44ba) inside the 02:00-06:00 UTC busy window, so deploy_staging_collectors refused the forward rollout before reading Railway or uploading anything ('Collector release refused: could overlap the 02:00-06:00 UTC busy window'); snkrdunk-collector still runs its f65a7acc image. STAGING_DELIVERY.md's recovery for merged code with no rollout: a follow-up PR that touches no collector watch path and re-requests the same sequential release. This one changes one documentation line and requests the snkrdunk-collector rollout of its own merge commit, which carries #257's code.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/ROADMAP.md"
+      ],
+      "effects": [
+        "documentation",
+        "infrastructure"
+      ],
+      "reason": "Item 3 records the refused rollout. Infrastructure: mission-scoped re-upload of snkrdunk-collector on this merge commit (code from #257, unchanged since its review)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (one CI release)"
+      ],
+      "routes": [
+        "No new route; discovery requests stay inside the existing intent bounds and the dispatch budget"
+      ],
+      "dependencies": [
+        "staging at 8dfe44ba (#257)"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback; must start between 06:00 and 23:00 UTC.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "8dfe44baf86753cc2f489b0a067485c6eafbdf66",
+      "procedure": "The rollout captures snkrdunk-collector's live deployment before upload and restores it on failure (recovery_deployment_id is reference only, carried from #252's mission); afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "Discovery intents failing on the new code, a source denial, or an intent with seed_anchors 0 while unspent seeds remain.",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_discovery_planner_postgres.py",
+        "services/snkrdunk_collector/tests/test_discovery_seeds.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_planner.py"
+      ],
+      "observation_window": "Delivery verify (SNKRDUNK component at the merge); then the next auto intent shows seed_anchors > 0 and inspected > 0 in snkrdunk-discovery-state."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "ab3f03bd-3659-4d81-8e31-93792d1347f9"
+      }
+    ]
+  },
+  "diff_sha256": "ae34a01b56b685a7ce6cba46c136acc0f9391ef30a96c2bfdf7213a3ed174f93"
+}
