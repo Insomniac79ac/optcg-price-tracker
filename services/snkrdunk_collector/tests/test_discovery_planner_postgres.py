@@ -308,3 +308,95 @@ def test_a_seed_no_longer_committed_is_refused(database, monkeypatch):
         with pytest.raises(ValueError, match="committed owner-confirmed"):
             intent(session, claim_like)
 
+
+
+def _use_seeds(monkeypatch, releases):
+    from snkrdunk_collector import discovery, discovery_planner
+
+    monkeypatch.setattr(discovery_planner, "seed_identities", lambda: list(releases))
+    monkeypatch.setattr(discovery_planner, "seed_releases", lambda: dict(releases))
+    monkeypatch.setattr(discovery, "seed_identities", lambda: list(releases))
+
+
+def _settle_cursor(factory, work_id, now, **cursor):
+    """Settle as completed, then overwrite cursor fields (a run that used other anchors)."""
+    settle(factory, work_id, now, inspected=cursor.pop("inspected"))
+    with factory.begin() as session:
+        work = session.get(FreshnessWork, work_id)
+        work.resume_cursor = {**work.resume_cursor, **cursor}
+
+
+def test_never_used_mappings_do_not_crowd_out_seeds(database, monkeypatch):
+    """Staging 2026-11-01 14:58Z: 12 never-used old-set mappings filled the intent and the 41
+    seeds waited behind them. Seeds now come first even when every anchor is unused."""
+    factory, source_id, _ = database
+    seeds = {str(600000 + n): "OP-12" for n in range(12)}
+    _use_seeds(monkeypatch, seeds)
+    work, reason = plan(factory, source_id, T0)
+    assert reason is None
+    assert work.resume_cursor["anchor_seed_identities"] == list(seeds)
+    assert work.resume_cursor["anchor_mapping_ids"] == []
+
+
+def test_seeds_in_releases_without_candidates_go_first(database, monkeypatch):
+    from app.models import SnkrdunkCandidate
+
+    factory, source_id, _ = database
+    with factory.begin() as session:
+        session.add(SnkrdunkCandidate(source_url="https://snkrdunk.com/apparels/700001",
+                                      title="fixture", detected_set_code="OP-05",
+                                      match_status="unmatched"))
+    _use_seeds(monkeypatch, {"135438": "OP-05", "158311": "OP-06"})
+    work, _ = plan(factory, source_id, T0)
+    assert work.resume_cursor["anchor_seed_identities"] == ["158311", "135438"]
+
+
+def test_a_mapping_in_an_uncovered_release_beats_a_seed_in_a_covered_one(database, monkeypatch):
+    from app.models import SnkrdunkCandidate
+
+    factory, source_id, anchors = database
+    with factory.begin() as session:
+        session.scalar(select(ReleaseProduct)).official_code = "OP-13"
+        session.add(SnkrdunkCandidate(source_url="https://snkrdunk.com/apparels/700001",
+                                      title="fixture", detected_set_code="OP-05",
+                                      match_status="unmatched"))
+    seeds = {str(600000 + n): "OP-05" for n in range(11)}
+    _use_seeds(monkeypatch, seeds)
+    work, _ = plan(factory, source_id, T0)
+    # Both OP-13 mappings, then seeds for the remaining ten places.
+    assert work.resume_cursor["anchor_mapping_ids"] == anchors[:2]
+    assert work.resume_cursor["anchor_seed_identities"] == list(seeds)[:10]
+
+
+def test_a_spent_seed_waits_and_a_productive_seed_is_reused(database, monkeypatch):
+    """A completed full-radius intent that inspected fewer than its bound emptied every one of
+    its anchors' neighbourhoods; one that hit the bound proves nothing about them."""
+    factory, source_id, anchors = database
+    _use_seeds(monkeypatch, {"135438": "OP-05", "158311": "OP-06"})
+    now = T0
+    first, _ = plan(factory, source_id, now)
+    _settle_cursor(factory, first.id, now, inspected=[str(n) for n in range(20)],
+                   anchor_seed_identities=["135438"], anchor_mapping_ids=[])
+    now += SIX
+    second, _ = plan(factory, source_id, now)
+    _settle_cursor(factory, second.id, now, inspected=["x"],
+                   anchor_seed_identities=["158311"], anchor_mapping_ids=[])
+    now += SIX
+    third, reason = plan(factory, source_id, now)
+    assert reason is None
+    # 135438 (used once, productive) leads; the never-used mappings follow; 158311 (spent) last.
+    assert third.resume_cursor["anchor_seed_identities"] == ["135438", "158311"]
+    assert third.resume_cursor["anchor_mapping_ids"] == anchors[:2]
+    from snkrdunk_collector import discovery_planner
+
+    with factory() as session:
+        previous = discovery_planner._published(session, source_id)
+        assert discovery_planner._exhausted(session, previous) == (set(), {"158311"})
+
+
+def test_seed_releases_follow_the_committed_file():
+    from snkrdunk_collector.discovery_seeds import seed_identities, seed_releases
+
+    releases = seed_releases()
+    assert list(releases) == seed_identities() and len(releases) == 41
+    assert releases["135438"] == "OP-05"

@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK coverage: the seeds of #252 were never used (owner 'go perfectionist' 2026-11-02). The first auto run after the seeds (work 4763, 2026-11-01 14:58Z) had 12 mapping anchors (the bound), inspected 0 products and used no seed: anchors were least used first with mappings winning ties, and at least 149 of the 353 mapping identities had never been used, so every seed waited behind them. The planner now orders starting points by: not known spent (a completed full-radius intent that inspected fewer than its bound spent every anchor it used, since neighbours() walks every radius round before stopping); in a release with no SNKRDUNK candidate yet (seed release from the committed file, mapping release from its print); seeds before mappings; least used. snkrdunk-discovery-state reports seed_anchors per intent so an intent without seeds is visible.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_planner.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_seeds.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "_anchors ranking and _exhausted (read-only queries: mappings with their release, distinct candidate set codes, last outcomes); seed_releases reads the same committed file under the same fail-closed checks. Bounds, guards, budget and intent validation unchanged. Infrastructure: mission-scoped re-upload of snkrdunk-collector."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/tests/test_discovery_planner_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Never-used mappings no longer crowd out seeds; uncovered releases first; a mapping in an uncovered release beats a seed in a covered one; a spent seed waits and a productive one is reused; seed_releases matches the file. Three of the new tests fail on the old planner. Collector suite: 677 passed."
+    },
+    {
+      "files": [
+        "scripts/diagnostics/snkrdunk-discovery-state.sql"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "intents gains seed_anchors. Diagnostic tests (read-only execution) pass."
+    },
+    {
+      "files": [
+        "docs/agent/DECISIONS.md",
+        "docs/agent/ROADMAP.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Owner decision and item 3 update."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (one CI release)"
+      ],
+      "routes": [
+        "No new route; discovery requests stay inside the existing intent bounds (12 anchors, radius 48, 20 products) and the dispatch budget"
+      ],
+      "dependencies": [
+        "staging after #255"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback. The next auto intent (6 h interval, request-budget guard unchanged) starts from seeds in sets with no SNKRDUNK candidate.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "240ff79c6ab62a115cbdc8edfc7fda748b013091",
+      "procedure": "The rollout captures snkrdunk-collector's live deployment before upload and restores it on failure (recovery_deployment_id is reference only, carried from #252's mission); afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "Discovery intents failing on the new code, a source denial, or an intent with seed_anchors 0 while unspent seeds remain.",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_discovery_planner_postgres.py",
+        "services/snkrdunk_collector/tests/test_discovery_seeds.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_planner.py"
+      ],
+      "observation_window": "Delivery verify (SNKRDUNK component at the merge); then the next auto intent shows seed_anchors > 0 and inspected > 0 in snkrdunk-discovery-state."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "ab3f03bd-3659-4d81-8e31-93792d1347f9"
+      }
+    ]
+  },
+  "diff_sha256": "a0677d2cd8f7d70a04c48c7d86074d226498d26b849b0e7bb0926c321b706321"
+}
