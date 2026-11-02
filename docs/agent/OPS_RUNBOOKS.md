@@ -336,6 +336,14 @@ stored and new digest, selected print) with the plan SHA; apply re-plans in the 
 refuses on any difference, refreshes exactly those through `refresh_discovery_proposals` and checks
 each is exact. Proposals only, no mapping (`approve-f1-batch` next), no source request.
 
+`approve-snkr-batch` (`scripts/ops/f1_approve.py`, `source="snkrdunk"`, owner 2026-11-01): the
+approve-f1-batch selection, guards, pinned list and per-proposal approval for current pending exact
+SNKRDUNK groups carrying `unique_snkrdunk_title_kind_resolves_one_release_sibling`. The admin gate
+(`resolve_exact_print`) narrows SNKRDUNK siblings by the same title kind, only when every surviving
+print's kind is known. `proposal-refresh` refreshes SNKRDUNK groups stored ambiguous before the rule
+(its `REFRESH_REASONS`), so the order is: proposal-refresh dry run and apply, then
+approve-snkr-batch dry run and apply.
+
 `market-value-freeze-legacy` (`scripts/ops/mv_freeze_legacy.py`, plan in
 `app.services.market_value_membership`): owner plan A (2026-10-28). Market Value days published
 before the membership ledger carry only the v1 digest of their prints, so the publisher refuses

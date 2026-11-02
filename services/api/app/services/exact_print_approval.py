@@ -203,6 +203,10 @@ class SourceEvidence:
     rarity: str | None = None
     title: str | None = None
     product_label: str | None = None
+    # SNKRDUNK title kind (owner 2026-11-01): "plain" for a bare ordinary rarity, "parallel" for the
+    # same with "-P", else None. Read off the stored title by the same function the proposal resolver
+    # uses; it narrows only when every surviving print's kind is known.
+    listing_kind: str | None = None
 
     @property
     def has_unresolved_product(self) -> bool:
@@ -219,10 +223,13 @@ class SourceEvidence:
         persisted separately, and re-reading it here needs no migration and no
         rewrite of existing candidate rows.
         """
+        from app.services.source_mapping_proposals import snkrdunk_listing_kind
+
         match = _SOURCE_PRODUCT_LABEL_RE.search(candidate.title or "")
         label = match.group(1).strip() if match else None
         return cls(
             source_name="snkrdunk",
+            listing_kind=snkrdunk_listing_kind(candidate.title, candidate.detected_rarity),
             source_url=candidate.source_url,
             card_code=candidate.detected_card_code,
             set_code=candidate.detected_set_code,
@@ -587,7 +594,10 @@ def resolve_exact_print(
     # product this printing shipped in and `official_asset_variant` is which
     # official asset it carries - the two facts that actually separate
     # printings of one card. Rarity is descriptive and is deliberately not a
-    # discriminator here.
+    # discriminator here. One exception (owner 2026-11-01): with no parsed
+    # variant, a SNKRDUNK title's "-P" marker (or its absence on a bare
+    # ordinary rarity) names the parallel or plain asset, and narrows only
+    # when every surviving print's kind is known.
     surviving = list(siblings)
     # Product narrowing has two channels and they are mutually exclusive: a
     # product either has a Bandai code or it does not. The coded channel is
@@ -617,6 +627,13 @@ def resolve_exact_print(
             if _norm(p.official_asset_variant) == _norm(evidence.variant)
         ]
         evidence_used.append(f"asset variant {evidence.variant}")
+    elif evidence.listing_kind is not None:
+        from app.services.source_mapping_proposals import print_listing_kind
+
+        kinds = {p.id: print_listing_kind(p) for p, _ in surviving}
+        if None not in kinds.values():
+            surviving = [(p, c) for p, c in surviving if kinds[p.id] == evidence.listing_kind]
+            evidence_used.append(f"title kind {evidence.listing_kind}")
 
     surviving_ids = sorted(p.id for p, _ in surviving)
 

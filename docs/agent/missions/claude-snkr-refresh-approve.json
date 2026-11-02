@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK coverage, revised step 2 part 3 (owner 'go ahead' 2026-11-01): turn the SNKRDUNK groups the title-kind rule (#255) resolves into mappings. proposal-refresh also refreshes SNKRDUNK groups stored ambiguous before the rule (REFRESH_REASONS per source). New ops-write runbook approve-snkr-batch: approve-f1-batch's selection, guards, pinned list and dry-run-then-apply for pending exact SNKRDUNK groups with reason unique_snkrdunk_title_kind_resolves_one_release_sibling. The admin exact-print gate (resolve_exact_print) narrows SNKRDUNK siblings by the same title kind, only when every surviving print's kind is known; without it the gate refuses every such group (verified locally: both approve-snkr-batch tests fail with the narrowing disabled). exact_print_approval.py is a Yuyu-Tei collector runtime input (import graph), so the nine Yuyu-Tei shards are re-uploaded; Yuyu-Tei evidence never sets listing_kind, so their behaviour is unchanged. Also pins yuyu_reader_component to #255's merge (240ff79c) and snkr_component to #258's merge (a789a82a, which delivered #257). #258's delivery verify failed only on Yuyu continuity: staging's fleet still pinned the shards to ada16845 while they run 240ff79c, the pin this PR carries.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/exact_print_approval.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "SourceEvidence.listing_kind, set only by from_snkrdunk_candidate via snkrdunk_listing_kind; resolve_exact_print narrows by print_listing_kind only when every surviving print's kind is known, and records 'title kind <kind>' as evidence used. Never widens. Infrastructure: mission-scoped re-upload of the nine Yuyu-Tei shards (runtime input by import graph)."
+    },
+    {
+      "files": [
+        "scripts/ops/f1_approve.py",
+        "scripts/ops/run.py",
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "approve-snkr-batch: f1_approve parameterised by source (SOURCE_RULES, RUNBOOK_NAMES); yuyutei behaviour and approve-f1-batch unchanged. Registered as a collector-affecting write runbook (quiet windows, owner approval)."
+    },
+    {
+      "files": [
+        "scripts/ops/proposal_refresh.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "REFRESH_REASONS per source; candidates carry their source; apply refreshes per source and requires every approved group exact."
+    },
+    {
+      "files": [
+        "services/api/tests/test_approve_snkr_batch.py",
+        "services/api/tests/test_proposal_refresh.py",
+        "services/api/tests/test_snkrdunk_print_authoritative_e2e_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Selection of SNKRDUNK title-kind groups only, approval through the narrowed gate, never widening; SNKRDUNK refresh. E2E: the 'consistent with both printings' gate test now strips the rarity token too (a bare 'SR' title with no variant is the plain print under the owner's rule, so CI refused it as a contradiction, not as ambiguous); a new test shows the plain title refuses the parallel and approves the base print. Related suites: 204 backend and 93 ops tests, plus 139 gate/e2e/proposal tests, pass."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/DECISIONS.md",
+        "docs/agent/ROADMAP.md",
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook paragraph, owner decision, item 3 update; fleet pins yuyu_reader_component to 240ff79c (#255 delivered) and snkr_component to a789a82a (#258 delivered #257)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "nine yuyutei-collector shards (one CI release)",
+        "SNKRDUNK proposal groups and mappings (owner-approved runbooks only)"
+      ],
+      "routes": [
+        "No source request and no new route"
+      ],
+      "dependencies": [
+        "staging after #258 and its delivery"
+      ],
+      "deployment_impact": "Nine Yuyu-Tei shards re-uploaded on the merge commit with automatic rollback; Yuyu-Tei behaviour unchanged. No row is written by the merge: proposals and mappings change only through owner-approved proposal-refresh and approve-snkr-batch applies.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 60
+    },
+    "recovery": {
+      "artifact": "240ff79c6ab62a115cbdc8edfc7fda748b013091",
+      "procedure": "The rollout captures each collector's live deployment before upload and restores it on failure (recovery_deployment_id rows are reference only, carried from the #255 mission); afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file. A wrong mapping is deactivated through the admin mapping path; the collector's artwork check refuses a capture whose photo does not match.",
+      "trigger": "A Yuyu-Tei shard failing after the release, or an approved SNKRDUNK mapping whose photo does not match its print.",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/api/tests/test_approve_snkr_batch.py",
+        "services/api/tests/test_proposal_refresh.py",
+        "services/api/tests/test_snkrdunk_print_authoritative_e2e_postgres.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/exact_print_approval.py"
+      ],
+      "observation_window": "Delivery verify (Yuyu-Tei reader component at the merge); then proposal-refresh dry run lists about 210 SNKRDUNK groups, and approve-snkr-batch dry run after its apply."
+    }
+  },
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "6eab21a9-a55e-4f98-abf9-bb9314a9f184"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "542bd065-e347-46f9-8b68-c3f6119d2e65"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "60b96ed9-9dd8-4400-9b9a-d48631e23e3b"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "359b9cbb-d6c2-47e0-903e-aa2df4189e7c"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "927115a8-c568-4984-9a08-63c40ca2044b"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "671c2e7d-f335-45f8-a60f-c8755433dd5a"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "725812e1-c328-420a-ad15-4d44c911e890"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "6bdebfe3-d88d-4314-9b80-9e82d501ac2a"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "34482cf2-ddc2-4780-bfaa-7aa50c468c40"
+      }
+    ]
+  },
+  "diff_sha256": "a36092efc37a2c7ec372f73d906c12528170fd3fe461a427a7f836dd08b7ee5b"
+}

@@ -361,11 +361,14 @@ def test_legacy_card_mapping_path_still_works_end_to_end(chain):
 
 
 def test_ambiguous_print_cannot_approve_and_nothing_prices(chain):
-    """Strip the variant evidence and the listing is consistent with both
-    printings. Approval is refused, so ingestion has nothing to key from."""
+    """Strip the variant and rarity evidence and the listing is consistent with
+    both printings. Approval is refused, so ingestion has nothing to key from.
+    (With the rarity token kept, the title kind would still separate them:
+    see the next test.)"""
     session = chain["session"]
     candidate = session.get(SnkrdunkCandidate, chain["candidate"].id)
     candidate.detected_variant = None
+    candidate.detected_rarity = None
     session.commit()
 
     response = _approve(chain, card_print_id=chain["prints"]["p1"].id)
@@ -377,6 +380,27 @@ def test_ambiguous_print_cannot_approve_and_nothing_prices(chain):
 
     _run_worker_ingest(chain["db"].url)
     assert session.query(PriceObservation).count() == 0
+
+
+def test_title_kind_separates_the_printings_when_the_variant_is_missing(chain):
+    """Owner 2026-11-01: a bare "SR" title is the plain print and "SR-P" the
+    parallel. With no parsed variant the gate narrows by that title kind: the
+    plain title refuses the parallel and approves the base print."""
+    session = chain["session"]
+    candidate = session.get(SnkrdunkCandidate, chain["candidate"].id)
+    candidate.detected_variant = None
+    session.commit()
+
+    refused = _approve(chain, card_print_id=chain["prints"]["p1"].id)
+    assert refused.status_code == 409
+    assert refused.json()["detail"]["code"] == "evidence_contradicts_selection"
+    session.expire_all()
+    assert session.query(SourceCardMapping).count() == 0
+
+    approved = _approve(chain, card_print_id=chain["prints"]["base"].id)
+    assert approved.status_code == 200, approved.text
+    session.expire_all()
+    assert session.query(SourceCardMapping).one().card_print_id == chain["prints"]["base"].id
 
 
 def test_wrong_print_cannot_approve(chain):

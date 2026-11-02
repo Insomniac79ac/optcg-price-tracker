@@ -54,13 +54,13 @@ def test_only_the_reviewed_group_is_planned_and_refreshed_to_exact(db_session, m
     plan, facts = pr.build_plan(db_session)
     assert [c["candidate_id"] for c in plan["candidates"]] == [cand.id]
     assert plan["candidates"][0]["selected_card_print_id"] == selected.id
-    assert facts["ambiguous_pending_groups"] == 2 and facts["left_as_is"] == {"ambiguous": 1}
+    assert facts["ambiguous_pending_groups"] == 2 and facts["left_as_is"] == {"yuyutei:ambiguous": 1}
     before_untouched = current(db_session, untouched.id).id
 
     result = pr.apply_plan(db_session, plan)
     db_session.commit()
 
-    assert result["resolutions"] == {"exact": 1}
+    assert result["yuyutei"]["resolutions"] == {"exact": 1}
     group = current(db_session, cand.id)
     assert group.resolution_status == "exact" and group.review_status == "pending"
     assert pr.REVIEW_REASON in group.resolution_reasons_json
@@ -77,7 +77,7 @@ def test_apply_refuses_a_plan_that_no_longer_matches(db_session, monkeypatch):
 
 
 def test_run_is_a_dry_run_by_default_and_apply_needs_the_sha(tmp_path):
-    plan = {"source_id": 1, "candidates": [{"candidate_id": 7, "new_digest": "a" * 64, "selected_card_print_id": 9}]}
+    plan = {"candidates": [{"source": "yuyutei", "candidate_id": 7, "new_digest": "a" * 64, "selected_card_print_id": 9}]}
     facts = {"ambiguous_pending_groups": 3, "left_as_is": {"ambiguous": 2}, "resolved_by_review_now": []}
     written = []
     out = pr.run(tmp_path, preview=lambda: (plan, facts), write=written.append)
@@ -88,5 +88,32 @@ def test_run_is_a_dry_run_by_default_and_apply_needs_the_sha(tmp_path):
     pr.run(tmp_path, apply=True, expected_sha256=out["plan_sha256"], preview=lambda: (plan, facts),
            write=lambda p: written.append(p) or {"resolutions": {"exact": 1}})
     assert written == [plan]
-    empty = pr.run(tmp_path, preview=lambda: ({"source_id": 1, "candidates": []}, facts))
+    empty = pr.run(tmp_path, preview=lambda: ({"candidates": []}, facts))
     assert empty["ok"] is False
+
+
+def test_snkrdunk_title_kind_groups_are_refreshed_too(db_session, monkeypatch):
+    """Owner 2026-11-01: SNKRDUNK groups stored ambiguous before the title rule are refreshed exact."""
+    from app.services import source_mapping_proposals as smp
+    from tests.test_source_mapping_proposals import _base, _snk, _snk_family
+
+    _base(db_session)
+    _, family, prints = _snk_family(db_session)
+    candidate = _snk(db_session, 1, family.card_code, f"Nami R-P [{family.card_code}] (Booster Pack)", "R-P")
+    db_session.commit()
+    real = smp.snkrdunk_listing_kind
+    monkeypatch.setattr(smp, "snkrdunk_listing_kind", lambda *a: None)  # stored before the rule existed
+    persist_proposals(db_session, analyse_source_mapping_proposals(db_session, build_report=False).plans)
+    db_session.commit()
+    assert current(db_session, candidate.id).resolution_status == "ambiguous"
+    monkeypatch.setattr(smp, "snkrdunk_listing_kind", real)
+
+    plan, facts = pr.build_plan(db_session)
+    assert plan["candidates"] == [{"source": "snkrdunk", "candidate_id": candidate.id,
+                                   "new_digest": plan["candidates"][0]["new_digest"],
+                                   "selected_card_print_id": prints["p1"].id}]
+    result = pr.apply_plan(db_session, plan)
+    db_session.commit()
+    assert result["snkrdunk"]["resolutions"] == {"exact": 1}
+    group = current(db_session, candidate.id)
+    assert group.resolution_status == "exact" and pr.SNKR_TITLE_REASON in group.resolution_reasons_json

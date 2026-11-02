@@ -29,6 +29,7 @@ on:
           - snkr-parser-requeue
           - market-value-freeze-legacy
           - proposal-refresh
+          - approve-snkr-batch
       apply:
         description: "Write (default: dry run, nothing written)"
         type: boolean
