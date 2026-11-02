@@ -1,12 +1,14 @@
 -- SNKRDUNK discovery state, read-only. Owner task (2026-10-19): why discovery stopped.
 -- intents: every SNKRDUNK discovery work item (published `snkr-published:` scopes and any other)
--- with its bounds and recorded result. attempts: their attempts. legacy_runs: the older
+-- with its bounds and recorded result (anchors: mapping anchors; seed_anchors: committed seeds,
+-- 2026-11-02). attempts: their attempts. legacy_runs: the older
 -- snkrdunk_discovery_runs path by status. anchors_by_release: approved, manually verified
 -- SNKRDUNK mappings (the only anchors published discovery accepts) per release, with stored
 -- candidates whose stored set code names that release. budget: the SNKRDUNK dispatch budget.
 -- intents
 select w.id, w.scope_key, w.state, w.last_outcome, w.attempt_count, w.next_due_at, w.updated_at,
   json_array_length(coalesce(w.resume_cursor -> 'anchor_mapping_ids', '[]'::json)) anchors,
+  json_array_length(coalesce(w.resume_cursor -> 'anchor_seed_identities', '[]'::json)) seed_anchors,
   w.resume_cursor ->> 'radius_start' radius_start, w.resume_cursor ->> 'radius_end' radius_end,
   w.resume_cursor ->> 'max_products' max_products, w.resume_cursor ->> 'published_urls_observed' published_urls,
   json_array_length(coalesce(w.resume_cursor -> 'inspected_identities', '[]'::json)) inspected,

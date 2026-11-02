@@ -21,20 +21,25 @@ MAX_SEEDS = 200
 
 def seed_identities(path: Path = SEEDS_FILE) -> list[str]:
     """Distinct canonical listing identities of the committed seeds, in file order (fail closed)."""
+    return list(seed_releases(path))
+
+
+def seed_releases(path: Path = SEEDS_FILE) -> dict[str, str]:
+    """{identity: release} of the committed seeds, in file order (fail closed)."""
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("schema_version") != 1 or not isinstance(data.get("seeds"), list):
         raise ValueError("unrecognized discovery seeds file")
     seeds = data["seeds"]
     if len(seeds) > MAX_SEEDS:
         raise ValueError("discovery seeds exceed bound")
-    identities = []
+    releases = {}
     for seed in seeds:
         if not isinstance(seed, dict) or not all(
             isinstance(seed.get(k), str) and seed[k] for k in ("release", "url", "title", "confirmed_by")
         ):
             raise ValueError("every seed needs release, url, title and confirmed_by")
         identity = canonical_source_listing_identity("snkrdunk", seed["url"])
-        if not identity or identity in identities:
+        if not identity or identity in releases:
             raise ValueError("distinct public SNKRDUNK product seeds required")
-        identities.append(identity)
-    return identities
+        releases[identity] = seed["release"]
+    return releases

@@ -10,15 +10,18 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 
 from app.models import (
+    CardPrint,
     FreshnessAttempt,
     FreshnessWork,
+    ReleaseProduct,
+    SnkrdunkCandidate,
     SourceCardMapping,
     SourceDispatchBudget,
 )
 from app.services.freshness_policy import require_utc
 from app.services.freshness_queue import plan_discovery_scope
 from opcg_source_identity import canonical_source_listing_identity
-from snkrdunk_collector.discovery_seeds import seed_identities
+from snkrdunk_collector.discovery_seeds import seed_identities, seed_releases
 
 SCOPE_PREFIX = "snkr-published:auto-v1-"
 REQUEST_COST = 300
@@ -46,13 +49,44 @@ def _published(session, source_id):
     ).all()
 
 
-def _anchors(session, source_id, previous, seeds=None):
-    """(mapping ids, seed identities, pool size): least used first across both kinds.
+def _release_key(code):
+    return "".join(ch for ch in (code or "").upper() if ch not in "-_ ") or None
 
-    Seeds (owner 2026-11-01) start discovery in sets no approved mapping reaches; a seed whose
-    listing is already an approved mapping counts once, as the mapping."""
-    rows = session.scalars(
-        select(SourceCardMapping)
+
+def _exhausted(session, previous):
+    """(mapping ids, seed identities) whose neighbourhoods a completed full-radius intent emptied.
+
+    neighbours() walks every radius round of every anchor before it stops, so a completed
+    intent that inspected fewer products than its bound had no unexcluded neighbour left
+    around any of its anchors; exclusions only grow, so those anchors stay spent."""
+    mapping_ids, seed_ids = set(), set()
+    for work in previous:
+        cursor = work.resume_cursor or {}
+        if (
+            "inspected_identities" not in cursor
+            or cursor.get("radius_start") != 1
+            or (cursor.get("radius_end") or 0) < RADIUS_END
+            or len(cursor["inspected_identities"]) >= (cursor.get("max_products") or 0)
+            or _last_outcome(session, work) != "completed"
+        ):
+            continue
+        mapping_ids.update(cursor.get("anchor_mapping_ids", []))
+        seed_ids.update(cursor.get("anchor_seed_identities", []))
+    return mapping_ids, seed_ids
+
+
+def _anchors(session, source_id, previous, seeds=None, releases=None):
+    """(mapping ids, seed identities, pool size), best first (owner 2026-11-01, perfectionist).
+
+    Order: anchors whose neighbourhoods are not known to be spent; then anchors in a release with
+    no SNKRDUNK candidate yet; then seeds before mappings (seeds are the owner-confirmed starting
+    points in sets mappings never reached); then least used. A seed whose listing is already an
+    approved mapping counts once, as the mapping. An anchor whose release is unknown never gets
+    the uncovered-release priority."""
+    rows = session.execute(
+        select(SourceCardMapping, ReleaseProduct.official_code)
+        .outerjoin(CardPrint, CardPrint.id == SourceCardMapping.card_print_id)
+        .outerjoin(ReleaseProduct, ReleaseProduct.id == CardPrint.release_product_id)
         .where(
             SourceCardMapping.source_id == source_id,
             SourceCardMapping.is_active.is_(True),
@@ -69,21 +103,34 @@ def _anchors(session, source_id, previous, seeds=None):
             used[mapping_id] = used.get(mapping_id, 0) + 1
         for identity in cursor.get("anchor_seed_identities", []):
             seed_used[identity] = seed_used.get(identity, 0) + 1
-    # Least used first; one entry per listing identity, as intent() requires.
+    spent_mappings, spent_seeds = _exhausted(session, previous)
+    covered = {
+        _release_key(code)
+        for code in session.scalars(select(SnkrdunkCandidate.detected_set_code).distinct())
+    }
+
+    def tier(release):
+        key = _release_key(release)
+        return 0 if key is not None and key not in covered else 1
+
+    # One entry per listing identity, as intent() requires.
     entries, identities = [], set()
-    for row in sorted(rows, key=lambda m: m.id):
+    for row, release in rows:
         identity = canonical_source_listing_identity("snkrdunk", row.source_url)
         if not identity or identity in identities:
             continue
         identities.add(identity)
-        entries.append((used.get(row.id, 0), 0, row.id, ("mapping", row.id)))
+        entries.append(((row.id in spent_mappings, tier(release), 1, used.get(row.id, 0), row.id),
+                        ("mapping", row.id)))
     seeds = seed_identities() if seeds is None else seeds
+    releases = seed_releases() if releases is None else releases
     for position, identity in enumerate(seeds):
         if identity in identities:
             continue
         identities.add(identity)
-        entries.append((seed_used.get(identity, 0), 1, position, ("seed", identity)))
-    chosen = [entry[3] for entry in sorted(entries)][:MAX_ANCHORS]
+        entries.append(((identity in spent_seeds, tier(releases.get(identity)), 0,
+                         seed_used.get(identity, 0), position), ("seed", identity)))
+    chosen = [entry for _, entry in sorted(entries, key=lambda e: e[0])][:MAX_ANCHORS]
     return ([v for k, v in chosen if k == "mapping"], [v for k, v in chosen if k == "seed"],
             len(identities))
 
