@@ -79,6 +79,11 @@ def _official_series(args, out):
     return official_series.run(out)
 
 
+def _bandai_label_evidence(args, out):
+    from ops import bandai_label_evidence
+    return bandai_label_evidence.run(out)
+
+
 def _snkr_page_check(args, out):
     from ops import snkr_page_check
     return snkr_page_check.run(out)
@@ -199,6 +204,9 @@ RUNBOOKS = {
     "snkr-page-check": ("read", False, _snkr_page_check),
     # Why each registered physical artwork review resolves or is refused (no source request).
     "identity-proof-check": ("read", False, _identity_proof_check),
+    # Fresh Bandai JP/Asia-EN series titles and memberships against stored SNKRDUNK labels
+    # (owner 2026-11-03): evidence for label rows; no DB write, no price-source request.
+    "bandai-label-evidence": ("read", False, _bandai_label_evidence),
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
     "enqueue-capture-batch": ("write", True, _capture),
