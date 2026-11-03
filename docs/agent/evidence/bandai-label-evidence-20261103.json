@@ -1,0 +1,1440 @@
+{
+ "what": "Bandai JP and Asia-EN Card List series pickers and coded OP/EB/PRB series memberships, captured by ops-readonly bandai-label-evidence (owner 2026-11-03). Evidence for SNKRDUNK label rows in release_product_aliases.py; replaces the frozen catalogue for rows added on or after 2026-11-03.",
+ "run_id": 41626034881,
+ "started_at": "2026-11-03T11:16:14.212884+00:00",
+ "bandai_requests": 50,
+ "pickers": {
+  "bandai_jp": [
+   [
+    "550302",
+    "プレミアムブースター ONE PIECE CARD THE BEST vol.2【PRB-02】"
+   ],
+   [
+    "550301",
+    "プレミアムブースター ONE PIECE CARD THE BEST【PRB-01】"
+   ],
+   [
+    "550205",
+    "エクストラブースター ONE PIECE Heroines Edition vol.2【EB-05】"
+   ],
+   [
+    "550204",
+    "エクストラブースター EGGHEAD CRISIS【EB-04】"
+   ],
+   [
+    "550203",
+    "エクストラブースター ONE PIECE Heroines Edition【EB-03】"
+   ],
+   [
+    "550202",
+    "エクストラブースター Anime 25th collection【EB-02】"
+   ],
+   [
+    "550201",
+    "エクストラブースター メモリアルコレクション【EB-01】"
+   ],
+   [
+    "550117",
+    "ブースターパック 世界最強の戦士【OP-17】"
+   ],
+   [
+    "550116",
+    "ブースターパック 決戦の刻【OP-16】"
+   ],
+   [
+    "550115",
+    "ブースターパック 神の島の冒険【OP-15】"
+   ],
+   [
+    "550114",
+    "ブースターパック 蒼海の七傑【OP-14】"
+   ],
+   [
+    "550113",
+    "ブースターパック 受け継がれる意志【OP-13】"
+   ],
+   [
+    "550112",
+    "ブースターパック 師弟の絆【OP-12】"
+   ],
+   [
+    "550111",
+    "ブースターパック 神速の拳【OP-11】"
+   ],
+   [
+    "550110",
+    "ブースターパック 王族の血統【OP-10】"
+   ],
+   [
+    "550109",
+    "ブースターパック 新たなる皇帝【OP-09】"
+   ],
+   [
+    "550108",
+    "ブースターパック 二つの伝説【OP-08】"
+   ],
+   [
+    "550107",
+    "ブースターパック 500年後の未来【OP-07】"
+   ],
+   [
+    "550106",
+    "ブースターパック 双璧の覇者【OP-06】"
+   ],
+   [
+    "550105",
+    "ブースターパック 新時代の主役【OP-05】"
+   ],
+   [
+    "550104",
+    "ブースターパック 謀略の王国【OP-04】"
+   ],
+   [
+    "550103",
+    "ブースターパック 強大な敵【OP-03】"
+   ],
+   [
+    "550102",
+    "ブースターパック 頂上決戦【OP-02】"
+   ],
+   [
+    "550101",
+    "ブースターパック ROMANCE DAWN【OP-01】"
+   ],
+   [
+    "550036",
+    "スタートデッキ 黄 ユースタス・キッド【ST-36】"
+   ],
+   [
+    "550035",
+    "スタートデッキ 赤黒 サボ【ST-35】"
+   ],
+   [
+    "550034",
+    "スタートデッキ 紫 シャーロット・カタクリ【ST-34】"
+   ],
+   [
+    "550033",
+    "スタートデッキ 青 クザン【ST-33】"
+   ],
+   [
+    "550032",
+    "スタートデッキ 緑 ロロノア・ゾロ【ST-32】"
+   ],
+   [
+    "550031",
+    "スタートデッキ 赤 モンキー・D・ルフィ【ST-31】"
+   ],
+   [
+    "550030",
+    "スタートデッキEX ルフィ&エース【ST-30】"
+   ],
+   [
+    "550029",
+    "スタートデッキ EGGHEAD【ST-29】"
+   ],
+   [
+    "550028",
+    "スタートデッキ 緑黄 ヤマト【ST-28】"
+   ],
+   [
+    "550027",
+    "スタートデッキ 黒 マーシャル・D・ティーチ【ST-27】"
+   ],
+   [
+    "550026",
+    "スタートデッキ 紫黒 モンキー・D・ルフィ【ST-26】"
+   ],
+   [
+    "550025",
+    "スタートデッキ 青 バギー【ST-25】"
+   ],
+   [
+    "550024",
+    "スタートデッキ 緑 ジュエリー・ボニー【ST-24】"
+   ],
+   [
+    "550023",
+    "スタートデッキ 赤 シャンクス【ST-23】"
+   ],
+   [
+    "550022",
+    "スタートデッキ エース&ニューゲート【ST-22】"
+   ],
+   [
+    "550021",
+    "スタートデッキEX ギア5【ST-21】"
+   ],
+   [
+    "550020",
+    "スタートデッキ 黄 シャーロット・カタクリ【ST-20】"
+   ],
+   [
+    "550019",
+    "スタートデッキ 黒 スモーカー【ST-19】"
+   ],
+   [
+    "550018",
+    "スタートデッキ 紫 モンキー・D・ルフィ【ST-18】"
+   ],
+   [
+    "550017",
+    "スタートデッキ 青 ドンキホーテ・ドフラミンゴ【ST-17】"
+   ],
+   [
+    "550016",
+    "スタートデッキ 緑 ウタ【ST-16】"
+   ],
+   [
+    "550015",
+    "スタートデッキ 赤 エドワード・ニューゲート【ST-15】"
+   ],
+   [
+    "550014",
+    "スタートデッキ 3D2Y【ST-14】"
+   ],
+   [
+    "550013",
+    "アルティメットデッキ 3兄弟の絆【ST-13】"
+   ],
+   [
+    "550012",
+    "スタートデッキ ゾロ&サンジ【ST-12】"
+   ],
+   [
+    "550011",
+    "スタートデッキ Side ウタ【ST-11】"
+   ],
+   [
+    "550010",
+    "アルティメットデッキ “三船長”集結【ST-10】"
+   ],
+   [
+    "550009",
+    "スタートデッキ Side ヤマト【ST-09】"
+   ],
+   [
+    "550008",
+    "スタートデッキ Side モンキー・D・ルフィ【ST-08】"
+   ],
+   [
+    "550007",
+    "スタートデッキ ビッグ・マム海賊団【ST-07】"
+   ],
+   [
+    "550006",
+    "スタートデッキ 海軍【ST-06】"
+   ],
+   [
+    "550005",
+    "スタートデッキ ONE PIECE FILM edition【ST-05】"
+   ],
+   [
+    "550004",
+    "スタートデッキ 百獣海賊団【ST-04】"
+   ],
+   [
+    "550003",
+    "スタートデッキ 王下七武海【ST-03】"
+   ],
+   [
+    "550002",
+    "スタートデッキ 最悪の世代【ST-02】"
+   ],
+   [
+    "550001",
+    "スタートデッキ 麦わらの一味【ST-01】"
+   ],
+   [
+    "550701",
+    "ファミリーデッキセット"
+   ],
+   [
+    "550901",
+    "プロモーションカード"
+   ],
+   [
+    "550801",
+    "限定商品収録カード"
+   ]
+  ],
+  "bandai_asia_en": [
+   [
+    "556302",
+    "PREMIUM BOOSTER -ONE PIECE CARD THE BEST vol.2- [PRB-02]"
+   ],
+   [
+    "556301",
+    "PREMIUM BOOSTER -ONE PIECE CARD THE BEST- [PRB-01]"
+   ],
+   [
+    "556205",
+    "EXTRA BOOSTER -ONE PIECE Heroines Edition vol.2- [EB-05]"
+   ],
+   [
+    "556204",
+    "EXTRA BOOSTER -EGGHEAD CRISIS- [EB-04]"
+   ],
+   [
+    "556203",
+    "EXTRA BOOSTER -ONE PIECE Heroines Edition- [EB-03]"
+   ],
+   [
+    "556202",
+    "EXTRA BOOSTER -Anime 25th collection- [EB-02]"
+   ],
+   [
+    "556201",
+    "EXTRA BOOSTER -Memorial Collection- [EB-01]"
+   ],
+   [
+    "556117",
+    "BOOSTER PACK -The World's Strongest Warriors- [OP-17]"
+   ],
+   [
+    "556116",
+    "BOOSTER PACK -THE TIME OF BATTLE- [OP-16]"
+   ],
+   [
+    "556115",
+    "BOOSTER PACK -Adventure on KAMI’s Island- [OP-15]"
+   ],
+   [
+    "556114",
+    "BOOSTER PACK -The Azure Sea’s Seven- [OP-14]"
+   ],
+   [
+    "556113",
+    "BOOSTER PACK -Carrying on His Will- [OP-13]"
+   ],
+   [
+    "556112",
+    "BOOSTER PACK -Legacy of the Master- [OP-12]"
+   ],
+   [
+    "556111",
+    "BOOSTER PACK -A Fist of Divine Speed- [OP-11]"
+   ],
+   [
+    "556110",
+    "BOOSTER PACK -Royal Blood- [OP-10]"
+   ],
+   [
+    "556109",
+    "BOOSTER PACK -Emperors in the New World- [OP-09]"
+   ],
+   [
+    "556108",
+    "BOOSTER PACK -Two Legends- [OP-08]"
+   ],
+   [
+    "556107",
+    "BOOSTER PACK -500 Years in the Future- [OP-07]"
+   ],
+   [
+    "556106",
+    "BOOSTER PACK -Wings of Captain- [OP-06]"
+   ],
+   [
+    "556105",
+    "BOOSTER PACK -Awakening of the New Era- [OP-05]"
+   ],
+   [
+    "556104",
+    "BOOSTER PACK -Kingdoms of Intrigue- [OP-04]"
+   ],
+   [
+    "556103",
+    "BOOSTER PACK -Pillars of Strength- [OP-03]"
+   ],
+   [
+    "556102",
+    "BOOSTER PACK -Paramount War- [OP-02]"
+   ],
+   [
+    "556101",
+    "BOOSTER PACK -ROMANCE DAWN- [OP-01]"
+   ],
+   [
+    "556036",
+    "STARTER DECK -Yellow Eustass\"Captain\"Kid- [ST-36]"
+   ],
+   [
+    "556035",
+    "STARTER DECK -Red/Black Sabo- [ST-35]"
+   ],
+   [
+    "556034",
+    "STARTER DECK -Purple Charlotte Katakuri- [ST-34]"
+   ],
+   [
+    "556033",
+    "STARTER DECK -Blue Kuzan- [ST-33]"
+   ],
+   [
+    "556032",
+    "STARTER DECK -Green Roronoa Zoro- [ST-32]"
+   ],
+   [
+    "556031",
+    "STARTER DECK -Red Monkey.D.Luffy- [ST-31]"
+   ],
+   [
+    "556030",
+    "STARTER DECK EX -Luffy & Ace- [ST-30]"
+   ],
+   [
+    "556029",
+    "STARTER DECK -EGGHEAD- [ST-29]"
+   ],
+   [
+    "556028",
+    "STARTER DECK -Green/Yellow Yamato- [ST-28]"
+   ],
+   [
+    "556027",
+    "STARTER DECK -Black Marshall.D.Teach- [ST-27]"
+   ],
+   [
+    "556026",
+    "STARTER DECK -Purple/Black Monkey.D.Luffy- [ST-26]"
+   ],
+   [
+    "556025",
+    "STARTER DECK -Blue Buggy- [ST-25]"
+   ],
+   [
+    "556024",
+    "STARTER DECK -Green Jewelry Bonney- [ST-24]"
+   ],
+   [
+    "556023",
+    "STARTER DECK -Red Shanks- [ST-23]"
+   ],
+   [
+    "556022",
+    "STARTER DECK -Ace & Newgate- [ST-22]"
+   ],
+   [
+    "556021",
+    "STARTER DECK EX -GEAR5- [ST-21]"
+   ],
+   [
+    "556020",
+    "STARTER DECK -Yellow Charlotte Katakuri- [ST-20]"
+   ],
+   [
+    "556019",
+    "STARTER DECK -Black Smoker- [ST-19]"
+   ],
+   [
+    "556018",
+    "STARTER DECK -Purple Monkey.D.Luffy- [ST-18]"
+   ],
+   [
+    "556017",
+    "STARTER DECK -Blue Donquixote Doflamingo- [ST-17]"
+   ],
+   [
+    "556016",
+    "STARTER DECK -Green Uta- [ST-16]"
+   ],
+   [
+    "556015",
+    "STARTER DECK -Red Edward.Newgate- [ST-15]"
+   ],
+   [
+    "556014",
+    "STARTER DECK -3D2Y- [ST-14]"
+   ],
+   [
+    "556013",
+    "ULTIMATE DECK -The Three Brothers Bond- [ST-13]"
+   ],
+   [
+    "556012",
+    "STARTER DECK -Zoro & Sanji- [ST-12]"
+   ],
+   [
+    "556011",
+    "STARTER DECK -Side Uta- [ST-11]"
+   ],
+   [
+    "556010",
+    "ULTIMATE DECK -The Three Captains- [ST-10]"
+   ],
+   [
+    "556009",
+    "STARTER DECK -Side Yamato- [ST-09]"
+   ],
+   [
+    "556008",
+    "STARTER DECK -Side Monkey.D.Luffy- [ST-08]"
+   ],
+   [
+    "556007",
+    "STARTER DECK -Big Mom Pirates- [ST-07]"
+   ],
+   [
+    "556006",
+    "STARTER DECK -The Navy- [ST-06]"
+   ],
+   [
+    "556005",
+    "STARTER DECK -ONE PIECE FILM edition- [ST-05]"
+   ],
+   [
+    "556004",
+    "STARTER DECK -Animal Kingdom Pirates- [ST-04]"
+   ],
+   [
+    "556003",
+    "STARTER DECK -The Seven Warlords of the Sea- [ST-03]"
+   ],
+   [
+    "556002",
+    "STARTER DECK -Worst Generation- [ST-02]"
+   ],
+   [
+    "556001",
+    "STARTER DECK -Straw Hat Crew- [ST-01]"
+   ],
+   [
+    "556701",
+    "Family Deck Set"
+   ],
+   [
+    "556901",
+    "Promotion card"
+   ],
+   [
+    "556801",
+    "Limited Product Card"
+   ]
+  ]
+ },
+ "codes": [
+  {
+   "code": "EB-01",
+   "jp": [
+    "550201"
+   ],
+   "en": [
+    "556201"
+   ],
+   "en_title": "EXTRA BOOSTER -Memorial Collection- [EB-01]",
+   "jp_n": 61,
+   "en_n": 61,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "5003a2c82eae",
+   "jp_members": "EB01:001-061"
+  },
+  {
+   "code": "EB-02",
+   "jp": [
+    "550202"
+   ],
+   "en": [
+    "556202"
+   ],
+   "en_title": "EXTRA BOOSTER -Anime 25th collection- [EB-02]",
+   "jp_n": 87,
+   "en_n": 87,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "6d780bc4a571",
+   "jp_members": "EB01:001,021,040 EB02:001-061 OP05:001-002,022,060,098 OP06:001,020-022,042,080 OP07:001,019,038,059,079,097 OP08:001-002,021,057-058,098"
+  },
+  {
+   "code": "EB-03",
+   "jp": [
+    "550203"
+   ],
+   "en": [
+    "556203"
+   ],
+   "en_title": "EXTRA BOOSTER -ONE PIECE Heroines Edition- [EB-03]",
+   "jp_n": 62,
+   "en_n": 62,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "e662cbe0450c",
+   "jp_members": "EB03:001-062"
+  },
+  {
+   "code": "EB-04",
+   "jp": [
+    "550204"
+   ],
+   "en": [
+    "556204"
+   ],
+   "en_title": "EXTRA BOOSTER -EGGHEAD CRISIS- [EB-04]",
+   "jp_n": 65,
+   "en_n": 65,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "23318590aef2",
+   "jp_members": "EB01:023 EB04:001-061 OP11:106 PRB02:006,014"
+  },
+  {
+   "code": "EB-05",
+   "jp": [
+    "550205"
+   ],
+   "en": [
+    "556205"
+   ],
+   "en_title": "EXTRA BOOSTER -ONE PIECE Heroines Edition vol.2- [EB-05]",
+   "jp_n": 72,
+   "en_n": 72,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "3b45937564dc",
+   "jp_members": "EB03:001 EB05:001-061 OP01:016 OP11:022,041 OP13:100 OP14:033,041 OP15:039 OP17:081,109 ST17:004"
+  },
+  {
+   "code": "OP-01",
+   "jp": [
+    "550101"
+   ],
+   "en": [
+    "556101"
+   ],
+   "en_title": "BOOSTER PACK -ROMANCE DAWN- [OP-01]",
+   "jp_n": 121,
+   "en_n": 121,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "314e7388e868",
+   "jp_members": "OP01:001-121"
+  },
+  {
+   "code": "OP-02",
+   "jp": [
+    "550102"
+   ],
+   "en": [
+    "556102"
+   ],
+   "en_title": "BOOSTER PACK -Paramount War- [OP-02]",
+   "jp_n": 121,
+   "en_n": 121,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "0ed0be31b537",
+   "jp_members": "OP02:001-121"
+  },
+  {
+   "code": "OP-03",
+   "jp": [
+    "550103"
+   ],
+   "en": [
+    "556103"
+   ],
+   "en_title": "BOOSTER PACK -Pillars of Strength- [OP-03]",
+   "jp_n": 127,
+   "en_n": 127,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "0598f64006f5",
+   "jp_members": "OP01:051 OP03:001-123 ST01:012 ST03:009 ST04:003"
+  },
+  {
+   "code": "OP-04",
+   "jp": [
+    "550104"
+   ],
+   "en": [
+    "556104"
+   ],
+   "en_title": "BOOSTER PACK -Kingdoms of Intrigue- [OP-04]",
+   "jp_n": 124,
+   "en_n": 124,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "725acc384a56",
+   "jp_members": "OP01:047,078 OP02:004,085,099 OP04:001-119"
+  },
+  {
+   "code": "OP-05",
+   "jp": [
+    "550105"
+   ],
+   "en": [
+    "556105"
+   ],
+   "en_title": "BOOSTER PACK -Awakening of the New Era- [OP-05]",
+   "jp_n": 125,
+   "en_n": 125,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "6a66e5aa27ae",
+   "jp_members": "OP01:016,121 OP02:120 OP03:092 OP04:044 OP05:001-119 ST01:012"
+  },
+  {
+   "code": "OP-06",
+   "jp": [
+    "550106"
+   ],
+   "en": [
+    "556106"
+   ],
+   "en_title": "BOOSTER PACK -Wings of Captain- [OP-06]",
+   "jp_n": 125,
+   "en_n": 125,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "73963f559c79",
+   "jp_members": "OP03:008,114 OP04:024,064 OP05:051,091 OP06:001-119"
+  },
+  {
+   "code": "OP-07",
+   "jp": [
+    "550107"
+   ],
+   "en": [
+    "556107"
+   ],
+   "en_title": "BOOSTER PACK -500 Years in the Future- [OP-07]",
+   "jp_n": 125,
+   "en_n": 125,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "9319d4b27e12",
+   "jp_members": "OP01:035,073 OP03:003,078 OP05:074 OP06:101 OP07:001-119"
+  },
+  {
+   "code": "OP-08",
+   "jp": [
+    "550108"
+   ],
+   "en": [
+    "556108"
+   ],
+   "en_title": "BOOSTER PACK -Two Legends- [OP-08]",
+   "jp_n": 125,
+   "en_n": 125,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "3298914af2f9",
+   "jp_members": "OP02:013 OP03:112 OP08:001-119 ST02:007 ST03:004 ST04:005 ST06:006"
+  },
+  {
+   "code": "OP-09",
+   "jp": [
+    "550109"
+   ],
+   "en": [
+    "556109"
+   ],
+   "en_title": "BOOSTER PACK -Emperors in the New World- [OP-09]",
+   "jp_n": 126,
+   "en_n": 126,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "a499dba59c41",
+   "jp_members": "OP04:119 OP05:067,093,119 OP07:015,051 OP08:106 OP09:001-119"
+  },
+  {
+   "code": "OP-10",
+   "jp": [
+    "550110"
+   ],
+   "en": [
+    "556110"
+   ],
+   "en_title": "BOOSTER PACK -Royal Blood- [OP-10]",
+   "jp_n": 125,
+   "en_n": 125,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "94f044442b94",
+   "jp_members": "EB01:056 OP07:021 OP10:001-119 ST12:012 ST14:003 ST15:002 ST18:001"
+  },
+  {
+   "code": "OP-11",
+   "jp": [
+    "550111"
+   ],
+   "en": [
+    "556111"
+   ],
+   "en_title": "BOOSTER PACK -A Fist of Divine Speed- [OP-11]",
+   "jp_n": 126,
+   "en_n": 126,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "994470bd3511",
+   "jp_members": "EB01:057 OP05:119 OP06:119 OP07:085 OP09:005 OP11:001-119 ST16:004 ST18:005"
+  },
+  {
+   "code": "OP-12",
+   "jp": [
+    "550112"
+   ],
+   "en": [
+    "556112"
+   ],
+   "en_title": "BOOSTER PACK -Legacy of the Master- [OP-12]",
+   "jp_n": 126,
+   "en_n": 126,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "bbabef1c87d0",
+   "jp_members": "OP06:050 OP09:013,037,093 OP10:082 OP12:001-119 ST13:011 ST18:004"
+  },
+  {
+   "code": "OP-13",
+   "jp": [
+    "550113"
+   ],
+   "en": [
+    "556113"
+   ],
+   "en_title": "BOOSTER PACK -Carrying on His Will- [OP-13]",
+   "jp_n": 128,
+   "en_n": 128,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "2c5b3417b8a8",
+   "jp_members": "EB02:028 OP07:111,118 OP09:004,009,118-119 OP10:030 OP13:001-120"
+  },
+  {
+   "code": "OP-14",
+   "jp": [
+    "550114"
+   ],
+   "en": [
+    "556114"
+   ],
+   "en_title": "BOOSTER PACK -The Azure Sea’s Seven- [OP-14]",
+   "jp_n": 126,
+   "en_n": 126,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "62ed9c25be88",
+   "jp_members": "EB01:003 OP06:093 OP07:046 OP09:051 OP10:065 OP12:030 OP14:001-120"
+  },
+  {
+   "code": "OP-15",
+   "jp": [
+    "550115"
+   ],
+   "en": [
+    "556115"
+   ],
+   "en_title": "BOOSTER PACK -Adventure on KAMI’s Island- [OP-15]",
+   "jp_n": 125,
+   "en_n": 125,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "784ca78afbbb",
+   "jp_members": "EB02:052 OP12:014 OP13:031,042 OP15:001-119 P:105 ST26:005"
+  },
+  {
+   "code": "OP-16",
+   "jp": [
+    "550116"
+   ],
+   "en": [
+    "556116"
+   ],
+   "en_title": "BOOSTER PACK -THE TIME OF BATTLE- [OP-16]",
+   "jp_n": 125,
+   "en_n": 125,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "911c023ba31f",
+   "jp_members": "EB04:054 OP10:045 OP11:067 OP14:029,084 OP16:001-119 ST15:005"
+  },
+  {
+   "code": "OP-17",
+   "jp": [
+    "550117"
+   ],
+   "en": [
+    "556117"
+   ],
+   "en_title": "BOOSTER PACK -The World's Strongest Warriors- [OP-17]",
+   "jp_n": 130,
+   "en_n": 130,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "d20c368c334b",
+   "jp_members": "EB04:007,061 OP12:056 OP13:028 OP14:108 OP16:098 OP17:001-119 P:084,107 ST27:005 ST31:004 ST32:002"
+  },
+  {
+   "code": "PRB-01",
+   "jp": [
+    "550301"
+   ],
+   "en": [
+    "556301"
+   ],
+   "en_title": "PREMIUM BOOSTER -ONE PIECE CARD THE BEST- [PRB-01]",
+   "jp_n": 111,
+   "en_n": 111,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "6e2bfdfdf7f9",
+   "jp_members": "EB01:006 OP01:006,016,024,029,033,041,047,051-052,070,078,120-121 OP02:004,013,015,018,089,096,099,106,114,117,121 OP03:003,055-057,060,079,089,094,108,110,113,116,121-123 OP04:029,031-032,036,044,056,083,089,095,100,104,112 OP05:006-007,010,015,034,043,057,069,073-074,081-082,105,114-115,117-119 OP06:003,023,035-036,038,056,060,064-069,079,086,091,100,106,110,114,118 P:014,029,053,055 PRB01:001 ST01:006,014 ST02:004 ST03:005,008,013 ST04:003,005,016 ST06:010,014 ST07:007 ST09:014 ST10:010 ST12:014"
+  },
+  {
+   "code": "PRB-02",
+   "jp": [
+    "550302"
+   ],
+   "en": [
+    "556302"
+   ],
+   "en_title": "PREMIUM BOOSTER -ONE PIECE CARD THE BEST vol.2- [PRB-02]",
+   "jp_n": 173,
+   "en_n": 173,
+   "same_membership": true,
+   "jp_only": "",
+   "en_only": "",
+   "jp_digest": "2ee31eaf543c",
+   "jp_members": "EB01:009,012,015,018,038,046,048,051,057,060-061 EB02:061 OP01:039,055 OP02:005,068 OP03:008,044,048,072,097 OP04:016,077,083,096 OP05:004,021,030,036-037,052,077,091,097,102 OP06:007,044,047,049,056,058-059,063,073,076,078,107,115,118-119 OP07:014-015,017,021,026,029,031,040,056,064,076,107,109,114,118-119 OP08:023,067,074,076,087,099,118 OP09:002,004-005,009,014,020,027,033,046,048,056-057,065,069,072,076-079,084,086,093,096-098 OP10:011,018,032,046,079,095,105,108-109,112,114,119 P:044,063,068-070,073-075,078-079,081-083,085,088 PRB02:001-018 ST01:011 ST02:007 ST06:008 ST10:005,008 ST12:005,017 ST13:004,007,010,014,019 ST14:007,010,013,016-017 ST15:002 ST16:003-005 ST17:002-003,005 ST18:001-003 ST19:002 ST20:003 ST21:003"
+  }
+ ],
+ "labels": [
+  {
+   "label": "Booster Pack Formidable Enemy",
+   "listings": 153,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "OP-03"
+   ]
+  },
+  {
+   "label": "Booster Pack Final Battle",
+   "listings": 153,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "OP-02"
+   ]
+  },
+  {
+   "label": "Booster Pack ROMANCE DAWN",
+   "listings": 152,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-01"
+   ],
+   "stored_set_codes": [
+    "OP-01"
+   ]
+  },
+  {
+   "label": "Booster Pack The Kingdom Of Conspiracy",
+   "listings": 148,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "OP-04"
+   ]
+  },
+  {
+   "label": "Premium Card Collection -Best Selection vol.1-",
+   "listings": 12,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Premium Card Collection 25th Anniversary Edition",
+   "listings": 9,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Extra Booster Memorial Collection",
+   "listings": 7,
+   "verdict": "official_unique",
+   "codes": [
+    "EB-01"
+   ],
+   "stored_set_codes": [
+    "EB-01"
+   ]
+  },
+  {
+   "label": "ONE PIECE FILM RED Finale Set",
+   "listings": 7,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Royal Blood\"",
+   "listings": 6,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-10"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Two Legends\"",
+   "listings": 5,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-08"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack Wings of Captain",
+   "listings": 4,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-06"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"CARRYING ON HIS WILL\"",
+   "listings": 4,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-13"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Extra Booster \"Anime 25th Collection\"",
+   "listings": 4,
+   "verdict": "official_unique",
+   "codes": [
+    "EB-02"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Extra Booster \"ONE PIECE Heroines edition\"",
+   "listings": 4,
+   "verdict": "official_unique",
+   "codes": [
+    "EB-03"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Extra Booster \"EGGHEAD CRISIS\"",
+   "listings": 4,
+   "verdict": "official_unique",
+   "codes": [
+    "EB-04"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Standard Battle Pack Vol.3",
+   "listings": 4,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Standard Battle Pack Vol.2",
+   "listings": 4,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "1st ANNIVERSARY SET",
+   "listings": 3,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"A Fist of Divine Speed\"",
+   "listings": 3,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-11"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"THE TIME OF BATTLE\"",
+   "listings": 3,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-16"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Standard Battle Pack Vol.1",
+   "listings": 3,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack Awakening of the New Era",
+   "listings": 2,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-05"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Awakening Of The New Era\"",
+   "listings": 2,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-05"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Meetup Souvenir",
+   "listings": 2,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack 500 Yeas in the Future",
+   "listings": 2,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack The Future After 500 years",
+   "listings": 2,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Emperors In The New World\"",
+   "listings": 2,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-09"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"LEGACY OF THE MASTER\"",
+   "listings": 2,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-12"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"THE AZURE SEA'S SEVEN\"",
+   "listings": 2,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-14"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Start Dacks Beasts Pirates",
+   "listings": 2,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "ST-04"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Adventure on KAMI’s Island\"",
+   "listings": 2,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-15"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"THE WORLD’S STRONGEST WARRIORS\"",
+   "listings": 2,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-17"
+   ],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Standard Battle Trophy",
+   "listings": 2,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "「ONE PIECE FILM RED」Attendant's Benefits Tutorial Deck",
+   "listings": 2,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"ROMANCE DAWN\"",
+   "listings": 1,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-01"
+   ],
+   "stored_set_codes": [
+    "OP-01"
+   ]
+  },
+  {
+   "label": "Weekly Shonen Jump 2023 6th and 7th issue All applicants service Recafig",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Weekly Shonen Jump 2024 Issue 3 All Applicants Service Recafig",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Kingdoms Of Intrigue\"",
+   "listings": 1,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-04"
+   ],
+   "stored_set_codes": [
+    "OP-04"
+   ]
+  },
+  {
+   "label": "Promotion Pack 2022 Vol.2",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Championship Best 32",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack ROMANCE DAWN ROMANCE DAWN",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Sikyo JUMP 2022.12 Freebie",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Promotional Card \"The Strongest Three Brothers Pack\"",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Championship Battle Best 16",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Start Deck Worst Generation",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Premium Card Collection 25th Anniversary Editionl",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Pillars Of Strength\"",
+   "listings": 1,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-03"
+   ],
+   "stored_set_codes": [
+    "OP-03"
+   ]
+  },
+  {
+   "label": "Flagship Battle Victory souvenir",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Standard Battle",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "CHAMPIONSHIP Set Privilege",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Flagship Battle Best 8",
+   "listings": 1,
+   "verdict": "no_published_title",
+   "codes": [],
+   "stored_set_codes": [
+    "None"
+   ]
+  },
+  {
+   "label": "Booster Pack \"Paramount War\"",
+   "listings": 1,
+   "verdict": "official_unique",
+   "codes": [
+    "OP-02"
+   ],
+   "stored_set_codes": [
+    "OP-02"
+   ]
+  }
+ ]
+}

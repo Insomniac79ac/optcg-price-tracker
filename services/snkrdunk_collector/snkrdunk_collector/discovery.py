@@ -327,6 +327,32 @@ def retained_fetch(page, freshness, source_id, url):
     return RetainedDocument(url, body, raw_id, status)
 
 
+def with_proposals(session, result):
+    """The completed result with proposals persisted for its new candidates.
+
+    Yuyu-Tei discovery has always refreshed proposals for what it found; SNKRDUNK discovery did
+    not, so the listings the seeds reached on 2026-11-02 and 03 had no proposal at all (owner
+    2026-11-03, perfectionist). The same refresh_discovery_proposals call, in a savepoint: a
+    failure there is recorded on the cursor and rolls back only the proposals, never the new
+    candidates or the discovery result. Approval stays the owner-gated approve-snkr-batch.
+    """
+    if result.outcome != "completed":
+        return result
+    from dataclasses import replace
+
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+
+    cursor = dict(result.resume_cursor or {})
+    try:
+        with session.begin_nested():
+            proposals = refresh_discovery_proposals(
+                session, "snkrdunk", cursor.get("new_candidate_ids") or []
+            )
+    except Exception as exc:  # recorded, never fatal to discovery
+        proposals = {"error": f"{type(exc).__name__}: {exc}"[:200]}
+    return replace(result, resume_cursor={**cursor, "proposal_refresh": proposals})
+
+
 def run_discovery(session, claim, *, freshness):
     from snkrdunk_collector.run_lock import LockLost
     from playwright.sync_api import sync_playwright
@@ -389,13 +415,17 @@ def run_discovery(session, claim, *, freshness):
                         ),
                     )
                     freshness.result = result
-                    return result
                 finally:
                     try:
                         freshness.settle_browser(page)
                     finally:
                         context.close()
                         browser.close()
+        # Outside the browser deadline: proposals for the new candidates, in the same fenced
+        # transaction, but never at the expense of the discovery result (owner 2026-11-03).
+        result = with_proposals(session, result)
+        freshness.result = result
+        return result
     except (AdmissionStopped, LockLost):
         raise
     except Exception as exc:

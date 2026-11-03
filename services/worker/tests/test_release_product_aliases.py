@@ -107,6 +107,23 @@ def test_the_new_aliases_do_not_disturb_the_existing_ones():
         "BOOSTERPACKPARAMOUNTWAR": "OP-02",
         "BOOSTERPACKPILLARSOFSTRENGTH": "OP-03",
         "BOOSTERPACKKINGDOMSOFINTRIGUE": "OP-04",
+        # 2026-11-03 rows, proven against the committed Bandai capture
+        # (test_release_product_aliases_capture.py).
+        "EXTRABOOSTERANIME25THCOLLECTION": "EB-02",
+        "EXTRABOOSTERONEPIECEHEROINESEDITION": "EB-03",
+        "EXTRABOOSTEREGGHEADCRISIS": "EB-04",
+        "BOOSTERPACKAWAKENINGOFTHENEWERA": "OP-05",
+        "BOOSTERPACKWINGSOFCAPTAIN": "OP-06",
+        "BOOSTERPACKTWOLEGENDS": "OP-08",
+        "BOOSTERPACKEMPERORSINTHENEWWORLD": "OP-09",
+        "BOOSTERPACKROYALBLOOD": "OP-10",
+        "BOOSTERPACKAFISTOFDIVINESPEED": "OP-11",
+        "BOOSTERPACKLEGACYOFTHEMASTER": "OP-12",
+        "BOOSTERPACKCARRYINGONHISWILL": "OP-13",
+        "BOOSTERPACKTHEAZURESEASSEVEN": "OP-14",
+        "BOOSTERPACKADVENTUREONKAMISISLAND": "OP-15",
+        "BOOSTERPACKTHETIMEOFBATTLE": "OP-16",
+        "BOOSTERPACKTHEWORLDSSTRONGESTWARRIORS": "OP-17",
     }
 
 
@@ -182,14 +199,19 @@ def test_absent_or_unknown_labels_resolve_to_none(label):
         "Booster Packs ROMANCE DAWN",
         "Extra Booster Memorial Collections",
         "Extra Booster Memorial Collection vol.2",
-        "Extra Booster Anime 25th collection",  # a real DIFFERENT product, EB-02
     ],
 )
 def test_a_near_match_refuses(label):
     """One character of difference is a different product until someone says
-    otherwise. EB-02 is the sharpest case: it is real, it is adjacent, and a
-    fuzzy matcher would reach EB-01 for it."""
+    otherwise."""
     assert resolve_product_code(label) is None
+
+
+def test_eb02_is_its_own_product_never_eb01():
+    """EB-02 is the sharpest case: real, adjacent, and a fuzzy matcher would
+    reach EB-01 for it. Until 2026-11-03 it had no row and refused; now its own
+    Bandai title resolves it to EB-02, and only to EB-02."""
+    assert resolve_product_code("Extra Booster Anime 25th collection") == "EB-02"
 
 
 @pytest.mark.parametrize(

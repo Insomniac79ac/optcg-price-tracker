@@ -345,6 +345,15 @@ print's kind is known. `proposal-refresh` refreshes SNKRDUNK groups stored ambig
 (its `REFRESH_REASONS`), so the order is: proposal-refresh dry run and apply, then
 approve-snkr-batch dry run and apply.
 
+`snkr-candidate-refresh` (`scripts/ops/snkr_candidate_refresh.py`, owner 2026-11-03): SNKRDUNK
+listings stored with no set code or no proposal. The plan re-reads every stored candidate with the
+collector's own `evidence_from_listing` (stored title and image URL, no page fetch): an empty set
+code that now resolves is set (a stored code is never overwritten; disagreements are counted), and
+every candidate with a new code or with no current proposal group whose listing has no active
+mapping is refreshed through `refresh_discovery_proposals`. Plan SHA, dry run first, apply re-plans
+and refuses on any difference. No mapping (`approve-snkr-batch` next), no source request. New
+SNKRDUNK discovery listings get proposals on their own since 2026-11-03 (`discovery.with_proposals`).
+
 `market-value-freeze-legacy` (`scripts/ops/mv_freeze_legacy.py`, plan in
 `app.services.market_value_membership`): owner plan A (2026-10-28). Market Value days published
 before the membership ledger carry only the v1 digest of their prints, so the publisher refuses
