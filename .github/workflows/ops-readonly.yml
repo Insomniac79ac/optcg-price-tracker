@@ -43,13 +43,13 @@ on:
           - market-value-membership
           - new-source-coverage
           - official-image-assets
+          - snkrdunk-artwork-inputs
           - snkrdunk-coverage-gap
           - snkrdunk-coverage-gap-discovery
           - snkrdunk-coverage-gap-releases
           - snkrdunk-coverage-gap-samples
           - snkrdunk-discovery-state
           - snkrdunk-listing-kinds
-          - snkrdunk-artwork-inputs
           - snkrdunk-new-mappings
           - snkrdunk-quarantine
           - source-bytes-by-source
