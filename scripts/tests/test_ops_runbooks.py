@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import capture_batch, collector_flag, official_series, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import bandai_label_evidence, capture_batch, collector_flag, official_series, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, encoding_sample, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -1151,6 +1151,56 @@ class OfficialSeriesIndex(unittest.TestCase):
         self.assertEqual(out["breakdown"], [["550901", "Flagship Battle", 2, 0], ["550901", "Judge Pack Vol.1", 1, 1],
                                             ["550205", "EB-05 Heroines vol.2", 1, 0]])
         self.assertEqual(out["held"], ["550901:1"])
+
+
+class BandaiLabelEvidence(unittest.TestCase):
+    """Owner 2026-11-03: fresh Bandai evidence for SNKRDUNK labels, read-only."""
+
+    INDEX = {"bandai_jp": [("550108", "ブースターパック 二つの伝説【OP-08】"), ("550901", "プロモーションカード"),
+                           ("550105", "ブースターパック 新時代の主役【OP-05】")],
+             "bandai_asia_en": [("556108", "BOOSTER PACK -Two Legends- [OP-08]"),
+                                ("556105", "BOOSTER PACK -Awakening of the New Era- [OP-05]")]}
+    CODES = {("bandai_jp", "550108"): {"OP08-001", "OP08-002", "OP08-003", "OP05-060"},
+             ("bandai_asia_en", "556108"): {"OP08-001", "OP08-002", "OP08-003", "OP05-060"},
+             ("bandai_jp", "550105"): {"OP05-001", "OP05-119"},
+             ("bandai_asia_en", "556105"): {"OP05-001"}}
+
+    def run_fixture(self, titles):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = bandai_label_evidence.run(
+                tmp, read_titles=lambda: titles, read_index=lambda c: self.INDEX[c],
+                read_codes=lambda c, sid: self.CODES[(c, sid)])
+            self.assertTrue((Path(tmp) / "bandai-label-evidence.json").is_file())
+        return out
+
+    def test_labels_are_checked_against_both_catalogues_titles(self):
+        out = self.run_fixture([
+            {"title": 'Marco L [OP08-002](Booster Pack "Two Legends")', "set_code": None},
+            {"title": "Wanda R [OP08-034](Booster Pack Two Legends)", "set_code": None},
+            {"title": "Morgans C [OP07-090] (Booster Pack 500 Yeas in the Future)", "set_code": None},
+            {"title": "Nami R [OP01-016]", "set_code": "OP-01"}])
+        labels = {row[0]: row for row in out["labels"]}
+        self.assertEqual(labels['Booster Pack "Two Legends"'][2:4], ["official_unique", ["OP-08"]])
+        self.assertEqual(labels["Booster Pack Two Legends"][2:4], ["official_unique", ["OP-08"]])
+        self.assertEqual(labels["Booster Pack 500 Yeas in the Future"][2], "no_published_title")
+        self.assertEqual(len(labels), 3)  # a title with no trailing label carries none
+
+    def test_membership_is_compared_per_code(self):
+        codes = {row[0]: row for row in self.run_fixture([])["codes"]}
+        self.assertEqual(codes["OP-08"][1:7], [["550108"], ["556108"], "BOOSTER PACK -Two Legends- [OP-08]", 4, 4, True])
+        self.assertEqual(codes["OP-08"][10], "OP05:060 OP08:001-003")
+        self.assertEqual(codes["OP-05"][6:9], [False, "OP05:119", ""])
+        self.assertNotIn(None, codes)  # the uncoded promotion bucket is not a target
+
+    def test_compact_runs_and_codes(self):
+        self.assertEqual(bandai_label_evidence.compact({"OP08-001", "OP08-002", "OP08-004", "P-073"}),
+                         "OP08:001-002,004 P:073")
+        self.assertEqual(bandai_label_evidence.series_code("BOOSTER PACK -Two Legends- [OP-08]"), "OP-08")
+        self.assertEqual(bandai_label_evidence.series_code("ブースターパック 二つの伝説【OP-08】"), "OP-08")
+        self.assertIsNone(bandai_label_evidence.series_code("プロモーションカード"))
+
+    def test_registered_as_read_runbook(self):
+        self.assertEqual(run.RUNBOOKS["bandai-label-evidence"][:2], ("read", False))
 
 
 class FleetAndImages(unittest.TestCase):

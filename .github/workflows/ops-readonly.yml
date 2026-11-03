@@ -25,6 +25,7 @@ on:
           - official-series-index
           - snkr-page-check
           - identity-proof-check
+          - bandai-label-evidence
       ledger_floor:
         description: "verify-lossless: exclusive ledger id floor"
         type: string

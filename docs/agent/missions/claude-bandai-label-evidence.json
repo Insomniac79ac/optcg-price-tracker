@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK fix 3 step 1 (owner 'go perfectionist' 2026-11-03): fresh Bandai evidence for the product labels of the 37 new SNKRDUNK listings (all stored with no set code and no proposal). The label tables' evidence standard re-derives rows from a frozen Bandai catalogue that is not in the repository and whose Asia-EN half is gone (catalogue_import.py), so this read-only runbook captures both Bandai series pickers and the coded OP/EB/PRB series pages and tests each stored SNKRDUNK label against checks 1 to 3. It decides nothing; label rows follow in a reviewed PR.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/bandai_label_evidence.py",
+        "scripts/ops/run.py",
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New read runbook bandai-label-evidence: about 50 requests to Bandai's official card lists through the existing collector fetcher (honest User-Agent, 2 s apart, stops on 401/403/429/451), plus one SELECT of SNKRDUNK candidate titles on the read-only session. No DB write, no price-source request."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Label verdicts against both catalogues, membership comparison, compact runs, registration. 97 ops tests pass (Postgres 16)."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Runbook row."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly runbook"
+      ],
+      "routes": [
+        "Bandai official card lists (JP and Asia-EN), read-only staging Postgres session"
+      ],
+      "dependencies": [
+        "staging after #259"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "6af64d594be9cde3effc82bea527d858189eee59",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or Bandai refuses the reads.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/bandai_label_evidence.py"
+      ],
+      "observation_window": "First ops-readonly bandai-label-evidence run."
+    }
+  },
+  "diff_sha256": "cb4c25a40fa1f98e87b426a91e2588a0eaf094c3a71ad3196014c27092df885c"
+}
