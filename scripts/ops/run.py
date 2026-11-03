@@ -176,6 +176,13 @@ def _proposal_refresh(args, out):
     return proposal_refresh.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
 
 
+def _snkr_candidate_refresh(args, out):
+    from ops import snkr_candidate_refresh
+    if args.count is not None:
+        raise common.Refused("snkr-candidate-refresh takes no count: it plans every listing that needs it")
+    return snkr_candidate_refresh.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
+
+
 def _mv_freeze_legacy(args, out):
     from ops import mv_freeze_legacy
     if args.count is not None:
@@ -233,6 +240,9 @@ RUNBOOKS = {
     # SNKRDUNK proposals the title-kind rule resolved become mappings through the admin guard, in
     # owner-approved batches like approve-f1-batch (owner 2026-11-01). New mappings are priced.
     "approve-snkr-batch": ("write", True, _approve_snkr),
+    # SNKRDUNK listings stored with no set code or no proposal (owner 2026-11-03): set codes from
+    # the Bandai-proven label rows and proposals through discovery's own path. No mapping.
+    "snkr-candidate-refresh": ("write", False, _snkr_candidate_refresh),
 }
 
 

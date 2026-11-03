@@ -336,3 +336,56 @@ def test_runtime_settles_late_browser_denial_before_insert(database, monkeypatch
         counts(factory)["RawSnapshot"] == 4
         and counts(factory)["SnkrdunkCandidate"] == 0
     )
+
+
+def test_new_candidates_get_proposals_in_the_fenced_transaction(database):
+    """Owner 2026-11-03: SNKRDUNK discovery persists proposals for what it found, like Yuyu-Tei."""
+    from app.models import SourceMappingProposalGroup
+    from snkrdunk_collector.discovery import with_proposals
+
+    engine, factory, source_id = database
+    with collection_lock(engine) as lock, pinned_session(lock, factory) as session:
+        claim, attempt = start(session, source_id, lambda: T0)
+        result = with_proposals(
+            session, consume(session, claim, freshness=attempt, fetch=retained(attempt, source_id))
+        )
+        assert attempt.finish(result)
+    with factory() as session:
+        candidate = session.scalar(select(SnkrdunkCandidate))
+        groups = session.scalars(select(SourceMappingProposalGroup).where(
+            SourceMappingProposalGroup.source_candidate_type == "snkrdunk_candidate",
+            SourceMappingProposalGroup.source_candidate_id == candidate.id)).all()
+        assert len(groups) == 1 and groups[0].review_status == "pending"
+        cursor = session.get(FreshnessWork, claim.work_id).resume_cursor
+        assert cursor["proposal_refresh"]["created"] == 1
+        assert cursor["new_candidate_ids"] == [candidate.id]
+
+
+def test_a_failing_proposal_refresh_never_costs_the_discovery_result(database, monkeypatch):
+    from app.models import SourceMappingProposalGroup
+    from app.services import discovery_proposal_refresh
+    from snkrdunk_collector.discovery import with_proposals
+
+    def broken(session, source, ids):
+        session.add(SourceMappingProposalGroup())  # a write the savepoint must undo
+        session.flush()
+
+    monkeypatch.setattr(discovery_proposal_refresh, "refresh_discovery_proposals", broken)
+    engine, factory, source_id = database
+    with collection_lock(engine) as lock, pinned_session(lock, factory) as session:
+        claim, attempt = start(session, source_id, lambda: T0)
+        result = with_proposals(
+            session, consume(session, claim, freshness=attempt, fetch=retained(attempt, source_id))
+        )
+        assert result.outcome == "completed" and "error" in result.resume_cursor["proposal_refresh"]
+        assert attempt.finish(result)
+    assert counts(factory)["SnkrdunkCandidate"] == 1
+    with factory() as session:
+        assert session.scalar(select(func.count()).select_from(SourceMappingProposalGroup)) == 0
+
+
+def test_a_refused_result_is_returned_unchanged():
+    from snkrdunk_collector.discovery import with_proposals
+
+    refused = CaptureResult("identity_refusal", failure="x")
+    assert with_proposals(None, refused) is refused

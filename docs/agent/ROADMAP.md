@@ -173,6 +173,10 @@ coverage (item 11d).
   #257 merged at 03:33Z, inside the 02:00-06:00 UTC busy window, so its collector rollout refused
   before any change (snkrdunk-collector stayed on f65a7acc). Delivered by a follow-up PR that
   touches no collector watch path (STAGING_DELIVERY.md: merged code with no rollout).
+- **Update 2026-11-03 (fix 3):** the seeds work (runs 4974, 4975: 37 new listings), but the listings had
+  no set code and no proposal. Bandai-proven label rows for 15 sets, discovery now creates proposals,
+  and `snkr-candidate-refresh` catches up the backlog. Of the 208 approved 2026-11-02, 97 priced, 50
+  no grade-A listing, 61 refused by the collector (49 artwork, 12 box-topper) await owner identification.
 - **Blocker:** owner decision on the SNKRDUNK discovery fix and its order against CardRush (N14).
 - **Class:** AMBER (substantial source-volume increase).
 

@@ -77,6 +77,16 @@ three were investigated against the frozen catalogues on 2026-08-27.
       all with `product_code: null`. One SNKRDUNK label can therefore span two
       uncoded buckets. Nothing to resolve to.
 
+EVIDENCE SOURCE FOR ROWS ADDED ON OR AFTER 2026-11-03 (owner, perfectionist). The frozen
+catalogues are not in the repository (gitignored, operator machine) and the frozen Asia-EN half
+is gone. Rows for EB-02 to EB-04 and OP-05, OP-06, OP-08 to OP-17 are proven against a fresh
+capture of both Bandai catalogues instead: ops-readonly `bandai-label-evidence` run 41626034881,
+committed verbatim as docs/agent/evidence/bandai-label-evidence-20261103.json (both series
+pickers, and per code the series ids, titles and card-code memberships). The three checks are
+unchanged and are re-derived from that file by the worker's test_release_product_aliases_capture.
+Only labels SNKRDUNK actually printed were added: OP-07 ("500 Yeas in the Future", "The Future
+After 500 years") matches no Bandai title and stays unresolved here.
+
 GROWING THE TABLE. Discovery records every label it could not resolve
 (`unresolved_product_labels` on the run summary) so the gaps are visible and
 can be added with evidence, rather than guessed at parse time.
@@ -149,6 +159,171 @@ _ALIASES: dict[str, tuple[str, str]] = {
         "contents: both catalogues list an identical set of 124 card codes, "
         "including the five reprints Bandai carries inside OP-04. Atlas "
         "ReleaseProduct OP-04 carries the JP title and source_series_id 550104.",
+    ),
+    "EXTRABOOSTERANIME25THCOLLECTION": (
+        "EB-02",
+        "Bandai publishes this product as 'EXTRA BOOSTER -Anime 25th collection- [EB-02]' "
+        "(bandai_asia_en series 556202) and 'エクストラブースター Anime 25th collection【EB-02】' "
+        "(bandai_jp series 550202); the label equals the Latin title exactly once normalised, "
+        "and no other series title in either catalogue normalises to it. Same product in both "
+        "catalogues by contents: both list the same 87 card codes (digest 6d780bc4a571). "
+        "SNKRDUNK labels seen: Extra Booster \"Anime 25th Collection\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "EXTRABOOSTERONEPIECEHEROINESEDITION": (
+        "EB-03",
+        "Bandai publishes this product as 'EXTRA BOOSTER -ONE PIECE Heroines Edition- "
+        "[EB-03]' (bandai_asia_en series 556203) and 'エクストラブースター ONE PIECE Heroines "
+        "Edition【EB-03】' (bandai_jp series 550203); the label equals the Latin title exactly "
+        "once normalised, and no other series title in either catalogue normalises to it. "
+        "Same product in both catalogues by contents: both list the same 62 card codes "
+        "(digest e662cbe0450c). SNKRDUNK labels seen: Extra Booster \"ONE PIECE Heroines "
+        "edition\". Evidence: ops-readonly bandai-label-evidence run 41626034881 (2026-11-03), "
+        "committed as docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "EXTRABOOSTEREGGHEADCRISIS": (
+        "EB-04",
+        "Bandai publishes this product as 'EXTRA BOOSTER -EGGHEAD CRISIS- [EB-04]' "
+        "(bandai_asia_en series 556204) and 'エクストラブースター EGGHEAD CRISIS【EB-04】' (bandai_jp "
+        "series 550204); the label equals the Latin title exactly once normalised, and no "
+        "other series title in either catalogue normalises to it. Same product in both "
+        "catalogues by contents: both list the same 65 card codes (digest 23318590aef2). "
+        "SNKRDUNK labels seen: Extra Booster \"EGGHEAD CRISIS\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKAWAKENINGOFTHENEWERA": (
+        "OP-05",
+        "Bandai publishes this product as 'BOOSTER PACK -Awakening of the New Era- [OP-05]' "
+        "(bandai_asia_en series 556105) and 'ブースターパック 新時代の主役【OP-05】' (bandai_jp series "
+        "550105); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 125 card codes (digest 6a66e5aa27ae). SNKRDUNK "
+        "labels seen: Booster Pack Awakening of the New Era; Booster Pack \"Awakening Of The "
+        "New Era\". Evidence: ops-readonly bandai-label-evidence run 41626034881 (2026-11-03), "
+        "committed as docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKWINGSOFCAPTAIN": (
+        "OP-06",
+        "Bandai publishes this product as 'BOOSTER PACK -Wings of Captain- [OP-06]' "
+        "(bandai_asia_en series 556106) and 'ブースターパック 双璧の覇者【OP-06】' (bandai_jp series "
+        "550106); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 125 card codes (digest 73963f559c79). SNKRDUNK "
+        "labels seen: Booster Pack Wings of Captain. Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKTWOLEGENDS": (
+        "OP-08",
+        "Bandai publishes this product as 'BOOSTER PACK -Two Legends- [OP-08]' "
+        "(bandai_asia_en series 556108) and 'ブースターパック 二つの伝説【OP-08】' (bandai_jp series "
+        "550108); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 125 card codes (digest 3298914af2f9). SNKRDUNK "
+        "labels seen: Booster Pack \"Two Legends\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKEMPERORSINTHENEWWORLD": (
+        "OP-09",
+        "Bandai publishes this product as 'BOOSTER PACK -Emperors in the New World- [OP-09]' "
+        "(bandai_asia_en series 556109) and 'ブースターパック 新たなる皇帝【OP-09】' (bandai_jp series "
+        "550109); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 126 card codes (digest a499dba59c41). SNKRDUNK "
+        "labels seen: Booster Pack \"Emperors In The New World\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKROYALBLOOD": (
+        "OP-10",
+        "Bandai publishes this product as 'BOOSTER PACK -Royal Blood- [OP-10]' "
+        "(bandai_asia_en series 556110) and 'ブースターパック 王族の血統【OP-10】' (bandai_jp series "
+        "550110); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 125 card codes (digest 94f044442b94). SNKRDUNK "
+        "labels seen: Booster Pack \"Royal Blood\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKAFISTOFDIVINESPEED": (
+        "OP-11",
+        "Bandai publishes this product as 'BOOSTER PACK -A Fist of Divine Speed- [OP-11]' "
+        "(bandai_asia_en series 556111) and 'ブースターパック 神速の拳【OP-11】' (bandai_jp series 550111); "
+        "the label equals the Latin title exactly once normalised, and no other series title "
+        "in either catalogue normalises to it. Same product in both catalogues by contents: "
+        "both list the same 126 card codes (digest 994470bd3511). SNKRDUNK labels seen: "
+        "Booster Pack \"A Fist of Divine Speed\". Evidence: ops-readonly bandai-label-evidence "
+        "run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKLEGACYOFTHEMASTER": (
+        "OP-12",
+        "Bandai publishes this product as 'BOOSTER PACK -Legacy of the Master- [OP-12]' "
+        "(bandai_asia_en series 556112) and 'ブースターパック 師弟の絆【OP-12】' (bandai_jp series 550112); "
+        "the label equals the Latin title exactly once normalised, and no other series title "
+        "in either catalogue normalises to it. Same product in both catalogues by contents: "
+        "both list the same 126 card codes (digest bbabef1c87d0). SNKRDUNK labels seen: "
+        "Booster Pack \"LEGACY OF THE MASTER\". Evidence: ops-readonly bandai-label-evidence "
+        "run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKCARRYINGONHISWILL": (
+        "OP-13",
+        "Bandai publishes this product as 'BOOSTER PACK -Carrying on His Will- [OP-13]' "
+        "(bandai_asia_en series 556113) and 'ブースターパック 受け継がれる意志【OP-13】' (bandai_jp series "
+        "550113); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 128 card codes (digest 2c5b3417b8a8). SNKRDUNK "
+        "labels seen: Booster Pack \"CARRYING ON HIS WILL\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKTHEAZURESEASSEVEN": (
+        "OP-14",
+        "Bandai publishes this product as 'BOOSTER PACK -The Azure Sea’s Seven- [OP-14]' "
+        "(bandai_asia_en series 556114) and 'ブースターパック 蒼海の七傑【OP-14】' (bandai_jp series "
+        "550114); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 126 card codes (digest 62ed9c25be88). SNKRDUNK "
+        "labels seen: Booster Pack \"THE AZURE SEA'S SEVEN\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKADVENTUREONKAMISISLAND": (
+        "OP-15",
+        "Bandai publishes this product as 'BOOSTER PACK -Adventure on KAMI’s Island- [OP-15]' "
+        "(bandai_asia_en series 556115) and 'ブースターパック 神の島の冒険【OP-15】' (bandai_jp series "
+        "550115); the label equals the Latin title exactly once normalised, and no other "
+        "series title in either catalogue normalises to it. Same product in both catalogues "
+        "by contents: both list the same 125 card codes (digest 784ca78afbbb). SNKRDUNK "
+        "labels seen: Booster Pack \"Adventure on KAMI’s Island\". Evidence: ops-readonly "
+        "bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKTHETIMEOFBATTLE": (
+        "OP-16",
+        "Bandai publishes this product as 'BOOSTER PACK -THE TIME OF BATTLE- [OP-16]' "
+        "(bandai_asia_en series 556116) and 'ブースターパック 決戦の刻【OP-16】' (bandai_jp series 550116); "
+        "the label equals the Latin title exactly once normalised, and no other series title "
+        "in either catalogue normalises to it. Same product in both catalogues by contents: "
+        "both list the same 125 card codes (digest 911c023ba31f). SNKRDUNK labels seen: "
+        "Booster Pack \"THE TIME OF BATTLE\". Evidence: ops-readonly bandai-label-evidence run "
+        "41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
+    ),
+    "BOOSTERPACKTHEWORLDSSTRONGESTWARRIORS": (
+        "OP-17",
+        "Bandai publishes this product as 'BOOSTER PACK -The World's Strongest Warriors- "
+        "[OP-17]' (bandai_asia_en series 556117) and 'ブースターパック 世界最強の戦士【OP-17】' (bandai_jp "
+        "series 550117); the label equals the Latin title exactly once normalised, and no "
+        "other series title in either catalogue normalises to it. Same product in both "
+        "catalogues by contents: both list the same 130 card codes (digest d20c368c334b). "
+        "SNKRDUNK labels seen: Booster Pack \"THE WORLD’S STRONGEST WARRIORS\". Evidence: "
+        "ops-readonly bandai-label-evidence run 41626034881 (2026-11-03), committed as "
+        "docs/agent/evidence/bandai-label-evidence-20261103.json."
     ),
 }
 
