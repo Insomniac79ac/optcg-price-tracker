@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK facts after approve-snkr-batch (owner 'ok' 2026-11-03): 12 of the 208 new mappings were refused on their first check with release_name_mismatch (page shows a BOX封入特典 product), and the 37 new discovery listings show proposals 'none' or 'release_unresolved' in snkrdunk-coverage-gap. snkrdunk-quarantine's per-item rows exceed the summary budget, so this compact diagnostic lists the batch outcome by state/outcome/availability/reason, each refused batch item with its listing and stored title, and each candidate created since 2026-11-02 10:00Z with its stored set code, rarity, title and current proposal. Also pins yuyu_reader_component to #256's merge (6c65fa4b), which delivered the nine shards.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/snkrdunk-new-mappings.sql",
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New SELECT-only diagnostic (three statements) and its workflow choice; runs in the read-only ops session; covered by DiagnosticsOnPostgres (93 ops tests passed locally on Postgres 16)."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "yuyu_reader_component 240ff79c -> 6c65fa4b (#256 released the nine Yuyu-Tei shards); snkr_component stays a789a82a. No Yuyu-Tei runtime input changed between 6c65fa4b and this head; none for SNKRDUNK since a789a82a."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #256"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "6c65fa4b83ede7e2070874d4cd3d4ed092944ee1",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/snkrdunk-new-mappings.sql"
+      ],
+      "observation_window": "First ops-readonly db-diagnostic snkrdunk-new-mappings run."
+    }
+  },
+  "diff_sha256": "da82b81e9448fb907699581cb33137be5cdd1d8eb59bd0abc4028e749a7b874b"
+}

@@ -8,7 +8,7 @@
       "scripts/verify_yuyu_raw_reader_component.py"
     ],
     "snkr_component": "a789a82a1b7981261c4ef5c3668f5745ab9c9d2f",
-    "yuyu_reader_component": "240ff79c6ab62a115cbdc8edfc7fda748b013091",
+    "yuyu_reader_component": "6c65fa4b83ede7e2070874d4cd3d4ed092944ee1",
     "yuyu_capacity_cadence": true
   },
   "operational_notes": [
