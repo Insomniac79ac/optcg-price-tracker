@@ -49,6 +49,7 @@ on:
           - snkrdunk-coverage-gap-samples
           - snkrdunk-discovery-state
           - snkrdunk-listing-kinds
+          - snkrdunk-artwork-inputs
           - snkrdunk-new-mappings
           - snkrdunk-quarantine
           - source-bytes-by-source
