@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "mission": "Owner 2026-11-03: identified mappings 4456, 4423 and 4356 (refused by the collector's artwork check) as correct parallels (prints 5862, 5864, 5872) and suspects the collector compares the listing photo with the base artwork. The collector compares with card_prints.image_url of the mapped print (snkrdunk_collector/collect.py). This read-only diagnostic shows, per artwork-refused batch mapping, the mapped print, its image file name, its siblings' image file names and whether its image URL equals the base print's, so the cause is read from data, not guessed.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/snkrdunk-artwork-inputs.sql",
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New SELECT-only diagnostic (one statement) and its workflow choice; covered by DiagnosticsOnPostgres (passed locally on Postgres 16)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #261"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "2055d82c9e5bc4dfcdf39f482dfd7ad411f395c4",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/snkrdunk-artwork-inputs.sql"
+      ],
+      "observation_window": "First ops-readonly db-diagnostic snkrdunk-artwork-inputs run."
+    }
+  },
+  "diff_sha256": "d94971f59e729d54894dd70b06711c7dcf2185fc6ba3f38fdb27b323da577d19"
+}
