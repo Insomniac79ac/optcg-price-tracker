@@ -207,4 +207,7 @@ def run(out_dir, fetcher=None, read_titles=None, read_index=None, read_codes=Non
     return {"bandai_requests": result["bandai_requests"], "series_in_pickers": result["series_in_pickers"],
             "labels": [[x["label"], x["listings"], x["verdict"], x["codes"], x["stored_set_codes"]] for x in labels],
             "codes": [[r["code"], r["jp"], r["en"], r["en_title"], r["jp_n"], r["en_n"], r["same_membership"],
-                       r["jp_only"], r["en_only"], r["jp_digest"], r["jp_members"]] for r in rows]}
+                       r["jp_only"], r["en_only"], r["jp_digest"], r["jp_members"]] for r in rows],
+            # Every series title in both pickers, so check 2 (uniqueness) can be re-derived from a
+            # committed copy of this summary (owner 2026-11-03).
+            "pickers": {k: [[s["series_id"], s["name"]] for s in v] for k, v in series.items()}}
