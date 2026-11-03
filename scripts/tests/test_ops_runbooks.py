@@ -1191,6 +1191,9 @@ class BandaiLabelEvidence(unittest.TestCase):
         self.assertEqual(codes["OP-08"][10], "OP05:060 OP08:001-003")
         self.assertEqual(codes["OP-05"][6:9], [False, "OP05:119", ""])
         self.assertNotIn(None, codes)  # the uncoded promotion bucket is not a target
+        pickers = self.run_fixture([])["pickers"]
+        self.assertIn(["550901", "プロモーションカード"], pickers["bandai_jp"])
+        self.assertEqual(len(pickers["bandai_asia_en"]), 2)
 
     def test_compact_runs_and_codes(self):
         self.assertEqual(bandai_label_evidence.compact({"OP08-001", "OP08-002", "OP08-004", "P-073"}),

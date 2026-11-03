@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "mission": "SNKRDUNK fix 3 (owner 'go perfectionist' 2026-11-03): bandai-label-evidence also returns every series title of both Bandai pickers in its summary, so the label rows that follow can commit a copy of the capture and re-derive check 2 (title uniqueness across both catalogues) in tests. Run 41620421852 captured the facts; its file artifact is not readable from the agent workspace.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/bandai_label_evidence.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Summary gains pickers: [series_id, title] for both catalogues (126 titles). Same requests as before; no DB write, no price-source request."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Pickers in the summary. 97 ops tests pass (Postgres 16)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly runbook"
+      ],
+      "routes": [
+        "Bandai official card lists (JP and Asia-EN), read-only staging Postgres session"
+      ],
+      "dependencies": [
+        "staging after #260"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "807472f61312ba394a562fbe20671c218bf504d4",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or Bandai refuses the reads.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/bandai_label_evidence.py"
+      ],
+      "observation_window": "First ops-readonly bandai-label-evidence run."
+    }
+  },
+  "diff_sha256": "f0b6de1d1ca4f9f9e706d0c6af918f2c18dec297e98c800edcf06894035104c8"
+}
