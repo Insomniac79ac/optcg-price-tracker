@@ -36,6 +36,7 @@ def test_metered_close_settles_before_context_disposal_or_result_writer(
         source_url="https://snkrdunk.com/apparels/104428",
         source_card_id="OP01-001",
         card_print_id=1,
+        canonical_source_listing_identity="104428",
     )
     monkeypatch.setattr(
         collect,
