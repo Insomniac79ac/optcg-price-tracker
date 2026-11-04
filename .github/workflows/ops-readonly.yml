@@ -26,6 +26,7 @@ on:
           - snkr-page-check
           - identity-proof-check
           - bandai-label-evidence
+          - snkr-refused-photos
       ledger_floor:
         description: "verify-lossless: exclusive ledger id floor"
         type: string
