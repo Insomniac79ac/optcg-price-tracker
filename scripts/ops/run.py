@@ -79,6 +79,13 @@ def _official_series(args, out):
     return official_series.run(out)
 
 
+def _snkr_owner_requeue(args, out):
+    from ops import snkr_owner_requeue
+    if args.count is not None:
+        raise common.Refused("snkr-owner-requeue takes no count: it reopens every confirmed item")
+    return snkr_owner_requeue.run(out, apply=args.apply, expected_sha256=args.expected_sha256)
+
+
 def _snkr_refused_photos(args, out):
     from ops import snkr_refused_photos
     return snkr_refused_photos.run(out)
@@ -251,6 +258,9 @@ RUNBOOKS = {
     # SNKRDUNK listings stored with no set code or no proposal (owner 2026-11-03): set codes from
     # the Bandai-proven label rows and proposals through discovery's own path. No mapping.
     "snkr-candidate-refresh": ("write", False, _snkr_candidate_refresh),
+    # Reopen SNKRDUNK artwork refusals the owner confirmed by photo (owner 2026-11-04, plan B):
+    # collector-affecting (the collector re-checks every reopened item).
+    "snkr-owner-requeue": ("write", True, _snkr_owner_requeue),
 }
 
 

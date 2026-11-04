@@ -34,6 +34,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
+from snkrdunk_collector.owner_artwork import confirm as confirm_owner_artwork
 from snkrdunk_collector.artwork import compare_artwork
 from snkrdunk_collector.artwork_url import artwork_url
 from snkrdunk_collector.browser import (
@@ -408,10 +409,20 @@ def run_one_mapping_detailed(
                         "available": False,
                         "error": artwork_error or "missing_official_image_url",
                     }
+                # Owner 2026-11-04 (plan B): a refused comparison of two real images becomes a
+                # match only for the exact mapping, print, listing and photo the owner confirmed.
+                holder["artwork_comparison"] = confirm_owner_artwork(
+                    holder["artwork_comparison"],
+                    mapping_id=mapping.id,
+                    card_print_id=mapping.card_print_id,
+                    listing=getattr(mapping, "canonical_source_listing_identity", None),
+                    photo_url=extraction["extracted"].get("product_image_url"),
+                )
                 log_event(
                     "artwork_comparison_complete",
                     mapping_id=mapping.id,
                     match=holder["artwork_comparison"].get("match"),
+                    owner_confirmed=holder["artwork_comparison"].get("owner_confirmed"),
                     hash_distances=holder["artwork_comparison"].get("hash_distances"),
                     aspect_ratio_relative_diff=holder["artwork_comparison"].get("aspect_ratio_relative_diff"),
                     batch_run_id=batch_run_id,
