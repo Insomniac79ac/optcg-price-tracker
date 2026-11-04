@@ -31,6 +31,266 @@
       "verdict": "same",
       "confirmed_on": "2026-11-03",
       "note": "OP02-025 L-P; owner: 'is a parallel', staging print 5872; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4324,
+      "card_print_id": 3464,
+      "listing": "171990",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/ba3723e4-b0bf-489d-be44-0aeb371b261e.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 3464; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4293,
+      "card_print_id": 6010,
+      "listing": "93521",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/418a4d4f-44a6-41b1-9860-fa03790fbcd6.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 6010; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4314,
+      "card_print_id": 6021,
+      "listing": "93514",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/339c8536-d7b3-4760-bd8f-6d1655f4f41d.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 6021; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4305,
+      "card_print_id": 6053,
+      "listing": "94871",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/2e5ee879-515f-46a8-aa6e-092a68a79d99.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 6053; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4329,
+      "card_print_id": 6082,
+      "listing": "94887",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/c3609573-ae94-49df-a9ea-9224cd4fed37.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 6082; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4304,
+      "card_print_id": 6089,
+      "listing": "93516",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/2ff88fb6-cffb-4779-864d-4ec87cebb390.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 6089; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4338,
+      "card_print_id": 6108,
+      "listing": "94890",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/34dce7b3-7fc5-4b0f-a743-d4cd93caf9e7.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 6108; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4350,
+      "card_print_id": 5843,
+      "listing": "102427",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/7990064a-7077-4087-aa1b-a170be30e2e6.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5843; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4403,
+      "card_print_id": 5879,
+      "listing": "102440",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/d4a6ac9c-324b-4441-b6a4-4ded07bffd2d.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5879; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4488,
+      "card_print_id": 5880,
+      "listing": "142789",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/6179afcb-ed6e-457e-b80a-1301f1612176.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5880; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4489,
+      "card_print_id": 5892,
+      "listing": "142798",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/801ffc95-4fa1-450a-ace5-3aa738e0733d.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5892; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4417,
+      "card_print_id": 5893,
+      "listing": "102444",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/ea2644f3-1852-4151-9f8e-d555b893a3df.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5893; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4414,
+      "card_print_id": 5905,
+      "listing": "102443",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/121c4da9-c83c-48e2-adc5-100585ebb96b.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5905; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4387,
+      "card_print_id": 5919,
+      "listing": "102436",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/01c398a8-2599-4761-84c9-9fd4d3fd2f90.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5919; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4372,
+      "card_print_id": 5931,
+      "listing": "102432",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/ca886e5e-02ea-4348-aa29-65001b1c4a47.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5931; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4495,
+      "card_print_id": 5932,
+      "listing": "142828",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/80c86950-c626-45fb-8164-1f4f306c7d86.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5932; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4375,
+      "card_print_id": 5956,
+      "listing": "102433",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/c264fd51-79dc-43fc-b730-ea4e473445f6.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5956; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4333,
+      "card_print_id": 5963,
+      "listing": "102422",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/dbea025a-c085-48db-b829-a1d9dc4e4022.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5963; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4420,
+      "card_print_id": 5984,
+      "listing": "102445",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/28aad18c-98cf-4924-92b2-574389943a30.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5984; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4432,
+      "card_print_id": 5990,
+      "listing": "102449",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/36878c64-e558-4311-b68e-716f8e1b9dcf.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5990; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4370,
+      "card_print_id": 5706,
+      "listing": "143313",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/ca1e3c06-d86a-4837-933e-c0f0c7a75771.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5706; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4317,
+      "card_print_id": 5707,
+      "listing": "112946",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/36ace8d9-4c2a-45ce-954e-e19d1bfabd11.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5707; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4347,
+      "card_print_id": 5736,
+      "listing": "112954",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/4e3b7111-af2e-46bb-8db0-8b809b8701b8.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5736; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4458,
+      "card_print_id": 5742,
+      "listing": "143340",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/b27d41d9-a4bc-4722-94c9-2eb0bbe94b57.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5742; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4351,
+      "card_print_id": 5743,
+      "listing": "112955",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/57ac7e16-13ef-4212-951f-c02401928755.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5743; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4354,
+      "card_print_id": 5818,
+      "listing": "143400",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/523188cc-ec2c-4e49-b8d8-2d86793d311f.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-04",
+      "note": "owner: 'matched with' staging print 5818; photo from snkr-refused-photos run 41811758459"
     }
   ]
 }
