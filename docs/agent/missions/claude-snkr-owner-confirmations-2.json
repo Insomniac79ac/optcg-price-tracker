@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "mission": "Plan B, second confirmation batch (owner 2026-11-04 21:54 MYT): the owner identified 26 more artwork-refused SNKRDUNK mappings as matching their mapped print (4324, 4293, 4314, 4305, 4329, 4304, 4338, 4350, 4403, 4488, 4489, 4417, 4414, 4387, 4372, 4495, 4375, 4333, 4420, 4432, 4370, 4317, 4347, 4458, 4351, 4354; every print id the owner named equals the mapped print). Owner observation: SNKRDUNK's colouration differs from Bandai's official images, a likely cause of the refusals. Photo URLs from snkr-refused-photos run 41811758459. Also pins snkr_component to #266's merge (a4966bbd).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/owner_artwork_confirmations.json"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "26 owner confirmations (29 in all), same fail-closed loader and exact (mapping, print, listing, photo URL) binding as #266. Infrastructure: mission-scoped re-upload of snkrdunk-collector (runtime input)."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "snkr_component e9fd5f17 -> a4966bbd (#266 released snkrdunk-collector)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (one CI release)"
+      ],
+      "routes": [
+        "No new route; no extra source request (the collector's normal re-check of reopened items)"
+      ],
+      "dependencies": [
+        "staging after #266"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback; must start 06:00-23:00 UTC. Nothing reopens without an owner-approved snkr-owner-requeue apply.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "a4966bbd939eb10e3fb0f4b35e060d08d6091dab",
+      "procedure": "The rollout captures snkrdunk-collector's live deployment before upload and restores it on failure (recovery_deployment_id is reference only); afterwards collector-redeploy to the fleet pin. A wrong confirmation is removed by PR; a mapping priced from one is deactivated through the admin mapping path.",
+      "trigger": "A reopened item captured with a photo the owner did not confirm, or collector failures on the new code.",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_owner_artwork.py",
+        "services/snkrdunk_collector/tests/test_owner_artwork_wiring.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/owner_artwork_confirmations.json"
+      ],
+      "observation_window": "Delivery verify; snkr-owner-requeue dry run lists the 26 (plus any of the first 3 still blocked)."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "7dda1332-11b7-4a04-9fa1-fdd3aea3c4ff"
+      }
+    ]
+  },
+  "diff_sha256": "a95740776c42facb6820abaaa88a588d48b976247f892c907c6738f98df3e87c"
+}
