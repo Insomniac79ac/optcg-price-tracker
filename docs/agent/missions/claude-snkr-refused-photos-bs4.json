@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "mission": "Plan B step 1 follow-up (owner 2026-11-04): snkr-refused-photos run 41806721094 read no photo for any of the 99 blocked artwork refusals; the ops-readonly workflow installs beautifulsoup4 (which the collector's parser needs) only for snkr-page-check, and the per-row error was only in the artifact. Install it for snkr-refused-photos too, and keep each row's error in the summary.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        ".github/workflows/ops-readonly.yml",
+        "scripts/ops/snkr_refused_photos.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Same pinned beautifulsoup4 install as snkr-page-check, for snkr-refused-photos; summary rows carry the per-row error where no photo was read. Read-only, no source request."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #264"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "2ae4f6ed19e029a1ea08db18c997062da7efdd34",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/snkr_refused_photos.py"
+      ],
+      "observation_window": "First ops-readonly snkr-refused-photos run."
+    }
+  },
+  "diff_sha256": "d4c8dcfcfa9d2e9e5453efa3236ec70d0c22f857c8c2211a51560199b3e5202b"
+}
