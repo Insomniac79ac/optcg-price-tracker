@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "mission": "Plan B (owner 'OK, build plan B' 2026-11-04; 'for those that the collector is unable to identify, a manual identification to match would be more accurate' 2026-11-03). An owner photo confirmation stands in for the SNKRDUNK artwork matcher, for exactly the mapping, its current print, its current listing and the photo URL the owner confirmed, and only when the matcher compared two decoded images (owner_artwork.confirm, wired after compare_artwork in collect.py). Every other identity check still applies; thresholds unchanged. First three confirmations: mappings 4456, 4423, 4356, which the owner identified as the right parallels (prints 5862, 5864, 5872), with the photo URLs snkr-refused-photos run 41811758459 read from the collector's stored refusal pages. New owner-gated, collector-affecting ops-write runbook snkr-owner-requeue reopens exactly the blocked artwork refusals that have a committed confirmation and still pass the queue's eligibility and lineage checks.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py",
+        "services/snkrdunk_collector/snkrdunk_collector/owner_artwork.py",
+        "services/snkrdunk_collector/snkrdunk_collector/owner_artwork_confirmations.json"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "owner_artwork.confirm after compare_artwork: a refused comparison of two decoded images becomes an owner-confirmed match only for the exact (mapping, print, listing, photo URL) in the committed file (fail-closed loader). Logged as owner_confirmed on artwork_comparison_complete. Infrastructure: mission-scoped re-upload of snkrdunk-collector (runtime input)."
+    },
+    {
+      "files": [
+        "scripts/ops/snkr_owner_requeue.py",
+        "scripts/ops/run.py",
+        ".github/workflows/ops-write.yml"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "New collector-affecting write runbook snkr-owner-requeue: plan SHA, dry run default, apply re-plans under row locks; writes only freshness_work state/next_due_at/last_failure (marker prefix) for the planned rows."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/tests/test_owner_artwork.py",
+        "services/snkrdunk_collector/tests/test_owner_artwork_wiring.py",
+        "services/api/tests/test_snkr_owner_requeue_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Exact-match only (photo, print, listing, mapping); uncompared or unreadable photos never confirmable; loader fails closed; collector wiring passes its own mapping, print, listing and extracted photo; requeue plans only confirmed artwork refusals, skips other prints/listings and ineligible mappings, refuses stale plans. Collector 700, ops 100, requeue 23 passed (Postgres 16)."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md",
+        "docs/agent/DECISIONS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "snkr-refused-photos row (missing from #264), snkr-owner-requeue paragraph, owner decision."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (one CI release)",
+        "three SNKRDUNK refresh work rows (owner-approved runbook only)"
+      ],
+      "routes": [
+        "No new route; no extra source request (the collector's normal re-check of reopened items)"
+      ],
+      "dependencies": [
+        "staging after #265"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback; must start 06:00-23:00 UTC. Without an owner-approved snkr-owner-requeue apply nothing reopens.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "871dff9cd51526adbe178cfc9311f62a71cab933",
+      "procedure": "The rollout captures snkrdunk-collector's live deployment before upload and restores it on failure (recovery_deployment_id is reference only); afterwards collector-redeploy to the fleet pin. A wrong confirmation is removed by PR; a mapping priced from one is deactivated through the admin mapping path.",
+      "trigger": "A reopened item captured with a photo the owner did not confirm, or collector failures on the new code.",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_owner_artwork.py",
+        "services/snkrdunk_collector/tests/test_owner_artwork_wiring.py",
+        "services/api/tests/test_snkr_owner_requeue_postgres.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py"
+      ],
+      "observation_window": "Delivery verify (SNKRDUNK component at the merge); snkr-owner-requeue dry run lists 3 items; after apply, the next SNKRDUNK turns capture them with owner_confirmed in the artwork log."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "7dda1332-11b7-4a04-9fa1-fdd3aea3c4ff"
+      }
+    ]
+  },
+  "diff_sha256": "caa2411aebcf9278ffe33adad81a33053885db95b2cb62a7cb6c662402b9105b"
+}

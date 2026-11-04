@@ -36,6 +36,7 @@ file contains a known secret value.
 | `snkr-page-check` | none | SNKRDUNK product pages the collector already stored (no SNKRDUNK request): the newest `identity_refusal` pages since 2026-10-26 08:00Z and the newest captured pages before it, decoded through their dictionary bases; per page HTTP status, size, `<img>` with a class ending `__mainImage`, image-related class tokens, gallery props present, short excerpt around `mainImage`; and the collectors' current parser run offline on each page (main image and diagnostics, chip picker, raw and PSA10 results, retained-gallery recovery traced step by step, price-related class tokens, excerpts around the first price chip and the gallery props); and where the condition prices live (price-like keys and yen amounts in the embedded Flight data, excerpts around the condition labels, API-looking paths, loading markers in and around the chip picker, each chip's label and text). Newest 2 refusals, 1 capture before | `snkr-page-check.json` |
 | `identity-proof-check` | none | The resolver over exactly the candidates in `positive_physical_artwork.json` (same code path as discovery, staging gate on, read-only session rolled back): per review the status before the proof, whether it resolved, and the validator's own refusal message, which `resolve()` otherwise swallows (owner 2026-10-31). No source request | `identity-proof-check.json` |
 | `bandai-label-evidence` | none | Fresh evidence for SNKRDUNK product labels (owner 2026-11-03): Bandai's JP and Asia-EN series pickers and every coded OP/EB/PRB series page (about 50 requests, 2 s apart, collector fetcher with honest User-Agent, stops on 401/403/429/451); per code the Asia-EN title and whether JP and Asia-EN list the same cards; per stored SNKRDUNK label, checks 1 and 2 of `release_product_aliases.py`'s evidence standard. Label rows are added by a reviewed PR from these facts. No DB write, no price-source request | `bandai-label-evidence.json` |
+| `snkr-refused-photos` | none | The exact photo behind each blocked SNKRDUNK artwork refusal (owner 2026-11-04, plan B): the page the collector stored at the refusal, decoded offline, through the collector's own `find_main_product_image`. Per item: mapping, print, listing, work, refusal time and photo URL (or the reason none was read). The input owner photo confirmations are bound to. No source request, no write | `snkr-refused-photos.json` |
 | `fleet-vs-receipt` | `receipt` (comma-separated committed receipts; empty = PR #103 then PR #173 rollouts) | All 10 collectors, each against the newest receipt that deployed it: live deployment, status, exact-commit marker, image digest, cron and deployment records after that receipt | `fleet-vs-receipt.json` |
 | `official-images-status` | - | Last 5 `official-images-mirror` runs and the `check_official_images` database check (no R2 or Bandai request) | `official-images-status.json` |
 | `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
@@ -353,6 +354,16 @@ every candidate with a new code or with no current proposal group whose listing 
 mapping is refreshed through `refresh_discovery_proposals`. Plan SHA, dry run first, apply re-plans
 and refuses on any difference. No mapping (`approve-snkr-batch` next), no source request. New
 SNKRDUNK discovery listings get proposals on their own since 2026-11-03 (`discovery.with_proposals`).
+
+`snkr-owner-requeue` (`scripts/ops/snkr_owner_requeue.py`, owner 2026-11-04, plan B): reopens
+the blocked SNKRDUNK refresh items the artwork check refused whose mapping, current print and
+current listing have a committed owner photo confirmation
+(`services/snkrdunk_collector/snkrdunk_collector/owner_artwork_confirmations.json`) and that still
+pass the queue's eligibility and lineage checks. Other refusals and unconfirmed items stay blocked.
+The collector re-checks each reopened item in full; the confirmation stands in for the matcher only
+for the exact photo URL confirmed (`owner_artwork.confirm`). Collector-affecting (quiet windows),
+plan SHA, dry run first, no source request. Order: owner verdict, `snkr-refused-photos` for the
+photo URL, confirmation PR (a collector release), then this runbook.
 
 `market-value-freeze-legacy` (`scripts/ops/mv_freeze_legacy.py`, plan in
 `app.services.market_value_membership`): owner plan A (2026-10-28). Market Value days published

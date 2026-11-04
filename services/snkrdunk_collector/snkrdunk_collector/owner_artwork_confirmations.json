@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "about": "Owner-confirmed SNKRDUNK photos the artwork check refused (owner 2026-11-04, plan B). See owner_artwork.py. Photo URLs from ops-readonly snkr-refused-photos.",
+  "confirmations": [
+    {
+      "mapping_id": 4456,
+      "card_print_id": 5862,
+      "listing": "102462",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/34fc4c78-ba5e-4c31-900a-51d93d9923c9.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-03",
+      "note": "OP02-017 Masked Deuce R-P; owner: 'is a parallel', staging print 5862; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4423,
+      "card_print_id": 5864,
+      "listing": "102446",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/68499a16-c695-4173-a9a5-7783662734fb.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-03",
+      "note": "OP02-018 R-P; owner: 'is a parallel', staging print 5864; photo from snkr-refused-photos run 41811758459"
+    },
+    {
+      "mapping_id": 4356,
+      "card_print_id": 5872,
+      "listing": "102428",
+      "photo_url": "https://cdn.snkrdunk.com/upload_bg_removed/1266a380-c7e9-4e77-95b3-3ba80e446926.webp",
+      "confirmed_by": "owner",
+      "verdict": "same",
+      "confirmed_on": "2026-11-03",
+      "note": "OP02-025 L-P; owner: 'is a parallel', staging print 5872; photo from snkr-refused-photos run 41811758459"
+    }
+  ]
+}
