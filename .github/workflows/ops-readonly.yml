@@ -130,7 +130,7 @@ jobs:
           pip install -q -r scripts/agent-state-requirements.txt -r services/api/requirements.txt
           pip install -q --no-deps ./packages/opcg_source_identity
           npm install -g @railway/cli@5.62.1 vercel@60.1.3
-          if [ "$RUNBOOK" = snkr-page-check ]; then
+          if [ "$RUNBOOK" = snkr-page-check ] || [ "$RUNBOOK" = snkr-refused-photos ]; then
             # Runs the SNKRDUNK collector's own parser offline; same pin as the collector.
             pip install -q "$(grep -E '^beautifulsoup4==' services/snkrdunk_collector/requirements.txt)"
           fi

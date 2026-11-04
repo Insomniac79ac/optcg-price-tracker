@@ -71,7 +71,9 @@ def run(out_dir):
             rows.append(row)
         conn.rollback()
     summary = {"items": len(rows), "without_photo": problems, "source_requests": 0, "database_writes": 0,
+               # The error stays in the summary: run 41806721094 read no photo at all and the reason
+               # (bs4 not installed for this runbook) was only in the artifact.
                "rows": [[r["mapping_id"], r["card_print_id"], r["listing"], r["work_id"], r.get("refused_at"),
-                         r["photo_url"]] for r in rows]}
+                         r["photo_url"] or r.get("error")] for r in rows]}
     common.write_json(Path(out_dir) / OUTPUT, {**summary, "detail": rows})
     return summary
