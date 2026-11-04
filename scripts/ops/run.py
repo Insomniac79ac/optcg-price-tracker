@@ -79,6 +79,11 @@ def _official_series(args, out):
     return official_series.run(out)
 
 
+def _snkr_refused_photos(args, out):
+    from ops import snkr_refused_photos
+    return snkr_refused_photos.run(out)
+
+
 def _bandai_label_evidence(args, out):
     from ops import bandai_label_evidence
     return bandai_label_evidence.run(out)
@@ -214,6 +219,9 @@ RUNBOOKS = {
     # Fresh Bandai JP/Asia-EN series titles and memberships against stored SNKRDUNK labels
     # (owner 2026-11-03): evidence for label rows; no DB write, no price-source request.
     "bandai-label-evidence": ("read", False, _bandai_label_evidence),
+    # The stored photo behind each quarantined SNKRDUNK artwork refusal (owner 2026-11-04, plan B):
+    # the input owner photo confirmations are bound to. Stored pages only; no source request.
+    "snkr-refused-photos": ("read", False, _snkr_refused_photos),
     "enqueue-remaining-50": ("write", True, _enqueue),
     "approve-f1-batch": ("write", True, _approve_f1),
     "enqueue-capture-batch": ("write", True, _capture),

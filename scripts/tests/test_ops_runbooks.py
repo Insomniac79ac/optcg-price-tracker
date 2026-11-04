@@ -17,7 +17,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ops import bandai_label_evidence, capture_batch, collector_flag, official_series, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
+from ops import bandai_label_evidence, capture_batch, snkr_refused_photos, collector_flag, official_series, collector_redeploy, common, diagnostic, enqueue_remaining, f1_approve, fleet, official_images, refresh_backfill, replan, run, staging_state, storage_rates  # noqa: E402
 from ops import db as ops_db, encoding_sample, lossless  # noqa: E402
 
 S13 = ROOT / "docs/agent/handoff/2026-10-15/capacity75-session13/evidence"
@@ -1204,6 +1204,23 @@ class BandaiLabelEvidence(unittest.TestCase):
 
     def test_registered_as_read_runbook(self):
         self.assertEqual(run.RUNBOOKS["bandai-label-evidence"][:2], ("read", False))
+
+
+class SnkrRefusedPhotos(unittest.TestCase):
+    """Owner 2026-11-04: the photo URL the collector compared, from its own parser, offline."""
+
+    def test_the_collectors_main_image_reading_is_used(self):
+        page = ('<html><body><img class="Gallery_x__thumb" src="https://cdn.snkrdunk.com/t.jpg">'
+                '<img class="slWKSa_mainImage" '
+                'src="https://cdn.snkrdunk.com/upload_bg_removed/34fc4c78.webp"></body></html>')
+        self.assertEqual(snkr_refused_photos.photo_url(page),
+                         "https://cdn.snkrdunk.com/upload_bg_removed/34fc4c78.webp")
+
+    def test_no_single_main_image_reads_as_none(self):
+        self.assertIsNone(snkr_refused_photos.photo_url("<html><img src='x'></html>"))
+
+    def test_registered_as_read_runbook(self):
+        self.assertEqual(run.RUNBOOKS["snkr-refused-photos"][:2], ("read", False))
 
 
 class FleetAndImages(unittest.TestCase):

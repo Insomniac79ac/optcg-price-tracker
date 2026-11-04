@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "mission": "Plan B step 1 (owner 'OK, build plan B' 2026-11-04): owner confirmations of SNKRDUNK photos the collector's artwork check refused will be bound to the exact photo confirmed. New read runbook snkr-refused-photos reads, for every blocked SNKRDUNK refresh item refused by the artwork check, the page the collector stored at that refusal and runs the collector's own find_main_product_image on it (offline, no SNKRDUNK request). Also pins snkr_component to #262's merge (e9fd5f17), which released snkrdunk-collector.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/snkr_refused_photos.py",
+        "scripts/ops/run.py",
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "New read runbook: two SELECTs on the read-only session plus offline decoding and parsing of stored pages (snkr-page-check's decoder, the collector's extractor). No source request, no write."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Photo URL from the collector's main-image reading; no single main image reads as none; registration. 100 ops tests pass; the runbook SQL was executed against the Postgres 16 schema."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "snkr_component a789a82a -> e9fd5f17 (#262 released snkrdunk-collector); no SNKRDUNK runtime input changed since; yuyu_reader_component stays 6c65fa4b."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #263 and #262"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "e9fd5f17dfa1a52653973e4b7aa4831854e7c1bc",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/snkr_refused_photos.py"
+      ],
+      "observation_window": "First ops-readonly snkr-refused-photos run."
+    }
+  },
+  "diff_sha256": "60587651bf0e3b7db925178157f696baa4ea2ae2f69bf779953374664e143bd8"
+}
