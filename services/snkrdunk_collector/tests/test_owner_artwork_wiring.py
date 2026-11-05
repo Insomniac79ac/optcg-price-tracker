@@ -10,7 +10,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from app.services.freshness_integration import CaptureResult
-from snkrdunk_collector import collect, due, extractor, owner_artwork
+from snkrdunk_collector import collect, due, extractor, models, owner_artwork
 
 HTML = (Path(__file__).parent / "fixtures/product_page_reduced.html").read_text()
 REFUSED = {"match": False, "hash_distances": {"average_hash": 24, "dhash": 9, "phash": 14}}
@@ -28,9 +28,11 @@ def run(monkeypatch, entries):
         yield playwright
 
     monkeypatch.setattr(collect, "sync_playwright", fake_playwright)
-    mapping = SimpleNamespace(id=4456, source_id=2, source_url="https://snkrdunk.com/apparels/104428",
-                              source_card_id="OP01-001", card_print_id=5862,
-                              canonical_source_listing_identity="104428")
+    # The collector's own mapping model, not a stand-in: on 2026-11-04 a SimpleNamespace carried an
+    # attribute the real model lacked, and production skipped every confirmation.
+    mapping = models.SourceCardMapping(id=4456, source_id=2, source_url="https://snkrdunk.com/apparels/104428",
+                                       source_card_id="OP01-001", card_print_id=5862,
+                                       canonical_source_listing_identity="104428")
     monkeypatch.setattr(collect, "_load_mapping", lambda *args: (
         mapping, SimpleNamespace(name="snkrdunk"),
         SimpleNamespace(treatment="parallel",
@@ -78,3 +80,8 @@ def test_the_exact_confirmed_photo_becomes_an_owner_match(monkeypatch):
 def test_without_a_confirmation_the_refusal_stands(monkeypatch):
     _, out = run(monkeypatch, {})
     assert out == REFUSED
+
+
+def test_the_collector_mapping_model_reads_the_stored_listing_identity():
+    column = models.SourceCardMapping.__table__.c.canonical_source_listing_identity
+    assert column.nullable

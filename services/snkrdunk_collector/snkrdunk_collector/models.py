@@ -122,6 +122,11 @@ class SourceCardMapping(Base):
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # The stored listing identity (services/api/app/models/source_card_mapping.py), read by the
+    # owner photo confirmation (owner_artwork.py), which is keyed on it as snkr-owner-requeue is.
+    # Missing from this mirror until 2026-11-05: the 2026-11-04 hook read it with getattr, got
+    # None, and every confirmation was skipped (mappings 4356, 4423, 4456 refused again).
+    canonical_source_listing_identity: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean)
     review_status: Mapped[str] = mapped_column(String(32))

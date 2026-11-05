@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "mission": "Plan B fix (2026-11-05): owner photo confirmations never applied. The SNKRDUNK collector's own mapping model (snkrdunk_collector/models.py) mirrors source_card_mappings without canonical_source_listing_identity; the #266 hook read it with getattr, got None, and owner_artwork.confirm returned the refusal unchanged (Railway log for 4456 at 2026-11-04 12:33Z: owner_confirmed null). Mappings 4356, 4423 and 4456 were reopened and refused again for that reason. This adds the column to the mirror (read-only, no DDL), reads it directly so a missing attribute fails loudly, and makes the wiring test use the real model. Also pins snkr_component to #267's merge (ab3697cb).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/models.py",
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "The collector reads the stored listing identity the confirmations (and snkr-owner-requeue) are keyed on. Matcher thresholds unchanged; the confirmation binding is unchanged. Infrastructure: mission-scoped re-upload of snkrdunk-collector."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/tests/test_owner_artwork_wiring.py",
+        "services/snkrdunk_collector/tests/test_metered_browser_close.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Wiring test uses the collector's real SourceCardMapping (fails on the old model); model column test; the metered test's stand-in gains the attribute."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "snkr_component a4966bbd -> ab3697cb (#267 released snkrdunk-collector)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "snkrdunk-collector (one CI release)"
+      ],
+      "routes": [
+        "No new route; no extra source request (the collector's normal re-check of reopened items)"
+      ],
+      "dependencies": [
+        "staging after #267"
+      ],
+      "deployment_impact": "snkrdunk-collector re-uploaded on the merge commit with automatic rollback; must start 06:00-23:00 UTC. Nothing reopens without an owner-approved snkr-owner-requeue apply.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "ab3697cbddbe660ba1a700d217114988da04fc5d",
+      "procedure": "The rollout captures snkrdunk-collector's live deployment before upload and restores it on failure (recovery_deployment_id is reference only); afterwards collector-redeploy to the fleet pin. A wrong confirmation is removed by PR; a mapping priced from one is deactivated through the admin mapping path.",
+      "trigger": "A reopened item captured with a photo the owner did not confirm, or collector failures on the new code (for example a mapping read error).",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/snkrdunk_collector/tests/test_owner_artwork.py",
+        "services/snkrdunk_collector/tests/test_owner_artwork_wiring.py",
+        "services/snkrdunk_collector/tests/test_metered_browser_close.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/snkrdunk_collector/snkrdunk_collector/models.py",
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py"
+      ],
+      "observation_window": "Delivery verify; then snkr-owner-requeue (owner-approved) for the 29 confirmed items and the collector log artwork_comparison_complete showing owner_confirmed set."
+    }
+  },
+  "deployment_verification": {
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "7dda1332-11b7-4a04-9fa1-fdd3aea3c4ff"
+      }
+    ]
+  },
+  "diff_sha256": "b35b08ebff9a88c6e4ecac6408e2052200459aa9a117a336388d9fa9eb540b7d"
+}

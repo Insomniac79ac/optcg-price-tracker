@@ -415,7 +415,7 @@ def run_one_mapping_detailed(
                     holder["artwork_comparison"],
                     mapping_id=mapping.id,
                     card_print_id=mapping.card_print_id,
-                    listing=getattr(mapping, "canonical_source_listing_identity", None),
+                    listing=mapping.canonical_source_listing_identity,
                     photo_url=extraction["extracted"].get("product_image_url"),
                 )
                 log_event(
