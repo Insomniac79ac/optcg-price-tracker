@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Coordinator handoff 2026-11-05 (owner: from 2026-11-06 the Grok Bot \"CP engineer\" takes over Card Pirate development; finish what is in flight, then hand off). State with run ids, open work in order, items waiting on the owner and the exact next steps. Documentation only.",
+  "classification": "GREEN",
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/handoff/2026-11-05/coordinator-handoff.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Handoff for the successor (CP engineer)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "docs only"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "none"
+      ],
+      "deployment_impact": "None.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 1
+    },
+    "recovery": {
+      "artifact": "c69548ca22fdb553844fc6420d6d48343e278e9b",
+      "procedure": "Native revert.",
+      "trigger": "Wrong status.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/handoff/2026-11-05/coordinator-handoff.md"
+      ],
+      "observation_window": "None."
+    }
+  },
+  "diff_sha256": "90f0912e91031d3a71114155e6a21ac7b535350ebfc58fa20536bcabc1287c96"
+}
