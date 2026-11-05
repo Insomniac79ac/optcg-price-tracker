@@ -7,7 +7,7 @@
       "scripts/verify_snkr_published_discovery_component.py",
       "scripts/verify_yuyu_raw_reader_component.py"
     ],
-    "snkr_component": "ab3697cbddbe660ba1a700d217114988da04fc5d",
+    "snkr_component": "02be15f4756b9c90ee0c962502ab2ff322394b8f",
     "yuyu_reader_component": "6c65fa4b83ede7e2070874d4cd3d4ed092944ee1",
     "yuyu_capacity_cadence": true
   },
