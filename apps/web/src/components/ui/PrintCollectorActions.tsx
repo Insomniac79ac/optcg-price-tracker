@@ -28,22 +28,26 @@ export function PrintCollectorActions({
   cardPrintId,
   versionLabel,
   shelf,
+  signedOutSignInHref = null,
 }: {
   cardPrintId: number;
   /** How this version is named on the page, e.g. "Roronoa Zoro (OP01-025) · Alternate art". */
   versionLabel: string;
   shelf: CollectorShelf;
+  /** Server-built href. When set, the invite is in the first render, before the session resolves. */
+  signedOutSignInHref?: string | null;
 }) {
   const [open, setOpen] = useState<Panel>("none");
 
   if (shelf.status === "disabled") return null;
 
+  const showInvite = shelf.status === "visitor" || (shelf.status === "loading" && Boolean(signedOutSignInHref));
   const headingId = `collector-actions-${cardPrintId}`;
   return (
     <section className={styles.panel} aria-labelledby={headingId} data-testid="print-collector-actions">
       <h2 id={headingId} className={styles.heading}>Your collection</h2>
-      {shelf.status === "loading" && <div className={styles.placeholder} aria-hidden="true" />}
-      {shelf.status === "visitor" && <SignInInvite cardPrintId={cardPrintId} />}
+      {shelf.status === "loading" && !signedOutSignInHref && <div className={styles.placeholder} aria-hidden="true" />}
+      {showInvite && <SignInInvite cardPrintId={cardPrintId} href={signedOutSignInHref} />}
       {shelf.status === "error" && (
         <p className={styles.line}>
           Your collection couldn’t be loaded right now.{" "}
@@ -63,13 +67,14 @@ export function PrintCollectorActions({
   );
 }
 
-function SignInInvite({ cardPrintId }: { cardPrintId: number }) {
+function SignInInvite({ cardPrintId, href }: { cardPrintId: number; href?: string | null }) {
   const back = `/prints/${cardPrintId}`;
+  const signInHref = href ?? `/sign-in?callbackUrl=${encodeURIComponent(back)}`;
   return (
     <>
       <p className={styles.line}>Keep this exact version in your collection, or watch its price.</p>
       <div className={styles.buttons}>
-        <Link href={`/sign-in?callbackUrl=${encodeURIComponent(back)}`} className={styles.secondary}>
+        <Link href={signInHref} className={styles.secondary}>
           Sign in to add it
         </Link>
       </div>

@@ -135,7 +135,14 @@ function imageProvenance(print: PrintUiModel): string | null {
  * as soon as the print itself arrives, and a history request that fails simply
  * leaves that one section out rather than erroring the page.
  */
-export default function PrintDetailPage({ initialDetail = null }: { initialDetail?: PrintDetail | null }) {
+export default function PrintDetailPage({
+  initialDetail = null,
+  signedOutSignInHref = null,
+}: {
+  initialDetail?: PrintDetail | null;
+  /** Server-built sign-in href for a signed-out first render. Null for a collector. */
+  signedOutSignInHref?: string | null;
+}) {
   const params = useParams<{ id: string }>();
   const printId = params?.id;
 
@@ -314,6 +321,7 @@ export default function PrintDetailPage({ initialDetail = null }: { initialDetai
                 cardPrintId={print.cardPrintId}
                 versionLabel={[`${print.displayName} (${print.cardCode})`, print.printingType?.label, print.releaseCode && `Found in ${print.releaseCode}`].filter(Boolean).join(" · ")}
                 shelf={shelf}
+                signedOutSignInHref={signedOutSignInHref}
               />
             </div>
             <LiveMarket print={print} history={history} historyStatus={historyStatus} />

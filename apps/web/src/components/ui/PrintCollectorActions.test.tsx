@@ -37,6 +37,21 @@ describe("PrintCollectorActions", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("uses the server href in the first render, before the session resolves", () => {
+    render(
+      <PrintCollectorActions
+        cardPrintId={5}
+        versionLabel={LABEL}
+        shelf={shelf("loading")}
+        signedOutSignInHref="/sign-in?callbackUrl=%2Fprints%2F2615"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Sign in to add it" })).toHaveAttribute(
+      "href",
+      "/sign-in?callbackUrl=%2Fprints%2F2615",
+    );
+  });
+
   it("renders nothing when collector accounts are switched off", () => {
     const { container } = render(<PrintCollectorActions cardPrintId={5} versionLabel={LABEL} shelf={shelf("disabled")} />);
     expect(container).toBeEmptyDOMElement();
