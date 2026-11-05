@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "mission": "Owner 2026-11-05 (\"yes, build the diagnostic PR\"): the 24 h check on the second approve-snkr-batch (run 41787151033, 32 mappings in new sets) could not isolate its outcomes, because snkrdunk-new-mappings covered only the first run (41444936669), and could not show whether discovery creates proposals since 2026-11-03 13:24Z, because the per-listing table exceeded the inline summary. This makes batch and refused cover both runs with a run column (refused trimmed of title and listing to stay inline), and replaces new_listings with a compact count of candidates created since 2026-11-02 10:00Z, split at 13:24Z, by set code, mapped listing and proposal status. Also pins snkr_component to #268's merge (02be15f4).",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/snkrdunk-new-mappings.sql"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "SELECT-only diagnostic, three statements; covered by DiagnosticsOnPostgres (passed locally on Postgres 16)."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "snkr_component ab3697cb -> 02be15f4 (#268 released snkrdunk-collector)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #268"
+      ],
+      "deployment_impact": "None: a read-only report.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "02be15f4756b9c90ee0c962502ab2ff322394b8f",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report is wrong or slow.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/snkrdunk-new-mappings.sql"
+      ],
+      "observation_window": "First ops-readonly db-diagnostic snkrdunk-new-mappings run after merge."
+    }
+  },
+  "diff_sha256": "34433e31ba55bc71e14a636c25c2cf8cd60b27086db9eaca6be2c4e58352d145"
+}
