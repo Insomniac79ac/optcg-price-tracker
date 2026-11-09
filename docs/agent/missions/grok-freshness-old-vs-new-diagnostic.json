@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "mission": "Read-only comparison, on the eligible mapping population, of the current overdue rule and the rule that waits 24 hours after a mapping is created. Current rule: no successful check, or the last successful check is older than 24 hours. Comparison rule: coalesce(last successful check, source_card_mappings.created_at) is older than 24 hours, and a row with neither time stays overdue. The existing degraded-signals diagnostic gains three SELECT statements: one row per source (old count, new count, first collection still inside 24 hours, and the difference), every mapping whose flag differs (capped at 200 rows, with the full count), and the count plus up to 50 ids of mappings created more than 24 hours ago that the current rule marks overdue and the comparison rule does not. That last count is expected to be 0. No schema change, no row written, no collector upload.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/degraded-signals.sql"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Three added SELECT/WITH statements on the existing degraded-signals diagnostic. They only read the eligible population and source_card_mappings. The statements already in the file are unchanged."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging at 58f56732c073"
+      ],
+      "deployment_impact": "None: statements added to an existing read-only report. No collector upload and no schema change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "58f56732c073672ba3db3a14219ab083bd5a173e",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "A statement errors, or old_vs_new_unexpected_drop is not 0.",
+      "backup": "Not applicable: no schema change and no row written.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/degraded-signals.sql"
+      ],
+      "observation_window": "Delivery verify for this merge. The statements are available on the next ops-readonly db-diagnostic degraded-signals run."
+    }
+  },
+  "diff_sha256": "f0a1b2e4e3036439f9fe3d6cb44a64d103103f6a04aa9f804be29562d7a08c43"
+}
