@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "mission": "Mission 4 item 3 (issue #273, owner 2026-11-09): snkrdunk-new-mappings picked up only two approve-snkr-batch applies by hardcoded reviewed_by values. An apply stores ops-write:approve-snkr-batch:<GITHUB_RUN_ID or local> (f1_approve.batch_reviewed_by, then lowercased). The diagnostic now matches that anchored pattern, so every later apply is included and approve-f1-batch, a longer runbook name, and a manual email are not. Read-only. No identity, pricing, fleet, or workflow change.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/snkrdunk-new-mappings.sql"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "SELECT-only diagnostic. batch and refused match reviewed_by with the anchored approve-snkr-batch pattern instead of two run ids. proposals is unchanged."
+    },
+    {
+      "files": [
+        "scripts/ops/f1_approve.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "The apply label is built by batch_reviewed_by, the same ops-write:approve-snkr-batch:<run id or local> string the runbook already stored. The diagnostic pattern is batch_reviewed_by_pattern."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "The pattern matches the two historical labels and the label the writer builds, and does not match approve-f1-batch, a longer runbook name, or manual reviewer values. The SQL file uses that pattern and stays SELECT/WITH."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging after #269"
+      ],
+      "deployment_impact": "None: a read-only report and the same approval label string.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "1a7d9480044f3d5ca360b21ec9d152ee996ece86",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The report misses an approve-snkr-batch apply or includes another approval.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/snkrdunk-new-mappings.sql"
+      ],
+      "observation_window": "First ops-readonly db-diagnostic snkrdunk-new-mappings run after merge."
+    }
+  },
+  "diff_sha256": "168c439e2c0822e6c964140306525eefba5f9e5a8835585e6af2783fa4f4abe1"
+}

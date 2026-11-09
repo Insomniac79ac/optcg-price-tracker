@@ -1,6 +1,10 @@
--- SNKRDUNK approve-snkr-batch outcomes and discovery proposals, read-only (owner 2026-11-03, "ok"
--- and 2026-11-05, "yes, build the diagnostic PR"). Both approval runs: 41444936669 (2026-11-02, 208
--- groups) and 41787151033 (2026-11-04, 32 mappings in new sets), named in the run column.
+-- SNKRDUNK approve-snkr-batch outcomes and discovery proposals, read-only (owner 2026-11-03, "ok",
+-- 2026-11-05, "yes, build the diagnostic PR", and 2026-11-09 Mission 4 item 3).
+-- batch and refused take every approve-snkr-batch apply. f1_approve.batch_reviewed_by writes
+-- ops-write:approve-snkr-batch:<GITHUB_RUN_ID or local>, and the decision service stores that
+-- lowercased. The predicate is f1_approve.batch_reviewed_by_pattern("snkrdunk"): anchored, so
+-- approve-f1-batch, a longer runbook name, and a manual email do not match. The run column is
+-- that suffix. The first two applies (41444936669, 41787151033) match it; later applies do too.
 -- batch: each run's mappings, found through their proposal group's candidate listing, counted by
 -- refresh work state, last outcome, raw availability and refusal reason (digits folded to N).
 -- refused: each blocked refresh item of either run with its print and reason (listings and photos
@@ -11,11 +15,11 @@
 -- batch
 with ss as (select id from sources where name = 'snkrdunk'),
 g as (
-  select substring(g.reviewed_by from '([0-9]+)$') run, g.source_candidate_id cid
+  select substring(g.reviewed_by from '^ops-write:approve-snkr-batch:([0-9]+|local)$') run,
+    g.source_candidate_id cid
   from source_mapping_proposal_groups g
   where g.source_candidate_type = 'snkrdunk_candidate'
-    and g.reviewed_by in ('ops-write:approve-snkr-batch:41444936669',
-                          'ops-write:approve-snkr-batch:41787151033')),
+    and g.reviewed_by ~ '^ops-write:approve-snkr-batch:([0-9]+|local)$'),
 bm as (
   select distinct g.run, m.id mapping_id from g
   join snkrdunk_candidates c on c.id = g.cid
@@ -37,11 +41,11 @@ from wk group by run, state, last_outcome, availability, reason order by run, n 
 -- refused
 with ss as (select id from sources where name = 'snkrdunk'),
 g as (
-  select substring(g.reviewed_by from '([0-9]+)$') run, g.source_candidate_id cid
+  select substring(g.reviewed_by from '^ops-write:approve-snkr-batch:([0-9]+|local)$') run,
+    g.source_candidate_id cid
   from source_mapping_proposal_groups g
   where g.source_candidate_type = 'snkrdunk_candidate'
-    and g.reviewed_by in ('ops-write:approve-snkr-batch:41444936669',
-                          'ops-write:approve-snkr-batch:41787151033'))
+    and g.reviewed_by ~ '^ops-write:approve-snkr-batch:([0-9]+|local)$')
 select distinct g.run, w.id work_id, m.id mapping_id, cc.card_code code, p.official_asset_variant variant,
   rp.official_code release,
   left(regexp_replace(coalesce(w.last_failure, ''), '[0-9]+', 'N', 'g'), 30) reason
