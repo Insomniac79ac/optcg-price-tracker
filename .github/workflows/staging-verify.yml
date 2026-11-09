@@ -25,7 +25,8 @@ jobs:
     if: >-
       github.repository == 'Insomniac79ac/optcg-price-tracker' && vars.STAGING_AUTONOMY_ENABLED == 'true'
       && (github.event_name == 'push' || github.ref == 'refs/heads/staging')
-    runs-on: ubuntu-latest
+    # Temporary: Playwright 1.58.0 cannot install chromium on ubuntu-latest (Ubuntu 26.04). Pin until Playwright supports Ubuntu 26.
+    runs-on: ubuntu-24.04
     # Platform wait (900 s) plus the frontend runtime SHA wait (600 s) plus the checks.
     timeout-minutes: 45
     environment: staging-delivery
