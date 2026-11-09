@@ -28,8 +28,10 @@ from collections import Counter
 from datetime import timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import random
+import re
 import time
 
 from ops import common
@@ -42,6 +44,38 @@ RULES = {F1_REASON: "f1", REVIEW_REASON: "physical_review"}
 # proposals the title-kind rule resolved. Each source keeps its own rules and list identity.
 SOURCE_RULES = {"yuyutei": RULES, "snkrdunk": {SNKR_TITLE_REASON: "snkr_title_kind"}}
 RUNBOOK_NAMES = {"yuyutei": "approve-f1-batch", "snkrdunk": "approve-snkr-batch"}
+# Suffix of the reviewed_by an apply stores. GITHUB_RUN_ID is a decimal Actions run id;
+# outside Actions the code writes the literal local. Nothing else is a batch label.
+_BATCH_RUN_SUFFIX = r"[0-9]+|local"
+
+
+def batch_reviewed_by(source, run_id=None):
+    """The reviewed_by an ops-write apply of this source's batch runbook stores.
+
+    ``approve`` sets ``AdminActor.email`` to this string. The decision service
+    stores ``email.strip().lower()`` (``source_mapping_proposal_decision``).
+    The runbook leaves the run id empty, so the suffix is ``GITHUB_RUN_ID`` or
+    the literal ``local``.
+    """
+    if run_id is None:
+        run_id = os.environ.get("GITHUB_RUN_ID", "local")
+    return f"ops-write:{RUNBOOK_NAMES[source]}:{run_id}".strip().lower()
+
+
+def batch_reviewed_by_pattern(source):
+    """Anchored POSIX regex for every label ``batch_reviewed_by(source)`` writes.
+
+    The runbook name is a literal between colons and the suffix is digits or
+    ``local``, so another runbook, a longer name, and a manual reviewer email
+    cannot match. ``snkrdunk-new-mappings.sql`` uses the snkrdunk result as
+    ``reviewed_by ~ '<pattern>'``.
+    """
+    name = RUNBOOK_NAMES[source]
+    if not re.fullmatch(r"[a-z0-9-]+", name):
+        raise ValueError(f"runbook name is not a safe pattern literal: {name}")
+    return rf"^ops-write:{name}:({_BATCH_RUN_SUFFIX})$"
+
+
 DEFAULT_COUNT = 500
 MAX_COUNT = 600
 SAMPLE_SIZE = 20
@@ -247,7 +281,6 @@ def approve(session, entries, *, run_label, now=common.now_utc):
 
 
 def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None, source="yuyutei"):
-    import os
     from sqlalchemy.orm import Session
     from ops import db as ops_db, storage_rates
     import yuyu_identity_capture_enqueue as tool
@@ -289,7 +322,7 @@ def run(out_dir, *, apply=False, count=None, expected_sha256="", run_label=None,
     if not apply:
         return summary
 
-    run_label = run_label or f"ops-write:{RUNBOOK_NAMES[source]}:{os.environ.get('GITHUB_RUN_ID', 'local')}"
+    run_label = run_label or batch_reviewed_by(source)
     # Mask the database password in the log before the tool opens its own session.
     ops_db.resolve()[1].clear()
     with tool.staging_session(writable=True) as session:

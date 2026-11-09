@@ -337,6 +337,33 @@ class DiagnosticsOnPostgres(unittest.TestCase):
             self.assertEqual(conn.execute(capture_batch.POPULATION_SQL).fetchall(), [])
 
 
+
+    def test_snkr_batch_reviewed_by_pattern_on_postgres(self):
+        import psycopg
+
+        pattern = f1_approve.batch_reviewed_by_pattern("snkrdunk")
+        cases = (
+            ("ops-write:approve-snkr-batch:41444936669", True, "41444936669"),
+            ("ops-write:approve-snkr-batch:41787151033", True, "41787151033"),
+            ("ops-write:approve-snkr-batch:local", True, "local"),
+            ("ops-write:approve-snkr-batch:51500000001", True, "51500000001"),
+            ("ops-write:approve-f1-batch:41444936669", False, None),
+            ("ops-write:approve-f1-batch:local", False, None),
+            ("ops-write:approve-snkr-batch-extra:9", False, None),
+            ("test:approve-snkr-batch", False, None),
+            ("reviewer@example.com", False, None),
+            ("owner", False, None),
+            ("admin@example.test", False, None),
+        )
+        with psycopg.connect(self.dsn, options=ops_db.options()) as conn:
+            for label, expected, suffix in cases:
+                matched, captured = conn.execute(
+                    "select %s ~ %s, substring(%s from %s)",
+                    (label, pattern, label, pattern)).fetchone()
+                self.assertEqual(matched, expected, label)
+                self.assertEqual(captured, suffix, label)
+
+
 class Lossless(unittest.TestCase):
     def rows(self):
         from opcg_source_identity.raw_payload import encode, sha256
@@ -745,6 +772,88 @@ class F1Approve(unittest.TestCase):
             approved, stopped = f1_approve.approve(session, entries, run_label="x", now=lambda: utc(2026, 10, 19, 2, 1))
         fake.assert_not_called()
         self.assertEqual((approved, stopped["code"]), ([], "quiet_window"))
+
+
+
+    def test_snkr_batch_reviewed_by_pattern_matches_the_writer_not_other_approvals(self):
+        """snkrdunk-new-mappings uses the label approve-snkr-batch stores, and nothing else."""
+        import inspect
+        import re
+
+        pattern = f1_approve.batch_reviewed_by_pattern("snkrdunk")
+        self.assertEqual(pattern, r"^ops-write:approve-snkr-batch:([0-9]+|local)$")
+        self.assertEqual(f1_approve.batch_reviewed_by_pattern("yuyutei"),
+                         r"^ops-write:approve-f1-batch:([0-9]+|local)$")
+        self.assertIn("run_label = run_label or batch_reviewed_by(source)", inspect.getsource(f1_approve.run))
+
+        def matches(label):
+            return re.fullmatch(pattern, label) is not None
+
+        historical = (
+            "ops-write:approve-snkr-batch:41444936669",
+            "ops-write:approve-snkr-batch:41787151033",
+        )
+        for label in historical:
+            found = re.fullmatch(pattern, label)
+            self.assertIsNotNone(found, label)
+            self.assertEqual(found.group(1), label.rsplit(":", 1)[1])
+
+        with mock.patch.dict(os.environ, {"GITHUB_RUN_ID": "51500000001"}):
+            written = f1_approve.batch_reviewed_by("snkrdunk")
+        self.assertEqual(written, "ops-write:approve-snkr-batch:51500000001")
+        self.assertEqual(written.strip().lower(), written)
+        self.assertTrue(matches(written))
+        self.assertTrue(matches(f1_approve.batch_reviewed_by("snkrdunk", "41444936669")))
+        self.assertTrue(matches(f1_approve.batch_reviewed_by("snkrdunk", "41787151033")))
+        self.assertTrue(matches(f1_approve.batch_reviewed_by("snkrdunk", "Local")))
+        cleared = {key: value for key, value in os.environ.items() if key != "GITHUB_RUN_ID"}
+        with mock.patch.dict(os.environ, cleared, clear=True):
+            local = f1_approve.batch_reviewed_by("snkrdunk")
+        self.assertEqual(local, "ops-write:approve-snkr-batch:local")
+        self.assertTrue(matches(local))
+
+        others = (
+            f1_approve.batch_reviewed_by("yuyutei", "41444936669"),
+            f1_approve.batch_reviewed_by("yuyutei"),
+            "ops-write:approve-f1-batch:41787151033",
+            "ops-write:approve-f1-batch:local",
+            "ops-write:approve-snkr-batch-extra:99",
+            "ops-write:approve-snkr-batch:99extra",
+            "ops-write:approve-snkr-batch:",
+            "ops-write:approve-snkr-batch",
+            "ops-write:approve-snkr-batch:local-extra",
+            "ops-write:approve-snkr-batch:123:456",
+            "ops-write:approve-snkr-batch:LOCAL",
+            "ops-write:approve-snkr-batch:1 ",
+            " ops-write:approve-snkr-batch:1",
+            "test:approve-snkr-batch",
+            "reviewer@example.com",
+            "trusted.reviewer@example.com",
+            "owner",
+            "admin@example.test",
+            "offline-fixture",
+            "test:reviewer",
+            "codex:fixture",
+            "ops-write:snkr-owner-requeue:1",
+            "ops-write:proposal-refresh:1",
+        )
+        for label in others:
+            self.assertFalse(matches(label), label)
+
+        statements = diagnostic.load("snkrdunk-new-mappings")
+        for name in ("batch", "refused"):
+            body = statements[name]
+            self.assertEqual(body.count(f"reviewed_by ~ '{pattern}'"), 1, name)
+            self.assertEqual(body.count(f"substring(g.reviewed_by from '{pattern}')"), 1, name)
+            self.assertNotIn("41444936669", body)
+            self.assertNotIn("41787151033", body)
+            self.assertNotIn(" in (", body.lower())
+        self.assertNotIn("reviewed_by", statements["proposals"])
+        for body in statements.values():
+            low = body.lower().lstrip()
+            self.assertTrue(low.startswith(("select", "with")), body[:40])
+            for word in ("insert", "update", "delete"):
+                self.assertNotRegex(low, rf"\b{word}\b")
 
 
 class RefreshBackfill(unittest.TestCase):
