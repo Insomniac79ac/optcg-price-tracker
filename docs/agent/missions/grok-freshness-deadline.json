@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "mission": "Follow-up to Mission 4 (issue #273) freshness signal. A never-checked mapping counts as overdue only 24h after source_card_mappings.created_at (deadline anchored on coalesce(last successful check, created_at)). The same rule is in DUE_SQL overdue and over_24h, the freshness evidence behind quarantine_reporting.deficit, and the run-level never_checked_overdue count that classify uses. first_collection_pending (never checked, created less than 24h ago) is reported per source beside quarantined_refresh_work and does not cause DEGRADED or BLOCKED. The 24h target, the 23h dispatch point, identity-refusal DEGRADED, and every BLOCKED rule are unchanged. These modules are collector runtime inputs, so delivery re-uploads the ten collectors.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/operational_health.py",
+        "services/api/app/services/operational_health_runtime.py",
+        "services/api/app/services/operational_health_sql.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "The shared freshness deadline used by the state generator and by collector run receipts. Infrastructure: mission-scoped re-upload of the ten collectors, because these modules are on both collector import graphs. Collection selection, the 23h dispatch point, identity checks and prices are unchanged."
+    },
+    {
+      "files": [
+        "scripts/quarantine_reporting.py",
+        "scripts/generate_staging_state.py",
+        "scripts/ops/staging_state.py",
+        "docs/agent/evidence/staging-state-read.sql",
+        "docs/agent/raw-operational-run.schema.json",
+        "scripts/diagnostics/degraded-signals.sql"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "The staging-state freshness deficit ignores mappings still inside their first 24h, reports first_collection_pending beside quarantined refresh work, and degraded-signals carries an old-versus-new overdue comparison. Quarantined work stays outside the deficit."
+    },
+    {
+      "files": [
+        "scripts/tests/test_operational_health.py",
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_quarantine_reporting.py",
+        "services/api/tests/test_operational_health_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Operator-visible cases: created 1h ago stays HEALTHY with first_collection_pending 1; created 25h ago or checked 25h ago is DEGRADED due_work_deficit; quarantined work stays beside the deficit; an identity refusal stays DEGRADED."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "10 staging collectors (sequential CI release)"
+      ],
+      "routes": [
+        "No new route. No extra source request from this change."
+      ],
+      "dependencies": [
+        "staging at 58f56732"
+      ],
+      "deployment_impact": "Each collector is re-uploaded on the merge commit in its own slot, with automatic rollback to the deployment captured before upload. Must start 06:00-23:00 UTC. The API rebuilds through its existing GitHub watch because services/api changed. No schema change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 180
+    },
+    "recovery": {
+      "artifact": "58f56732c073672ba3db3a14219ab083bd5a173e",
+      "procedure": "The rollout captures each collector's live deployment before upload and restores it on failure (recovery_deployment_id rows are reference only, carried from the last full-fleet mission). Afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file.",
+      "trigger": "A collector failing after release, or a source marked DEGRADED for a mapping created less than 24h ago that has never been checked.",
+      "backup": "Not applicable: no schema change and no row written by this PR.",
+      "validation": [
+        "services/api/tests/test_operational_health_postgres.py",
+        "scripts/tests/test_operational_health.py",
+        "scripts/tests/test_quarantine_reporting.py",
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/operational_health_sql.py",
+        "services/api/app/services/operational_health.py",
+        "scripts/quarantine_reporting.py",
+        "scripts/diagnostics/degraded-signals.sql"
+      ],
+      "observation_window": "Delivery verify, including natural collector receipts on the merge commit. Then ops-readonly db-diagnostic degraded-signals, statement old_vs_new_overdue: difference equals first_collection_pending per source."
+    }
+  },
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "838a810d-37a0-4bd4-9290-16d64e68ee45"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "856b32ee-ab55-4983-800a-63eba4dba0d6"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "740ec58c-25fa-423c-8b4c-b60b5566a103"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "71686eff-e9f9-4ccc-83e1-c048ca06299d"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "be2a309f-3397-41fe-98be-c3eb1c504e4c"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "4420042e-53de-42a4-9c67-aa4b9c063004"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "633b333b-f051-4fb9-b9ff-a43c9191aa57"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "a706daa2-644a-49e8-9108-ae1acd37c922"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "fdea2a73-8d8b-4c1c-a40f-adaa2dd62fc9"
+      },
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "e4942d80-d246-43a4-8722-ef9a6c46c506"
+      }
+    ]
+  },
+  "diff_sha256": "f9f0da5f323773862560a8d9a51fe326cea359572966c595582a094d99b5a638"
+}
