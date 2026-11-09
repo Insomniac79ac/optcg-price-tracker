@@ -98,7 +98,8 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' && github.repository == 'Insomniac79ac/optcg-price-tracker'
       && github.ref == 'refs/heads/staging'
-    runs-on: ubuntu-latest
+    # Temporary: Playwright 1.58.0 cannot install chromium on ubuntu-latest (Ubuntu 26.04). Pin until Playwright supports Ubuntu 26.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     # The staging read credentials live in this Environment; it holds no production secret.
     environment: staging-delivery

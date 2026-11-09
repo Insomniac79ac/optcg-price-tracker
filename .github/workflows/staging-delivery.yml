@@ -18,7 +18,8 @@ jobs:
     # Activation is fail-closed until owner settings and staging-only read
     # credentials are verified. This environment must contain no production secrets.
     if: github.repository == 'Insomniac79ac/optcg-price-tracker' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && vars.STAGING_AUTONOMY_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    # Temporary: Playwright 1.58.0 cannot install chromium on ubuntu-latest (Ubuntu 26.04). Pin until Playwright supports Ubuntu 26.
+    runs-on: ubuntu-24.04
     # Collectors roll out one at a time, each in its own safe slot (~10 x 3-16 min),
     # plus at most one hour held out of the 19:30-20:30 UTC merge window.
     timeout-minutes: 240
