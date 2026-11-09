@@ -332,6 +332,7 @@
         "successful_check_age_p95",
         "successful_check_age_max",
         "never_checked",
+        "never_checked_overdue",
         "retries",
         "backoff",
         "maximum_successful_revisit_gap_seconds"
@@ -373,6 +374,13 @@
           "minimum": 0
         },
         "never_checked": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "never_checked_overdue": {
           "type": [
             "number",
             "null"

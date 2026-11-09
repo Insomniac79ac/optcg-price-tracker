@@ -56,6 +56,7 @@ SECTIONS = {
         "successful_check_age_p95",
         "successful_check_age_max",
         "never_checked",
+        "never_checked_overdue",
         "retries",
         "backoff",
         "maximum_successful_revisit_gap_seconds",
@@ -205,7 +206,9 @@ def classify(summary):
     ):
         if failure[key]:
             degraded.append(key)
-    for key in ("deadline_misses", "never_checked", "backoff"):
+    # never_checked_overdue: no successful check, and created_at is already
+    # past 24h. A younger never-checked mapping is first collection, not a miss.
+    for key in ("deadline_misses", "never_checked_overdue", "backoff"):
         if freshness[key]:
             degraded.append(key)
     if safety["expired_claims"]:
@@ -252,7 +255,7 @@ def classify(summary):
             "wrong_shard",
         )
     ]
-    required += [freshness[k] for k in ("deadline_misses", "never_checked")]
+    required += [freshness[k] for k in ("deadline_misses", "never_checked_overdue")]
     if (
         work["attempted"] is not None
         and all(work[k] is not None for k in ("listed", "no_listing"))
@@ -316,6 +319,8 @@ def aggregate(due_rows, runs, budgets, now):
             "backoff",
             "quarantined",
             "never_checked",
+            "never_checked_overdue",
+            "first_collection_pending",
             "within_23h",
             "between_23_24h",
             "over_24h",

@@ -1391,6 +1391,18 @@ class StagingStateSummary(unittest.TestCase):
         out = staging_state.summary(self.snapshot(blockers), {"repository": {"sha": "h"}}, {"mission_actions": []})
         self.assertEqual(out["blockers"], ["snkrdunk-identity-quarantine", "quarantined-refresh-work"])
         self.assertEqual(out["quarantined_refresh_work"], {"count": 69, "oldest_blocked_since": "2026-10-02T15:54:00Z"})
+        self.assertEqual(out["first_collection_pending"], {"yuyu": 0})
+
+    def test_pending_collection_sits_beside_quarantine(self):
+        blockers = [{"id": "quarantined-refresh-work", "count": 2, "oldest_blocked_since": "2026-10-02T15:54:00Z"}]
+        snapshot = self.snapshot(blockers)
+        snapshot["operational_health"]["snkrdunk"] = {
+            "status": "HEALTHY", "due_work": {"first_collection_pending": 1, "overdue": 0}}
+        out = staging_state.summary(snapshot, {"repository": {"sha": "h"}}, {"mission_actions": []})
+        self.assertEqual(out["quarantined_refresh_work"]["count"], 2)
+        self.assertEqual(out["first_collection_pending"], {"yuyu": 0, "snkrdunk": 1})
+        self.assertNotIn("freshness-deadline-deficit", out["blockers"])
+        self.assertEqual(out["operational_health"]["snkrdunk"], "HEALTHY")
 
     def test_no_quarantine_blocker(self):
         out = staging_state.summary(self.snapshot([]), {"repository": {"sha": "h"}}, {"mission_actions": []})

@@ -150,6 +150,30 @@ class QuarantineFreshnessTests(unittest.TestCase):
         self.assertNotIn("quarantine", out["snkrdunk"])
         self.assertNotIn("quarantined", out["snkrdunk"])
 
+    def test_first_collection_pending_is_not_a_deficit(self):
+        row = self.row(never_successfully_checked=1, check_older_than_24h=0, quarantined=0,
+                       quarantined_never_successfully_checked=0, quarantined_check_older_than_24h=0,
+                       first_collection_pending=1, quarantined_first_collection_pending=0)
+        out = quarantine.freshness([row], NOW)
+        self.assertFalse(quarantine.deficit(out))
+        self.assertEqual(out["snkrdunk"]["first_collection_pending"], 1)
+        self.assertEqual(out["snkrdunk"]["actionable_first_collection_pending"], 1)
+
+    def test_never_checked_past_creation_deadline_is_a_deficit(self):
+        row = self.row(never_successfully_checked=1, check_older_than_24h=0, quarantined=0,
+                       quarantined_never_successfully_checked=0, quarantined_check_older_than_24h=0,
+                       first_collection_pending=0, quarantined_first_collection_pending=0)
+        out = quarantine.freshness([row], NOW)
+        self.assertTrue(quarantine.deficit(out))
+
+    def test_pending_stays_out_of_the_deficit_while_quarantine_stays_visible(self):
+        row = self.row(never_successfully_checked=23, first_collection_pending=1,
+                       quarantined_first_collection_pending=0)
+        out = quarantine.freshness([row], NOW)
+        self.assertFalse(quarantine.deficit(out))
+        self.assertEqual(out["snkrdunk"]["quarantine"]["count"], 66)
+        self.assertEqual(out["snkrdunk"]["actionable_first_collection_pending"], 1)
+
 
 class QuarantineStateTests(unittest.TestCase):
     def evidence(self, older_than_24h):
@@ -184,6 +208,23 @@ class QuarantineStateTests(unittest.TestCase):
         state = self.build(self.evidence(45))
         self.assertIn("freshness-deadline-deficit", [b["id"] for b in state["blockers"]])
         self.assertEqual(state["freshness"]["deadline_compliance_status"], "not_met")
+        self.assertTrue(any(b["id"] == "quarantined-refresh-work" for b in state["blockers"]))
+
+    def test_pending_collection_is_not_the_deadline_blocker(self):
+        evidence = self.evidence(44)
+        for row in evidence["database"]["freshness"]:
+            if row["name"] == "snkrdunk":
+                row["never_successfully_checked"] = 23
+                row["first_collection_pending"] = 1
+                row["quarantined_first_collection_pending"] = 0
+            else:
+                row["first_collection_pending"] = 0
+                row["quarantined_first_collection_pending"] = 0
+        state = self.build(evidence)
+        ids = [b["id"] for b in state["blockers"]]
+        self.assertNotIn("freshness-deadline-deficit", ids)
+        self.assertIn("quarantined-refresh-work", ids)
+        self.assertEqual(state["freshness"]["by_source"]["snkrdunk"]["first_collection_pending"], 1)
 
     def test_sanitize_keeps_only_item_fields(self):
         evidence = self.evidence(44)

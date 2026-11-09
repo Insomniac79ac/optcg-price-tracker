@@ -3,7 +3,7 @@
 ELIGIBLE = """
 select m.id mapping_id, s.name source, m.id % 9 shard, w.id work_id,
  w.state, w.next_due_at, w.retry_not_before_at, w.claim_expires_at,
- ps.last_successfully_checked_at checked_at, ps.consecutive_failures
+ ps.last_successfully_checked_at checked_at, m.created_at mapped_at, ps.consecutive_failures
 from source_card_mappings m join sources s on s.id=m.source_id
 join card_prints p on p.id=m.card_print_id
 left join freshness_work w on w.source_card_mapping_id=m.id and w.kind='refresh'
@@ -22,15 +22,17 @@ DUE_SQL = """with e as (""" + ELIGIBLE + """), gaps as (
 ) select source, case when source='yuyutei' then shard else null end shard,
  count(*) eligible,
  count(*) filter(where checked_at is null or checked_at<=now()-interval '23 hours') due,
- count(*) filter(where checked_at is null or checked_at<now()-interval '24 hours') overdue,
+ count(*) filter(where coalesce(checked_at, mapped_at)<now()-interval '24 hours' or (checked_at is null and mapped_at is null)) overdue,
  count(*) filter(where state='claimed') claimed,
  count(*) filter(where retry_not_before_at>now()) backoff,
  count(*) filter(where consecutive_failures>0) retries,
  count(*) filter(where state='blocked') quarantined,
  count(*) filter(where checked_at is null) never_checked,
+ count(*) filter(where checked_at is null and (mapped_at is null or mapped_at<now()-interval '24 hours')) never_checked_overdue,
+ count(*) filter(where checked_at is null and mapped_at>=now()-interval '24 hours') first_collection_pending,
  count(*) filter(where checked_at>=now()-interval '23 hours') within_23h,
  count(*) filter(where checked_at<now()-interval '23 hours' and checked_at>=now()-interval '24 hours') between_23_24h,
- count(*) filter(where checked_at<now()-interval '24 hours') over_24h,
+ count(*) filter(where coalesce(checked_at, mapped_at)<now()-interval '24 hours' or (checked_at is null and mapped_at is null)) over_24h,
  count(*) filter(where state='claimed' and claim_expires_at<=now()) expired_claims,
  count(*) filter(where work_id is null) unplanned,
  min(next_due_at) filter(where state='pending' and next_due_at<=now() and (retry_not_before_at is null or retry_not_before_at<=now())) oldest_actionable_due_at,

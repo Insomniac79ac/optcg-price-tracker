@@ -44,8 +44,17 @@ def test_completed_discovery_is_accounted_but_is_not_a_successful_raw_check(db, 
         assert summary["work"]["attempted"] == summary["work"]["completed"] == 1
         assert summary["work"]["listed"] == summary["work"]["no_listing"] == 0
         assert summary["freshness"]["successful_checks"] == 0
-        assert "unaccounted_attempts" not in classify(summary)["reasons"]
-        assert classify(summary)["status"] == "DEGRADED"  # the untested mapping still misses its deadline
+        decision = classify(summary)
+        assert "unaccounted_attempts" not in decision["reasons"]
+        # A mapping created during this run has not missed the 24h deadline.
+        # The receipt is still not healthy: discovery does not fill every required field.
+        assert summary["freshness"]["deadline_misses"] == 0
+        assert summary["freshness"]["never_checked"] == 1
+        assert summary["freshness"]["never_checked_overdue"] == 0
+        assert "deadline_misses" not in decision["reasons"]
+        assert "never_checked_overdue" not in decision["reasons"]
+        assert decision["status"] == "DEGRADED"
+        assert "incomplete_evidence" in decision["reasons"]
 
 
 def test_execution_evidence_survives_completion_and_enforces_total_bound(
@@ -263,3 +272,112 @@ def test_budget_snapshot_preserves_indefinite_pause_without_free_text(db):
         row = session.execute(text(BUDGET_SQL)).mappings().one()
         assert row["permanent_pause"] is True
         assert "pause_reason" not in row
+
+
+def _due(session):
+    return session.execute(text(DUE_SQL)).mappings().one()
+
+
+def _snkr_health(row, now, *, identity=0):
+    from app.services.operational_health import aggregate, empty_summary
+
+    run = empty_summary()
+    started = (now - timedelta(minutes=6)).isoformat()
+    run["identity"].update(
+        source="snkrdunk",
+        service="snkrdunk-collector",
+        shard=None,
+        execution_id="fixture",
+        started_at=started,
+        finished_at=(now - timedelta(minutes=1)).isoformat(),
+        runtime_seconds=300,
+        trigger="natural",
+    )
+    run["work"].update(
+        eligible=row["eligible"], due=row["due"], selected=0, claimed=0, attempted=0,
+        listed=0, no_listing=0, promotional_hidden=0, accepted_observations=0,
+        raw_snapshots=0, max_work=1,
+    )
+    run["failure"].update({k: 0 for k in run["failure"]})
+    run["failure"]["identity"] = identity
+    run["freshness"].update(
+        successful_checks=0,
+        deadline_misses=row["overdue"],
+        never_checked=row["never_checked"],
+        never_checked_overdue=row["never_checked_overdue"],
+        retries=0,
+        backoff=0,
+    )
+    run["safety"].update(
+        claims_remaining=0, expired_claims=0, reservations_remaining=0,
+        reservation_overruns=0, singleton="held", duplicate_requests=0, wrong_shard=0,
+        identity_integrity="guarded", promotion_policy="not_applicable", production_impact=False,
+    )
+    run["exit"].update(terminal_state="completed")
+    budget = {
+        "name": "snkrdunk", "enabled": True, "request_limit": 1000, "window_seconds": 86400,
+        "window_started_at": (now - timedelta(minutes=5)).isoformat(), "used_requests": 0,
+        "reserved_requests": 0, "permanent_pause": False, "reservation_mismatch": False,
+        "open_reservations": 0,
+    }
+    return aggregate([dict(row)], [run], [budget], now.isoformat())["snkrdunk"]
+
+
+def test_never_checked_deadline_is_anchored_on_mapping_creation(db):
+    """What an operator sees from DUE_SQL: grace, then a real miss, then a stale check."""
+    from app.models import FreshnessPriceState, SourceCardMapping
+
+    factory, source, recent_id, pid = db
+    now = datetime.now(timezone.utc)
+    with factory.begin() as session:
+        session.get(SourceCardMapping, recent_id).created_at = now - timedelta(hours=1)
+    with factory() as session:
+        row = _due(session)
+        assert row["eligible"] == 1
+        assert row["never_checked"] == 1
+        assert row["first_collection_pending"] == 1
+        assert row["never_checked_overdue"] == 0
+        assert row["overdue"] == 0
+        assert row["over_24h"] == 0
+        assert row["due"] == 1  # still dispatched; the 23h point is unchanged
+        health = _snkr_health(row, now)
+        assert health["status"] == "HEALTHY"
+        assert "due_work_deficit" not in health["reasons"]
+        assert health["due_work"]["first_collection_pending"] == 1
+
+    aged_id = mapping(factory, source, pid, 456)
+    with factory.begin() as session:
+        session.get(SourceCardMapping, aged_id).created_at = now - timedelta(hours=25)
+    with factory() as session:
+        row = _due(session)
+        assert row["eligible"] == 2
+        assert row["never_checked"] == 2
+        assert row["first_collection_pending"] == 1
+        assert row["never_checked_overdue"] == 1
+        assert row["overdue"] == 1
+        assert row["over_24h"] == 1
+        health = _snkr_health(row, now)
+        assert health["status"] == "DEGRADED"
+        assert "due_work_deficit" in health["reasons"]
+
+    checked_id = mapping(factory, source, pid, 789)
+    plan(factory, checked_id, at=now - timedelta(hours=25))
+    with factory.begin() as session:
+        session.get(SourceCardMapping, checked_id).created_at = now - timedelta(days=3)
+        session.scalar(
+            select(FreshnessPriceState).where(FreshnessPriceState.work_id.is_not(None))
+        ).last_successfully_checked_at = now - timedelta(hours=25)
+    with factory() as session:
+        row = _due(session)
+        assert row["eligible"] == 3
+        assert row["never_checked"] == 2
+        assert row["first_collection_pending"] == 1
+        assert row["overdue"] == 2
+        assert row["over_24h"] == 2
+        health = _snkr_health(row, now)
+        assert health["status"] == "DEGRADED"
+        assert "due_work_deficit" in health["reasons"]
+
+    refused = _snkr_health(row, now, identity=1)
+    assert refused["status"] == "DEGRADED"
+    assert "identity" in refused["reasons"]
