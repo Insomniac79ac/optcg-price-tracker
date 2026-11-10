@@ -115,6 +115,7 @@ const STRICT_TRANSPORT_SECURITY = "max-age=63072000; includeSubDomains";
 
 const nextConfig: NextConfig = {
   experimental: {
+    // Self-hosting behind a shared cache needs the flag back on or no-store on RSC. apps/web stays on Vercel only.
     validateRSCRequestHeaders: false,
   },
   // Preserve Next’s HTML-only search/social defaults and cover documented
