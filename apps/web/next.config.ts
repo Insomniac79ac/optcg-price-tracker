@@ -114,6 +114,9 @@ const CONTENT_SECURITY_POLICY = [
 const STRICT_TRANSPORT_SECURITY = "max-age=63072000; includeSubDomains";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    validateRSCRequestHeaders: false,
+  },
   // Preserve Next’s HTML-only search/social defaults and cover documented
   // OpenAI search/browsing agents without blocking normal browser metadata.
   htmlLimitedBots: metadataBlockingBots,
