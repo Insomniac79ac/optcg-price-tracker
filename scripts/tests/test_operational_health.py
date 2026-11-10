@@ -44,7 +44,8 @@ def healthy(source="yuyutei"):
     )
     result["failure"].update({k: 0 for k in result["failure"]})
     result["freshness"].update(
-        successful_checks=70, deadline_misses=0, never_checked=0, retries=0, backoff=0
+        successful_checks=70, deadline_misses=0, never_checked=0, never_checked_overdue=0,
+        retries=0, backoff=0
     )
     result["safety"].update(
         claims_remaining=0,
@@ -181,6 +182,93 @@ class HealthTests(unittest.TestCase):
             rows, [done, started], [], "2026-10-04T09:00:00+00:00"
         )
         self.assertEqual(result["yuyu"]["status"], "DEGRADED")
+
+
+    def test_recent_never_checked_is_pending_not_degraded(self):
+        """Operator view: created 1h ago and never checked stays HEALTHY."""
+        now = "2026-11-09T08:26:00+00:00"
+        run = healthy("snkrdunk")
+        run["identity"].update(
+            started_at="2026-11-09T08:20:00+00:00",
+            finished_at="2026-11-09T08:25:00+00:00",
+        )
+        run["freshness"].update(never_checked=1, never_checked_overdue=0, deadline_misses=0)
+        rows = [dict(
+            source="snkrdunk", shard=None, eligible=1, due=1, overdue=0, quarantined=0,
+            never_checked=1, never_checked_overdue=0, first_collection_pending=1,
+            over_24h=0, between_23_24h=0, backoff=0, expired_claims=0,
+        )]
+        budget = [{
+            "name": "snkrdunk", "enabled": True, "request_limit": 3100, "window_seconds": 1800,
+            "window_started_at": "2026-11-09T08:00:00+00:00", "used_requests": 0,
+            "reserved_requests": 0, "permanent_pause": False, "reservation_mismatch": False,
+            "open_reservations": 0,
+        }]
+        result = health.aggregate(rows, [run], budget, now)
+        self.assertEqual(result["snkrdunk"]["status"], "HEALTHY")
+        self.assertNotIn("due_work_deficit", result["snkrdunk"]["reasons"])
+        self.assertNotIn("never_checked", result["snkrdunk"]["reasons"])
+        self.assertEqual(result["snkrdunk"]["due_work"]["first_collection_pending"], 1)
+        self.assertEqual(health.classify(run)["status"], "HEALTHY")
+
+    def test_never_checked_past_24h_is_a_due_work_deficit(self):
+        now = "2026-11-09T08:26:00+00:00"
+        run = healthy("snkrdunk")
+        run["identity"].update(
+            started_at="2026-11-09T08:20:00+00:00",
+            finished_at="2026-11-09T08:25:00+00:00",
+        )
+        run["freshness"].update(deadline_misses=1, never_checked=1, never_checked_overdue=1)
+        rows = [dict(
+            source="snkrdunk", shard=None, eligible=1, due=1, overdue=1, quarantined=0,
+            never_checked=1, never_checked_overdue=1, first_collection_pending=0,
+            over_24h=1, between_23_24h=0, backoff=0, expired_claims=0,
+        )]
+        budget = [{
+            "name": "snkrdunk", "enabled": True, "request_limit": 3100, "window_seconds": 1800,
+            "window_started_at": "2026-11-09T08:00:00+00:00", "used_requests": 0,
+            "reserved_requests": 0, "permanent_pause": False, "reservation_mismatch": False,
+            "open_reservations": 0,
+        }]
+        result = health.aggregate(rows, [run], budget, now)
+        self.assertEqual(result["snkrdunk"]["status"], "DEGRADED")
+        self.assertIn("due_work_deficit", result["snkrdunk"]["reasons"])
+        self.assertEqual(result["snkrdunk"]["due_work"]["first_collection_pending"], 0)
+        self.assertEqual(result["snkrdunk"]["deadline_compliance"], "not_met")
+
+    def test_check_older_than_24h_is_still_degraded(self):
+        now = "2026-11-09T08:26:00+00:00"
+        run = healthy("snkrdunk")
+        run["identity"].update(
+            started_at="2026-11-09T08:20:00+00:00",
+            finished_at="2026-11-09T08:25:00+00:00",
+        )
+        run["freshness"].update(deadline_misses=1, never_checked=0, never_checked_overdue=0)
+        rows = [dict(
+            source="snkrdunk", shard=None, eligible=1, due=1, overdue=1, quarantined=0,
+            never_checked=0, never_checked_overdue=0, first_collection_pending=0,
+            over_24h=1, between_23_24h=0, backoff=0, expired_claims=0,
+        )]
+        budget = [{
+            "name": "snkrdunk", "enabled": True, "request_limit": 3100, "window_seconds": 1800,
+            "window_started_at": "2026-11-09T08:00:00+00:00", "used_requests": 0,
+            "reserved_requests": 0, "permanent_pause": False, "reservation_mismatch": False,
+            "open_reservations": 0,
+        }]
+        result = health.aggregate(rows, [run], budget, now)
+        self.assertEqual(result["snkrdunk"]["status"], "DEGRADED")
+        self.assertIn("due_work_deficit", result["snkrdunk"]["reasons"])
+        self.assertIn("deadline_misses", result["snkrdunk"]["reasons"])
+
+    def test_identity_refusal_stays_degraded_beside_pending_collection(self):
+        run = healthy("snkrdunk")
+        run["failure"]["identity"] = 1
+        run["freshness"].update(never_checked=1, never_checked_overdue=0, deadline_misses=0)
+        result = health.classify(run)
+        self.assertEqual(result["status"], "DEGRADED")
+        self.assertIn("identity", result["reasons"])
+        self.assertNotIn("never_checked", result["reasons"])
+        self.assertNotIn("never_checked_overdue", result["reasons"])
 
     def test_json_schema_stays_in_sync(self):
         schema = json.loads(

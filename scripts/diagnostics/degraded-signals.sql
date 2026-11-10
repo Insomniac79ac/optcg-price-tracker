@@ -3,9 +3,12 @@
 -- by_source_state
 with e as ({{ELIGIBLE}})
 select source, coalesce(state, 'unplanned') state, count(*) n,
-  count(*) filter (where checked_at is null or checked_at < now() - interval '24 hours') overdue,
+  count(*) filter (where coalesce(checked_at, mapped_at) < now() - interval '24 hours'
+    or (checked_at is null and mapped_at is null)) overdue,
   count(*) filter (where checked_at is null) never_checked,
-  count(*) filter (where checked_at < now() - interval '24 hours') over_24h,
+  count(*) filter (where checked_at is null and mapped_at >= now() - interval '24 hours') first_collection_pending,
+  count(*) filter (where coalesce(checked_at, mapped_at) < now() - interval '24 hours'
+    or (checked_at is null and mapped_at is null)) over_24h,
   count(*) filter (where retry_not_before_at > now()) backoff
 from e group by 1, 2 order by 1, 2;
 
@@ -25,7 +28,8 @@ from e join freshness_work w on w.id = e.work_id where e.state = 'blocked' group
 -- overdue_not_blocked
 with e as ({{ELIGIBLE}})
 select source, count(*) n from e where coalesce(state, '') <> 'blocked'
-  and (checked_at is null or checked_at < now() - interval '24 hours') group by 1 order by 1;
+  and (coalesce(checked_at, mapped_at) < now() - interval '24 hours'
+    or (checked_at is null and mapped_at is null)) group by 1 order by 1;
 
 -- old_vs_new_overdue
 -- One row per source. old_overdue is the current rule: no successful check, or the

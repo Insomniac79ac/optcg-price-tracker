@@ -202,6 +202,7 @@ def execution(
                     successful_checks=facts["listed"] + facts["no_listing"],
                     deadline_misses=sum(r["overdue"] for r in relevant),
                     never_checked=sum(r["never_checked"] for r in relevant),
+                    never_checked_overdue=sum(r["never_checked_overdue"] for r in relevant),
                     backoff=sum(r["backoff"] for r in relevant),
                     retries=sum(r["retries"] for r in relevant),
                 )

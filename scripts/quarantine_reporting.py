@@ -5,9 +5,9 @@ their count and oldest age always visible, and are excluded from overdue work an
 freshness deadline compliance. No threshold, budget or target changes; real overdue
 work still fails every check.
 
-Tooling only. The shared aggregate (`app.services.operational_health`) and its SQL
-are collector runtime inputs, so they are not changed; this module adjusts their
-inputs and output inside the state tooling. It is not imported by any collector.
+Tooling only. It adjusts the shared aggregate's inputs and output inside the
+state tooling so quarantined work stays beside the deadline, not inside it. It is
+not imported by any collector.
 
 Fail closed: without the per-item quarantine list (older evidence), or when the list
 disagrees with the authoritative per-shard `quarantined` count, nothing is excluded
@@ -26,11 +26,11 @@ QUARANTINE_SQL = (
     "with e as ("
     + ELIGIBLE
     + """) select e.source, case when e.source='yuyutei' then e.shard else null end shard,
- e.checked_at, w.updated_at since
+ e.checked_at, e.mapped_at, w.updated_at since
  from e join freshness_work w on w.id=e.work_id where e.state='blocked'
  order by e.source, e.mapping_id"""
 )
-ITEM_FIELDS = ("source", "shard", "checked_at", "since")
+ITEM_FIELDS = ("source", "shard", "checked_at", "mapped_at", "since")
 QUARANTINE_COLUMNS = ("quarantined", "quarantined_never_successfully_checked",
                       "quarantined_check_older_than_24h", "quarantined_oldest_since")
 ALIASES = (("yuyutei", "yuyu"), ("snkrdunk", "snkrdunk"))
@@ -48,12 +48,26 @@ def _hours(now, then):
 
 
 def _overdue(item, at):
-    return item["checked_at"] is None or item["checked_at"] < at - timedelta(hours=24)
+    """Deadline anchor: last successful check, else mapping created_at.
+
+    No anchor (older evidence, or a row with neither time) stays overdue. A
+    never-checked mapping is overdue only 24h after it was created.
+    """
+    anchor = item["checked_at"] if item["checked_at"] is not None else item.get("mapped_at")
+    if anchor is None:
+        return True
+    return anchor < at - timedelta(hours=24)
 
 
 def _items(raw):
     return [
-        {"source": i["source"], "shard": i["shard"], "checked_at": _at(i["checked_at"]), "since": _at(i["since"])}
+        {
+            "source": i["source"],
+            "shard": i["shard"],
+            "checked_at": _at(i["checked_at"]),
+            "mapped_at": _at(i.get("mapped_at")),
+            "since": _at(i["since"]),
+        }
         for i in raw
     ]
 
@@ -91,12 +105,13 @@ def actionable_due_rows(due_rows, items, now):
     for row in rows:
         mine = [i for i in items if i["source"] == row["source"] and i["shard"] == row["shard"]]
         overdue = [i for i in mine if _overdue(i, now)]
-        older = [i for i in overdue if i["checked_at"] is not None]
         due = [i for i in mine if i["checked_at"] is None or i["checked_at"] <= now - timedelta(hours=23)]
-        between = [i for i in due if i not in overdue]
-        for key, n in (("due", len(due)), ("overdue", len(overdue)), ("over_24h", len(older)),
+        # between_23_24h is a successful check in that hour, not a young never-checked mapping.
+        between = [i for i in due if i["checked_at"] is not None and i not in overdue]
+        for key, n in (("due", len(due)), ("overdue", len(overdue)), ("over_24h", len(overdue)),
                        ("between_23_24h", len(between)),
-                       ("never_checked", sum(i["checked_at"] is None for i in mine))):
+                       ("never_checked", sum(i["checked_at"] is None for i in mine)),
+                       ("never_checked_overdue", sum(i["checked_at"] is None and _overdue(i, now) for i in mine))):
             if row.get(key) is not None:
                 row[key] = max(0, row[key] - n)
         row["quarantined_excluded"] = row.get("quarantined") or 0
@@ -123,7 +138,9 @@ def actionable_run(run, items):
         and i["since"] is not None and i["since"] <= started
     ]
     for key, n in (("deadline_misses", sum(_overdue(i, started) for i in mine)),
-                   ("never_checked", sum(i["checked_at"] is None for i in mine))):
+                   ("never_checked", sum(i["checked_at"] is None for i in mine)),
+                   ("never_checked_overdue", sum(
+                       i["checked_at"] is None and _overdue(i, started) for i in mine))):
         if freshness.get(key) is not None:
             freshness[key] = max(0, freshness[key] - n)
     return run
@@ -166,10 +183,14 @@ def freshness(rows, now):
         if q is None:
             for key in QUARANTINE_COLUMNS:
                 r.pop(key, None)
+            r.pop("quarantined_first_collection_pending", None)
         else:
             since = _at(r.get("quarantined_oldest_since"))
             r["actionable_never_successfully_checked"] = r["never_successfully_checked"] - r["quarantined_never_successfully_checked"]
             r["actionable_check_older_than_24h"] = r["check_older_than_24h"] - r["quarantined_check_older_than_24h"]
+            q_pending = r.pop("quarantined_first_collection_pending", None)
+            if r.get("first_collection_pending") is not None:
+                r["actionable_first_collection_pending"] = r["first_collection_pending"] - (q_pending or 0)
             r["quarantine"] = {
                 "count": q,
                 "never_successfully_checked": r.pop("quarantined_never_successfully_checked"),
@@ -183,10 +204,25 @@ def freshness(rows, now):
     return out
 
 
+def _grace(row):
+    """Never-checked mappings still inside 24h of creation.
+
+    Older evidence has no such count: zero, so a never-checked row stays a miss.
+    """
+    if "actionable_first_collection_pending" in row:
+        return row["actionable_first_collection_pending"] or 0
+    if row.get("first_collection_pending") is not None:
+        return row["first_collection_pending"] or 0
+    return 0
+
+
 def deficit(by_source):
-    """True when actionable (non-quarantined) work misses the 24 h target."""
+    """True when actionable (non-quarantined) work misses the 24 h target.
+
+    A never-checked mapping created less than 24h ago is first collection, not a miss.
+    """
     return any(
-        r.get("actionable_never_successfully_checked", r["never_successfully_checked"])
+        (r.get("actionable_never_successfully_checked", r["never_successfully_checked"]) - _grace(r)) > 0
         or r.get("actionable_check_older_than_24h", r["check_older_than_24h"])
         for r in by_source.values()
     )

@@ -35,6 +35,12 @@ def summary(snapshot, evidence, health):
             "blockers": [b["id"] for b in snapshot["blockers"]],
             "quarantined_refresh_work": quarantined and {
                 "count": quarantined["count"], "oldest_blocked_since": quarantined["oldest_blocked_since"]},
+            "first_collection_pending": {
+                alias: ((snapshot.get("operational_health") or {}).get(alias) or {}).get("due_work", {}).get(
+                    "first_collection_pending") or 0
+                for alias in ("yuyu", "snkrdunk")
+                if alias in (snapshot.get("operational_health") or {})
+            },
             "operational_health": {k: snapshot["operational_health"][k]["status"]
                                    for k in ("yuyu", "snkrdunk") if k in snapshot["operational_health"]},
             "raw_health_actions": len(health["mission_actions"]),
