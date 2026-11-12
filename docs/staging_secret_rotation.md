@@ -49,6 +49,7 @@ a PR or a log.
 | 9 | Sentry DSN | Vercel / Railway | error reports (lowest risk) |
 | 10 | `ADMIN_LOGIN_PASSWORD_HASH` (admin sign-in password) | Railway `optcg-price-tracker` | api admin login |
 | 11 | `STAGING_VERCEL_READ_TOKEN` | GitHub, Environment `Staging-delivery` | CI deliveries and Verify (Vercel reads) |
+| 12 | `AUTH_GOOGLE_SECRET` (Google sign-in client secret; `AUTH_GOOGLE_ID` is not secret and does not change) | Vercel staging project | website Google sign-in |
 
 ### 1. Railway project token
 
@@ -140,6 +141,21 @@ It lives in GitHub, not Railway, so rotate it on a GitHub or Vercel incident. Cr
 project-scoped, read-only Vercel token (never an account or team token; scope rule in
 [agent/STAGING_DELIVERY.md](agent/STAGING_DELIVERY.md)), update the `Staging-delivery` environment
 secret in GitHub, delete the old token in Vercel. Check: the next Verify staging merge passes.
+
+### 12. Google sign-in client secret (`AUTH_GOOGLE_SECRET`)
+
+Google lets one OAuth client hold two client secrets at once, so sign-in keeps working during the
+change. Rotating this secret alone signs nobody out (item 5, `AUTH_SECRET`, does).
+
+1. In Google Cloud, open the staging OAuth client (the one whose client ID is in `AUTH_GOOGLE_ID`)
+   and add a new client secret. Copy it once. Leave `AUTH_GOOGLE_ID` and the authorised redirect
+   URIs as they are: both staging hosts' `/api/auth/callback/google` URLs stay listed.
+2. Vercel → staging project → **Settings** → **Environment Variables**: `AUTH_GOOGLE_SECRET` on every
+   row that holds it, ticking **Sensitive** when saving. Then **Deployments** → top entry → ⋮ →
+   **Redeploy**.
+3. Check: `https://staging.cardpirate.app/api/auth/providers` still lists `google`, and a real Google
+   sign-in on staging completes.
+4. Only after the check passes: disable, then delete, the old client secret in Google Cloud.
 
 ## Afterwards
 
