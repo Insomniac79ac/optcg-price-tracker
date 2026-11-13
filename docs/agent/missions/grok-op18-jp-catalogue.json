@@ -84,5 +84,5 @@
       "observation_window": "The catalogue-import dry run for scope op-18, then official-series-index and web-smoke after the apply."
     }
   },
-  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  "diff_sha256": "50f3ce5023aa8925c761efbd2380c78a6933aaed2966be47dbd1cc7d3853c849"
 }
