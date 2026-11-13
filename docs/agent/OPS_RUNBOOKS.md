@@ -251,6 +251,9 @@ catalogue-gap request (owner 2026-10-26).
    by rule. `report_only` scopes (`promos-limited-measure`) never import. Family batches:
    `flagship-battle`, `standard-battle`, `promotion-packs`, `premium-card-collections`,
    `magazines`, `events-and-prizes`, `other-limited`, `family-deck-set`.
+   Coded set scopes: `eb-05` (550205) and `op-18` (550118, Mission 5 #274; series id from
+   `official-series-index` run 43379261767, 119 Bandai entries on 2026-11-13; the import leaves
+   the release date unset, it is set by its own data migration).
 2. Capture: a fresh Bandai JP snapshot in the run directory, every six-digit series page plus the
    images of the scope's entries only; with uncoded products, also Bandai's Asia-EN picker and
    every one of its uncoded series pages (at most six; any failure refuses, so a missing page can

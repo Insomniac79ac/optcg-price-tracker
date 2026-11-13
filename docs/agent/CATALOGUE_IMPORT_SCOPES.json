@@ -9,6 +9,13 @@
       ],
       "uncoded_products": []
     },
+    "op-18": {
+      "note": "Mission 5 (#274): OP-18 ブースターパック 神の支配 (coded, series 550118). Series id and 119 Bandai entries read by ops-readonly official-series-index run 43379261767 (2026-11-13 06:32Z). Release date is not set by the import (separate migration).",
+      "series": [
+        "550118"
+      ],
+      "uncoded_products": []
+    },
     "family-deck-set": {
       "note": "Phase 2: Family Deck Set (series 550701), established through the single-product catch-all amendment (owner 2026-10-26).",
       "series": [],

@@ -118,6 +118,15 @@ class Scope(unittest.TestCase):
             ci.resolve_scope(name, scopes)
         self.assertEqual(ci.resolve_scope("eb-05", scopes)["series"], ["550205"])
 
+    def test_committed_op18_scope_is_exactly_series_550118(self):
+        # Mission 5 (#274): the id Bandai's picker gave (ops-readonly official-series-index run
+        # 43379261767), no uncoded product and no other series, so the import cannot widen.
+        scope = ci.resolve_scope("op-18", ci.load_scopes())
+        self.assertEqual(scope["series"], ["550118"])
+        self.assertFalse(scope.get("uncoded_products"))
+        self.assertFalse(scope.get("uncoded_series"))
+        self.assertFalse(scope.get("report_only"))
+
     def test_unknown_missing_and_malformed_scopes_refuse(self):
         for name in ("", "nope", "bad"):
             with self.assertRaises(common.Refused):
