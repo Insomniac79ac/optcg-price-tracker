@@ -1,278 +1,47 @@
--- Yuyu-Tei mapped URLs per print: for the CP price checker to compare a print's Yuyu-Tei headline
--- with its source page. Read-only. Population: Yuyu-Tei mappings that price a print today
--- (active, current, approved, card_print_id set), one row per mapping, ordered by mapping id.
--- The runner returns at most 500 rows per statement, so the list is split into pages of 500
--- (urls_01 .. urls_12, up to 6,000 mappings); totals.mappings says how many exist, so a reader
--- can tell when the pages do not cover them all. price_at and checked_at are the raw (ungraded)
--- refresh state of that mapping, or null when it has none.
+-- Yuyu-Tei mapped URL per print, for one fixed sample of 50 prints: the CP price checker's daily
+-- sample of 13 Nov 2026 (content-pipeline cardpirate/price-checks/2026-11-13.md, section
+-- "Sample rows (50 ...)", commit 22f529a), so the checker can open the Yuyu-Tei page a print's
+-- headline comes from. Read-only. One statement, exactly one row per sample print (50 rows),
+-- in the checker's table order (pos). Owner direction 13 Nov 2026: the result must fit the
+-- 18,000-character inline summary (scripts/ops/diagnostic.py INLINE_CHARS), because bots cannot
+-- fetch artifacts. To keep that bound for any data, a URL longer than 120 characters is not
+-- returned (source_url null, url_chars says how long it is); observed Yuyu-Tei card URLs are
+-- 44 to 50 characters (https://yuyu-tei.jp/sell/opc/card/<slug>/<id>).
+-- mapping_id and source_url are the lowest-id current Yuyu-Tei mapping that prices the print
+-- (active, not superseded, approved); mappings counts them (more than 1 is itself a finding;
+-- 0 means no current Yuyu-Tei mapping, mapping_id and source_url null). price_at and
+-- checked_at are that mapping's raw (ungraded) refresh state, or null when it has none.
+-- Release code is left out (the checker's table has it) so the bound holds at the schema's
+-- maximum column lengths. Changing the sample is a reviewed PR to this file.
 
--- totals
-with ys as (select id from sources where name = 'yuyutei')
-select count(*) mappings, count(distinct m.card_print_id) prints, 12 * 500 page_capacity
-from source_card_mappings m
-where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-  and m.review_status = 'approved' and m.card_print_id is not null;
-
--- urls_01
-with ys as (select id from sources where name = 'yuyutei'),
+-- sample
+with s(print_id, pos) as (values
+  (3867,1),(6774,2),(5930,3),(6015,4),(5057,5),(5238,6),(5715,7),(5097,8),(3214,9),(6430,10),
+  (4413,11),(4907,12),(4352,13),(4267,14),(4060,15),(3854,16),(4306,17),(3300,18),(6864,19),(6955,20),
+  (3132,21),(6883,22),(6021,23),(2,24),(5736,25),(5541,26),(6086,27),(5575,28),(5913,29),(5562,30),
+  (5806,31),(5777,32),(5845,33),(5585,34),(5879,35),(6808,36),(5963,37),(6052,38),(6141,39),(5886,40),
+  (5797,41),(5566,42),(5351,43),(5335,44),(4805,45),(6724,46),(5102,47),(4894,48),(6580,49),(3723,50)),
+ys as (select id from sources where name = 'yuyutei'),
 ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
+  select m.card_print_id print_id, count(*) mappings, min(m.id) mapping_id
   from source_card_mappings m
   where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
+    and m.review_status = 'approved' and m.card_print_id in (select print_id from s)
+  group by 1),
 st as (
   select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
     max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
   from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 1 and 500)
+  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym)
   group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
+select s.pos, s.print_id, c.card_code, p.official_asset_variant variant,
+  coalesce(ym.mappings, 0) mappings, ym.mapping_id,
+  case when length(m.source_url) <= 120 then m.source_url end source_url,
+  length(m.source_url) url_chars, st.availability, st.price_at, st.checked_at
+from s
+left join card_prints p on p.id = s.print_id
+left join canonical_cards c on c.id = p.canonical_card_id
+left join ym on ym.print_id = s.print_id
+left join source_card_mappings m on m.id = ym.mapping_id
 left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 1 and 500
-order by ym.rn;
-
--- urls_02
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 501 and 1000)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 501 and 1000
-order by ym.rn;
-
--- urls_03
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 1001 and 1500)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 1001 and 1500
-order by ym.rn;
-
--- urls_04
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 1501 and 2000)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 1501 and 2000
-order by ym.rn;
-
--- urls_05
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 2001 and 2500)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 2001 and 2500
-order by ym.rn;
-
--- urls_06
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 2501 and 3000)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 2501 and 3000
-order by ym.rn;
-
--- urls_07
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 3001 and 3500)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 3001 and 3500
-order by ym.rn;
-
--- urls_08
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 3501 and 4000)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 3501 and 4000
-order by ym.rn;
-
--- urls_09
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 4001 and 4500)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 4001 and 4500
-order by ym.rn;
-
--- urls_10
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 4501 and 5000)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 4501 and 5000
-order by ym.rn;
-
--- urls_11
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 5001 and 5500)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 5001 and 5500
-order by ym.rn;
-
--- urls_12
-with ys as (select id from sources where name = 'yuyutei'),
-ym as (
-  select m.id mapping_id, m.card_print_id print_id, m.source_url,
-    row_number() over (order by m.id) rn
-  from source_card_mappings m
-  where m.source_id = (select id from ys) and m.is_active and m.superseded_at is null
-    and m.review_status = 'approved' and m.card_print_id is not null),
-st as (
-  select w.source_card_mapping_id mapping_id, string_agg(distinct ps.availability, ',') availability,
-    max(ps.last_valid_price_observed_at) price_at, max(ps.last_successfully_checked_at) checked_at
-  from freshness_work w join freshness_price_states ps on ps.work_id = w.id and ps.price_category = 'raw'
-  where w.kind = 'refresh' and w.source_card_mapping_id in (select mapping_id from ym where rn between 5501 and 6000)
-  group by 1)
-select ym.print_id, c.card_code, p.official_asset_variant variant, rp.official_code release_code,
-  ym.mapping_id, ym.source_url, st.availability, st.price_at, st.checked_at
-from ym join card_prints p on p.id = ym.print_id join canonical_cards c on c.id = p.canonical_card_id
-left join release_products rp on rp.id = p.release_product_id
-left join st on st.mapping_id = ym.mapping_id
-where ym.rn between 5501 and 6000
-order by ym.rn;
+order by s.pos;
