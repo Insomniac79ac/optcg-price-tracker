@@ -149,9 +149,10 @@ tests; docs outside `docs/agent/`. The exact allowlists live in
 - Disk minimum 3 GB.
 - Still mandatory: 0 collector runtime inputs (import-graph check), relevant
   suites green, no secret values printed, additive migrations only with a staging
-  Postgres backup under 24 h (checked automatically before arming), and one
-  independent review pass for anything touching auth or security, recorded as an
-  `Independent security review: ...` line in the PR description.
+  Postgres backup under 24 h (checked automatically before arming). Anything
+  touching auth, security or the build supply chain is not a product PR at all:
+  it is DATA lane with a mission (owner, 2026-11-14), until an approval the PR
+  author can't create exists (SEC-001).
 - RED still overrides: a product PR never changes production, pricing,
   identity, Market Value/Index meaning, or auth/security/secrets policy.
 
