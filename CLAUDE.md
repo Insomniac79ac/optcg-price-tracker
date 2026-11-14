@@ -19,8 +19,9 @@ CI decides the lane from the diff (`scripts/product_lane.py`, run by `policy-gat
 
 - **PRODUCT**: `apps/web` (not `vercel.json`), `services/api/tests`, docs outside `docs/agent/`
   (plus `docs/agent/PRODUCT_LOG.md`), allowlisted collector-facing API modules, additive product
-  migrations. No mission manifest; append a line to `docs/agent/PRODUCT_LOG.md`. Auth/security paths
-  need an `Independent security review: ...` line in the PR description.
+  migrations. No mission manifest; append a line to `docs/agent/PRODUCT_LOG.md`. Auth/security and
+  build supply chain paths are always DATA (owner, 2026-11-14) until an approval the PR author can't
+  create exists (SEC-001); a review line in the PR description no longer changes the lane.
 - **DATA**: everything else, including collectors and their import graph, identity, prices, Market
   Value/Index, `scripts/`, `docs/agent/`, `.github/`, `.claude/` and this file. Adds exactly one
   mission file `docs/agent/missions/<branch, / as ->.json` for the PR's own diff
