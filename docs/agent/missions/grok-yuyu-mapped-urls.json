@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "mission": "Read-only diagnostic yuyu-mapped-urls (#286): for one fixed sample of 50 prints, the CP price checker's daily sample of 2026-11-13, return per print the current Yuyu-Tei mapping (active, not superseded, approved; lowest id plus a count) and its source URL, with the mapping's raw refresh state. One statement, exactly 50 rows, sized to fit the 18,000-character inline summary (URLs over 120 characters are returned as a length only). No schema change, no row written, no source request, no collector upload. The ops-readonly choice-list line is the owner's edit.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/diagnostics/yuyu-mapped-urls.sql"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "New read-only diagnostic file with one SELECT/WITH statement over sources, source_card_mappings, card_prints, canonical_cards, freshness_work and freshness_price_states. Reads no user, account, session or token table."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly db-diagnostic"
+      ],
+      "routes": [
+        "Read-only staging Postgres session (default_transaction_read_only=on)"
+      ],
+      "dependencies": [
+        "staging at 1c584a18ae64",
+        "owner adds yuyu-mapped-urls to the ops-readonly.yml diagnostic choice list"
+      ],
+      "deployment_impact": "None: a new read-only report. No collector upload and no schema change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 2
+    },
+    "recovery": {
+      "artifact": "1c584a18ae64c0bc70f7a2c304eb63f3c28fd611",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "The statement errors, returns other than 50 rows, or lands in rows_omitted instead of the inline summary.",
+      "backup": "Not applicable: no schema change and no row written.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/diagnostics/yuyu-mapped-urls.sql"
+      ],
+      "observation_window": "Available on the first ops-readonly db-diagnostic yuyu-mapped-urls run after merge, once the owner has added the choice-list line."
+    }
+  },
+  "diff_sha256": "13cc21678d01a43e0c8eaab58fb9095edea86f688adb525b3adcb67f2f77d13a"
+}
