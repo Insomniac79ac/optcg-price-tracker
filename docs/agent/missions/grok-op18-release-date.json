@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Mission 5 (#274) follow-up, OP-18 JP release date (CEO option 1 approved 2026-11-11 21:37; continues as its own DATA step, CEO 2026-11-13 22:49). The OP-18 release product (bandai_jp, release_product_id 290 on staging) was created by catalogue-import apply run 43434421865 without a date, so the website shows released_on null. Data migration cb7419af37e9 on 001d92ba8eb9 sets released_on 2026-11-21 and release_date_source DATE_VERIFIED_SINGLE_SOURCE on that one product only when it is still undated, in the same style as c4e9a2b7816d (catalogue plus official code match; no insert or delete). Frozen input docs/evidence/op18-release-date-2026-11-12.json: Bandai JP product page read 2026-11-12, 2026-11-13 and 2026-11-14, each 2026年11月21日(土). apply_migration.py allowlists cb7419af37e9 on 001d92ba8eb9. Order after merge: owner approves apply-migration dry run, then the apply; then a fleet PR records revision cb7419af37e9.",
+  "classification": "AMBER",
+  "impacts": [
+    {
+      "files": [
+        "services/api/alembic/versions/cb7419af37e9_op18_release_date.py",
+        "docs/evidence/op18-release-date-2026-11-12.json"
+      ],
+      "effects": [
+        "migration"
+      ],
+      "reason": "Data-only migration: updates at most one release_products row (bandai_jp OP-18, released_on null) to 2026-11-21 with source DATE_VERIFIED_SINGLE_SOURCE; downgrade clears only that exact value. No schema change. Applied after merge only by the owner-approved apply-migration runbook."
+    },
+    {
+      "files": [
+        "scripts/ops/apply_migration.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "apply-migration allowlist gains the pair cb7419af37e9 on 001d92ba8eb9. No secret, gate, permission or timeout change."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_apply_migration.py",
+        "services/api/tests/test_op18_release_date.py",
+        "services/api/tests/test_op18_release_date_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Allowlist pair; upgrade dates only the undated OP-18 product, leaves dated or other products alone, downgrade reverts only its own value (Postgres test runs in CI)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "release_products (one row: bandai_jp OP-18)",
+        "ops-write apply-migration"
+      ],
+      "routes": [
+        "/cards?release_product_id=290 and the release list read released_on; no source route"
+      ],
+      "dependencies": [
+        "staging 2d541710 or later; no open PR must merge first",
+        "then apply-migration cb7419af37e9 dry run and apply (owner), then fleet revision PR"
+      ],
+      "deployment_impact": "API, market-index-snapshot and official-images-mirror rebuild from Git (API image). No collector release, no collector pin or evidence refresh. Until apply-migration runs, staging stays on revision 001d92ba8eb9 and OP-18 stays undated, as today.",
+      "database_writes": 1,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "2d541710a2b88a9e735bdf6078c9c23507c4637c",
+      "procedure": "Native revert PR with its own mission file before apply; after apply, Alembic downgrade to 001d92ba8eb9 clears only this value (separate owner decision).",
+      "trigger": "Bandai changes the JP date before release, or the apply dry run shows any row other than OP-18 changing.",
+      "backup": "Railway Postgres backup under 24 h (required by apply-migration).",
+      "validation": [
+        "services/api/tests/test_op18_release_date.py",
+        "services/api/tests/test_op18_release_date_postgres.py",
+        "scripts/tests/test_ops_apply_migration.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/alembic/versions/cb7419af37e9_op18_release_date.py"
+      ],
+      "observation_window": "apply-migration dry run and apply runs; then /cards?release_product_id=290 shows released_on 2026-11-21 and chronology_available true."
+    }
+  },
+  "diff_sha256": ""
+}
