@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "Web dependency pass (owner t363u 2026-11-14 21:02 MYT, CP security answer 2026-11-13 23:48 MYT): @sentry/nextjs 10.75.0 -> 10.78.0 (exact pin, latest 10.x; clears a critical advisory fixed in 10.75.2 and a transitive bundler-plugin advisory that 10.75.2 would not clear), and the three leftover lockfile packages restored: browserslist 4.28.5 -> 4.29.5, source-map-js 1.2.1 -> 1.2.2, baseline-browser-mapping 2.10.42 -> 2.11.37. The lockfile changes only those and what they pull in. No 11.x, no other package moved on purpose.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
