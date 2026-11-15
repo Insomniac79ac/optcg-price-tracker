@@ -44,8 +44,11 @@ def verify_collector_token(token: str, secret: str) -> dict:
         if not isinstance(audiences, list) or AUDIENCE not in audiences:
             raise jwt.InvalidAudienceError("Invalid audience")
     exp, iat = payload["exp"], payload["iat"]
-    if isinstance(exp, bool) or isinstance(iat, bool):
-        raise jwt.InvalidTokenError("exp and iat must be numbers")
+    # PyJWT accepts a numeric string or a bool for exp and iat; refuse them here
+    # so the subtraction below cannot raise TypeError (a 500 instead of a 401).
+    for value in (exp, iat):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise jwt.InvalidTokenError("exp and iat must be numbers")
     if exp - iat > MAX_LIFETIME_SECONDS:
         raise jwt.InvalidTokenError("Token lifetime exceeds the maximum")
     if exp <= iat:

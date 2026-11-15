@@ -91,6 +91,15 @@ def test_other_algorithms_and_wrong_secret_are_refused():
         verify_collector_token(_token(_claims(), secret="another-secret-of-enough-length!!"), SECRET)
 
 
+@pytest.mark.parametrize("claim", ["exp", "iat"])
+@pytest.mark.parametrize("kind", ["numeric_string", "bool"])
+def test_non_numeric_exp_or_iat_is_refused_not_a_server_error(claim, kind):
+    now = int(time.time())
+    good = {"exp": now + 300, "iat": now}[claim]
+    value = str(good) if kind == "numeric_string" else True
+    with pytest.raises(jwt.InvalidTokenError):
+        verify_collector_token(_token(_claims(**{claim: value})), SECRET)
+
 def test_rate_limit_key_refuses_what_auth_refuses(monkeypatch):
     from starlette.requests import Request
 
