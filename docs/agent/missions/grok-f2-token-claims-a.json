@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "mission": "F2 plus F3 mission, delivery (a) of three (owner decision t244u 2026-11-11 23:15 MYT; CP security answer 2026-11-13 23:48 MYT). API tolerant step: one shared collector-token verifier (services/api/app/core/collector_token.py) used by require_current_user and the /me rate-limit key, requiring exp, iat and sub, HS256 only, 30 s leeway, a 10 minute lifetime cap and refusing a future iat; iss card-pirate-web and aud card-pirate-api checked only when present (delivery (b) adds them on the website, delivery (c) requires them). F3: startup warnings (no value, no length) for a weak or placeholder API_JWT_SECRET and a placeholder ADMIN_TOKEN, warn-only outside production so staging stays up; boot refusal comes in delivery (c). Does not protect against a leaked secret.",
+  "target": "staging",
+  "classification": "GREEN",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/core/collector_token.py",
+        "services/api/app/auth.py",
+        "services/api/app/core/rate_limit.py",
+        "services/api/app/core/env_validation.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Collector bearer tokens are verified in one place. Website tokens today carry sub, iat and exp (apps/web/src/lib/collectorApi.ts mintApiToken 300 s, mintProbeToken 60 s), so every token a real user or the delivery probe sends is still accepted; tokens with no exp or iat, a lifetime over 600 s, a future iat, a wrong iss or aud, or another algorithm are refused. Env validation adds two warn-only checks outside production. Security-relevant enforcement of the owner's t244u decision, no policy change beyond it."
+    },
+    {
+      "files": [
+        "services/api/tests/_auth_helpers.py",
+        "services/api/tests/test_auth_user.py",
+        "services/api/tests/test_collector_token.py",
+        "services/api/tests/test_env_validation.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Test tokens now carry iat and exp like the website's; new regression tests for every refusal, the rate-limit path refusing what auth refuses, and the F3 warnings carrying neither value nor length."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Railway staging API (native Git deploy)"
+      ],
+      "routes": [
+        "Every route behind require_current_user or require_current_user_optional; the /me rate-limit key"
+      ],
+      "dependencies": [
+        "staging at 191377b5 (after #292)"
+      ],
+      "deployment_impact": "The API rebuilds through its GitHub watch because services/api changed. No collector runtime input changed (changed_runtime_inputs for snkrdunk and yuyutei against component 16e41d4c: import-graph, none of these files). No schema change, no website change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "191377b54af6317720ead70131fcf777006b33c6",
+      "procedure": "Native revert PR of this merge with its own docs/agent/missions/<name>.json; the API returns to decoding with signature and optional exp only.",
+      "trigger": "Collector sign-in or /me requests return 401 for real website tokens, or the delivery's collector_token_check fails after merge.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "services/api/tests/test_collector_token.py",
+        "services/api/tests/test_auth_user.py",
+        "services/api/tests/test_rate_limit.py",
+        "services/api/tests/test_env_validation.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "backend-tests"
+      ],
+      "post_change": [
+        "services/api/app/core/collector_token.py",
+        "services/api/app/auth.py",
+        "services/api/app/core/rate_limit.py"
+      ],
+      "observation_window": "This merge's staging delivery verify, including collector_token_check (the website-signed probe accepted by the API)."
+    }
+  },
+  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+}
