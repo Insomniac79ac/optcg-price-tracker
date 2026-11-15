@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "Read-only diagnostic yuyu-mapped-urls (#286): for one fixed sample of 50 prints, the CP price checker's daily sample of 2026-11-13, return per print the current Yuyu-Tei mapping (active, not superseded, approved; lowest id plus a count) and its source URL, with the mapping's raw refresh state. One statement, exactly 50 rows, sized to fit the 18,000-character inline summary (URLs over 120 characters are returned as a length only). No schema change, no row written, no source request, no collector upload. The ops-readonly choice-list line is the owner's edit.",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -26,6 +26,15 @@
         "state_observation"
       ],
       "reason": "New read-only diagnostic file with one SELECT/WITH statement over sources, source_card_mappings, card_prints, canonical_cards, freshness_work and freshness_price_states. Reads no user, account, session or token table."
+    },
+    {
+      "files": [
+        ".github/workflows/ops-readonly.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Owner added yuyu-mapped-urls to the ops-readonly diagnostic choice list so it matches the SQL files. No secret, gate, permission or timeout change."
     }
   ],
   "safeguards": {
@@ -66,5 +75,5 @@
       "observation_window": "Available on the first ops-readonly db-diagnostic yuyu-mapped-urls run after merge, once the owner has added the choice-list line."
     }
   },
-  "diff_sha256": "13cc21678d01a43e0c8eaab58fb9095edea86f688adb525b3adcb67f2f77d13a"
+  "diff_sha256": "7d350fbc4541cf6a1888253cf01e9b581e41bb921f8bbdcb43563136d4da8a58"
 }
