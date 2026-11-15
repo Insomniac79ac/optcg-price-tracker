@@ -85,5 +85,5 @@
       "observation_window": "This merge's staging delivery verify, including collector_token_check (the website-signed probe accepted by the API)."
     }
   },
-  "diff_sha256": "412c4ff4ac9143fca7d3da3bc7a14c56141a2e7d19f6ed03c1269fc91024e16e"
+  "diff_sha256": "485c4fef9d594df82d9755d33f83f4b3e235a699e1477774f8b70a419c6076eb"
 }
