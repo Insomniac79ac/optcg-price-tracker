@@ -54,15 +54,16 @@ PRODUCT_API = {
 PRODUCT_TABLES = {"collection_entries", "collection_entry_events", "watchlist_entries",
                   "user_preferences"}
 FK_TARGETS = PRODUCT_TABLES | {"users"}
-# Authentication and security surfaces: product lane, but one independent review
-# pass is mandatory and must be recorded in the PR description.
+# Authentication, security and build supply chain surfaces: always DATA lane (owner
+# decision 2026-11-14). A line in the PR description can't prove a review, because
+# the PR's author writes it, so no text unlocks PRODUCT for these paths. They stay
+# DATA until an approval the author can't create exists (SEC-001).
 SECURITY = re.compile(
     r"auth(?!orit)|session|token|csrf|cors|secret|login|jwt|proxy|security|permission"
     r"|middleware|next\.config|accounts/"
     # Build and supply chain of the web app run with Vercel build variables.
     r"|package(-lock)?\.json$|\.npmrc$|dockerfile|^apps/web/scripts/"
 )
-SECURITY_REVIEW = re.compile(r"^\s*Independent security review:\s*\S+", re.I | re.M)
 # Migration allowlist: the only op.* calls, and the only sa.* constructors.
 CREATE_OPS = {"create_table"}
 EXTEND_OPS = {"add_column", "create_index", "create_unique_constraint", "create_check_constraint"}
@@ -325,9 +326,9 @@ def classify(base, head, pr_body="", *, require_security_review=True):
             reasons.append(f"product migrations: exactly one, on base head {base_heads}, "
                            f"leaving one head (found {new_heads})")
     security = [p for p in files if SECURITY.search(p.lower())]
-    if security and require_security_review and not SECURITY_REVIEW.search(pr_body or ""):
-        reasons.append("auth/security paths need an 'Independent security review: <link or summary>' "
-                       "line in the PR description: " + ", ".join(security))
+    if security and require_security_review:
+        reasons.append("auth/security/supply-chain paths are DATA lane until an approval the PR "
+                       "author can't create exists (SEC-001): " + ", ".join(security))
     result.update(reasons=reasons, migrations=migrations, security_paths=security,
                   security_review_required=bool(security))
     if not reasons:

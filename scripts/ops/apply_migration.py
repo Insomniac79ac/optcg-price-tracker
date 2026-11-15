@@ -28,7 +28,7 @@ from pathlib import Path
 from ops import common
 
 # revision -> the only parent it may be applied on. Adding a pair is a reviewed code change.
-ALLOWED = {"001d92ba8eb9": "7a52e9b48e8a"}
+ALLOWED = {"001d92ba8eb9": "7a52e9b48e8a", "cb7419af37e9": "001d92ba8eb9"}
 MAX_BACKUP_HOURS = 24
 LOCK_TIMEOUT_MS = 5000
 STATEMENT_TIMEOUT_MS = 120000

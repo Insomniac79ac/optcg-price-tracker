@@ -67,7 +67,7 @@ class Refusals(unittest.TestCase):
         return am.run(self.out, **kwargs)
 
     def test_only_the_allowlisted_pair(self):
-        self.assertEqual(am.ALLOWED, {REV: PARENT})
+        self.assertEqual(am.ALLOWED, {REV: PARENT, "cb7419af37e9": REV})
         am.check_pair(REV, PARENT)
         for revision, parent, why in ((PARENT, "", "not allowlisted"), ("", PARENT, "not allowlisted"),
                                       ("001d92ba8eba", PARENT, "not allowlisted"),

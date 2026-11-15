@@ -1,0 +1,33 @@
+{
+  "purpose": "Frozen input for Alembic revision cb7419af37e9 (OP-18 JP release date). Mission 5, issue 274.",
+  "status": "FINAL: Bandai JP product page re-read 2026-11-14 by the CP engineer; the date still matches",
+  "accepted_mapping": [
+    {
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-18",
+      "release_date": "2026-11-21",
+      "classification": "DATE_VERIFIED_SINGLE_SOURCE"
+    }
+  ],
+  "observations": [
+    {
+      "source_url": "https://www.onepiece-cardgame.com/products/op18.html",
+      "observed_text": "ブースターパック 神の支配【OP-18】 発売日 2026年11月21日(土)",
+      "observed_at": "2026-11-12T08:59:00+08:00",
+      "observed_by": "CP release watcher (HTTP read of the official JP product page)"
+    },
+    {
+      "source_url": "https://www.onepiece-cardgame.com/products/op18.html",
+      "observed_text": "ブースターパック 神の支配【OP-18】 発売日 2026年11月21日(土)",
+      "observed_at": "2026-11-13T21:30:00+08:00",
+      "observed_by": "CP engineer (WebFetch of the official JP product page)"
+    },
+    {
+      "source_url": "https://www.onepiece-cardgame.com/products/op18.html",
+      "observed_text": "ブースターパック 神の支配【OP-18】 発売日 2026年11月21日(土)",
+      "observed_at": "2026-11-14T14:41:00+08:00",
+      "observed_by": "CP engineer (WebFetch of the official JP product page)"
+    }
+  ],
+  "single_source_reason": "Only the official JP product page states the JP date. The EN page (November 20, 2026) is a different regional release and is not used."
+}
