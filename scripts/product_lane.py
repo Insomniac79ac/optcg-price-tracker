@@ -23,7 +23,9 @@ import re
 import subprocess
 import sys
 
-MANIFEST = "docs/agent/STAGING_MISSION.json"
+MANIFEST = "docs/agent/STAGING_MISSION.json"  # retired; a revert restores it
+MISSIONS_DIR = "docs/agent/missions/"
+FLEET = "docs/agent/STAGING_FLEET.json"
 PRODUCT_LOG = "docs/agent/PRODUCT_LOG.md"
 API_APP = "services/api/app/"
 MIGRATIONS = "services/api/alembic/versions/"
@@ -102,8 +104,10 @@ def path_reason(path, status):
     p = PurePosixPath(path)
     if p.is_absolute() or ".." in p.parts:
         return "unsafe path"
-    if path == MANIFEST:
+    if path == MANIFEST or path.startswith(MISSIONS_DIR):
         return "declares a data-lane mission manifest"
+    if path == FLEET:
+        return "staging fleet state (delivery and verification input)"
     if path.startswith("apps/web/"):
         if p.name == "vercel.json":
             return "deployment configuration (infrastructure)"

@@ -1,0 +1,7 @@
+# Installed from the repository root (CI and the D1 Dockerfile), like the other collectors.
+./services/source_collector_kit
+sqlalchemy>=2.0
+psycopg[binary]
+pydantic-settings
+pytest
+zstandard==0.25.0

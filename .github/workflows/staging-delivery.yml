@@ -138,13 +138,18 @@ jobs:
           python scripts/staging_delivery_scope.py --merge "$MERGED_SHA" --output docs/agent/evidence/latest-delivery-scope.json || true
           decision=$(jq -r '.decision // "full"' docs/agent/evidence/latest-delivery-scope.json 2>/dev/null || echo full)
           if [ "$decision" != skip ] && [ "$decision" != product ]; then decision=full; fi
-          # Every DATA-lane PR changes the manifest. A full delivery with an
-          # unchanged manifest would replay an earlier mission's rollout/DDL.
-          if [ "$decision" = full ] && git diff --quiet "$MERGED_SHA^1" "$MERGED_SHA" -- docs/agent/STAGING_MISSION.json; then
-            echo "::error::Manifest unchanged but not a documentation or PRODUCT-lane merge; refusing rollout and DDL"
+          # Only the merge's own mission may request a rollout or DDL. A full
+          # delivery needs exactly one added mission file; a mission that was
+          # changed, removed or duplicated, or unreadable fleet state, refuses.
+          none=()
+          if [ "$decision" != full ]; then none=(--allow-none); fi
+          manifest="$RUNNER_TEMP/staging-mission.json"
+          if ! python scripts/staging_mission.py compose --base "$MERGED_SHA^1" --head "$MERGED_SHA" "${none[@]}" --output "$manifest"; then
+            echo "::error::No single valid mission for this $decision merge; refusing rollout and DDL"
             exit 1
           fi
           echo "decision=$decision" >> "$GITHUB_OUTPUT"
+          echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
       - name: Apply reviewed additive RAW dependency migration
         if: steps.scope.outputs.decision == 'full'
         env:
@@ -152,32 +157,36 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
           STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
           MERGED_SHA: ${{ steps.merge.outputs.sha }}
+          MANIFEST: ${{ steps.scope.outputs.manifest }}
         run: |
           pip install -r scripts/staging-migration-requirements.txt
-          python scripts/apply_staging_raw_dependency.py --manifest docs/agent/STAGING_MISSION.json --expected "$MERGED_SHA" --output docs/agent/evidence/latest-raw-dependency-migration.json
+          python scripts/apply_staging_raw_dependency.py --manifest "$MANIFEST" --expected "$MERGED_SHA" --output docs/agent/evidence/latest-raw-dependency-migration.json
       - name: Deploy mission-scoped staging collectors
         if: steps.scope.outputs.decision == 'full'
         env:
           GH_TOKEN: ${{ github.token }}
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
           MERGED_SHA: ${{ steps.merge.outputs.sha }}
-        run: python scripts/deploy_staging_collectors.py --manifest docs/agent/STAGING_MISSION.json --expected "$MERGED_SHA" --output docs/agent/evidence/latest-collector-rollout.json
+          MANIFEST: ${{ steps.scope.outputs.manifest }}
+        run: python scripts/deploy_staging_collectors.py --manifest "$MANIFEST" --expected "$MERGED_SHA" --output docs/agent/evidence/latest-collector-rollout.json
       - name: Verify native Git deployment and regenerate state
         env:
           GH_TOKEN: ${{ github.token }}
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
           STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
           EXPECTED: ${{ steps.merge.outputs.sha }}
+          STAGING_MISSION_MANIFEST: ${{ steps.scope.outputs.manifest }}
         run: |
-          # Dedicated staging environment only. API expectations are mission data.
+          # Dedicated staging environment only. API expectations are mission data
+          # (fleet state plus this merge's mission); --check scripts read the same file.
           python - <<'PY'
           import json, os, subprocess
-          m = json.load(open('docs/agent/STAGING_MISSION.json'))
+          m = json.load(open(os.environ['STAGING_MISSION_MANIFEST']))
           v = dict(m['deployment_verification'])
           scope = json.load(open('docs/agent/evidence/latest-delivery-scope.json'))
           if scope.get('decision') == 'product':
-              # PRODUCT lane: the manifest is an earlier mission's; expect the
-              # merged API and the repository's single Alembic head instead.
+              # PRODUCT lane: no mission; expect the merged API and the
+              # repository's single Alembic head instead of the fleet state's.
               v.update(api_sha=scope['api_sha'], revision=scope['revision'])
           extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
           subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', os.environ['EXPECTED'],

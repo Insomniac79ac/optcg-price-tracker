@@ -85,7 +85,7 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 | 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | F15 owner check; L1 needs a collector release |
 | 20 | Currency selector | planned (later) | RED (invariant amendment) | deferred |
 | 21 | English-edition catalogue | planned (later) | AMBER | deferred |
-| 22 | Per-PR mission files (stop manifest conflicts) | planned (plan only, owner 2026-10-19) | AMBER (policy tooling, `.github/`) | owner go; hold-for-owner |
+| 22 | Per-PR mission files (stop manifest conflicts) | in progress (built, draft PR, delivers last) | AMBER (policy tooling, `.github/`) | queue #180, #179, #178, #181, #182 first; owner merge |
 
 ### 1. RAW coverage to 75%
 
@@ -313,7 +313,12 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
 
 ### 22. Per-PR mission files (stop manifest conflicts)
 
-- **Status: planned, plan only** (owner request 2026-10-19 04:03Z: plan, don't build).
+- **Status: in progress.** Owner GO 2026-10-19 09:24Z: build now, deliver last (after #180, #179,
+  #178, #181 and #182 merge or close), draft with hold-for-owner. The first collector PR on the new
+  layout is the live test: staging-automerge in an allowed collector window, with "Deploy
+  mission-scoped staging collectors" and the delivery verification passing. Built as planned below,
+  plus one rule the plan missed: after a collector delivery, the next merge pins the fleet's
+  component SHAs ([STAGING_DELIVERY.md](STAGING_DELIVERY.md#per-pr-mission-files-2026-10-19)).
 - **Problem.** Every DATA-lane PR edits the one shared `docs/agent/STAGING_MISSION.json`. After each
   merge the next PR has a text conflict on it, and even without one its `diff_sha256` goes stale: the
   hash covers a two-dot diff against the moving `staging` tip, so any merge to `staging` changes it.
@@ -356,7 +361,7 @@ more sources, both sources, zero sources) and the latest Market Value receipt co
   every new branch fails closed, the evaluator rules are unchanged, the first delivery after it is a
   docs PR (scope skip) before any collector PR, recovery is a native revert. Needs hold-for-owner
   (touches `.github/`) and an `Independent security review:` line, since it is policy tooling.
-- **Blocker:** owner go. Not started.
+- **Blocker:** the delivery queue ahead of it.
 
 ### 23. Rollout receipts readable by sessions
 

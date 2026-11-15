@@ -291,7 +291,68 @@ def get_index_change_7d_for_prints(
     # total by construction - one row per print at most.
     snapshot_by_print = {row.card_print_id: row for row in rows}
 
-    return {
+    changes = {
         print_id: _change_for(snapshot_by_print.get(print_id), market_index)
         for print_id, market_index in index_by_print.items()
     }
+    # A source cutover splice (app.services.market_index_splice) is the one way a
+    # source_semantics_version step stays comparable. Consulted only for prints whose
+    # two ends already disagree on that version, so a page with no such print issues
+    # no extra query, and with no splice row nothing changes.
+    crossing = [
+        print_id
+        for print_id, change in changes.items()
+        if change is None
+        and print_id in snapshot_by_print
+        and snapshot_by_print[print_id].source_semantics_version
+        != index_by_print[print_id].source_semantics_version
+    ]
+    if crossing:
+        changes.update(
+            _spliced_changes(db, crossing, snapshot_by_print, index_by_print, today=today)
+        )
+    return changes
+
+
+def _spliced_changes(
+    db: Session,
+    print_ids: list[int],
+    snapshot_by_print: dict[int, MarketIndexSnapshot],
+    index_by_print: dict[int, PrintMarketIndexOut],
+    *,
+    today: date | None,
+) -> dict[int, float | None]:
+    from app.services import market_index_splice as splice_rules
+
+    splices = splice_rules.load_splices(db)
+    if not splices:
+        return {}
+    reference = today if today is not None else datetime.now(timezone.utc).date()
+    by_pair: dict[tuple[int, int], list[int]] = {}
+    for print_id in print_ids:
+        pair = (
+            snapshot_by_print[print_id].source_semantics_version,
+            index_by_print[print_id].source_semantics_version,
+        )
+        by_pair.setdefault(pair, []).append(print_id)
+    out: dict[int, float | None] = {}
+    for (from_version, to_version), ids in by_pair.items():
+        splice = splice_rules.splice_between(
+            splices,
+            from_version=from_version,
+            to_version=to_version,
+            after=_baseline_date(today),
+            on_or_before=reference,
+        )
+        if splice is None:
+            continue
+        old_on_splice, new_on_splice = splice_rules.splice_points_for_prints(db, splice, ids)
+        for print_id in ids:
+            if print_id in old_on_splice and print_id in new_on_splice:
+                out[print_id] = splice_rules.spliced_percent(
+                    splice_rules.IndexPoint.from_snapshot(snapshot_by_print[print_id]),
+                    old_on_splice[print_id],
+                    new_on_splice[print_id],
+                    splice_rules.IndexPoint.from_live(index_by_print[print_id]),
+                )
+    return out

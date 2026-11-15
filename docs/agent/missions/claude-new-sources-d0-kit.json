@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "mission": "New-sources plan step D0 (owner approved the plan 2026-10-19 00:34Z; N7 no permission requests, honest UA, robots.txt, stop on 403/429), on top of S1 to S4 (all merged to staging by 2026-10-20): the shared new-shop collector kit and the Dorasuta collector package, minus the HTML list-page parser, which waits for real fixtures. Kit: CardPirateBot User-Agent with the contact read from SOURCE_COLLECTOR_CONTACT (never committed; placeholders refused), robots.txt gate that fails closed, 5 s spacing plus jitter, same-host redirects only, stop on 403/429 or a challenge page, per-run request cap, source_dispatch_budgets reserve/settle and indefinite pause on denial, RAW-first storage with its own dictionary-encoder admission for registered new-source parsers. Dorasuta: series/page planner (page 1 daily, full sweep in 6 days, 150 requests cap), writer for source products, groups and condition variants, observations only for raw:A rows of exact or manual products with exactly one approved current mapping, and a resolver pass after each run. Nothing is deployed: there is no Dockerfile, Railway service or schedule, and run.main refuses before any request without a contact, a registered parser and a series list. Staging only; no change to the yuyutei or snkrdunk collectors, their runtime inputs, rollouts, prices, identity guards, mappings, secrets or Railway.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/source_collector_kit/pyproject.toml",
+        "services/source_collector_kit/pytest.ini",
+        "services/source_collector_kit/requirements.txt",
+        "services/source_collector_kit/source_collector_kit/__init__.py",
+        "services/source_collector_kit/source_collector_kit/budget.py",
+        "services/source_collector_kit/source_collector_kit/etiquette.py",
+        "services/source_collector_kit/source_collector_kit/fetch.py",
+        "services/source_collector_kit/source_collector_kit/health.py",
+        "services/source_collector_kit/source_collector_kit/listing_run.py",
+        "services/source_collector_kit/source_collector_kit/raw.py",
+        "services/source_collector_kit/source_collector_kit/registry.py",
+        "services/source_collector_kit/source_collector_kit/robots.py",
+        "services/source_collector_kit/tests/conftest.py",
+        "services/source_collector_kit/tests/test_kit.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "New package, not imported by any deployed service. Fetch etiquette, robots gate, budget, RAW write and run loop for new shops."
+    },
+    {
+      "files": [
+        "services/dorasuta_collector/dorasuta_collector/__init__.py",
+        "services/dorasuta_collector/dorasuta_collector/config.py",
+        "services/dorasuta_collector/dorasuta_collector/resolve.py",
+        "services/dorasuta_collector/dorasuta_collector/run.py",
+        "services/dorasuta_collector/dorasuta_collector/writer.py",
+        "services/dorasuta_collector/pytest.ini",
+        "services/dorasuta_collector/requirements.txt",
+        "services/dorasuta_collector/tests/conftest.py",
+        "services/dorasuta_collector/tests/test_dorasuta_collector.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "New package, not deployed (no Dockerfile or service). Planner, writer, resolver pass and a run entry point that refuses until D0b (parser) and D1 (contact variable, service) land."
+    },
+    {
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Adds source_collector_kit and dorasuta_collector to the existing collector-tests matrix so their tests run on every PR. No other job, trigger or permission changes."
+    },
+    {
+      "files": [
+        "scripts/tests/test_collector_runtime_inputs.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Plan \u00a72.7 guard extended to both new packages: neither may be a Yuyu-Tei or SNKRDUNK collector runtime input."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "None deployed (new packages and CI test matrix only)"
+        }
+      ],
+      "routes": [
+        "None: no API route, page or read changes. AMBER only because .github/workflows/ci.yml gains two collector-tests matrix entries."
+      ],
+      "dependencies": [
+        "Needs S1 #181 (source_products tables, grade_key; migration 7a52e9b48e8a applied 2026-10-19) and S3 #183 (resolver), both merged to staging. Plan on branch plan/new-sources."
+      ],
+      "deployment_impact": "API and worker redeploy with no code change for them. collector_services is empty and no raw_dependency_migration: 0 collector rollouts, no DDL, no new service.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 10
+    },
+    "recovery": {
+      "artifact": "2bcbe9013c0aa9ba76a4ce4e90ca9a45c206ebf3",
+      "procedure": "Native revert of this PR. Nothing runs, so no data, schema or configuration to undo.",
+      "trigger": "Any CI job other than the new matrix entries changes behaviour, or a Yuyu-Tei or SNKRDUNK collector check reports a changed runtime input.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "services/source_collector_kit/tests/test_kit.py",
+        "services/dorasuta_collector/tests/test_dorasuta_collector.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/staging_web_smoke.py"
+      ],
+      "observation_window": "After merge: Verify staging merge and the signed-out web smoke pass; no collector rollout runs and every yuyutei and snkrdunk service stays on its current source commit."
+    }
+  },
+  "diff_sha256": "d1381cbf58fb1ef115ace6021666455a7a4808e2bbe5b71fe2e79f83334c85f3"
+}

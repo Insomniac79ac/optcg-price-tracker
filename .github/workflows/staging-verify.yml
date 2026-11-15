@@ -49,9 +49,13 @@ jobs:
             exit 0
           fi
           echo "current=true" >> "$GITHUB_OUTPUT"
+          # Fleet state plus the merge's own mission, if it added one. A changed,
+          # removed or duplicated mission, or unreadable fleet state, fails.
+          export STAGING_MISSION_MANIFEST="$RUNNER_TEMP/staging-mission.json"
+          python scripts/staging_mission.py compose --base "$EXPECTED^1" --head "$EXPECTED" --allow-none --output "$STAGING_MISSION_MANIFEST"
           python - <<'PY'
           import json, os, subprocess
-          v = json.load(open('docs/agent/STAGING_MISSION.json'))['deployment_verification']
+          v = json.load(open(os.environ['STAGING_MISSION_MANIFEST']))['deployment_verification']
           expected = os.environ['EXPECTED']
           extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
           subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', expected,

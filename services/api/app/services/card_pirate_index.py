@@ -64,6 +64,7 @@ upward bias that sentence rules out.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, ROUND_HALF_EVEN, localcontext
@@ -653,6 +654,7 @@ def build_points(
     *,
     scope_kind: str = SCOPE_OVERALL,
     scope_key: str = "",
+    splice_days: Mapping[date, SnapshotDay] | None = None,
 ) -> ScopeSeries:
     """The whole chain for one scope, from ordered snapshot days.
 
@@ -673,6 +675,11 @@ def build_points(
         calculated across the boundary, under either version.
       * Otherwise the day is an ordinary step: compute, and publish if at
         least MIN_CONSTITUENTS constituents qualified.
+      * `splice_days` (new-sources plan §2.6, inert until a splice row exists):
+        an old-basis day for a source cutover date. When the version pair moves
+        by exactly one source_semantics_version step on that date, the step into
+        it is computed against the old-basis day instead of opening a segment,
+        and the new-basis day becomes the anchor. No break is recorded.
     """
     ordered = sorted(days, key=lambda d: d.point_date)
 
@@ -731,8 +738,17 @@ def build_points(
             anchor_day, anchor_versions = day, versions
             continue
 
+        # --- a source cutover splice (app.services.market_index_splice): the step
+        # into the splice day is taken on the OLD basis that day, and the new basis
+        # becomes the anchor. No splice day supplied, no change: the boundary below.
+        step_day = day
+        if versions != anchor_versions and splice_days:
+            spliced = splice_days.get(day.point_date)
+            if _is_splice_day(spliced, anchor_versions, versions):
+                step_day = spliced
+
         # --- a version boundary: close the segment, open a new one ---
-        if versions != anchor_versions:
+        if versions != anchor_versions and step_day is day:
             carried_from = last_published.point_date if last_published else None
             level = last_published.index_value if last_published else BASE_VALUE
             draft = _base_draft(
@@ -772,7 +788,7 @@ def build_points(
             continue
 
         # --- an ordinary step ---
-        step = compute_step(anchor_day, day)
+        step = compute_step(anchor_day, step_day)
         step_days = (day.point_date - anchor_day.point_date).days
 
         if step_days > 1:
@@ -803,7 +819,7 @@ def build_points(
             # An unpublishable step is still a real, single-version day, so it
             # DOES become the anchor: the next day compares against the values
             # actually observed here, not against a stale earlier day.
-            anchor_day = day
+            anchor_day, anchor_versions = day, versions
             continue
 
         level = chain(last_published.index_value, step.step_log_return)
@@ -830,9 +846,22 @@ def build_points(
         )
         points.append(draft)
         last_published = draft
-        anchor_day = day
+        anchor_day, anchor_versions = day, versions
 
     return ScopeSeries(points=tuple(points), breaks=tuple(breaks))
+
+
+def _is_splice_day(
+    spliced: SnapshotDay | None,
+    anchor_versions: tuple[int, int] | None,
+    versions: tuple[int, int],
+) -> bool:
+    """An old-basis day that bridges exactly one source_semantics_version step."""
+    if spliced is None or anchor_versions is None or not spliced.observations:
+        return False
+    if spliced.is_mixed_version or _version_pair(spliced) != anchor_versions:
+        return False
+    return versions == (anchor_versions[0], anchor_versions[1] + 1)
 
 
 # --- change across a break (section 5.6) ------------------------------------

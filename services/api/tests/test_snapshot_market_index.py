@@ -1174,3 +1174,43 @@ def test_build_snapshot_row_copies_versions_as_emitted(db_session, catalogue):
 
     assert row["index_version"] == 7
     assert row["source_semantics_version"] == 9
+
+
+# --- source cutover splice (new-sources plan §2.6) --------------------------
+
+
+def test_no_splice_row_writes_no_old_basis_rows(db_session, catalogue):
+    from app.source_products.models import MarketIndexSpliceSnapshot
+
+    snapshot_market_index(db_session, skip_lock=True)
+    assert db_session.query(MarketIndexSpliceSnapshot).count() == 0
+
+
+def test_a_splice_today_archives_the_old_basis_beside_every_snapshot(db_session, catalogue):
+    """Splicing SNKRDUNK out is only a fixture device: it is the second source this
+    catalogue has, so the old basis visibly differs from the new one."""
+    from app.source_products.models import MarketIndexSplice, MarketIndexSpliceSnapshot
+
+    splice = MarketIndexSplice(
+        splice_date=datetime.now(timezone.utc).date(),
+        from_semantics_version=SOURCE_SEMANTICS_VERSION - 1,
+        to_semantics_version=SOURCE_SEMANTICS_VERSION,
+        source_added="snkrdunk",
+        approved_by="owner",
+        approved_at=datetime.now(timezone.utc),
+    )
+    db_session.add(splice)
+    db_session.commit()
+
+    snapshot_market_index(db_session, skip_lock=True)
+
+    new = _by_print(db_session)
+    old = {r.card_print_id: r for r in db_session.query(MarketIndexSpliceSnapshot).all()}
+    assert set(old) == set(new)
+    both = catalogue["both"].id
+    assert new[both].index_value_jpy == 1740  # median of 1980 and 1500
+    assert (old[both].index_value_jpy, old[both].source_count) == (1980, 1)
+    assert old[both].source_semantics_version == SOURCE_SEMANTICS_VERSION - 1
+    assert all(v["source"] != "snkrdunk" for v in old[both].provenance["source_values"])
+    tracked = catalogue["tracked"].id
+    assert (old[tracked].index_value_jpy, old[tracked].coverage_status) == (None, "none")

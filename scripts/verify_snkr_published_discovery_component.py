@@ -9,6 +9,7 @@ import time
 
 import collector_runtime_inputs as runtime_inputs
 import generate_staging_state as state
+import staging_mission
 
 API = "1ddb234b8a0a51a2ad313359e22168182bf07dbd"
 SNKR = "ffbb5a8a1ca852d28763b175e2e850b0824edeea"
@@ -154,10 +155,10 @@ def main():
     head = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=state.ROOT, text=True
     ).strip()
-    mission = json.loads((state.ROOT / "docs/agent/STAGING_MISSION.json").read_text())
-    expected = mission["deployment_verification"].get("snkr_component", SNKR)
+    verification = staging_mission.deployment_verification(state.ROOT)
+    expected = verification.get("snkr_component", SNKR)
     expected = head if expected == "merge" else expected
-    api_expected = expected_api(mission["deployment_verification"]["api_sha"], head)
+    api_expected = expected_api(verification["api_sha"], head)
     continuity(api_expected, head, API_PATHS)
     collector_continuity(expected, head, "snkrdunk")
     print(
