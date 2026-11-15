@@ -367,3 +367,40 @@ def test_development_rate_limit_disabled_does_not_warn():
     report = validate_environment(dev_env(RATE_LIMIT_ENABLED="false"))
 
     assert checks_by_name(report)["rate_limit_enabled_in_production"].status == "pass"
+
+
+# --- F3: secret strength (delivery (a): warn outside production) -----------
+
+
+def staging_env(**overrides) -> dict:
+    base = {"APP_ENV": "staging", "ADMIN_TOKEN": "a" * 40, "API_JWT_SECRET": "b" * 64}
+    base.update(overrides)
+    return base
+
+
+def test_staging_weak_api_jwt_secret_warns_without_value_or_length():
+    for weak in ("change-me", "local-dev-api-jwt-secret", "short-secret"):
+        report = validate_environment(staging_env(API_JWT_SECRET=weak))
+        check = checks_by_name(report)["api_jwt_secret_strength"]
+        assert report.ok is True
+        assert check.status == "warning"
+        assert weak not in check.message
+        assert str(len(weak)) not in check.message
+
+
+def test_staging_strong_api_jwt_secret_passes():
+    report = validate_environment(staging_env())
+    assert checks_by_name(report)["api_jwt_secret_strength"].status == "pass"
+    assert checks_by_name(report)["admin_token_not_placeholder"].status == "pass"
+
+
+def test_staging_placeholder_admin_token_warns():
+    report = validate_environment(staging_env(ADMIN_TOKEN="change-me"))
+    assert report.ok is True
+    assert checks_by_name(report)["admin_token_not_placeholder"].status == "warning"
+
+
+def test_production_weak_api_jwt_secret_fails():
+    report = validate_environment(prod_env(API_JWT_SECRET="change-me"))
+    assert report.ok is False
+    assert any("API_JWT_SECRET" in e for e in report.errors)

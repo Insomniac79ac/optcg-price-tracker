@@ -29,6 +29,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app.core.collector_token import verify_collector_token
 from app.services.app_logging import record_app_log
 from app.settings import settings
 
@@ -249,8 +250,8 @@ def rate_limit_status() -> dict:
 
 def _collector_key(request: Request) -> str | None:
     """Rate-limit key for a /me request: a digest of the collector subject in a
-    bearer token whose signature and expiry verify as in
-    app.auth.require_current_user (HS256, API_JWT_SECRET; the route also
+    bearer token that passes the same verifier as
+    app.auth.require_current_user (app.core.collector_token; the route also
     requires an email claim). None when it does not verify; such a
     request is keyed by IP and is refused with 401 by the route itself."""
     secret = settings.API_JWT_SECRET
@@ -258,7 +259,7 @@ def _collector_key(request: Request) -> str | None:
     if not secret or not authorization.startswith("Bearer "):
         return None
     try:
-        payload = jwt.decode(authorization.removeprefix("Bearer ").strip(), secret, algorithms=["HS256"])
+        payload = verify_collector_token(authorization.removeprefix("Bearer ").strip(), secret)
     except jwt.InvalidTokenError:
         return None
     sub = payload.get("sub")
