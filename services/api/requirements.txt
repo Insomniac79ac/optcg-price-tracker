@@ -9,9 +9,7 @@ alembic
 psycopg[binary]
 redis
 celery
-# Pinned (F2 mission): the collector token verifier relies on PyJWT's
-# require, leeway and iat checks; upgrade on purpose, with the auth tests.
-pyjwt==2.15.1
+pyjwt
 argon2-cffi
 # Inspection only - decoding, dimensions, format and alpha for the
 # display-image mirroring verifier (app.services.display_image_mirror). It
