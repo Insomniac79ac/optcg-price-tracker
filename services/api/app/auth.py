@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.collector_token import verify_collector_token
 from app.db import get_db
 from app.env import is_development_environment
 from app.models import User
@@ -70,7 +71,7 @@ def require_current_user(
     token = authorization.removeprefix("Bearer ").strip()
 
     try:
-        payload = jwt.decode(token, settings.API_JWT_SECRET, algorithms=["HS256"])
+        payload = verify_collector_token(token, settings.API_JWT_SECRET)
     except jwt.InvalidTokenError as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
 

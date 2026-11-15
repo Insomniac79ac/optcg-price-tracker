@@ -46,6 +46,10 @@ DEVELOPMENT = "development"
 
 LOCAL_DEV_ADMIN_TOKEN = "local-dev-admin-token"
 MIN_ADMIN_TOKEN_LENGTH = 32
+# F3 (secret strength): the example placeholder from .env.production.example and
+# the known local defaults. Values only; never logged.
+KNOWN_PLACEHOLDER_SECRETS = frozenset({"change-me", "changeme", "local-dev-api-jwt-secret"})
+MIN_API_JWT_SECRET_BYTES = 32
 DEFAULT_LOCAL_DB_PASSWORD_MARKER = "opcg:opcg"
 
 VALID_SCRAPING_MODES = ("mock", "live")
@@ -189,6 +193,41 @@ def _check_admin_token_not_default(env: Mapping[str, str], is_production: bool) 
         )
     return EnvCheckResult(
         "admin_token_not_default", PASS, CRITICAL, "ADMIN_TOKEN is not the local-dev default."
+    )
+
+
+def _check_admin_token_not_placeholder(env: Mapping[str, str], is_production: bool) -> EnvCheckResult:
+    value = env.get("ADMIN_TOKEN") or ""
+    if value and value.strip().lower() in KNOWN_PLACEHOLDER_SECRETS:
+        status, severity = _severity_for(is_production)
+        return EnvCheckResult(
+            "admin_token_not_placeholder", status, severity,
+            "ADMIN_TOKEN is a known placeholder or default value; set a random secret.",
+        )
+    return EnvCheckResult(
+        "admin_token_not_placeholder", PASS, CRITICAL, "ADMIN_TOKEN is not a known placeholder."
+    )
+
+
+def _check_api_jwt_secret_strength(env: Mapping[str, str], is_production: bool) -> EnvCheckResult:
+    """F3: API_JWT_SECRET signs every collector token. Delivery (a) warns outside
+    production (staging stays up); delivery (c) refuses at boot on every
+    environment that is not explicitly development. The message never carries
+    the value or its length."""
+    value = env.get("API_JWT_SECRET") or ""
+    if not value:
+        return EnvCheckResult(
+            "api_jwt_secret_strength", PASS, INFO, "API_JWT_SECRET not set (checked by config_check)."
+        )
+    if value.strip().lower() in KNOWN_PLACEHOLDER_SECRETS or len(value.encode()) < MIN_API_JWT_SECRET_BYTES:
+        status, severity = _severity_for(is_production)
+        return EnvCheckResult(
+            "api_jwt_secret_strength", status, severity,
+            f"API_JWT_SECRET is a known placeholder or shorter than {MIN_API_JWT_SECRET_BYTES} bytes; "
+            "set a random secret (e.g. openssl rand -hex 32).",
+        )
+    return EnvCheckResult(
+        "api_jwt_secret_strength", PASS, CRITICAL, "API_JWT_SECRET meets the strength floor."
     )
 
 
@@ -506,6 +545,8 @@ def validate_environment(env: Mapping[str, str] | None = None) -> EnvValidationR
         _check_admin_token_present(env, is_production),
         _check_admin_token_not_default(env, is_production),
         _check_admin_token_length(env, is_production),
+        _check_admin_token_not_placeholder(env, is_production),
+        _check_api_jwt_secret_strength(env, is_production),
         scraping_mode_check,
         _check_scraping_mode_live_explicit(scraping_mode),
         _check_live_scraping_delays(env, scraping_mode, is_production),

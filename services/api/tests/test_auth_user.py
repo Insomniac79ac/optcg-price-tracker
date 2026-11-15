@@ -6,6 +6,7 @@ from app.models import User
 # Any signed-in route will do; the legacy /collection router went in Collector v1 S8.
 AUTHED = "/saved-views"
 from tests._auth_helpers import (
+    timed_claims,
     TEST_API_JWT_SECRET,
     TEST_USER_EMAIL,
     TEST_USER_GOOGLE_SUB,
@@ -75,7 +76,7 @@ def test_token_missing_required_claims_returns_401(db_session):
 
     from app.main import app
 
-    token = jwt.encode({"sub": TEST_USER_GOOGLE_SUB}, TEST_API_JWT_SECRET, algorithm="HS256")
+    token = jwt.encode(timed_claims(sub=TEST_USER_GOOGLE_SUB), TEST_API_JWT_SECRET, algorithm="HS256")
     unauth_client = TestClient(app)
     unauth_client.headers.update({"Authorization": f"Bearer {token}"})
     response = unauth_client.get(AUTHED)
@@ -150,7 +151,7 @@ def test_website_token_check_pass_is_told_apart_without_provisioning(db_session)
 
     client = TestClient(app)
     for secret, detail in ((TEST_API_JWT_SECRET, "Token missing required claims"), ("diverged-secret", "Invalid or expired token")):
-        token = jwt.encode({"sub": "collector-token-check"}, secret, algorithm="HS256")
+        token = jwt.encode(timed_claims(sub="collector-token-check"), secret, algorithm="HS256")
         response = client.get(AUTHED, headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 401
         assert response.json() == {"detail": detail}
