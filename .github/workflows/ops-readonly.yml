@@ -63,6 +63,7 @@ on:
           - yuyu-f1-parallel-check
           - yuyu-f1-sizing
           - yuyu-f3-aliases
+          - yuyu-mapped-urls
       transients:
         description: "storage-rates: named transients to exclude (comma-separated; empty = all named)"
         type: string

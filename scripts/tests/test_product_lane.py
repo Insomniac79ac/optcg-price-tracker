@@ -148,12 +148,26 @@ class ProductLaneDirections(unittest.TestCase):
         self.assertEqual(r["lane"], "data")
         self.assertTrue(any("exactly one" in x for x in r["reasons"]), r["reasons"])
 
-    def test_web_build_supply_chain_needs_the_review_line(self):
+    # Owner 2026-11-14: security-path PRs stay DATA whatever the PR body says.
+    REVIEW_BODIES = (
+        "",
+        "Independent security review: PENDING",
+        "Independent security review: TBD",
+        "independent security review: -",
+        "Independent security review:\n\n## Summary\nnothing here",
+        "Summary\nIndependent security review: fresh agent pass, no findings\n",
+        "Independent security review: separate reviewer session, verdict PASS, head "
+        + "a" * 40 + ", https://github.com/x/y/pull/1#issuecomment-1",
+    )
+
+    def test_web_build_supply_chain_is_always_data(self):
         path = "apps/web/package.json"
         changes = {path: (ROOT / path).read_text() + "\n"}
-        self.assertEqual(self.lane(changes)["lane"], "data")
-        self.assertEqual(self.lane(changes, body="Independent security review: deps diff checked")["lane"],
-                         "product")
+        for body in self.REVIEW_BODIES:
+            with self.subTest(body=body):
+                r = self.lane(changes, body=body)
+                self.assertEqual(r["lane"], "data")
+                self.assertTrue(any("SEC-001" in x for x in r["reasons"]), r["reasons"])
 
     def test_editing_an_existing_migration_is_data(self):
         versions = ROOT / "services/api/alembic/versions"
@@ -161,12 +175,21 @@ class ProductLaneDirections(unittest.TestCase):
         r = self.lane({path: (ROOT / path).read_text() + "\n# edit\n"})
         self.assertEqual(r["lane"], "data")
 
-    def test_auth_paths_need_an_independent_review_line(self):
+    def test_auth_paths_are_always_data(self):
         changes = {"apps/web/src/lib/authFixture.ts": "export const x = 1\n"}
-        self.assertEqual(self.lane(changes)["lane"], "data")
-        r = self.lane(changes, body="Summary\nIndependent security review: fresh agent pass, no findings\n")
+        for body in self.REVIEW_BODIES:
+            with self.subTest(body=body):
+                r = self.lane(changes, body=body)
+                self.assertEqual(r["lane"], "data", r["reasons"])
+                self.assertTrue(r["security_review_required"])
+                self.assertEqual(r["security_paths"], ["apps/web/src/lib/authFixture.ts"])
+
+    def test_delivery_scope_still_classifies_security_paths_as_product(self):
+        # staging_delivery_scope.py classifies merged diffs with require_security_review=False;
+        # the gate change applies to PR lanes only.
+        changes = {"apps/web/src/lib/authFixture.ts": "export const x = 1\n"}
+        r = product_lane.classify("HEAD", synthetic_commit(changes), "", require_security_review=False)
         self.assertEqual(r["lane"], "product", r["reasons"])
-        self.assertTrue(r["security_review_required"])
 
     def test_authoritative_is_not_an_auth_path(self):
         r = self.lane({"services/api/tests/test_print_authoritative_fixture.py": "X = 1\n"})

@@ -145,10 +145,12 @@ which first asks the base branch's `product_lane.py`. PRODUCT requires all of:
   tables and adds nullable/defaulted columns, indexes or constraints on tables it
   creates or on the collector-account tables; foreign keys only to `users` or
   those tables; it chains onto the base's single head and leaves one head;
-- auth/security paths, and the web app's build and supply chain
-  (`package.json`, lockfile, `.npmrc`, Dockerfiles, `apps/web/scripts/`,
-  `next.config`), carry an `Independent security review:` line in the PR
-  description.
+- it touches no auth/security path and nothing in the web app's build and
+  supply chain (`package.json`, lockfile, `.npmrc`, Dockerfiles,
+  `apps/web/scripts/`, `next.config`). Those are always DATA (owner,
+  2026-11-14): a line in the PR description can't prove a review, because the
+  author writes it. They stay DATA until an approval the PR author can't create
+  exists (SEC-001).
 
 Anything else, or any error, runs today's mission checks unchanged against the
 PR's mission.
