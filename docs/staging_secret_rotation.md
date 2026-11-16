@@ -127,6 +127,16 @@ token at once. `TELEGRAM_CHAT_ID` is not a secret.
 Sentry → the project → **Settings** → **Client Keys (DSN)** → create a new key, put it where the old
 DSN was, deploy, then disable the old key. It only allows sending events, so it is last.
 
+The DSN lives in two variables, one per Sentry project:
+- `SENTRY_DSN` on the Railway `api` service (Sentry project `card-pirate-api`): change it, then the api
+  needs a new deployment to read it.
+- `NEXT_PUBLIC_SENTRY_DSN` on the Vercel staging project (Sentry project `card-pirate-web`): it is baked
+  into the client bundle at build time, so **Deployments** → top entry → ⋮ → **Redeploy** after the
+  change.
+
+Check: after the deploys, new events still arrive in each Sentry project under the new key, and the old key shows
+no new events after it is disabled.
+
 ### 10. Admin sign-in password (`ADMIN_LOGIN_PASSWORD_HASH`)
 
 A provider breach exposes the stored hash, which can be attacked offline, so change the password too.
@@ -162,6 +172,11 @@ change. Rotating this secret alone signs nobody out (item 5, `AUTH_SECRET`, does
 - **Review access in the incident window**: Railway project activity and its Tokens list (no unknown
   tokens), Cloudflare R2 token activity, GitHub audit log and Vercel activity. Anything unfamiliar
   goes to the owner before more rotation.
+- **Google sign-in client**: in Google Cloud, open the staging OAuth client (item 12) and check its
+  client secrets list holds only the secrets you expect (none created in the incident window but
+  yours), and that the authorised redirect URIs and JavaScript origins are unchanged. Where the
+  project keeps Cloud Audit Logs, look for credential changes in the same window. Anything unfamiliar
+  goes to the owner, as above.
 
 - A **Verify staging merge** re-run on the same commit fails with "Unexpected API build for a change
   outside its watch paths". The rotation redeployed the api on a commit whose merge Railway had
