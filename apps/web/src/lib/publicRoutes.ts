@@ -56,12 +56,15 @@ export const CRAWLER_DISALLOWED_PREFIXES = [
  *
  * Read from NEXT_PUBLIC_SITE_URL so the same build can serve a preview host
  * and a custom domain without baking either into the source. Falls back to the
- * current staging origin rather than throwing: a sitemap with the wrong host
- * is a far smaller problem than a build that fails, and the value is easy to
- * set once a real domain exists. */
+ * staging site's own domain, staging.cardpirate.app (the Vercel alias still
+ * serves the app, but shared links and og:url should name the real domain),
+ * rather than throwing: a sitemap with the wrong host is a far smaller problem
+ * than a build that fails. */
+export const STAGING_SITE_ORIGIN = "https://staging.cardpirate.app";
+
 export function publicSiteUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  const base = configured || "https://optcg-price-tracker-staging.vercel.app";
+  const base = configured || STAGING_SITE_ORIGIN;
   return base.replace(/\/+$/, "");
 }
 
