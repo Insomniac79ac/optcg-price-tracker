@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Owner decision 2026-11-17 ('go both'). (1) Approved RED work: policy-gate passes a RED mission only when owner_approvals links the owner's approval for every RED category, it declares RED and meets every AMBER safeguard; its output owner_merge_only=true makes staging-pr-live report the PR as not current and staging-automerge refuse to arm it, so only the owner merges it by hand. It may not change collector runtime inputs or request a rollout or RAW migration (a hand merge runs neither). Production stays unapprovable. The link documents the approval; the hand merge is the control. (2) staging-automerge fails fast when the PR is behind staging or in conflict (mergeable_state behind or dirty), before arming and on every wait poll, instead of timing out after 30 minutes (#294). Opened by Claude: it is the gate on the engineer's own PRs; labelled hold-for-owner, the owner merges. policy-gate runs the base branch's policy, so this PR is evaluated by today's policy and RED takes effect only after merge.",
+  "classification": "AMBER",
+  "impacts": [
+    {
+      "files": [
+        "scripts/staging_policy.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "RED evaluation: approval links per RED category (owner_approvals), RED declared, AMBER safeguards required, owner_merge_only output, no rollout or RAW migration request, no collector runtime change (checked with collector_runtime_inputs). Production refused as before; missing or malformed approvals refused as before."
+    },
+    {
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "policy-gate exports owner_merge_only; staging-pr-live reports approved RED as not current; staging-automerge refuses it as a second guard; arming and the wait loop stop at once on mergeable_state behind or dirty. Triggers, permissions, environments and secrets unchanged."
+    },
+    {
+      "files": [
+        "scripts/tests/test_staging_policy.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Approved RED passes but is owner_merge_only; every RED category needs a valid GitHub link; RED still needs every other check; no rollout or migration request; GREEN and AMBER never owner_merge_only; workflow guards for RED arming and fail-fast present in both places."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_DELIVERY.md",
+        "docs/agent/AUTONOMY_POLICY.md",
+        "docs/agent/DECISIONS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Approved RED work and fail-fast described; decision recorded."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "policy-gate classification of PRs to staging",
+        "staging-pr-live and staging-automerge arming"
+      ],
+      "routes": [
+        "None: CI tooling and docs only; no API, web or collector route"
+      ],
+      "dependencies": [
+        "staging 4a2aae43 or later; no open PR must merge first"
+      ],
+      "deployment_impact": "No service, collector, fleet or schema change. GREEN and AMBER PRs are evaluated exactly as before; RED missions that were always refused can now pass only with approval links and are never armed. A PR behind staging or in conflict now fails its delivery job at once instead of after 30 minutes.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 5
+    },
+    "recovery": {
+      "artifact": "4a2aae436d86b01c20a2b978ea87980b1fb5b845",
+      "procedure": "Native revert PR with its own mission file restores the previous policy and wait loop.",
+      "trigger": "A RED PR is armed or merged by CI, a GREEN or AMBER PR is refused that passed before, or a current PR fails fast wrongly.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_staging_policy.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/staging_policy.py",
+        ".github/workflows/ci.yml"
+      ],
+      "observation_window": "The next PR to staging (policy-gate output owner_merge_only=false, normal arming) and the first approved RED PR (#293's successor): policy-gate passes, staging-automerge does not arm, the owner merges by hand."
+    }
+  },
+  "diff_sha256": "e3d38d6c72ec60062f8d1156d32cda509aa16620f755593dea4b544c41644f0c"
+}

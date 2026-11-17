@@ -183,6 +183,25 @@ owner merges by hand. After a hand merge, `Verify staging merge` (push to `stagi
 head and regenerates state as usual. Agents may add the label, never remove it
 (`.claude/hooks/guard.py`).
 
+**Approved RED work (owner 2026-11-17).** A mission with a RED effect, or a RED category set to
+true, passes `policy-gate` only when `owner_approvals` maps every one of its RED categories to a
+link to the owner's approval (`https://github.com/Insomniac79ac/optcg-price-tracker/...` or
+`.../content-pipeline/...`), it declares `classification: RED`, and it meets every AMBER
+safeguard. `policy-gate` then outputs `owner_merge_only=true`: `staging-pr-live` reports the PR
+as not current and `staging-automerge` refuses to arm it, whatever its labels or draft state, so
+only the owner merges it by hand. The link documents the approval; it can't prove it (until
+SEC-001, anything in the repo can be written with the owner's token). The hand merge is the
+control. Because a hand merge never rolls out collectors or runs a RAW migration, approved RED
+work may not change a collector's runtime inputs or request either; split those into their own
+mission. A `target` other than staging is never approvable.
+
+**Behind or conflicting PRs fail fast (owner 2026-11-17).** Staging requires branches to be up
+to date, so a PR behind staging can never native-merge (#294 waited 30 minutes and timed out).
+`staging-automerge` reads the PR's `mergeable_state` before arming and on every wait poll, and
+stops at once on `behind` or `dirty` with the fix: merge staging into the branch and refresh the
+mission digest in the same push, never GitHub's "Update branch". Its failure step disarms
+native auto-merge as before.
+
 A hand merge never rolls out collectors: only `staging-automerge` runs
 `deploy_staging_collectors.py`. A PR that both needs the hold (it touches `.github/**`) and
 changes collector code must therefore be split: the workflow change held, the collector code

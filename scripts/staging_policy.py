@@ -16,6 +16,13 @@ RED = {
 }
 AMBER = {"migration", "infrastructure", "service_cutover", "bulk_data", "source_envelope", "subsystem_activation"}
 GREEN = {"application", "tests", "documentation", "state_observation", "staging_deployment"}
+# Owner 2026-11-17 ("go both"): RED work the owner has already approved may pass
+# this check, but only with a link to that approval per RED category, and such a
+# PR is never auto-merged: the owner merges it by hand (ci.yml reads
+# owner_merge_only). The link documents the approval; it can't prove it, because
+# until SEC-001 gives the bots their own GitHub identity anything in the repo can be
+# written with the owner's token. The control is the hand merge, not the link.
+OWNER_APPROVAL = re.compile(r"https://github\.com/Insomniac79ac/(optcg-price-tracker|content-pipeline)/\S+")
 
 
 def git(*args):
@@ -31,14 +38,22 @@ def evaluate(mission, files, digest):
     errors = []
     impacts = mission.get("impacts", [])
     effects = {effect for item in impacts for effect in item.get("effects", [])}
-    red = sorted(effects & RED)
     decisions = mission.get("red_decisions", {})
-    red.extend(key for key in sorted(RED) if decisions.get(key) is True)
+    red = sorted(set(effects & RED) | {key for key in RED if decisions.get(key) is True})
     if mission.get("target") != "staging":
-        red.append("production: target must be staging")
-    if red:
+        # Never approvable: there is no production to deliver to.
         return {"classification": "RED", "eligible": False,
-                "errors": ["Human decision required: " + x for x in red]}
+                "errors": ["Human decision required: production: target must be staging"]}
+    approvals = mission.get("owner_approvals", {})
+    if not isinstance(approvals, dict):
+        approvals = {}
+    missing = [key for key in red if not OWNER_APPROVAL.fullmatch(str(approvals.get(key, "")))]
+    if missing:
+        return {"classification": "RED", "eligible": False,
+                "errors": ["Human decision required: " + x for x in missing]}
+    stray = sorted(set(approvals) - set(red))
+    if stray:
+        errors.append("owner_approvals may only name this mission's RED categories: " + ", ".join(stray))
     if mission.get("schema_version") != 1 or not mission.get("mission"):
         errors.append("A versioned, explicitly named mission is required")
     if set(decisions) != RED or any(type(v) is not bool for v in decisions.values()):
@@ -61,10 +76,11 @@ def evaluate(mission, files, digest):
     # Paths provide conservative floors; explicit effects can always raise them.
     floor = any(p.startswith((".github/workflows/", "deploy/", "services/api/alembic/"))
                 or p.endswith("vercel.json") for p in files)
-    level = "AMBER" if floor or effects & AMBER else "GREEN"
+    level = "RED" if red else "AMBER" if floor or effects & AMBER else "GREEN"
     if mission.get("classification") != level:
         errors.append(f"Declared classification must be {level}")
-    if level == "AMBER":
+    if level in ("AMBER", "RED"):
+        # Approved RED work meets at least every AMBER safeguard.
         safeguards = mission.get("safeguards", {})
         impact = safeguards.get("impact", {})
         for key in ("resources", "routes", "dependencies", "deployment_impact"):
@@ -84,7 +100,15 @@ def evaluate(mission, files, digest):
         checks = verify.get("required_checks", [])
         if not isinstance(checks, list) or "engineering-gate" not in checks:
             errors.append("AMBER verification must require engineering-gate")
-    return {"classification": level, "eligible": not errors, "errors": errors}
+    if level == "RED" and any(deployment.get(key) not in (None, [], {})
+                              for key in staging_mission.DEPLOY_REQUEST_KEYS):
+        # A hand merge runs no collector rollout and no RAW migration (STAGING_DELIVERY.md).
+        errors.append("Approved RED work is merged by hand, which runs no collector rollout or RAW "
+                      "migration: split those into their own mission")
+    result = {"classification": level, "eligible": not errors, "errors": errors}
+    if level == "RED":
+        result["owner_merge_only"] = True
+    return result
 
 
 def main():
@@ -120,7 +144,16 @@ def main():
             raise staging_mission.MissionError(
                 f"{staging_mission.LEGACY_MANIFEST} requests {sorted(legacy)} that this mission does not declare")
         result = evaluate(mission, files, digest)
-        if result["classification"] == "AMBER" and result["eligible"]:
+        if result["classification"] == "RED" and result["eligible"]:
+            import collector_runtime_inputs
+            for collector in sorted(collector_runtime_inputs.COLLECTORS):
+                changed, _ = collector_runtime_inputs.changed_runtime_inputs(args.base, args.head, collector)
+                if changed:
+                    result = {"classification": "RED", "eligible": False, "errors": [
+                        f"Approved RED work is merged by hand, which never rolls out {collector}; "
+                        f"split its runtime changes into their own mission: {', '.join(sorted(changed))[:300]}"]}
+                    break
+        if result["classification"] in ("AMBER", "RED") and result["eligible"]:
             artifact = mission["safeguards"]["recovery"]["artifact"]
             # A documented rollback must resolve to actual retained Git source.
             git("cat-file", "-e", artifact + "^{commit}")
