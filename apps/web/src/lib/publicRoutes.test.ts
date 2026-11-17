@@ -129,6 +129,20 @@ describe("publicSiteUrl", () => {
     expect(publicSiteUrl()).toMatch(/^https:\/\/[^/]+$/);
     process.env.NEXT_PUBLIC_SITE_URL = previous;
   });
+
+  it("falls back to the staging domain, not the Vercel alias, when unset or blank", () => {
+    const previous = process.env.NEXT_PUBLIC_SITE_URL;
+    try {
+      delete process.env.NEXT_PUBLIC_SITE_URL;
+      expect(publicSiteUrl()).toBe("https://staging.cardpirate.app");
+      process.env.NEXT_PUBLIC_SITE_URL = "   ";
+      expect(publicSiteUrl()).toBe("https://staging.cardpirate.app");
+      expect(publicSiteUrl()).not.toContain("vercel.app");
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = previous;
+    }
+  });
 });
 
 describe("search indexing switch", () => {
