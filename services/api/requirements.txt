@@ -9,12 +9,15 @@ alembic
 psycopg[binary]
 redis
 celery
-pyjwt
+# Pinned: token verification must not change under a silent upgrade.
+pyjwt==2.15.1
 argon2-cffi
 # Inspection only - decoding, dimensions, format and alpha for the
 # display-image mirroring verifier (app.services.display_image_mirror). It
 # must never produce image bytes: no Image.save, re-encode, resize or crop.
-Pillow
+# Pinned to the same version as both collectors, for the same reason as
+# ImageHash below: artwork digests and distances are compared across them.
+Pillow==13.0.0
 # Perceptual hashing for app.services.artwork_evidence. Pinned to the same
 # version the snkrdunk collector uses: the two compute distances that are
 # compared against shared thresholds, so a version skew between them would
