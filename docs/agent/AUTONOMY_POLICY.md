@@ -119,6 +119,12 @@ waive RED boundaries. Explicit human authorization must identify the decision
 and scope; an invariant change must be recorded in [DECISIONS.md](DECISIONS.md)
 and reconciled with the contract before implementation.
 
+Once the owner has approved a RED change, its PR records the approval link per RED
+category in the mission's `owner_approvals` and declares `classification: RED`.
+`policy-gate` then passes it, but CI never auto-merges it: the owner merges it by
+hand (owner 2026-11-17; [STAGING_DELIVERY.md](STAGING_DELIVERY.md), "Approved RED
+work"). Production is never approvable this way.
+
 ## Delivery lanes (owner decision 2026-10-15)
 
 Staging work runs in one of two lanes. CI decides the lane

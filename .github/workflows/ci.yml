@@ -32,11 +32,13 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           HEAD: ${{ github.event.pull_request.head.sha }}
+          OWNER_MERGE_ONLY: ${{ needs.policy-gate.outputs.owner_merge_only }}
         run: |
           # The owner's `hold-for-owner` label keeps a ready PR unarmed: the owner merges
-          # it by hand (docs/agent/STAGING_DELIVERY.md, "Owner hold").
+          # it by hand (docs/agent/STAGING_DELIVERY.md, "Owner hold"). Approved RED work
+          # (policy-gate owner_merge_only) is never armed, whatever its labels.
           gh api "repos/$REPO/pulls/$PR" \
-            --jq '"current=\(.draft == false and .head.sha == env.HEAD and ([.labels[].name] | index("hold-for-owner") == null))"' >> "$GITHUB_OUTPUT"
+            --jq '"current=\(.draft == false and .head.sha == env.HEAD and ([.labels[].name] | index("hold-for-owner") == null) and env.OWNER_MERGE_ONLY != "true")"' >> "$GITHUB_OUTPUT"
 
   staging-credential-presence:
     # An independent normal Environment job distinguishes unavailable staging
@@ -120,7 +122,13 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
           STAGING_RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
           STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
+          OWNER_MERGE_ONLY: ${{ needs.policy-gate.outputs.owner_merge_only }}
         run: |
+          # Second guard after staging-pr-live: approved RED work is merged by the owner by hand.
+          if [ "$OWNER_MERGE_ONLY" = true ]; then
+            echo "::error::RED (owner_merge_only): approved RED work is merged by the owner by hand, never armed."
+            exit 1
+          fi
           for name in STAGING_RAILWAY_TOKEN STAGING_VERCEL_READ_TOKEN; do
             if [ -z "${!name}" ]; then
               echo "::error::Required staging environment secret unavailable: $name"
@@ -146,6 +154,15 @@ jobs:
             echo 'Native merge already completed; exact current staging SHA verified.'
             exit 0
           fi
+          # Owner 2026-11-17: a PR behind staging (or in conflict) can never native-merge,
+          # because staging requires branches to be up to date; #294 waited 30 minutes and
+          # timed out. Stop at once with the fix. "unknown" (not computed yet) and "blocked"
+          # (checks still running) keep the normal path.
+          case "$(jq -r '.mergeable_state' /tmp/pr.json)" in
+            behind|dirty)
+              echo "::error::PR is behind staging or has a conflict ($(jq -r '.mergeable_state' /tmp/pr.json)): merge staging into the branch and refresh the mission digest in the same push. Never use GitHub's Update branch."
+              exit 1 ;;
+          esac
           # This mutation only enables native auto-merge. The CLI --auto
           # shortcut can instead merge immediately when a PR is already clean.
           node=$(jq -r '.node_id' /tmp/pr.json)
@@ -187,6 +204,15 @@ jobs:
               exit 0
             fi
             test "$(jq -r '.state' /tmp/merged.json)" = open
+            # Owner 2026-11-17: a PR behind staging (or in conflict) can never native-merge,
+            # because staging requires branches to be up to date; #294 waited 30 minutes and
+            # timed out. Stop at once with the fix. "unknown" (not computed yet) and "blocked"
+            # (checks still running) keep the normal path.
+            case "$(jq -r '.mergeable_state' /tmp/merged.json)" in
+              behind|dirty)
+                echo "::error::PR is behind staging or has a conflict ($(jq -r '.mergeable_state' /tmp/merged.json)): merge staging into the branch and refresh the mission digest in the same push. Never use GitHub's Update branch."
+                exit 1 ;;
+            esac
             # Never merge 19:30-20:30 UTC (market-index-snapshot runs at 20:00):
             # disarm, wait for the window to close, re-arm the same head.
             now=$(date -u +%s); day=$(date -u +%F)
@@ -315,6 +341,7 @@ jobs:
     outputs:
       lane: ${{ steps.policy.outputs.lane }}
       migrations: ${{ steps.policy.outputs.migrations }}
+      owner_merge_only: ${{ steps.policy.outputs.owner_merge_only }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -355,6 +382,7 @@ jobs:
           if [ -f /tmp/policy.json ]; then
             echo "lane=$(jq -r 'if .classification == "PRODUCT" then "product" else "data" end' /tmp/policy.json)" >> "$GITHUB_OUTPUT"
             echo "migrations=$(jq -r '(.lane.migrations // []) | length > 0' /tmp/policy.json)" >> "$GITHUB_OUTPUT"
+            echo "owner_merge_only=$(jq -r '.owner_merge_only // false' /tmp/policy.json)" >> "$GITHUB_OUTPUT"
           fi
           exit "$status"
 
