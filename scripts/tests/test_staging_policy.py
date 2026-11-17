@@ -33,6 +33,63 @@ class PolicyTests(unittest.TestCase):
     def test_production_refused(self):
         self.m["target"] = "production"
         self.assertEqual(self.result()["classification"], "RED")
+        # Not even with an approval link: there is no production.
+        self.m["owner_approvals"] = {"production": "https://github.com/Insomniac79ac/optcg-price-tracker/issues/1"}
+        self.assertFalse(self.result()["eligible"])
+
+    def approved_red(self):
+        self.m["classification"] = "RED"
+        self.m["impacts"][0]["effects"] = ["application", "security_or_secrets_policy"]
+        self.m["owner_approvals"] = {
+            "security_or_secrets_policy": "https://github.com/Insomniac79ac/optcg-price-tracker/issues/293"}
+        self.m["safeguards"] = {
+            "impact": {"resources": ["staging-api"], "routes": ["/me"],
+                       "dependencies": ["staging-web"], "deployment_impact": "API redeploy",
+                       "database_writes": 0, "source_requests": 0, "estimated_runtime_minutes": 10},
+            "recovery": {key: "evidence" for key in ["artifact", "procedure", "trigger", "backup", "validation"]},
+            "verification": {"required_checks": ["engineering-gate"], "post_change": ["health"],
+                             "observation_window": "one deployment"}}
+
+    def test_approved_red_passes_but_is_owner_merge_only(self):
+        self.approved_red()
+        result = self.result()
+        self.assertEqual(result["classification"], "RED")
+        self.assertTrue(result["eligible"], result["errors"])
+        self.assertIs(result["owner_merge_only"], True)
+
+    def test_red_needs_a_valid_approval_for_every_category(self):
+        self.approved_red()
+        for approvals in ({}, {"security_or_secrets_policy": "owner said yes"},
+                          {"security_or_secrets_policy": "https://github.com/someone-else/repo/issues/1"},
+                          ["https://github.com/Insomniac79ac/optcg-price-tracker/issues/293"]):
+            self.m["owner_approvals"] = approvals
+            result = self.result()
+            self.assertFalse(result["eligible"])
+            self.assertIn("security_or_secrets_policy", result["errors"][0])
+        self.m["owner_approvals"] = {
+            "security_or_secrets_policy": "https://github.com/Insomniac79ac/optcg-price-tracker/issues/293"}
+        self.m["red_decisions"]["pricing_methodology"] = True
+        self.assertFalse(self.result()["eligible"])
+
+    def test_approved_red_still_needs_every_other_check(self):
+        self.approved_red()
+        original = copy.deepcopy(self.m)
+        for mutation in (lambda m: m.update(diff_sha256="old"),
+                         lambda m: m.update(classification="AMBER"),
+                         lambda m: m["safeguards"]["recovery"].pop("validation"),
+                         lambda m: m["owner_approvals"].update(pricing_methodology=m["owner_approvals"]["security_or_secrets_policy"])):
+            self.m = copy.deepcopy(original)
+            mutation(self.m)
+            self.assertFalse(self.result()["eligible"])
+
+    def test_approved_red_cannot_request_rollout_or_migration(self):
+        self.approved_red()
+        for key, value in (("collector_services", ["snkrdunk-collector"]), ("raw_dependency_migration", {"x": 1})):
+            self.m["deployment_verification"] = {"api_sha": "a" * 40, "revision": "c4e8a1d7b902", key: value}
+            self.assertFalse(self.result()["eligible"])
+
+    def test_green_and_amber_are_never_owner_merge_only(self):
+        self.assertNotIn("owner_merge_only", self.result())
 
     def test_stale_missing_duplicate_and_unknown_evidence_fail(self):
         original = copy.deepcopy(self.m)
@@ -104,6 +161,23 @@ class NativeDeliveryRegressionTests(unittest.TestCase):
         self.assertEqual(job['concurrency']['group'], 'card-pirate-staging-delivery')
         self.assertEqual(job['concurrency']['cancel-in-progress'], 'false')
         self.assertIn('Required staging environment secret unavailable: $name', arm['run'])
+
+    def test_approved_red_is_never_armed(self):
+        # Owner 2026-11-17: approved RED work passes policy-gate but only the owner merges it.
+        self.assertIn('owner_merge_only', self.ci['jobs']['policy-gate']['outputs'])
+        live = self.ci['jobs']['staging-pr-live']['steps'][0]
+        self.assertEqual(live['env']['OWNER_MERGE_ONLY'], '${{ needs.policy-gate.outputs.owner_merge_only }}')
+        self.assertIn('env.OWNER_MERGE_ONLY != "true"', live['run'])
+        arm = self.ci['jobs']['staging-automerge']['steps'][0]
+        self.assertEqual(arm['env']['OWNER_MERGE_ONLY'], '${{ needs.policy-gate.outputs.owner_merge_only }}')
+        self.assertIn('approved RED work is merged by the owner by hand', arm['run'])
+
+    def test_behind_or_conflicting_pr_fails_fast(self):
+        # Owner 2026-11-17: #294 waited 30 minutes behind staging and timed out.
+        arm, wait = self.ci['jobs']['staging-automerge']['steps'][:2]
+        for step in (arm, wait):
+            self.assertIn('behind|dirty)', step['run'])
+            self.assertIn('Never use GitHub', step['run'])
 
 
 if __name__ == "__main__":
