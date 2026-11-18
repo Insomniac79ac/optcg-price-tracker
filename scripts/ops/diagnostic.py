@@ -5,7 +5,8 @@ by `;` (the format of docs/agent/evidence/staging-state-read.sql). Every stateme
 SELECT or WITH query and may not contain a write or session keyword; the read-only
 transaction (default_transaction_read_only=on) remains the enforcement. `{{ELIGIBLE}}` expands
 to the shared operational-health population (app.services.operational_health_sql.ELIGIBLE).
-Adding a diagnostic is a reviewed PR; there is no free-form SQL input.
+Adding a diagnostic is a reviewed PR; there is no free-form SQL input. The only value input is the
+optional bounded `print_ids` list, bound as a parameter (SEC-001 R13).
 """
 from __future__ import annotations
 
@@ -25,8 +26,33 @@ FORBIDDEN = re.compile(
     r"\b(insert|update|delete|merge|upsert|truncate|drop|alter|create|grant|revoke|copy|vacuum|analyze"
     r"|reindex|cluster|lock|set|reset|begin|commit|rollback|savepoint|call|do|execute|prepare|listen|notify"
     r"|refresh|security|pg_terminate_backend|pg_cancel_backend|pg_reload_conf|lo_import|lo_export"
-    r"|pg_read_file|pg_read_binary_file|pg_ls_dir|dblink|nextval|setval|set_config|pg_notify"
-    r"|pg_advisory\w*|pg_try_advisory\w*|txid_current|pg_switch_wal|pg_create\w*|pg_drop\w*)\b", re.I)
+    r"|pg_read_\w+|pg_ls_\w+|pg_stat_file|lo_get|current_setting|dblink\w*|nextval|setval|set_config|pg_notify"
+    r"|pg_advisory\w*|pg_try_advisory\w*|txid_current|pg_switch_wal|pg_create\w*|pg_drop\w*"
+    # SEC-001 R13: functions that run a query given as text, or read a table named at run time.
+    r"|query_to_xml\w*|cursor_to_xml\w*|table_to_xml\w*|schema_to_xml\w*|database_to_xml\w*"
+    r"|ts_stat|ts_rewrite|crosstab\w*|connectby|to_reg\w+"
+    # A regclass/regproc cast resolves a name built from string pieces at run time.
+    r"|regclass|regproc|regprocedure)\b", re.I)
+# Literal forms the '...' stripper below misreads (SEC-001 R13). Checked on the comment-stripped
+# text before literals are blanked. E'' only at a token start, so the plain literal 'e' passes.
+LITERAL_FORMS = re.compile(r"(?<![\w'])[eE]'|\b[uU]&['\"]|\$\w*\$|/\*")
+# Results land in public Actions logs and artifacts: a diagnostic may not name a user-data table
+# or a credential column (SEC-001 R13). A lint, not a control; the database role is the control.
+# app_log_events stays readable for counts and sizes, never its free-text columns.
+SENSITIVE = re.compile(
+    r"\b(users|user_preferences|watchlist_entries|wishlist_items|alert_rules|alert_events"
+    r"|collector_activity_events|collector_groups|collector_notes|collector_tags|collection_entries"
+    r"|collection_entry_events|collection_items|collection_item_groups|collection_item_tags"
+    r"|collection_value_points|saved_views|search_history|dashboard_preferences"
+    r"|portfolio_valuation_snapshots|grading_submissions|file_jobs"
+    r"|email|password|password_hash|secret|token|access_token|refresh_token|google_sub|pgpassword"
+    r"|context_json|traceback)\b", re.I)
+APP_LOG_TEXT = re.compile(r"\bmessage\b", re.I)
+# Optional bounded input (SEC-001 R13): a statement declares it with this placeholder, and the
+# value is bound as a SQL parameter (an int array), never formatted into the SQL text.
+PRINT_IDS = "%(print_ids)s"
+PRINT_IDS_MAX = 50
+PRINT_ID = re.compile(r"[1-9][0-9]{0,9}")
 
 
 def available():
@@ -55,9 +81,19 @@ def parse(text, expand=None):
             raise common.Refused(f"{name}: only SELECT/WITH statements")
         if ";" in body:
             raise common.Refused(f"{name}: one statement per name")
-        hit = FORBIDDEN.search(re.sub(r"'[^']*'", "''", body))
+        form = LITERAL_FORMS.search(body)
+        if form:
+            raise common.Refused(f"{name}: escape, Unicode or dollar-quoted literal or block comment {form.group(0)!r}")
+        blanked = re.sub(r"'[^']*'", "''", body)
+        hit = FORBIDDEN.search(blanked)
         if hit:
             raise common.Refused(f"{name}: forbidden keyword {hit.group(0)!r}")
+        hit = SENSITIVE.search(blanked)
+        if hit or (re.search(r"\bapp_log_events\b", blanked, re.I) and APP_LOG_TEXT.search(blanked)):
+            word = hit.group(0) if hit else "message"
+            raise common.Refused(f"{name}: names a user-data table or credential column {word!r}")
+        if "%" in body.replace(PRINT_IDS, "") and PRINT_IDS in body:
+            raise common.Refused(f"{name}: a statement with {PRINT_IDS} may not use another %")
         for key in re.findall(r"\{\{(\w+)\}\}", body):
             if expand is None or key not in expand:
                 raise common.Refused(f"{name}: unknown fragment {key}")
@@ -73,21 +109,45 @@ def load(name):
     return parse(text, fragments() if "{{" in text else None)
 
 
-def execute(conn, statements, row_limit=500):
+def parse_print_ids(raw):
+    """[] for empty, else up to PRINT_IDS_MAX distinct positive integers from a comma-separated string."""
+    items = [p.strip() for p in (raw or "").split(",")] if (raw or "").strip() else []
+    if any(not PRINT_ID.fullmatch(p) for p in items):
+        raise common.Refused("print_ids: comma-separated positive integers only")
+    ids = [int(p) for p in items]
+    if len(ids) > PRINT_IDS_MAX:
+        raise common.Refused(f"print_ids: at most {PRINT_IDS_MAX} ids, got {len(ids)}")
+    if len(set(ids)) != len(ids):
+        raise common.Refused("print_ids: duplicate id")
+    return ids
+
+
+def declares_print_ids(statements):
+    return any(PRINT_IDS in sql for sql in statements.values())
+
+
+def execute(conn, statements, row_limit=500, print_ids=()):
     out = {}
     for name, sql in statements.items():
-        rows = conn.execute(sql).fetchmany(row_limit + 1)
+        if PRINT_IDS in sql:
+            cursor = conn.execute(sql, {"print_ids": list(print_ids)})
+        else:
+            cursor = conn.execute(sql)
+        rows = cursor.fetchmany(row_limit + 1)
         out[name] = {"rows": rows[:row_limit], "truncated": len(rows) > row_limit}
     conn.rollback()
     return out
 
 
-def run(out_dir, name):
+def run(out_dir, name, print_ids=""):
     from ops import db as ops_db
 
     statements = load(name)
+    ids = parse_print_ids(print_ids)
+    if ids and not declares_print_ids(statements):
+        raise common.Refused(f"diagnostic {name!r} takes no print_ids")
     with ops_db.connection() as conn:
-        result = execute(conn, statements)
+        result = execute(conn, statements, print_ids=ids)
     common.write_json(Path(out_dir) / f"diagnostic-{name}.json",
                       {"diagnostic": name, "read_only": True, "database_writes": 0, "results": result})
     return {"diagnostic": name, "statements": {k: len(v["rows"]) for k, v in result.items()},

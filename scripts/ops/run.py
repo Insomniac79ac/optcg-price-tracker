@@ -71,7 +71,7 @@ def _official(args, out):
 
 def _diagnostic(args, out):
     from ops import diagnostic
-    return diagnostic.run(out, args.diagnostic)
+    return diagnostic.run(out, args.diagnostic, args.print_ids if isinstance(getattr(args, "print_ids", None), str) else "")
 
 
 def _official_series(args, out):
@@ -307,6 +307,12 @@ def preflight(args, now=None, read=gh_json):
         apply_migration.check_pair(args.revision, args.parent)
     if isinstance(getattr(args, "work_id", None), int) and args.runbook != "snkr-parser-requeue":
         raise common.Refused("--work-id is only for snkr-parser-requeue")
+    print_ids = getattr(args, "print_ids", "")
+    if isinstance(print_ids, str) and print_ids:
+        if args.runbook != "db-diagnostic":
+            raise common.Refused("--print-ids is only for db-diagnostic")
+        from ops import diagnostic
+        diagnostic.parse_print_ids(print_ids)
     if args.runbook == "catalogue-import":
         from ops import catalogue_import
         catalogue_import.resolve_scope(args.scope, catalogue_import.load_scopes())
@@ -355,6 +361,7 @@ def main(argv=None):
     parser.add_argument("--workflow", choices=["ops-readonly", "ops-write"], default="ops-readonly")
     parser.add_argument("--ledger-floor", help="verify-lossless: exclusive ledger id, or sample")
     parser.add_argument("--diagnostic")
+    parser.add_argument("--print-ids", default="", help="db-diagnostic: up to 50 comma-separated print ids")
     parser.add_argument("--transients")
     parser.add_argument("--receipt")
     parser.add_argument("--apply", action="store_true")
