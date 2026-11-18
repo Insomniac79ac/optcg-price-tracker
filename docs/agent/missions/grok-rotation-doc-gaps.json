@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Docs-only follow-up to #284 (CP security retest 2026-11-13): docs/staging_secret_rotation.md item 9 names the two Sentry DSN variables (Railway api SENTRY_DSN, Vercel NEXT_PUBLIC_SENTRY_DSN) with their redeploy step, and Afterwards adds a review of the staging Google OAuth client. No code, config or environment change. DATA lane by path (owner t397u).",
+  "classification": "GREEN",
+  "impacts": [
+    {
+      "files": [
+        "docs/staging_secret_rotation.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Two documentation gaps CP security found when retesting #284."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "docs only"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "none"
+      ],
+      "deployment_impact": "None.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 1
+    },
+    "recovery": {
+      "artifact": "ab814e68be32683d89cf6a1789aa74c648d0a14f",
+      "procedure": "Native revert.",
+      "trigger": "Runbook step wrong.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/staging_secret_rotation.md"
+      ],
+      "observation_window": "None."
+    }
+  },
+  "diff_sha256": "761595dcff9594019215defb46d65ceb80cce0a552a3c13b9a68f6a57fe3513b"
+}
