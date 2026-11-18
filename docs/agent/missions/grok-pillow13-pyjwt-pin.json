@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Dependency pin (CEO decision 2026-11-17 20:21 MYT; proposal reviewed 2026-11-16): Pillow==13.0.0 in services/snkrdunk_collector, services/yuyutei_collector and services/api (the API already resolves 13.0.0 unpinned, so the API and collectors stop running different Pillow versions), and pyjwt==2.15.1 in services/api (already resolved unpinned). Parity on 50 staging display images and 1,225 pairs: 0 digest, phash or distance differences between Pillow 12.3.0 and 13.0.0. DATA lane (build supply chain). Draft: the owner marks it ready, which releases both collectors.",
+  "mission": "Dependency pin (CEO decision 2026-11-17 20:21 MYT; proposal reviewed 2026-11-16): Pillow==13.0.0 in services/snkrdunk_collector, services/yuyutei_collector and services/api (the API already resolves 13.0.0 unpinned, so the API and collectors stop running different Pillow versions), and pyjwt==2.15.1 in services/api (already resolved unpinned). Parity on 50 staging display images and 1,225 pairs: 0 digest, phash or distance differences between Pillow 12.3.0 and 13.0.0. Both collector Dockerfiles move from the Playwright 1.61.0 jammy base (Python 3.10, which cannot install Pillow 13.0.0) to the same Playwright 1.61.0 on noble (Ubuntu 24.04, Python 3.12), pinned by multi-arch index digest, with an OS update step that brings libbrotli1 to the fixed version from the Ubuntu security notice (CEO decisions 2026-11-18 11:00 and 14:51 MYT; owner ruling AMBER 2026-11-18 15:04 MYT). DATA lane (build supply chain). Draft: the owner marks it ready, which releases both collectors.",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -31,6 +31,17 @@
     },
     {
       "files": [
+        "deploy/railway/snkrdunk-collector.Dockerfile",
+        "deploy/railway/yuyutei-collector.Dockerfile"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Collector base image moves from v1.61.0-jammy to v1.61.0-noble pinned by index digest sha256:a9731514f24121d1dcd25d58d0a38146646d290a5998fd80d3e533e7b5e21c69 (same Playwright version, Python 3.12), plus an apt step that upgrades only libbrotli1 and prints its version. Released with the same sequential collector re-upload."
+    },
+    {
+      "files": [
         "services/api/requirements.txt"
       ],
       "effects": [
@@ -49,7 +60,7 @@
         "No new route. No extra source request from this change."
       ],
       "dependencies": [
-        "staging at 86d5a026"
+        "staging at 35aa54d0"
       ],
       "deployment_impact": "Each collector is re-uploaded on the merge commit in its own slot, with automatic rollback to the deployment captured before upload. Must start 06:00-22:59 UTC; team rule: collector deliveries only 14:00 to 03:00 MYT. The API rebuilds because services/api changed; it already runs these versions. No schema change.",
       "database_writes": 0,
@@ -57,7 +68,7 @@
       "estimated_runtime_minutes": 180
     },
     "recovery": {
-      "artifact": "86d5a0261739f623676ffb0feca185cb0b096df4",
+      "artifact": "35aa54d0",
       "procedure": "The rollout captures each collector's live deployment before upload and restores it on failure (recovery_deployment_id rows are reference only, carried from the last full-fleet mission grok-freshness-deadline). Afterwards collector-redeploy to the fleet pin. Code: native revert PR with its own mission file (one more collector release back to 12.3.0).",
       "trigger": "A collector failing after release, an image decode error in collector logs, or artwork comparison verdicts changing class on the post-release due runs.",
       "backup": "Not applicable: no schema change and no row written by this PR.",
@@ -77,7 +88,9 @@
       "post_change": [
         "services/snkrdunk_collector/requirements.txt",
         "services/yuyutei_collector/requirements.txt",
-        "services/api/requirements.txt"
+        "services/api/requirements.txt",
+        "deploy/railway/snkrdunk-collector.Dockerfile",
+        "deploy/railway/yuyutei-collector.Dockerfile"
       ],
       "observation_window": "Delivery verify, including natural collector receipts on the merge commit. Then one SNKRDUNK and one Yuyu-Tei due run on staging read back from the run log, then the version-record follow-up (docs/agent/STAGING_FLEET.json) merges before anything else is armed."
     }

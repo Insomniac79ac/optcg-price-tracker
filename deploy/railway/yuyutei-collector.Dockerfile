@@ -25,7 +25,16 @@
 #   python -m yuyutei_collector.collect --mapping-id <id>
 # Railway Cron is not configured yet (see the tranche this was built for).
 
-FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
+# Base: Playwright 1.61.0 on Ubuntu 24.04 (Python 3.12), pinned by the multi-arch
+# index digest read 2026-11-18 so a re-pointed tag cannot change the build.
+FROM mcr.microsoft.com/playwright/python:v1.61.0-noble@sha256:a9731514f24121d1dcd25d58d0a38146646d290a5998fd80d3e533e7b5e21c69
+
+# OS security update (read 2026-11-18): bring libbrotli1 to the fixed version
+# from the Ubuntu security notice; the version installed is printed in the build log.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade libbrotli1 \
+    && dpkg-query -W -f='libbrotli1 installed version: ${Version}\n' libbrotli1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
