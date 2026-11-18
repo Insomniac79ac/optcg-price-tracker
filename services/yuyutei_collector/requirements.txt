@@ -5,6 +5,6 @@ psycopg[binary]
 pydantic-settings
 pytest
 
-Pillow==12.3.0
+Pillow==13.0.0
 # Optional RAW dictionary reader; writers activate separately in staging.
 zstandard==0.25.0
