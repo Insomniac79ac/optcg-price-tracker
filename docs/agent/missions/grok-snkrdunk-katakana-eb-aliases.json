@@ -42,6 +42,7 @@
     },
     {
       "files": [
+        "services/api/tests/test_op18_release_date.py",
         "services/api/tests/test_snkrdunk_katakana_eb_aliases.py",
         "services/api/tests/test_snkrdunk_katakana_eb_aliases_postgres.py",
         "scripts/tests/test_ops_apply_migration.py"
@@ -49,7 +50,7 @@
       "effects": [
         "tests"
       ],
-      "reason": "Migration matches its evidence and is the single head; no rendering equals a Bandai name; PostgreSQL upgrade, downgrade, upgrade cycle including a missing product and the exact rows added."
+      "reason": "Migration matches its evidence and is the single head; no rendering equals a Bandai name; PostgreSQL upgrade, downgrade, upgrade cycle including a missing product and the exact rows added. The OP-18 date test no longer requires its own revision to be the single head (a later revision sits on top); it still requires one head and its revision in the history."
     },
     {
       "files": [
