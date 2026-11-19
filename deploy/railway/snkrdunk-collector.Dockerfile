@@ -19,9 +19,9 @@
 #   python -m snkrdunk_collector.collect --mapping-id <id>
 # Railway Cron is not configured for this service yet.
 
-# Base: Playwright 1.61.0 on Ubuntu 24.04 (Python 3.12), pinned by the multi-arch
-# index digest read 2026-11-18 so a re-pointed tag cannot change the build.
-FROM mcr.microsoft.com/playwright/python:v1.61.0-noble@sha256:a9731514f24121d1dcd25d58d0a38146646d290a5998fd80d3e533e7b5e21c69
+# Base: Playwright 1.65.2 on Ubuntu 24.04 (Python 3.12), pinned by the multi-arch
+# index digest read 2026-11-19 so a re-pointed tag cannot change the build.
+FROM mcr.microsoft.com/playwright/python:v1.65.2-noble@sha256:38dd67fc654b56b3cba611e4c8eb71cd33750e1cd29eea2a5dc00b484817a75f
 
 # OS security update (read 2026-11-18): bring libbrotli1 to the fixed version
 # from the Ubuntu security notice; the version installed is printed in the build log.
@@ -34,6 +34,10 @@ WORKDIR /app
 
 COPY services/snkrdunk_collector/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Build-log evidence of the browser build this image ships: launch it once and
+# print its version (this also fails the build if the browser cannot start).
+RUN python -c "from playwright.sync_api import sync_playwright as sp; p = sp().start(); b = p.chromium.launch(); print('chromium version:', b.version); b.close(); p.stop()"
 
 # Same service package used by API and both opt-in adapters; no scheduler copy.
 COPY packages/opcg_source_identity /tmp/opcg_source_identity
