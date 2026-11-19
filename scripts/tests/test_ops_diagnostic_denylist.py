@@ -59,6 +59,16 @@ class QueryFromText(unittest.TestCase):
             with self.subTest(sql=sql):
                 self.assertIsNotNone(refused(sql))
 
+    def test_to_reg_with_space_or_newline_before_paren(self):
+        # CP security 19377ff: the pattern is \bto_reg\w+\s*\( so the space form is refused too.
+        for sql in ["select to_regclass ('x')", "select to_regclass\n('x')", "select TO_REGTYPE\t('int')",
+                    "select pg_catalog.to_regnamespace ('public')", "select \"to_regclass\" ('x')"]:
+            with self.subTest(sql=sql):
+                self.assertIsNotNone(refused(sql))
+
+    def test_to_reg_word_without_a_call_is_not_refused(self):
+        self.assertIsNone(refused("select 1 as to_region"))
+
     def test_schema_qualified_quoted_and_mixed_case(self):
         for sql in ["select pg_catalog.query_to_xml('select 1', true, false, '')",
                     "select \"query_to_xml\"('select 1', true, false, '')",

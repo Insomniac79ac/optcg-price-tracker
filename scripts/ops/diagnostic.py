@@ -30,9 +30,12 @@ FORBIDDEN = re.compile(
     r"|pg_advisory\w*|pg_try_advisory\w*|txid_current|pg_switch_wal|pg_create\w*|pg_drop\w*"
     # SEC-001 R13: functions that run a query given as text, or read a table named at run time.
     r"|query_to_xml\w*|cursor_to_xml\w*|table_to_xml\w*|schema_to_xml\w*|database_to_xml\w*"
-    r"|ts_stat|ts_rewrite|crosstab\w*|connectby|to_reg\w+"
+    r"|ts_stat|ts_rewrite|crosstab\w*|connectby"
     # A regclass/regproc cast resolves a name built from string pieces at run time.
-    r"|regclass|regproc|regprocedure)\b", re.I)
+    r"|regclass|regproc|regprocedure)\b"
+    # to_reg*() resolves a name given as text; Postgres accepts a space before the paren
+    # (CP security 19377ff: `to_regclass ('x')` must be refused) and the quoted name "to_regclass".
+    r"|\bto_reg\w+\"?\s*\(", re.I)
 # Literal forms the '...' stripper below misreads (SEC-001 R13). Checked on the comment-stripped
 # text before literals are blanked. E'' only at a token start, so the plain literal 'e' passes.
 LITERAL_FORMS = re.compile(r"(?<![\w'])[eE]'|\b[uU]&['\"]|\$\w*\$|/\*")
