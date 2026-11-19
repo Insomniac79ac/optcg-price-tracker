@@ -1,0 +1,16 @@
+{
+  "purpose": "SNKRDUNK katakana Extra Booster names recorded as source_rendering aliases (never Bandai names, no Bandai URL)",
+  "owner_confirmation": "content-pipeline ops/decisions.md 4b14c20 L561 (owner t106u, 2026-11-19 15:15 MYT): EB-04 and EB-03 yes; EB-02 yes only if the raw SNKRDUNK listing title reads 25th",
+  "observed_at": "2026-11-19 21:5x MYT, one page read each, public SNKRDUNK listing page title",
+  "accepted_mapping": [
+    {"official_code": "EB-04", "alias_name": "エッグヘッドクライシス", "alias_kind": "source_rendering", "source_url": null,
+     "listing": "https://snkrdunk.com/apparels/754975",
+     "listing_title": "スモーカー＆たしぎ R [EB04-003](エクストラブースター「エッグヘッドクライシス」)通販・買取・相場｜スニダン"},
+    {"official_code": "EB-03", "alias_name": "ワンピース ヒロインズエディション", "alias_kind": "source_rendering", "source_url": null,
+     "listing": "ops-readonly snkrdunk-quarantine run 44474605501 reason text (listing not fetched by me)",
+     "listing_title": "エクストラブースター「ワンピース ヒロインズエディション」 (from the refusal text, release part only)"},
+    {"official_code": "EB-02", "alias_name": "アニメ 25th コレクション", "alias_kind": "source_rendering", "source_url": null,
+     "listing": "https://snkrdunk.com/apparels/503392",
+     "listing_title": "トニートニー・チョッパー R [EB02-003](エクストラブースター「アニメ 25th コレクション」)通販・買取・相場｜スニダン"}
+  ]
+}
