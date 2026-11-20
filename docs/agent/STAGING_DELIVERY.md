@@ -209,6 +209,16 @@ unheld. When they ship together anyway, the rollout follows as a separate unheld
 the same `collector_services` mission (#171 then a follow-up; #223 then
 `claude-yuyu-probe-rollout`, 2026-10-26), opened as a draft that the owner marks ready.
 
+**A hand merge during a collector delivery makes that delivery obsolete (2026-11-20).** #302
+(Playwright 1.65.2) merged at 06:22Z and its `staging-automerge` job (CI run 44685688317) was
+releasing collectors one slot at a time when #303 (RED) was merged by hand at 07:01Z. Before each
+upload `deploy_staging_collectors.py` checks that the staging head still equals the delivery's
+merge commit; it no longer did, so snkrdunk-collector was refused ("Obsolete collector delivery;
+no upload allowed") and every released shard was restored to its previous deployment. The native
+concurrency group does not fence a hand merge (see below). Before any hand merge into `staging`,
+check that no CI run with a `staging-automerge` job is in progress or queued. Recovery is this
+section's follow-up PR with the same `collector_services` mission, never a re-run of the failed job.
+
 **Frontend runtime lag (2026-10-20).** Vercel can report the merge READY before the staging alias
 serves it (#189 and #190 failed "Frontend runtime SHA disagrees with platform" 1-2 minutes after
 merge; a later Verify staging merge passed). The verifier now polls web `/api/version` every 15 s
