@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "mission": "Collector re-release of #302 (Playwright 1.65.2, owner t537, 2026-11-19 20:42 MYT, content-pipeline ops/decisions.md L568) plus the fleet record of migration 7d2f9b4e1a63 (#303 P5). #302's own delivery (CI run 44685688317) rolled every collector back at 2026-11-20 07:03Z because #303 was merged by hand at 07:01Z during the rollout, so the staging head no longer equalled #302's merge commit ('Obsolete collector delivery; no upload allowed'). This PR changes no code: it carries the same collector_services request so staging-automerge releases the ten collectors one at a time on its merge commit (which contains #302 and #303), each restored to its previous deployment on failure, then verifies staging. It also moves docs/agent/STAGING_FLEET.json revision from cb7419af37e9 to 7d2f9b4e1a63, which delivery verify requires once the owner has applied that migration with apply-migration (dry run then apply). Draft: the owner marks it ready only after the migration apply receipt shows alembic_version_after 7d2f9b4e1a63, inside 14:00 to 03:00 MYT, and does not hand-merge anything into staging while its delivery runs.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/STAGING_DELIVERY.md"
+      ],
+      "effects": [
+        "documentation",
+        "infrastructure"
+      ],
+      "reason": "Records why the 20 Nov #302 delivery became obsolete (hand merge of #303 during the rollout) and the check to make before any hand merge. The infrastructure effect is this PR's purpose: the mission-scoped sequential release of all ten staging collectors on the merge commit, which carries #302's Playwright 1.65.2 images."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "revision cb7419af37e9 -> 7d2f9b4e1a63 (#303 migration, after the owner's apply-migration run); nothing else changes. Collector component pins stay 2f6b0c4d until the pin follow-up after this delivery verifies."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "10 staging collectors (sequential CI release)",
+        "Verify staging merge expectations for the collector fleet"
+      ],
+      "routes": [
+        "No new route. No extra source request from this change."
+      ],
+      "dependencies": [
+        "staging at f8938735 (#303), which contains #302 (ea387f10)",
+        "apply-migration 7d2f9b4e1a63 on parent cb7419af37e9 applied by the owner before Ready for review (until then delivery verify fails on the revision by design, OPS_RUNBOOKS.md apply-migration step 5)",
+        "then a fleet-pin PR (yuyu_reader_component and snkr_component to this merge SHA)"
+      ],
+      "deployment_impact": "Collector release of #302's code: each collector re-uploaded on the merge commit in its own slot with automatic rollback to the deployment captured before upload. Must start 06:00-22:59 UTC; team rule: collector deliveries only 14:00 to 03:00 MYT. services/api is not changed, so the API does not rebuild. No schema change in this PR.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 180
+    },
+    "recovery": {
+      "artifact": "f89387357ce9d6a6df902e45b8d1829756b44f99",
+      "procedure": "The rollout captures each collector's live deployment before upload and restores it on failure (recovery_deployment_id rows are reference only, carried from grok-playwright-1-65-2). Do not re-run a failed delivery job; recover with another follow-up PR carrying the same request. Fleet record: native revert PR with its own mission file.",
+      "trigger": "A collector failing to launch the browser after release, a rise in browser launch or page timeouts in collector logs, a change in capture results on the post-release due runs, or delivery verify reporting a migration revision mismatch.",
+      "backup": "Not applicable: no schema or row change in this PR.",
+      "validation": [
+        "services/snkrdunk_collector/tests",
+        "services/yuyutei_collector/tests",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/STAGING_FLEET.json",
+        "services/snkrdunk_collector/requirements.txt",
+        "services/yuyutei_collector/requirements.txt",
+        "deploy/railway/snkrdunk-collector.Dockerfile",
+        "deploy/railway/yuyutei-collector.Dockerfile"
+      ],
+      "observation_window": "Delivery verify (migration revision 7d2f9b4e1a63, natural collector receipts on the merge commit). Then one SNKRDUNK and one Yuyu-Tei due run on staging read back from the run log, then the version-record follow-up (docs/agent/STAGING_FLEET.json component pins) merges before anything else is armed."
+    }
+  },
+  "deployment_verification": {
+    "yuyu_reader_component": "merge",
+    "snkr_component": "merge",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "838a810d-37a0-4bd4-9290-16d64e68ee45"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "856b32ee-ab55-4983-800a-63eba4dba0d6"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "740ec58c-25fa-423c-8b4c-b60b5566a103"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "71686eff-e9f9-4ccc-83e1-c048ca06299d"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "be2a309f-3397-41fe-98be-c3eb1c504e4c"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "4420042e-53de-42a4-9c67-aa4b9c063004"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "633b333b-f051-4fb9-b9ff-a43c9191aa57"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "a706daa2-644a-49e8-9108-ae1acd37c922"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "fdea2a73-8d8b-4c1c-a40f-adaa2dd62fc9"
+      },
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "e4942d80-d246-43a4-8722-ef9a6c46c506"
+      }
+    ]
+  },
+  "diff_sha256": ""
+}
