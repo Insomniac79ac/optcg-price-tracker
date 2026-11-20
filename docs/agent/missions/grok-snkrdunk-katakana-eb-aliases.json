@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "mission": "P5 of the 16 Nov coverage plan (owner t498u ops/decisions L546; owner t106u L561, 2026-11-19 15:15 MYT; owner t539u L570 allows this PR to open alongside the browser security PR). SNKRDUNK writes three Extra Booster names in katakana and the release gate accepts only Bandai's Latin names, so listings of EB-02, EB-03 and EB-04 are refused as release_name_mismatch. Data migration 7d2f9b4e1a63 on cb7419af37e9 adds three source_rendering aliases for the snkrdunk source (EB-04 エッグヘッドクライシス, EB-03 ワンピース ヒロインズエディション, EB-02 アニメ 25th コレクション), each with no Bandai URL, only onto an existing bandai_jp product with that official code. Frozen input docs/evidence/snkrdunk-katakana-eb-aliases-2026-11-19.json. apply_migration.py allowlists 7d2f9b4e1a63 on cb7419af37e9. RED (identity: it widens the names the release gate accepts), owner merges by hand; the migration is applied afterwards by the owner through the apply-migration runbook (dry run, then apply). No collector runtime input changes.",
+  "classification": "RED",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": true,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "owner_approvals": {
+    "identity_weakening": "https://github.com/Insomniac79ac/content-pipeline/blob/4b14c20ba945aa8aa742d4eebb5d8aba045a3428/ops/decisions.md#L561,https://github.com/Insomniac79ac/content-pipeline/blob/d00e84c40b59e88bc8021c7419b73becf6fd0d9e/ops/decisions.md#L546"
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/alembic/versions/7d2f9b4e1a63_snkrdunk_katakana_eb_aliases.py"
+      ],
+      "effects": [
+        "migration",
+        "bulk_data"
+      ],
+      "reason": "Inserts at most three release_product_aliases rows (source_rendering, source_id snkrdunk, source_url null) for existing bandai_jp EB-02, EB-03 and EB-04 products. Nothing updated or deleted on upgrade; downgrade deletes exactly those rows."
+    },
+    {
+      "files": [
+        "docs/evidence/snkrdunk-katakana-eb-aliases-2026-11-19.json"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Frozen evidence: the three katakana names with the SNKRDUNK listing page titles they come from and the owner confirmation link."
+    },
+    {
+      "files": [
+        "services/api/tests/test_op18_release_date.py",
+        "services/api/tests/test_snkrdunk_katakana_eb_aliases.py",
+        "services/api/tests/test_snkrdunk_katakana_eb_aliases_postgres.py",
+        "scripts/tests/test_ops_apply_migration.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Migration matches its evidence and is the single head; no rendering equals a Bandai name; PostgreSQL upgrade, downgrade, upgrade cycle including a missing product and the exact rows added. The OP-18 date test no longer requires its own revision to be the single head (a later revision sits on top); it still requires one head and its revision in the history."
+    },
+    {
+      "files": [
+        "scripts/ops/apply_migration.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Adds the pair 7d2f9b4e1a63 on cb7419af37e9 to the apply-migration allowlist, as cfc642e6 did for cb7419af37e9. No other change."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "release_product_aliases (up to 3 rows)",
+        "ops-write apply-migration (owner clicks)"
+      ],
+      "routes": [
+        "No route changes. Effect after apply: SNKRDUNK refresh work for EB-02, EB-03 and EB-04 listings can pass the release-name check once requeued."
+      ],
+      "dependencies": [
+        "staging 55c02a2c or later; no open PR must merge first. #300 (SEC-001 PR 1) stays open and shares no files. The browser security PR (#302) may merge before or after.",
+        "then apply-migration 7d2f9b4e1a63 dry run and apply (owner), then a fleet revision PR"
+      ],
+      "deployment_impact": "A hand merge runs no rollout and no migration. API image rebuilds from Git; no collector release, no collector pin or evidence refresh. Until apply-migration runs, staging stays on revision cb7419af37e9 and nothing changes.",
+      "database_writes": 3,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "55c02a2c",
+      "procedure": "Native revert PR before apply; after apply, Alembic downgrade to cb7419af37e9 deletes only these three rows (separate owner decision).",
+      "trigger": "The apply dry run shows any row other than the three aliases changing, or a refused listing newly passes for the wrong release.",
+      "backup": "Railway Postgres backup under 24 h (required by apply-migration).",
+      "validation": [
+        "services/api/tests/test_snkrdunk_katakana_eb_aliases.py",
+        "services/api/tests/test_snkrdunk_katakana_eb_aliases_postgres.py",
+        "scripts/tests/test_ops_apply_migration.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/alembic/versions/7d2f9b4e1a63_snkrdunk_katakana_eb_aliases.py"
+      ],
+      "observation_window": "apply-migration dry run and apply runs; then ops-readonly snkrdunk-quarantine shows the EB-02, EB-03 and EB-04 release_name_mismatch rows requeue or change reason."
+    }
+  },
+  "diff_sha256": "6d6913de45a9bdc0dba6407c51c735bad7530889b2c589d4084d388e08dd8700"
+}
