@@ -101,3 +101,12 @@ class MarketValueReleasesOut(BaseModel):
 
 class MarketValueErrorOut(BaseModel):
     detail: str
+
+
+class MarketValueReleaseNotSeededOut(BaseModel):
+    """404 for a real release whose Market Value is not published yet."""
+
+    detail: Literal["release_market_value_not_seeded"]
+    release_product_id: int
+    release_code: str | None
+    release_name: str | None

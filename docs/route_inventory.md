@@ -86,7 +86,7 @@ per-endpoint sweep.
 |---|---|---|---|
 | `/health` | `GET /health` | none | 200, `{"status": "ok", ...}` - exempt from rate limiting (Docker healthchecks poll it) |
 | `/version` | `GET /version` | none | 200, version/git-commit/build-time |
-| `/analytics/market-value*` | `GET /analytics/market-value`, `/releases`, `/movers`, `/most-valuable` | none | 200 with persisted dates, partial JPY basket, separate movement and exact-print rankings; movers are one published daily step only; 404 unknown release, 422 invalid query, 503 unseeded or ranking integrity mismatch |
+| `/analytics/market-value*` | `GET /analytics/market-value`, `/releases`, `/movers`, `/most-valuable` | none | 200 with persisted dates, partial JPY basket, separate movement and exact-print rankings; movers are one published daily step only; 404 unknown release or a real release with no Market Value yet (detail release_market_value_not_seeded), 422 invalid query, 503 unseeded Overall or ranking integrity mismatch |
 | `/cards*` | `GET /cards`, `GET /cards/{id}`, `GET /cards/{id}/prices`, `POST`/`DELETE /cards/{id}/tags/{tag_id}` | none | 200 |
 | `/collection/*` | `GET/POST /collection`, `GET /collection/summary`, `GET /collection/valuation(/history)`, `GET/PATCH/DELETE /collection/{id}`, tag/group assignment, `GET /collection/export.csv`, `POST /collection/import.csv` | user | 200 (401 without a valid bearer token) |
 | `/wishlist/*` | `GET/POST /wishlist`, `GET /wishlist/summary`, `GET/PATCH/DELETE /wishlist/{id}`, `POST /wishlist/{id}/mark-purchased`, `POST /wishlist/{id}/convert-to-collection`, CSV import/export | user | 200 (401 without a valid bearer token) |

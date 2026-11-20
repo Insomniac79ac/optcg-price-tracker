@@ -1,4 +1,5 @@
 import { apiGet } from "./api";
+import { releaseLabelEnglish } from "./releaseNames";
 import type { PrintDisplayImage } from "./prints";
 
 export const MARKET_VALUE_WINDOWS = ["7d", "30d", "all"] as const;
@@ -247,4 +248,18 @@ export function marketChartPoints(series: MarketValuePoint[], mode: MarketValueM
     });
   }
   return rows;
+}
+
+/** A real release with no published Market Value: the API answers 404 with
+ * detail "release_market_value_not_seeded" (unknown ids use another detail). */
+export function marketNotPublished(error: unknown): string | null {
+  // Duck-typed (an ApiError carries status and the parsed body in details).
+  const failure = error as { status?: unknown; details?: unknown } | null;
+  if (failure?.status !== 404) return null;
+  const body = failure.details as { detail?: unknown; release_code?: unknown; release_name?: unknown } | null;
+  if (body?.detail !== "release_market_value_not_seeded") return null;
+  const code = typeof body.release_code === "string" ? body.release_code : null;
+  const name = typeof body.release_name === "string" ? body.release_name : null;
+  const label = code || name ? releaseLabelEnglish(code, name) : "this release";
+  return `Market Value for ${label} isn\u2019t published yet`;
 }

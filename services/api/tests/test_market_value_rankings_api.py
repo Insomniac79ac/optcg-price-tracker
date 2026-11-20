@@ -92,15 +92,25 @@ def test_invalid_ranking_parameters(client, route, params):
     "release_id,status,detail",
     [
         (99999, 404, "release_product_not_found"),
-        (5, 503, "market_value_not_seeded"),
-        (17, 503, "market_value_not_seeded"),
     ],
 )
-def test_unknown_and_unseeded_release(
-    seeded, client, route, release_id, status, detail
-):
+def test_unknown_release(seeded, client, route, release_id, status, detail):
     response = client.get(f"{BASE}/{route}", params={"release_product_id": release_id})
     assert response.status_code == status and response.json() == {"detail": detail}
+
+
+@pytest.mark.parametrize("route", ["movers", "most-valuable"])
+@pytest.mark.parametrize("release_id", [5, 17])
+def test_unseeded_release_is_404_with_identity_not_503(
+    seeded, client, route, release_id
+):
+    """Overall is seeded, this real release has no points: 404, never a 5xx."""
+    response = client.get(f"{BASE}/{route}", params={"release_product_id": release_id})
+    assert response.status_code == 404
+    body = response.json()
+    assert body["detail"] == "release_market_value_not_seeded"
+    assert body["release_product_id"] == release_id
+    assert set(body) == {"detail", "release_product_id", "release_code", "release_name"}
 
 
 @pytest.mark.parametrize("route", ["movers", "most-valuable"])

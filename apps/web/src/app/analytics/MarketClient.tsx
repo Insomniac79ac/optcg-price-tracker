@@ -9,7 +9,7 @@ import { MarketValueMostValuableSection, MarketValueMoversSection } from "@/comp
 import { MarketValueComparison } from "@/components/ui/MarketValueComparison";
 import { MarketValueReleaseMarket } from "@/components/ui/MarketValueReleaseMarket";
 import { ApiError } from "@/lib/api";
-import { fetchMarketValue, fetchMarketValueReleases, MARKET_VALUE_WINDOWS, marketScopeUrl, parseMarketRelease, type MarketValue, type MarketValueMode, type MarketValueRelease, type MarketValueWindow } from "@/lib/marketValue";
+import { fetchMarketValue, fetchMarketValueReleases, MARKET_VALUE_WINDOWS, marketNotPublished, marketScopeUrl, parseMarketRelease, type MarketValue, type MarketValueMode, type MarketValueRelease, type MarketValueWindow } from "@/lib/marketValue";
 
 export default function MarketPage({ initialData = null }: { initialData?: MarketValue | null }) {
   return (
@@ -33,7 +33,7 @@ function MarketView({ initialData }: { initialData: MarketValue | null }) {
   const [mode, setMode] = useState<MarketValueMode>("value");
   const [attempt, setAttempt] = useState(0);
   const [releases, setReleases] = useState<{ items: MarketValueRelease[]; failed: boolean; loading: boolean }>({ items: [], failed: false, loading: true });
-  const [settled, setSettled] = useState<{ key: string; data: MarketValue | null; error: string | null } | null>(initialData ? { key: `${initialData.release_product_id ?? "overall"}:${initialData.movement.window}:0`, data: initialData, error: null } : null);
+  const [settled, setSettled] = useState<{ key: string; data: MarketValue | null; error: string | null; notPublished?: string | null } | null>(initialData ? { key: `${initialData.release_product_id ?? "overall"}:${initialData.movement.window}:0`, data: initialData, error: null } : null);
   const key = `${releaseProductId ?? "overall"}:${window}:${attempt}`;
 
   // The catalogue request is independent: its failure must not block Overall
@@ -54,6 +54,8 @@ function MarketView({ initialData }: { initialData: MarketValue | null }) {
     fetchMarketValue(releaseProductId, window).then((data) => {
       if (!cancelled) setSettled({ key, data, error: null });
     }).catch((error: unknown) => {
+      const notPublished = marketNotPublished(error);
+      if (!cancelled && notPublished) { setSettled({ key, data: null, error: null, notPublished }); return; }
       if (!cancelled) setSettled({ key, data: null, error: error instanceof ApiError && error.status === 404 ? "This release could not be found." : "This Market view could not be loaded." });
     });
     return () => { cancelled = true; };
@@ -71,6 +73,7 @@ function MarketView({ initialData }: { initialData: MarketValue | null }) {
     data={invalid ? null : settled?.data ?? null}
     busy={busy}
     error={invalid ? "Choose a valid release to explore." : busy ? null : settled?.error ?? null}
+    notPublished={invalid || busy ? null : settled?.notPublished ?? null}
     releases={releases.items}
     releasesFailed={releases.failed}
     releaseProductId={releaseProductId}

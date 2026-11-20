@@ -214,9 +214,11 @@ the exact series Atlas had persisted rather than changing its derivation.
 is public. The default is Overall and `7d`; Overall has null release fields.
 Release IDs, codes and display names come from `ReleaseProduct`, including
 legitimate uncoded products when their series exists. Unknown IDs return 404;
-invalid IDs/windows return 422. Missing Overall v1 data, or a known release
-without a persisted v1 series, returns 503 with
-`{"detail":"market_value_not_seeded"}`.
+invalid IDs/windows return 422. Missing Overall v1 data returns 503 with
+`{"detail":"market_value_not_seeded"}`. A known release without a persisted v1
+series returns 404 with `detail` `release_market_value_not_seeded` plus
+`release_product_id`, `release_code` and `release_name` (changed 2026-11-20; it
+was 503). The same 404 applies to the two ranking endpoints.
 
 `as_of` is the latest persisted UTC date **for the selected scope**. It is not
 the HTTP request time or a live quote timestamp. The initial staging series
@@ -284,8 +286,9 @@ persisted rows before publication of the PR.
 
 Both ranking endpoints are public and SELECT-only. Optional positive
 `release_product_id` selects the authoritative ReleaseProduct FK; omission
-selects Overall. Unknown IDs are 404. Missing Overall data or a known release
-without its own persisted series is 503 `market_value_not_seeded`, as in A4A.
+selects Overall. Unknown IDs are 404. Missing Overall data is 503
+`market_value_not_seeded`, as in A4A. A known release without its own persisted
+series is 404 `release_market_value_not_seeded` (changed 2026-11-20; it was 503).
 Neither endpoint changes the A4A release table or adds per-release queries to it.
 
 ### Daily Market Movers

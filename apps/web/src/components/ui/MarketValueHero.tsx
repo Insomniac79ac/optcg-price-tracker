@@ -11,6 +11,7 @@ export interface MarketValueHeroProps {
   data: MarketValue | null;
   busy: boolean;
   error: string | null;
+  notPublished?: string | null;
   releases: MarketValueRelease[];
   releasesFailed: boolean;
   releaseProductId: number | null | "invalid";
@@ -23,7 +24,7 @@ export interface MarketValueHeroProps {
 }
 
 export function MarketValueHero(props: MarketValueHeroProps) {
-  const { data, busy, error, releases, releasesFailed, releaseProductId, window, mode, onScopeChange, onWindowChange, onModeChange, onRetry } = props;
+  const { data, busy, error, notPublished = null, releases, releasesFailed, releaseProductId, window, mode, onScopeChange, onWindowChange, onModeChange, onRetry } = props;
   const available = data?.movement.available === true && marketNumber(data.movement.pct) !== null;
   const unavailable = data ? movementUnavailable(data) : null;
   const scopeLabel = data?.scope_kind === "release"
@@ -68,7 +69,13 @@ export function MarketValueHero(props: MarketValueHeroProps) {
 
       <div className={styles.settled} aria-busy={busy} data-testid="market-settled">
         <div className={styles.statusLine} role="status">{busy ? data ? "Updating view…" : "Loading market…" : ""}</div>
-        {error ? (
+        {notPublished ? (
+          <div className={styles.error} role="status" data-testid="market-not-published">
+            <p className={styles.eyebrow}>Not published yet</p>
+            <h2>{notPublished}.</h2>
+            <p>Choose another release from the menu to see its Market Value.</p>
+          </div>
+        ) : error ? (
           <div className={styles.error} role="alert">
             <p className={styles.eyebrow}>Market unavailable</p>
             <h2>{error}</h2>

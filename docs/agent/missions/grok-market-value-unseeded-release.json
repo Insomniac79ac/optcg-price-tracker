@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "mission": "Unseeded release Market Value contract (owner t541u 2026-11-20 07:41 MYT, Sentry staging issue f62436bf19f143aaa04171123c8e68e4): GET /analytics/market-value, /movers and /most-valuable answer 404 with detail release_market_value_not_seeded (plus release_product_id, release_code, release_name) for a real release that has no persisted Market Value points, instead of 503 market_value_not_seeded. 503 stays for an unseeded Overall and for ranking integrity failures. The web page shows 'Market Value for <release> isn't published yet' on the hero, movers and most-valuable sections, with no retry button and no 'could not be loaded'. No database, collector or workflow change.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/api/market_value.py",
+        "services/api/app/market_value_schemas.py",
+        "services/api/app/services/market_value_rankings.py",
+        "services/api/app/services/market_value_read.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Public API contract change (AMBER by owner t541u): a real release with no Market Value points returns 404 release_market_value_not_seeded with its identity instead of 503, identical on all three endpoints. Unseeded Overall and integrity failures stay 503. Read-only code path, no query added."
+    },
+    {
+      "files": [
+        "apps/web/src/app/analytics/MarketClient.tsx",
+        "apps/web/src/components/ui/MarketValueDiscovery.tsx",
+        "apps/web/src/components/ui/MarketValueHero.tsx",
+        "apps/web/src/lib/marketValue.ts"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Web reads the 404 body and shows the not-published message on hero, movers and most-valuable, with no retry; other 404 and 5xx wording is unchanged."
+    },
+    {
+      "files": [
+        "apps/web/src/app/analytics/page.test.tsx",
+        "services/api/tests/test_market_value_api.py",
+        "services/api/tests/test_market_value_rankings_api.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "API tests per endpoint for seeded Overall with an unseeded release, and for unseeded Overall staying 503; web test for the shared release URL and for unchanged unknown-release and 503 wording."
+    },
+    {
+      "files": [
+        "docs/market_value.md",
+        "docs/route_inventory.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "docs/market_value.md and docs/route_inventory.md state the new 404 contract."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub Actions CI (backend-tests, frontend-build)",
+        "Railway API and worker redeploy",
+        "Vercel staging web build"
+      ],
+      "routes": [
+        "GET /analytics/market-value",
+        "GET /analytics/market-value/movers",
+        "GET /analytics/market-value/most-valuable",
+        "/analytics page"
+      ],
+      "dependencies": [
+        "staging at ea387f10 (after #302)"
+      ],
+      "deployment_impact": "API and Vercel staging web redeploy. No collector input changes, no RAW migration, no fleet change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "ea387f105359698126a909dc1b28019e8ee6c03d",
+      "procedure": "Native revert PR of this merge with its own mission file; the three endpoints return 503 market_value_not_seeded again and the web shows its previous wording.",
+      "trigger": "Staging delivery verify fails, a seeded release or Overall stops returning 200, or new Sentry events appear for these routes after merge.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "services/api/tests/test_market_value_api.py",
+        "services/api/tests/test_market_value_rankings_api.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "backend-tests",
+        "frontend-build"
+      ],
+      "post_change": [
+        "services/api/app/api/market_value.py",
+        "apps/web/src/app/analytics/MarketClient.tsx"
+      ],
+      "observation_window": "This merge's staging delivery verify, then the staging page for an unseeded release id and Sentry for the three routes."
+    }
+  },
+  "diff_sha256": "c97f125fc9086d73a13e1350ba2d4271c64124abdbed42f4344413a791cda02a"
+}

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { resolveCardImageUrl } from "@/lib/cardImage";
 import {
-  fetchMarketValueMostValuable, fetchMarketValueMovers, marketDate, marketJpy,
+  fetchMarketValueMostValuable, fetchMarketValueMovers, marketDate, marketNotPublished, marketJpy,
   marketPercentagePoints, marketPercent, marketSignedJpy,
   type MarketValueMover, type MarketValueMoverOrder, type MarketValuePrint,
 } from "@/lib/marketValue";
@@ -23,18 +23,19 @@ const MODES: { order: MarketValueMoverOrder; label: string }[] = [
 function useRanking<T>(selection: string, request: () => Promise<T>) {
   const [attempt, setAttempt] = useState(0);
   const key = `${selection}:${attempt}`;
-  const [settled, setSettled] = useState<{ key: string; data: T | null; failed: boolean } | null>(null);
+  const [settled, setSettled] = useState<{ key: string; data: T | null; failed: boolean; notPublished?: string | null } | null>(null);
   useEffect(() => {
     let cancelled = false;
     request().then((data) => {
       if (!cancelled) setSettled({ key, data, failed: false });
-    }).catch(() => {
-      if (!cancelled) setSettled({ key, data: null, failed: true });
+    }).catch((error: unknown) => {
+      const notPublished = marketNotPublished(error);
+      if (!cancelled) setSettled({ key, data: null, failed: notPublished === null, notPublished });
     });
     return () => { cancelled = true; };
   }, [key, request]);
   const busy = settled?.key !== key;
-  return { data: settled?.data ?? null, busy, failed: !busy && settled?.failed === true, retry: () => setAttempt((n) => n + 1) };
+  return { data: settled?.data ?? null, busy, notPublished: !busy ? settled?.notPublished ?? null : null, failed: !busy && settled?.failed === true, retry: () => setAttempt((n) => n + 1) };
 }
 
 function PrintArtwork({ item }: { item: MarketValuePrint }) {
@@ -62,6 +63,10 @@ function LocalError({ children, retry }: { children: React.ReactNode; retry: () 
   return <div className={styles.empty} role="alert"><p>{children}</p><button type="button" onClick={retry}>Try again</button></div>;
 }
 
+function NotPublished({ children }: { children: string }) {
+  return <div className={styles.empty} role="status" data-testid="not-published"><p>{children}.</p></div>;
+}
+
 function MoverCard({ item, order }: { item: MarketValueMover; order: MarketValueMoverOrder }) {
   const impact = order === "impact";
   return <li>
@@ -86,7 +91,7 @@ function MoverCard({ item, order }: { item: MarketValueMover; order: MarketValue
 export function MarketValueMoversSection({ releaseProductId }: { releaseProductId: number | null }) {
   const [order, setOrder] = useState<MarketValueMoverOrder>("gainers");
   const request = useCallback(() => fetchMarketValueMovers(releaseProductId, order), [releaseProductId, order]);
-  const { data, busy, failed, retry } = useRanking(`${releaseProductId ?? "overall"}:${order}`, request);
+  const { data, busy, failed, notPublished, retry } = useRanking(`${releaseProductId ?? "overall"}:${order}`, request);
   // Metrics and dates belong to the settled payload, even when a newer tab is loading.
   const displayOrder = data?.order ?? order;
 
@@ -99,7 +104,7 @@ export function MarketValueMoversSection({ releaseProductId }: { releaseProductI
     </header>
     <div className={styles.settled} aria-busy={busy} data-testid="movers-settled">
       <p className={styles.status} role="status">{busy ? data ? `Updating… Showing previous ${MODES.find((mode) => mode.order === data.order)?.label.toLowerCase()} for ${data.release_code ?? "All One Piece"}.` : "Loading market movers…" : ""}</p>
-      {failed ? <LocalError retry={retry}>Market movers could not be loaded.</LocalError> : data && <>
+      {notPublished ? <NotPublished>{notPublished}</NotPublished> : failed ? <LocalError retry={retry}>Market movers could not be loaded.</LocalError> : data && <>
         <div className={styles.sectionContext}>
           {displayOrder === "impact" && <p>Largest contributors to the latest basket move.</p>}
           {data.step_date && <p className={styles.date}>{data.step_date < data.scope_as_of
@@ -118,7 +123,7 @@ export function MarketValueMoversSection({ releaseProductId }: { releaseProductI
 
 export function MarketValueMostValuableSection({ releaseProductId, releaseCode }: { releaseProductId: number | null; releaseCode: string | null }) {
   const request = useCallback(() => fetchMarketValueMostValuable(releaseProductId), [releaseProductId]);
-  const { data, busy, failed, retry } = useRanking(`${releaseProductId ?? "overall"}`, request);
+  const { data, busy, failed, notPublished, retry } = useRanking(`${releaseProductId ?? "overall"}`, request);
   const code = releaseProductId === null ? null : releaseCode ?? (data?.release_product_id === releaseProductId ? data.release_code : null);
   const heading = code ? `Most valuable in ${code}` : "Most valuable cards";
   const browseUrl = releaseProductId === null ? "/cards" : `/cards?release_product_id=${releaseProductId}`;
@@ -130,7 +135,7 @@ export function MarketValueMostValuableSection({ releaseProductId, releaseCode }
     </header>
     <div className={styles.settled} aria-busy={busy} data-testid="valuable-settled">
       <p className={styles.status} role="status">{busy ? data ? `Updating… Showing previous prices for ${data.release_code ?? "All One Piece"}.` : "Loading most valuable cards…" : ""}</p>
-      {failed ? <LocalError retry={retry}>Most valuable cards could not be loaded.</LocalError> : data && <>
+      {notPublished ? <NotPublished>{notPublished}</NotPublished> : failed ? <LocalError retry={retry}>Most valuable cards could not be loaded.</LocalError> : data && <>
         <p className={styles.date}>Prices through <time dateTime={data.as_of}>{marketDate(data.as_of)}</time></p>
         {data.total_eligible === 0 ? <div className={styles.empty}><p>No priced cards yet for this scope.</p></div>
           : <ul className={styles.valuable}>{data.items.map((item) => <li key={item.card_print_id}>

@@ -1,6 +1,7 @@
 """Public persisted Market Value endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -13,11 +14,13 @@ from app.market_value_ranking_schemas import (
 from app.market_value_schemas import (
     MarketValueErrorOut,
     MarketValueOut,
+    MarketValueReleaseNotSeededOut,
     MarketValueReleasesOut,
     MarketValueWindow,
 )
 from app.services.market_value_read import (
     MarketValueUnavailableError,
+    ReleaseMarketValueNotSeededError,
     UnknownMarketValueReleaseError,
     get_market_value,
     list_market_value_releases,
@@ -29,6 +32,24 @@ from app.services.market_value_rankings import (
 )
 
 router = APIRouter(prefix="/analytics/market-value", tags=["analytics"])
+RELEASE_NOT_SEEDED = {
+    "model": MarketValueReleaseNotSeededOut,
+    "description": "Unknown ReleaseProduct ID (detail release_product_not_found), or a real release with no Market Value yet (detail release_market_value_not_seeded, with the release id, code and name).",
+}
+
+
+def _release_not_seeded(exc: ReleaseMarketValueNotSeededError) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content=MarketValueReleaseNotSeededOut(
+            detail="release_market_value_not_seeded",
+            release_product_id=exc.release_product_id,
+            release_code=exc.release_code,
+            release_name=exc.release_name,
+        ).model_dump(),
+    )
+
+
 UNSEEDED = {
     503: {
         "model": MarketValueErrorOut,
@@ -36,7 +57,7 @@ UNSEEDED = {
     }
 }
 RANKING_ERRORS = {
-    404: {"model": MarketValueErrorOut, "description": "Unknown ReleaseProduct ID."},
+    404: RELEASE_NOT_SEEDED,
     503: {
         "model": MarketValueRankingErrorOut,
         "description": "Unseeded persisted scope, or fail-closed archive/persistence integrity mismatch. No rankings returned.",
@@ -49,10 +70,7 @@ RANKING_ERRORS = {
     response_model=MarketValueOut,
     responses={
         **UNSEEDED,
-        404: {
-            "model": MarketValueErrorOut,
-            "description": "Unknown ReleaseProduct ID.",
-        },
+        404: RELEASE_NOT_SEEDED,
     },
 )
 def get_market_value_endpoint(
@@ -78,6 +96,8 @@ def get_market_value_endpoint(
         return get_market_value(
             db, release_product_id=release_product_id, window=window
         )
+    except ReleaseMarketValueNotSeededError as exc:
+        return _release_not_seeded(exc)
     except UnknownMarketValueReleaseError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except MarketValueUnavailableError as exc:
@@ -124,6 +144,8 @@ def get_market_value_movers_endpoint(
         return get_market_value_movers(
             db, release_product_id=release_product_id, order=order, limit=limit
         )
+    except ReleaseMarketValueNotSeededError as exc:
+        return _release_not_seeded(exc)
     except UnknownMarketValueReleaseError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except MarketValueUnavailableError as exc:
@@ -158,6 +180,8 @@ def get_market_value_most_valuable_endpoint(
         return get_market_value_most_valuable(
             db, release_product_id=release_product_id, limit=limit, offset=offset
         )
+    except ReleaseMarketValueNotSeededError as exc:
+        return _release_not_seeded(exc)
     except UnknownMarketValueReleaseError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except MarketValueUnavailableError as exc:

@@ -49,6 +49,7 @@ from app.services.market_value_provenance import (
     version_pairs_text,
 )
 from app.services.market_value_read import (
+    ReleaseMarketValueNotSeededError,
     MarketValueUnavailableError,
     UnknownMarketValueReleaseError,
     _latest_date,
@@ -76,6 +77,8 @@ def _selected_scope(db: Session, release_product_id: int | None):
         .limit(1)
     )
     if latest is None:
+        if release is not None:
+            raise ReleaseMarketValueNotSeededError(release)
         raise MarketValueUnavailableError("market_value_not_seeded")
     identity = dict(
         scope_kind=latest.scope_kind,

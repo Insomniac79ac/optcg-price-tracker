@@ -106,10 +106,21 @@ def test_unseeded_returns_consistent_503_without_fake_zeros(db_session, client, 
     assert response.json() == {"detail": "market_value_not_seeded"}
 
 
-def test_known_release_without_points_is_503(db_session, client):
+def test_known_release_without_points_is_404_not_seeded(db_session, client):
     seed(db_session)
     release(db_session)
-    assert client.get(URL + "?release_product_id=174").status_code == 503
+    response = client.get(URL + "?release_product_id=174")
+    assert response.status_code == 404
+    body = response.json()
+    assert body["detail"] == "release_market_value_not_seeded"
+    assert body["release_product_id"] == 174
+
+
+def test_unseeded_overall_stays_503_even_for_a_known_release(db_session, client):
+    release(db_session)
+    response = client.get(URL + "?release_product_id=174")
+    assert response.status_code == 503
+    assert response.json() == {"detail": "market_value_not_seeded"}
 
 
 def test_unavailable_movement_remains_json_null(db_session, client):

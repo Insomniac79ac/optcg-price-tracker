@@ -259,6 +259,32 @@ describe("loading and failures", () => {
   });
 });
 
+describe("shared URL for a release with no Market Value yet", () => {
+  it("shows the not-published message on hero, movers and most valuable, with no retry and no could-not-load", async () => {
+    navigate("/analytics?release_product_id=186");
+    const body = { detail: "release_market_value_not_seeded", release_product_id: 186, release_code: "OP-18", release_name: "Release OP-18" };
+    apiGet.mockImplementation((path, options) => path === `${BASE}/releases` ? stub(path, options) : Promise.reject(new ApiError("release_market_value_not_seeded", 404, body)));
+    await ready();
+    await waitFor(() => expect(screen.getByTestId("movers-settled")).toHaveAttribute("aria-busy", "false"));
+    await waitFor(() => expect(screen.getByTestId("valuable-settled")).toHaveAttribute("aria-busy", "false"));
+    expect(screen.getByTestId("market-not-published")).toHaveTextContent(/Market Value for .*OP-18.* isn.t published yet/);
+    expect(within(screen.getByTestId("market-value-movers")).getByTestId("not-published")).toHaveTextContent(/isn.t published yet/);
+    expect(within(screen.getByTestId("market-value-most-valuable")).getByTestId("not-published")).toHaveTextContent(/isn.t published yet/);
+    expect(screen.queryByText(/could not be loaded/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("an unknown release and a 503 keep their own wording and retry", async () => {
+    navigate("/analytics?release_product_id=99999");
+    apiGet.mockImplementation((path, options) => path === BASE ? Promise.reject(new ApiError("release_product_not_found", 404, { detail: "release_product_not_found" })) : path === `${BASE}/movers` ? Promise.reject(new ApiError("market_value_not_seeded", 503, { detail: "market_value_not_seeded" })) : stub(path, options));
+    await ready();
+    expect(screen.getByTestId("market-settled")).toHaveTextContent("This release could not be found.");
+    expect(await screen.findByText("Market movers could not be loaded.")).toBeInTheDocument();
+    expect(screen.queryByTestId("market-not-published")).not.toBeInTheDocument();
+  });
+});
+
 describe("B2 independent discovery requests", () => {
   it("refetches exactly hero, movers and most valuable once on release change", async () => {
     await ready();

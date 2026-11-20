@@ -42,6 +42,20 @@ class UnknownMarketValueReleaseError(LookupError):
     pass
 
 
+class ReleaseMarketValueNotSeededError(LookupError):
+    """A real ReleaseProduct that has no persisted Market Value points.
+
+    Not an outage: only that release is unpublished. The unseeded Overall case
+    and integrity failures stay MarketValueUnavailableError / 503.
+    """
+
+    def __init__(self, release):
+        super().__init__("release_market_value_not_seeded")
+        self.release_product_id = release.id
+        self.release_code = release.official_code
+        self.release_name = release.display_name
+
+
 def _scope(release_product_id: int | None):
     return (
         MarketValuePoint.scope_kind
@@ -57,6 +71,15 @@ def _latest_date(db: Session, release_product_id: int | None) -> date:
     )
     if latest is None:
         raise MarketValueUnavailableError("market_value_not_seeded")
+    return latest
+
+
+def _release_latest_date(db: Session, release) -> date:
+    latest = db.scalar(
+        select(func.max(MarketValuePoint.point_date)).where(*_scope(release.id))
+    )
+    if latest is None:
+        raise ReleaseMarketValueNotSeededError(release)
     return latest
 
 
@@ -218,7 +241,7 @@ def get_market_value(
                 raise UnknownMarketValueReleaseError("release_product_not_found")
         overall_date = _latest_date(db, None)
         as_of = (
-            overall_date if release is None else _latest_date(db, release_product_id)
+            overall_date if release is None else _release_latest_date(db, release)
         )
         query = select(MarketValuePoint).where(
             *_scope(release_product_id), MarketValuePoint.point_date <= as_of
