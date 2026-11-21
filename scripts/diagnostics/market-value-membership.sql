@@ -25,11 +25,11 @@ now_set as (
 select (select at from t) last_publication,
   (select count(*) from cand) rebuilt_count,
   'current-corrected-card-print-release-v1:' || encode(sha256(convert_to(
-    (select string_agg(id::text || ':' || release_product_id::text, E'\n' order by id) from cand), 'UTF8')), 'hex')
+    (select string_agg(id::text || ':' || release_product_id::text, chr(10) order by id) from cand), 'UTF8')), 'hex')
     rebuilt_revision,
   (select count(*) from now_set) current_count,
   'current-corrected-card-print-release-v1:' || encode(sha256(convert_to(
-    (select string_agg(id::text || ':' || release_product_id::text, E'\n' order by id) from now_set), 'UTF8')), 'hex')
+    (select string_agg(id::text || ':' || release_product_id::text, chr(10) order by id) from now_set), 'UTF8')), 'hex')
     current_revision,
   (select p.total_physical_print_count from market_value_points p
     where p.scope_kind = 'overall' order by p.point_date desc limit 1) stored_overall_count,

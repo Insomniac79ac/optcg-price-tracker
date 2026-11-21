@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "mission": "SEC-001 PR 1 (R13), owner-approved plan cardpirate/engineer/2026-11-15-sec-001-plan.md (approval t478u, content-pipeline 2ef7f18; wording revised with CP security's recheck b119fab in f26e687): new diagnostics run without a workflow edit (the diagnostic input becomes free text gated by diagnostic.load()); a bounded print_ids input bound as a SQL parameter; a diagnostic SQL lint that refuses functions running a query given as text, regclass/regproc casts, escape, Unicode and dollar-quoted literals and block comments, and user-data tables or credential columns, because results land in public Actions logs. The lint is not a control; the SELECT-only database role (first mission after SEC-001) is. The ops-readonly.yml change is the owner's to add on this branch (exact diff in the PR description). RED (security_or_secrets_policy), owner merges by hand.",
+  "target": "staging",
+  "classification": "RED",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": true,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "owner_approvals": {
+    "security_or_secrets_policy": "https://github.com/Insomniac79ac/content-pipeline/blob/2ef7f184b60f6f49d357d65f16410ee72658553c/ops/decisions.md#L524"
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/diagnostic.py",
+        "scripts/ops/run.py",
+        "scripts/diagnostics/market-value-membership.sql"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Diagnostic lint and the bounded print_ids input in the read-only ops runner. market-value-membership.sql writes its newline separator as chr(10) instead of an escape literal (same string)."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_diagnostic_denylist.py",
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "One refused case per lint item, every shipped .sql file still parses, print_ids parsing and binding; the workflow test asserts the free-text diagnostic and print_ids inputs."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Adding a diagnostic no longer needs a workflow line; lint and print_ids documented."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly workflow inputs (owner edit)"
+      ],
+      "routes": [
+        "No new route. No source request."
+      ],
+      "dependencies": [
+        "staging at 35aa54d0",
+        "owner adds the ops-readonly.yml diff on this branch"
+      ],
+      "deployment_impact": "None at runtime: scripts/ops runs only in the ops workflows. No collector, API or web change, no collector rollout, no migration.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 0
+    },
+    "recovery": {
+      "artifact": "35aa54d065eaf390393edb8b04127093f675ac26",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "A shipped diagnostic refused by the lint, or db-diagnostic failing on a valid name.",
+      "backup": "Not applicable: no schema change and no row written.",
+      "validation": [
+        "scripts/tests/test_ops_diagnostic_denylist.py",
+        "scripts/tests/test_ops_runbooks.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/diagnostic.py",
+        "scripts/ops/run.py"
+      ],
+      "observation_window": "After the owner merges: one db-diagnostic run of work-by-state (read-only) and CP security's retest of the code."
+    }
+  },
+  "diff_sha256": "a046230c639d231ff523531d14cb3afb0e028d567e0bee44167cf6d1a78324d3"
+}

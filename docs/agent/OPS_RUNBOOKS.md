@@ -39,7 +39,7 @@ file contains a known secret value.
 | `snkr-refused-photos` | none | The exact photo behind each blocked SNKRDUNK artwork refusal (owner 2026-11-04, plan B): the page the collector stored at the refusal, decoded offline, through the collector's own `find_main_product_image`. Per item: mapping, print, listing, work, refusal time and photo URL (or the reason none was read). The input owner photo confirmations are bound to. No source request, no write | `snkr-refused-photos.json` |
 | `fleet-vs-receipt` | `receipt` (comma-separated committed receipts; empty = PR #103 then PR #173 rollouts) | All 10 collectors, each against the newest receipt that deployed it: live deployment, status, exact-commit marker, image digest, cron and deployment records after that receipt | `fleet-vs-receipt.json` |
 | `official-images-status` | - | Last 5 `official-images-mirror` runs and the `check_official_images` database check (no R2 or Bandai request) | `official-images-status.json` |
-| `db-diagnostic` | `diagnostic` (file name) | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
+| `db-diagnostic` | `diagnostic` (file name), optional `print_ids` | One reviewed SQL file from `scripts/diagnostics/` | `diagnostic-<name>.json` |
 | `web-smoke` | - | Signed-out Playwright smoke of the staging site (`scripts/staging_web_smoke.py`); also runs after every delivery | `web-smoke.json` |
 | `capture-batch-preview` | `count` (up to; empty = 50) | The `enqueue-capture-batch` plan with every candidate judged, read-only: exclusion breakdown, the batch, its SHA-256 and storage fit | `plan.json`, `replan.json`, `approved-list.json`, `storage-fit.json` |
 
@@ -448,9 +448,19 @@ gh api $R/actions/runs/$RUN/artifacts --jq '.artifacts[] | {id, name, size_in_by
 ## Adding a runbook or diagnostic
 
 - Diagnostic: add `scripts/diagnostics/<name>.sql` (statements introduced by `-- name`, SELECT/WITH
-  only; `{{ELIGIBLE}}` expands to the operational-health population) and its name to the
-  `diagnostic` choice in `ops-readonly.yml`. The tests run every file on a real schema in a
-  read-only session.
+  only; `{{ELIGIBLE}}` expands to the operational-health population). No workflow edit: the
+  `diagnostic` input is free text and `diagnostic.load()` refuses any name that is not a file
+  there (SEC-001 R13). The tests run every file on a real schema in a read-only session.
+- Diagnostic lint (SEC-001 R13, `scripts/tests/test_ops_diagnostic_denylist.py`): results land in
+  public Actions logs, so `diagnostic.parse()` refuses functions that run a query given as text
+  (`query_to_xml*`, `cursor_to_xml*`, `table_to_xml*`, `schema_to_xml*`, `database_to_xml*`,
+  `ts_stat`, `ts_rewrite`, `dblink*`, `crosstab*`, `connectby`, `to_reg*`), `regclass`/`regproc`
+  casts, escape, Unicode and dollar-quoted literals and block comments, and any user-data table or
+  credential column (`app_log_events` only for counts and sizes). It is a lint, not a control.
+- Bounded `print_ids` input: optional, at most 50 distinct positive integers, comma-separated.
+  A statement declares it with `%(print_ids)s` (use `%(print_ids)s::int[]`; empty means the
+  diagnostic's own default) and it is bound as a parameter, never formatted into the SQL. A
+  diagnostic that does not declare it refuses a non-empty value.
 - Runbook: a module in `scripts/ops/` with `run(out_dir, ...) -> summary`, an entry in
   `RUNBOOKS` (kind, collector-affecting), and the workflow choice. Tests keep the workflow choices
   equal to `RUNBOOKS`. Both are DATA-lane PRs.
