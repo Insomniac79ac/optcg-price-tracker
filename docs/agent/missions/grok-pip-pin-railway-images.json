@@ -70,5 +70,5 @@
       "observation_window": "This merge's delivery verify (API on the merge commit), then worker and beat deployment status on the merge commit read back, then pip 26.2.2 confirmed in the api, worker and beat build logs."
     }
   },
-  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  "diff_sha256": "fdf342fcc4db5501bb69f7c6446a97c2586736760b3a37bb47f3cd38c01a528a"
 }
