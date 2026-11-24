@@ -91,5 +91,5 @@
       "observation_window": "apply-migration dry run and apply runs; then the EB-05 release shows released_on 2026-10-31 in the release chronology."
     }
   },
-  "diff_sha256": ""
+  "diff_sha256": "0785ef30bd84e625d7fd78d1b51339ae6f68aba3e413450f4e7533d8e5c061ad"
 }
