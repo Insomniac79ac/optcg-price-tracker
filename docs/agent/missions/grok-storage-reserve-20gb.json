@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "mission": "Record the owner's staging Postgres volume resize from 10 to 20 GB (owner t619u and t621u, resized 2026-11-23 about 06:33Z) in the storage watch: reserve_ceiling_mb_s9 6,778.7 -> 16,778.8 in scripts/ops/storage_events.json (3 GiB reserve kept, same decimal convention, CEO decision 2026-11-23 21:41 MYT), the resize as named step volume-resize-20gb (597.3 MB, not daily growth), and a 20 GB storage watch line in STAGING_FLEET.json operational_notes. Until this merges the daily storage-rates report shows the wrong room (873.4 MB in 45307620635) and counts the resize as growth.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/storage_events.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "reserve_ceiling_mb_s9 6778.7 -> 16778.8 and reserve_reason for the 20 GB volume; new named step volume-resize-20gb 2026-11-23 06:30Z to 06:40Z so storage_rates.py removes the 597.3 MB resize from later samples. Read only by scripts/ops/storage_rates.py (ops-readonly storage-rates)."
+    },
+    {
+      "files": [
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "One added operational_notes line (storage watch on the 20 GB volume). deployment_verification (revision 7d2f9b4e1a63, components 770c574a) unchanged."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_runbooks.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Session 13 reproduction pins its own 10 GB ceiling; new test asserts the 20 GB ceiling and that the resize step is not counted as growth."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "ops-readonly storage-rates output (room_to_reserve_mb_s9, planning and stress rates)",
+        "Verify staging merge fleet expectations (unchanged)"
+      ],
+      "routes": [
+        "No runtime route; storage-rates is a read-only ops runbook"
+      ],
+      "dependencies": [
+        "staging at ab56bc7a or later (#305 delivered)",
+        "owner resize done (t621u, staging-state 45125066667)"
+      ],
+      "deployment_impact": "No intended service change and no collector_services request. STAGING_FLEET.json is operational, so the delivery scope decides full; collector runtime inputs from 770c574a to head are unchanged (changed_runtime_inputs snkrdunk [] and yuyutei []).",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 70
+    },
+    "recovery": {
+      "artifact": "ab56bc7a6338e3e28ed12519786e503e695d071f",
+      "procedure": "Native revert PR with its own mission file.",
+      "trigger": "storage-rates after the merge refuses, or reports room_to_reserve_mb_s9 that is not 16,778.8 minus the current volume.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_ops_runbooks.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "scripts/ops/storage_events.json",
+        "docs/agent/STAGING_FLEET.json"
+      ],
+      "observation_window": "One ops-readonly storage-rates run after the delivery: expected room about 10,870 MB and planning (steps removed) about 36 MB/day (local compute on 45307620635's series: 10,873.5 MB, 36.09 MB/day)."
+    }
+  },
+  "diff_sha256": "0edad40ec63a61adc2598babd4799418bce0233ae281a805be2dc9c1d0757f0d"
+}
