@@ -116,6 +116,15 @@ FLAG_MALFORMED_ENTRY = "malformed_entry"
 # difference is information about a printing - not evidence that the canonical
 # card is wrong, and not an identity component. It is surfaced, not blocking.
 FLAG_RARITY_DIFFERS_BY_PRINTING = "rarity_differs_by_printing"
+# Owner t648u (24 Nov 2026, identity_weakening, docs/agent/DECISIONS.md): when
+# a LATER import shows the card's own set publishing a second rarity, and the
+# card's current canonical rarity is one of the own-set rarities, the
+# importer's existing rule (own set publishes several -> NULL,
+# canonical_import_apply) applies to the card: the plan carries a
+# canonical_rarity_transition to NULL instead of a conflict. Each print keeps
+# its own official_rarity. A current value that is NOT an own-set rarity stays
+# a conflict: that is a real disagreement about the card.
+FLAG_CANONICAL_RARITY_TRANSITION = "canonical_rarity_transition"
 # Bandai also republishes the card NAME per entry. The same card code appears
 # with 'モンキー・D・ルフィ' under one product and 'モンキー・Ｄ・ルフィ' under
 # another (full-width Latin D), and occasionally with a materially different
@@ -506,6 +515,22 @@ def compare_metadata_to_canonical(
 
 
 @dataclass(frozen=True)
+class CanonicalRarityTransition:
+    """A planned canonical_cards.rarity -> NULL write (owner t648u). Pure data.
+
+    `own_set_rarities` is every distinct rarity the card's own set publishes
+    for this card code across the WHOLE snapshot, sorted; the current value is
+    always one of them, or no transition is planned.
+    """
+
+    canonical_card_id: int
+    card_code: str
+    old_rarity: str
+    own_set: str
+    own_set_rarities: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class PlannedPrint:
     """One official artwork, resolved against Atlas. Pure data."""
 
@@ -557,6 +582,9 @@ class PlannedPrint:
     # to compare a proposed print against. None here is "no comparison was
     # possible", which is not the same as "nothing differs".
     metadata_comparison: MetadataComparison | None = None
+    # Present only when this entry is the own-set occurrence that settles a
+    # canonical rarity transition (FLAG_CANONICAL_RARITY_TRANSITION).
+    canonical_rarity_transition: CanonicalRarityTransition | None = None
 
     # The four published values, addressable directly as well as through
     # `official_metadata`. They are the values a write step would put in the
@@ -687,8 +715,14 @@ class PrintImportPlanner:
         source_catalogue: str = "bandai_jp",
         digest_provider: DigestProvider | None = None,
         authorised_uncoded_names: Iterable[str] | None = None,
+        own_set_rarities: dict[str, dict[str, frozenset[str]]] | None = None,
     ) -> None:
         self._session = session
+        # card code -> product code -> distinct rarities that product publishes
+        # for the card, measured over the whole snapshot (see plan_entries).
+        # Empty means no transition can be planned, which keeps every caller
+        # that does not pass it on the old conflict behaviour (fail closed).
+        self._own_set_rarities = own_set_rarities or {}
         self._catalogue = source_catalogue
         self._digest_provider = digest_provider
         # Prefetched Atlas state, built once on first use. `None` means "not
@@ -993,11 +1027,26 @@ class PrintImportPlanner:
         existing_card = self._canonical_card(card_code) if card_code else None
         proposed_card: ProposedCanonicalCard | None = None
         conflict = False
+        rarity_transition: CanonicalRarityTransition | None = None
 
         if existing_card is not None:
-            differences, notes = self._canonical_card_conflicts(
-                existing_card, entry, product_code
+            baseline_for_card = self._baseline_set_code(existing_card)
+            own_set_seen = (
+                self._own_set_rarities.get(card_code.strip().upper(), {}).get(baseline_for_card)
+                if baseline_for_card
+                else None
             )
+            differences, notes = self._canonical_card_conflicts(
+                existing_card, entry, product_code, own_set_rarities=own_set_seen
+            )
+            if not differences and any(f == FLAG_CANONICAL_RARITY_TRANSITION for f, _ in notes):
+                rarity_transition = CanonicalRarityTransition(
+                    canonical_card_id=existing_card.id,
+                    card_code=existing_card.card_code,
+                    old_rarity=existing_card.rarity,
+                    own_set=baseline_for_card,
+                    own_set_rarities=tuple(sorted(own_set_seen or ())),
+                )
             for note_flag, note in notes:
                 flags.append(note_flag)
                 reasons.append(note)
@@ -1134,6 +1183,7 @@ class PrintImportPlanner:
             proposed_canonical_card=proposed_card,
             proposed_release_product=proposed_product,
             metadata_comparison=metadata_comparison,
+            canonical_rarity_transition=rarity_transition,
         )
 
     @staticmethod
@@ -1166,7 +1216,12 @@ class PrintImportPlanner:
 
     @classmethod
     def _canonical_card_conflicts(
-        cls, card: CanonicalCard, entry: OfficialCardEntry, product_code: str | None
+        cls,
+        card: CanonicalCard,
+        entry: OfficialCardEntry,
+        product_code: str | None,
+        *,
+        own_set_rarities: frozenset[str] | None = None,
     ) -> tuple[list[str], list[tuple[str, str]]]:
         """Material identity disagreements, and print-scoped differences.
 
@@ -1277,7 +1332,24 @@ class PrintImportPlanner:
             # column is NULL but whose code is readable is a baseline to one
             # rule and not to the other. Since d1c48b7f36ae made the column
             # nullable that state is representable, so it is resolved once.
-            if is_baseline:
+            current = card.rarity.strip().upper()
+            seen = {r.strip().upper() for r in (own_set_rarities or ()) if r and r.strip()}
+            if is_baseline and len(seen) >= 2 and current in seen:
+                # Owner t648u: the own set now publishes several rarities and
+                # the current value is one of them, so the importer's own rule
+                # (several -> NULL) applies to the card. A transition, not a
+                # conflict; the applier re-checks every print first (C1, C2).
+                notes.append(
+                    (
+                        FLAG_CANONICAL_RARITY_TRANSITION,
+                        f"the card's own set ({baseline_set}) now publishes "
+                        f"{len(seen)} rarities for this card ({', '.join(sorted(seen))}); "
+                        f"canonical card #{card.id} records {card.rarity!r}, one of them, "
+                        "so its canonical rarity is planned to become NULL as the "
+                        "importer's rule says; each print keeps its own official_rarity",
+                    )
+                )
+            elif is_baseline:
                 conflicts.append(f"rarity ({card.rarity!r} vs {catalogue_rarity!r})")
             else:
                 notes.append(
@@ -1461,6 +1533,34 @@ class PrintImportPlanner:
         return f"p{suffix}" if suffix.isdigit() else None
 
 
+def own_set_rarities_from_entries(
+    entries: Iterable[OfficialCardEntry],
+) -> dict[str, dict[str, frozenset[str]]]:
+    """card code -> product code -> the distinct rarities that product publishes.
+
+    Read only from entries that name exactly one coded product, the same
+    reading plan_entry uses for an entry's product. Callers that plan a subset
+    of a snapshot must pass the WHOLE snapshot here (as with sibling counts):
+    a subset could hide an own-set rarity, and then the card stays a conflict,
+    which fails closed.
+    """
+    seen: dict[str, dict[str, set[str]]] = {}
+    for entry in entries:
+        names = tuple(getattr(entry, "product_names", ()) or ())
+        if len(names) != 1:
+            continue
+        code = product_code_from_display_name(names[0])
+        rarity = (entry.rarity or "").strip()
+        card_code = (entry.card_code or "").strip().upper()
+        if not code or not rarity or not card_code:
+            continue
+        seen.setdefault(card_code, {}).setdefault(code.strip().upper(), set()).add(rarity)
+    return {
+        card: {product: frozenset(rs) for product, rs in by_product.items()}
+        for card, by_product in seen.items()
+    }
+
+
 def plan_entries(
     session: Session,
     entries: Sequence[OfficialCardEntry],
@@ -1471,6 +1571,7 @@ def plan_entries(
     classify_mappings: bool = True,
     sibling_counts: dict[str, int] | None = None,
     authorised_uncoded_names: Iterable[str] | None = None,
+    own_set_rarities: dict[str, dict[str, frozenset[str]]] | None = None,
 ) -> ImportPlan:
     """Plan a set of official entries, with sibling counts resolved for free.
 
@@ -1488,6 +1589,11 @@ def plan_entries(
         source_catalogue=source_catalogue,
         digest_provider=digest_provider,
         authorised_uncoded_names=authorised_uncoded_names,
+        # Measured over `entries` unless the caller passes the whole snapshot's
+        # (owner t648u transitions; see own_set_rarities_from_entries).
+        own_set_rarities=(
+            own_set_rarities if own_set_rarities is not None else own_set_rarities_from_entries(entries)
+        ),
     )
     per_code: dict[str, int] = {}
     for entry in entries:
