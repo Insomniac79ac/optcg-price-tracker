@@ -94,5 +94,5 @@
       "observation_window": "The catalogue-import op-18 dry run (owner approves; expect create 38, no_change 119, conflict 0 and both excluded entries listed), then the apply, official-series-index and the price checker's spot check of the applied prints."
     }
   },
-  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  "diff_sha256": "1e4a7de276b49c447e51cfedfe6043f692986eb0e6a9fddc400fe5fa739a20f2"
 }
