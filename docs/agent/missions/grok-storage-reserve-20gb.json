@@ -41,7 +41,7 @@
         "scripts/tests/test_ops_runbooks.py"
       ],
       "effects": [
-        "test"
+        "tests"
       ],
       "reason": "Session 13 reproduction pins its own 10 GB ceiling; new test asserts the 20 GB ceiling and that the resize step is not counted as growth."
     }
