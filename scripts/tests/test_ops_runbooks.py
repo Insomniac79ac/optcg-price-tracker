@@ -4,7 +4,7 @@ Offline except DiagnosticsOnPostgres, which needs OPS_TEST_POSTGRES_URL (CI sets
 REQUIRE_POSTGRES=1, so a missing database fails instead of skipping).
 """
 import contextlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import io
 import json
 import os
@@ -29,7 +29,9 @@ def utc(*args):
 
 class StorageRates(unittest.TestCase):
     def test_reproduces_session13_rates_from_committed_series(self):
-        result = storage_rates.compute(json.loads((S13 / "volume-series-5min.json").read_text()))
+        events = storage_rates.load_events()
+        events["reserve_ceiling_mb_s9"] = 6778.7  # the 10 GB volume ceiling that session 13 used
+        result = storage_rates.compute(json.loads((S13 / "volume-series-5min.json").read_text()), events)
         v = result["variants"]
         self.assertEqual(result["room_to_reserve_mb_s9"], 2970.3)
         self.assertEqual(result["steps"]["new50"]["mb_s9"], 66.5)
@@ -40,6 +42,24 @@ class StorageRates(unittest.TestCase):
         self.assertEqual(v["ex_steps_ex_transients"]["stress_worst_rolling_24h"]["mb_day_s9"], 26.41)
         self.assertEqual(result["transients_excluded"]["2026-10-14-04z"]["samples"], 13)
         self.assertEqual(result["last_24h_mb_s9"], 26.32)
+
+    def test_20gb_ceiling_and_resize_step_not_counted_as_growth(self):
+        events = storage_rates.load_events()
+        self.assertEqual(events["reserve_ceiling_mb_s9"], 16778.8)   # 20,000 - 3,221.2 (owner t621u, CEO 2026-11-23 21:41 MYT)
+        step = events["steps"]["volume-resize-20gb"]
+        start, end = datetime.fromisoformat(step["from"]), datetime.fromisoformat(step["to"])
+        rows = []
+        for i in range(-288, 289):   # 5-minute samples, 24 h either side of the resize; +1 MB per hour of real growth
+            t = start + timedelta(minutes=5 * i)
+            mb = 5200.0 + (i + 288) / 12.0 + (597.3 if t >= end else 0.0)
+            rows.append({"ts": t.isoformat(), "value": mb / 1024})
+        events = dict(events, steps={"volume-resize-20gb": step})   # the synthetic series has no new50 samples
+        result = storage_rates.compute({"measurements": {"DISK_USAGE_GB": rows}}, events, transients=[])
+        self.assertTrue(result["steps"]["volume-resize-20gb"]["applied"])
+        self.assertAlmostEqual(result["steps"]["volume-resize-20gb"]["mb_s9"], 597.5, places=1)
+        self.assertEqual(result["room_to_reserve_mb_s9"], round(16778.8 - rows[-1]["value"] * 1024, 1))
+        self.assertAlmostEqual(result["variants"]["ex_steps"]["planning_mb_day_s9"], 24.0, delta=0.5)
+        self.assertGreater(result["variants"]["as_observed"]["planning_mb_day_s9"], 300)
 
     def test_no_transient_named_keeps_as_observed_stress(self):
         result = storage_rates.compute(json.loads((S13 / "volume-series-5min.json").read_text()), transients=[])
