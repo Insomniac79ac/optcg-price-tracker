@@ -87,5 +87,5 @@
       "observation_window": "One ops-readonly storage-rates run after the delivery: expected room about 10,870 MB and planning (steps removed) about 36 MB/day (local compute on 45307620635's series: 10,873.5 MB, 36.09 MB/day)."
     }
   },
-  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  "diff_sha256": "0edad40ec63a61adc2598babd4799418bce0233ae281a805be2dc9c1d0757f0d"
 }
