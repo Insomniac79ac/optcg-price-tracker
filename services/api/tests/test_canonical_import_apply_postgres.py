@@ -1287,3 +1287,95 @@ def test_the_engine_records_addresses_and_digests_never_bytes(db):
     for image_url, artwork_key in rows:
         assert image_url.startswith("https://")
         assert len(artwork_key) == 64
+
+
+# --- owner t648u (24 Nov 2026): canonical rarity -> NULL in a LATER import ----
+#
+# The base print was imported first (canonical rarity SR from one own-set
+# occurrence); Bandai later publishes a second own-set rarity. The end state
+# must equal importing both together: canonical NULL, each print keeping its
+# own official_rarity. C1 and C2 refuse anything that would change a print.
+
+_D_BASE = next(e for e in ENTRIES if e.entry_id == "OP01-050")
+_D_P1 = next(e for e in ENTRIES if e.entry_id == "OP01-050_p1")
+
+
+def _apply_entries(db: _Database, entries, *, apply=True):
+    with Session(db.engine) as session:
+        plan = P.plan_entries(
+            session, entries, series_index=SERIES,
+            digest_provider=DIGESTS.get, classify_mappings=False,
+        )
+        applier = A.CanonicalImportApplier(
+            session,
+            plan,
+            pinning=A.ApplyPinning(
+                snapshot_identity=SNAPSHOT_ID, expected_db_revision=A.db_revision(session)
+            ),
+            environment="test",
+            entries={e.entry_id: e for e in entries},
+        )
+        return applier.run(apply=apply)
+
+
+def _op01_050(db: _Database):
+    with db.engine.connect() as conn:
+        rarity = conn.execute(
+            text("SELECT rarity FROM canonical_cards WHERE card_code = 'OP01-050'")
+        ).scalar_one()
+        prints = conn.execute(
+            text("SELECT p.official_asset_variant, p.official_rarity FROM card_prints p "
+                 "JOIN canonical_cards c ON c.id = p.canonical_card_id "
+                 "WHERE c.card_code = 'OP01-050' ORDER BY p.official_asset_variant")
+        ).all()
+    return rarity, [tuple(r) for r in prints]
+
+
+def test_base_then_parallel_ends_where_both_together_do(db):
+    first = _apply_entries(db, [_D_BASE])
+    assert first.applied
+    assert _op01_050(db) == ("SR", [("base", "SR")])
+
+    dry = _apply_entries(db, [_D_BASE, _D_P1], apply=False)
+    assert dry.planner_conflicts == 0
+    [t] = dry.canonical_rarity_transitions
+    assert (t["card_code"], t["old_rarity"], t["own_set"]) == ("OP01-050", "SR", "OP-01")
+    assert t["own_set_rarities"] == sorted(["SR", "SPカード"])
+    assert all(r["effective_rarity_before"] == r["effective_rarity_after"] for r in t["prints"])
+    assert _op01_050(db) == ("SR", [("base", "SR")])  # the dry run wrote nothing
+
+    second = _apply_entries(db, [_D_BASE, _D_P1])
+    assert second.applied and second.canonical_rarity_transitions_applied == 1
+    # Same end state as test_a_card_whose_own_set_publishes_two_rarities_is_created_with_null
+    # and test_both_of_its_prints_are_created_each_with_its_own_official_rarity.
+    assert _op01_050(db) == (None, [("base", "SR"), ("p1", "SPカード")])
+
+
+def test_a_print_without_its_own_rarity_refuses_the_transition(db):
+    assert _apply_entries(db, [_D_BASE]).applied
+    with db.engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE card_prints SET official_rarity = NULL WHERE canonical_card_id = "
+            "(SELECT id FROM canonical_cards WHERE card_code = 'OP01-050')"
+        ))
+    before = _fingerprint(db)
+    with pytest.raises(A.ApplyRunFailed) as excinfo:
+        _apply_entries(db, [_D_BASE, _D_P1])
+    assert excinfo.value.report.rollback_reason == A.ABORT_RARITY_TRANSITION
+    assert _fingerprint(db) == before
+
+
+def test_a_value_changed_since_the_plan_refuses_the_transition(db):
+    assert _apply_entries(db, [_D_BASE]).applied
+    with Session(db.engine) as session:
+        plan = P.plan_entries(
+            session, [_D_BASE, _D_P1], series_index=SERIES,
+            digest_provider=DIGESTS.get, classify_mappings=False,
+        )
+    with db.engine.begin() as conn:
+        conn.execute(text("UPDATE canonical_cards SET rarity = 'SPカード' WHERE card_code = 'OP01-050'"))
+    before = _fingerprint(db)
+    with pytest.raises(A.ApplyRunFailed) as excinfo:
+        _apply(db, plan=plan)
+    assert excinfo.value.report.rollback_reason == A.ABORT_RARITY_TRANSITION
+    assert _fingerprint(db) == before
