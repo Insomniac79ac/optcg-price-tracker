@@ -28,6 +28,13 @@ This runbook gives it both inside the ops-write workflow:
    re-plans and refuses inside the importer (before the applier runs, nothing written) unless
    the plan equals the dry run the owner reviewed.
 
+5. Excluded entries. A scope may name exclude_entry_ids (entry id and reason, reviewed by PR):
+   those entries get no image and never reach the planner (filtered at the planner's input, so
+   sibling counts stay measured over the whole snapshot). Every excluded entry is printed by id
+   in the summary, an excluded id the scope does not capture refuses, a plan that still holds
+   one refuses, and the list is part of the plan SHA-256 (owner t642u, 2026-11-24: OP-18
+   option A, OP18-064_p1 and OP18-084_p2 until option D lands).
+
 Dry run (default): read-only session at the server, plan and the engine's dry-run report.
 Apply: --apply with the dry run's plan_sha256, after the owner approves the run.
 """
@@ -68,6 +75,8 @@ def resolve_scope(name, scopes):
     exclude_pattern   regular expression that drops expanded product names
     asia_en_measure   also report what Bandai's Asia-EN catalogue names (step C measurement)
     report_only       never import, even with apply (measurement scopes)
+    exclude_entry_ids [{"entry_id", "reason"}] entries left out of the plan (and their images),
+                      each printed by id in the summary; ids must be unique, reasons non-empty
 
     Uncoded products are imported when they pass the evidence standard with the step C
     amendments (owner 2026-10-26): Asia-EN agreement per product, single-product catch-all,
@@ -96,8 +105,18 @@ def resolve_scope(name, scopes):
                 patterns[key] = re.compile(value)
             except (re.error, TypeError):
                 raise common.Refused(f"scope {name!r}: {key} is not a regular expression") from None
+    excluded_entries = scope.get("exclude_entry_ids") or []
+    if not isinstance(excluded_entries, list) or not all(
+            isinstance(e, dict) and set(e) == {"entry_id", "reason"}
+            and all(isinstance(e[k], str) and e[k] and e[k] == e[k].strip() for k in e)
+            for e in excluded_entries):
+        raise common.Refused(f"scope {name!r}: exclude_entry_ids must be objects with a trimmed entry_id and reason")
+    ids = [e["entry_id"] for e in excluded_entries]
+    if len(ids) != len(set(ids)):
+        raise common.Refused(f"scope {name!r}: exclude_entry_ids repeats an entry id")
     return {"name": name, "series": series, "uncoded_products": products, "uncoded_series": uncoded_series,
-            "exclude_products": excludes, "asia_en_measure": bool(scope.get("asia_en_measure")),
+            "exclude_products": excludes, "exclude_entry_ids": [dict(e) for e in excluded_entries],
+            "asia_en_measure": bool(scope.get("asia_en_measure")),
             "report_only": bool(scope.get("report_only")),
             "product_pattern": patterns.get("product_pattern"), "exclude_pattern": patterns.get("exclude_pattern")}
 
@@ -115,13 +134,37 @@ def expand_products(entries, scope):
     return sorted((names | set(scope.get("uncoded_products") or ())) - excludes)
 
 
+def excluded_ids(scope):
+    return frozenset(e["entry_id"] for e in scope.get("exclude_entry_ids") or ())
+
+
 def scoped_entry_ids(entries, scope, products=None):
-    """Entry ids a scope plans: captured under one of its series, or naming one of its products."""
+    """Entry ids a scope plans: captured under one of its series, or naming one of its products,
+    minus its exclude_entry_ids."""
     series = set(scope["series"])
     products = set(scope.get("uncoded_products") or ()) if products is None else set(products)
+    excluded = excluded_ids(scope)
     return frozenset(
         row["entry_id"] for row in entries
-        if row.get("source_series_id") in series or products & set(row.get("product_names") or ()))
+        if (row.get("source_series_id") in series or products & set(row.get("product_names") or ()))
+        and row["entry_id"] not in excluded)
+
+
+def excluded_report(entries, scope, products=None):
+    """Every excluded entry by id, with what Bandai shows for it and the scope's reason.
+    Refuses an excluded id the scope does not capture, so the list cannot go stale silently."""
+    excluded = scope.get("exclude_entry_ids") or []
+    if not excluded:
+        return []
+    series = set(scope["series"])
+    products = set(scope.get("uncoded_products") or ()) if products is None else set(products)
+    captured = {row["entry_id"]: row for row in entries
+                if row.get("source_series_id") in series or products & set(row.get("product_names") or ())}
+    missing = [e["entry_id"] for e in excluded if e["entry_id"] not in captured]
+    if missing:
+        raise common.Refused("exclude_entry_ids not captured by the scope: " + ", ".join(missing))
+    return [{"entry_id": e["entry_id"], "card_code": captured[e["entry_id"]].get("card_code"),
+             "rarity": captured[e["entry_id"]].get("rarity"), "reason": e["reason"]} for e in excluded]
 
 
 # --- snapshot ------------------------------------------------------------------------------
@@ -150,6 +193,7 @@ def capture(root, scope, fetcher=None):
         entries = snapshot.load(ENTRIES_FILE)
         products = expand_products(entries, scope)
         wanted = scoped_entry_ids(entries, scope, products)
+        excluded = excluded_report(entries, scope, products)
         images = collector.collect_images(snapshot, fetcher, resume=False, workers=WORKERS,
                                           only_entry_ids=wanted)
     except collector.CollectionStopped as exc:
@@ -159,7 +203,7 @@ def capture(root, scope, fetcher=None):
     snapshot.save_manifest(manifest)
     return {"series": pages["series"], "entries": pages["entries"], "scoped_entries": len(wanted),
             "asset_urls": images.get("asset_urls"), "asset_failures": len(images.get("asset_failures") or []),
-            "requests": fetcher.requests, "products": products}
+            "requests": fetcher.requests, "products": products, "excluded_entries": excluded}
 
 
 # --- uncoded products: reported, not imported ------------------------------------------------
@@ -313,6 +357,10 @@ def plan_rows(plan, entry_records=None):
 
 def plan_sha(scope, rows, uncoded=(), asia_en_sha256=None):
     body = {"scope": scope["name"], "series": scope["series"], "prints": rows}
+    if scope.get("exclude_entry_ids"):
+        # What is left out decides what gets written too (only scopes that exclude carry it, so
+        # every other scope's SHA is unchanged).
+        body["excluded_entry_ids"] = sorted(excluded_ids(scope))
     if uncoded or asia_en_sha256:
         # The products the importer is told to establish, and the Asia-EN evidence it proves
         # them against, decide what gets written too.
@@ -372,13 +420,40 @@ def parse_report(text):
     return None
 
 
-def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, open_tunnel=None, uncoded=()):
-    """Runs the importer on the scope's coded series and its proven uncoded products;
-    returns (exit code, report, plan facts)."""
+@contextlib.contextmanager
+def excluding_planner(module, excluded):
+    """While open, the importer module's plan_entries never sees an excluded entry: the filter
+    sits at the planner's input, after the importer measured sibling counts over the whole
+    snapshot, so every other entry plans exactly as before. Restored on exit."""
+    if not excluded:
+        yield []
+        return
+    original, dropped = module.plan_entries, []
+
+    def plan_entries(session, entries, *args, **kwargs):
+        kept = []
+        for entry in entries:
+            (dropped if entry.entry_id in excluded else kept).append(entry)
+        return original(session, tuple(kept), *args, **kwargs)
+
+    module.plan_entries = plan_entries
+    try:
+        yield dropped
+    finally:
+        module.plan_entries = original
+
+
+def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, open_tunnel=None, uncoded=(),
+                 importer_module=None):
+    """Runs the importer on the scope's coded series and its proven uncoded products, without the
+    scope's excluded entries; returns (exit code, report, plan facts)."""
     from app.services.canonical_import_apply import STAGING_APPLY_CONFIRMATION
 
+    excluded = excluded_ids(scope)
+    if importer_module is None and (main is None or excluded):
+        import app.import_frozen_bandai_to_canonical_staging as importer_module
     if main is None:
-        from app.import_frozen_bandai_to_canonical_staging import main
+        main = importer_module.main
     if open_tunnel is None:
         url = proxy_url()  # resolved here, outside the redirect below
 
@@ -396,6 +471,10 @@ def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, ope
     facts = {}
 
     def on_plan(plan):
+        leaked = sorted(p.entry_id for p in plan.prints if p.entry_id in excluded)
+        if leaked:
+            facts["refused"] = "the plan holds excluded entries: " + ", ".join(leaked)
+            raise common.Refused(facts["refused"])
         rows = plan_rows(plan, records)
         facts.update(rows=rows, sha=plan_sha(scope, rows, uncoded, asia_sha), outcomes=plan.counts())
         if apply:
@@ -406,8 +485,10 @@ def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, ope
                 raise
 
     out, err = io.StringIO(), io.StringIO()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
+            excluding_planner(importer_module, excluded) as dropped:
         code = main(argv, open_tunnel=open_tunnel, on_plan=on_plan)
+    facts["excluded_at_planner"] = sorted({e.entry_id for e in dropped})
     facts["stderr_tail"] = err.getvalue()[-1500:]
     return code, parse_report(out.getvalue()), facts
 
@@ -432,7 +513,7 @@ def _default_fetcher():
 
 
 def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, main=None, open_tunnel=None,
-        scopes=None, backup=None, now=common.now_utc):
+        scopes=None, backup=None, now=common.now_utc, importer_module=None):
     import generate_staging_state as state
     from ops import apply_migration
 
@@ -451,9 +532,13 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
     from app.services.snapshot_planner_input import load_snapshot
     identity = load_snapshot(root).identity
     products = captured.pop("products", [])
+    excluded_entries = captured.pop("excluded_entries", [])
     captured["uncoded_products"] = len(products)
     summary = {"scope": chosen["name"], "apply": bool(apply), "snapshot_identity": identity,
                "capture": captured, "database_writes_possible": bool(apply)}
+    if excluded_entries:
+        # First in the summary after the capture, so nothing is left out silently (owner t642u).
+        summary["excluded_entries"] = excluded_entries
     if newest is not None:
         summary["backup"] = newest
     importable = []
@@ -485,7 +570,10 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
         if reason:
             raise common.Refused(reason)
     code, report, facts = import_scope(root, chosen, apply=apply, expected_sha256=expected_sha256,
-                                       main=main, open_tunnel=open_tunnel, uncoded=importable)
+                                       main=main, open_tunnel=open_tunnel, uncoded=importable,
+                                       importer_module=importer_module)
+    if excluded_entries:
+        summary["excluded_at_planner"] = facts.get("excluded_at_planner")
     common.write_json(Path(out_dir) / "catalogue-import.json",
                       {**summary, "exit_code": code, "plan_sha256": facts.get("sha"),
                        "outcomes": facts.get("outcomes"), "prints": facts.get("rows"), "report": report,
