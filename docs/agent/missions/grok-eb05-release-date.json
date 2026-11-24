@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "EB-05 step 1 (owner t622u, content-pipeline ops/decisions.md L631, 23 Nov 2026; order confirmed by owner t648u and t653u, 24 Nov): EB-05 JP release date. Data migration e216c1c45131 on 7d2f9b4e1a63 sets released_on 2026-10-31 and release_date_source DATE_VERIFIED_SINGLE_SOURCE on the bandai_jp EB-05 release product (release_product_id 231 on staging) only when it is still undated, same pattern as cb7419af37e9 (catalogue plus official code match; no insert or delete). Frozen input docs/evidence/eb05-release-date-2026-11-24.json: release watcher 12 Nov and Bandai JP product page re-read 24 Nov twice, each 2026年10月31日(土). apply_migration.py allowlists e216c1c45131 on 7d2f9b4e1a63. Order after merge: owner approves apply-migration dry run, then the apply; then a fleet PR records revision e216c1c45131.",
+  "classification": "AMBER",
+  "impacts": [
+    {
+      "files": [
+        "services/api/alembic/versions/e216c1c45131_eb05_release_date.py",
+        "docs/evidence/eb05-release-date-2026-11-24.json"
+      ],
+      "effects": [
+        "migration"
+      ],
+      "reason": "Data-only migration: updates at most one release_products row (bandai_jp EB-05, released_on null) to 2026-10-31 with source DATE_VERIFIED_SINGLE_SOURCE; downgrade clears only that exact value. No schema change. Applied after merge only by the owner-approved apply-migration runbook."
+    },
+    {
+      "files": [
+        "scripts/ops/apply_migration.py"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "apply-migration allowlist gains the pair e216c1c45131 on 7d2f9b4e1a63. No secret, gate, permission or timeout change."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_apply_migration.py",
+        "services/api/tests/test_eb05_release_date.py",
+        "services/api/tests/test_eb05_release_date_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Allowlist pair; upgrade dates only the undated EB-05 product, leaves dated or other products alone (OP-17, OP-18), downgrade reverts only its own value (Postgres test runs in CI)."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "release_products (one row: bandai_jp EB-05)",
+        "ops-write apply-migration"
+      ],
+      "routes": [
+        "release chronology and Market Value release ordering read released_on; no source route"
+      ],
+      "dependencies": [
+        "staging f0674dff or later",
+        "#308 (OP-18 option A, DATA) and the SEC-003 fixes go first in the owner's order (t653u); one DATA delivery at a time",
+        "then apply-migration e216c1c45131 dry run and apply (owner), then fleet revision PR"
+      ],
+      "deployment_impact": "API, market-index-snapshot and official-images-mirror rebuild from Git (API image). No collector release, no collector pin or evidence refresh. Until apply-migration runs, staging stays on revision 7d2f9b4e1a63 and EB-05 stays as it is.",
+      "database_writes": 1,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "f0674dffdadf23364603dcc99b792ba76ecf6752",
+      "procedure": "Native revert PR with its own mission file before apply; after apply, Alembic downgrade to 7d2f9b4e1a63 clears only this value (separate owner decision).",
+      "trigger": "The apply dry run shows any row other than EB-05 changing, or Bandai's JP page shows another date.",
+      "backup": "Railway Postgres backup under 24 h (required by apply-migration).",
+      "validation": [
+        "services/api/tests/test_eb05_release_date.py",
+        "services/api/tests/test_eb05_release_date_postgres.py",
+        "scripts/tests/test_ops_apply_migration.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/alembic/versions/e216c1c45131_eb05_release_date.py"
+      ],
+      "observation_window": "apply-migration dry run and apply runs; then the EB-05 release shows released_on 2026-10-31 in the release chronology."
+    }
+  },
+  "diff_sha256": ""
+}
