@@ -231,7 +231,7 @@ coverage (item 11d).
 
 - **Status: blocked.** Share cards serve a static image (#153) while Next.js stays on 16.2.12, which
   closes the `next/og` advisory path. Generated cards come back after Next.js 16.3.6+ (retry plan in
-  [security/2026-10-16-accounts-audit.md](security/2026-10-16-accounts-audit.md)).
+  the 16 Oct accounts audit, now in the owner's private record).
 - **Collection sharing:** private only (collector-v1 §B4); an opt-in share needs a privacy contract
   (RED: private data exposure).
 
@@ -356,7 +356,7 @@ coverage (item 11d).
   F4, F10, S1, I1 (data lane); F6, F7 (migrations on protected tables); D4 (npm); L1
   `hide_parameters` (needs a collector release: it missed #173 and now waits for the next one);
   D1 remainder (Next.js 16.3, parked).
-- **Source:** [security/2026-10-16-accounts-audit.md](security/2026-10-16-accounts-audit.md).
+- **Source:** the 16 Oct accounts audit, now in the owner's private record.
 
 ### 20. Currency selector (later)
 
