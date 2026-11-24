@@ -15,7 +15,7 @@
     "significant_recurring_cost": false,
     "yuyu_sale_policy": false
   },
-  "mission": "Docs-only (owner ruling 2026-11-24, SEC-003): remove docs/agent/security/2026-10-16-accounts-audit.md from staging because it now lives in the owner's private record, and point the two ROADMAP.md links at that record. No code, config, workflow or environment change; no history rewrite.",
+  "mission": "Docs-only (owner ruling 2026-11-24): remove docs/agent/security/2026-10-16-accounts-audit.md from staging because it now lives in the owner's private record; ROADMAP.md section 9 names that record, and section 19 keeps one line that audit items are tracked privately. No code, config, workflow or environment change; no history rewrite.",
   "classification": "GREEN",
   "impacts": [
     {
@@ -34,7 +34,7 @@
       "effects": [
         "documentation"
       ],
-      "reason": "Sections 9 and the security row linked the removed file; they now name the private record."
+      "reason": "Section 9 names the private record instead of the removed file. Section 19 keeps one line that audit items are tracked privately."
     }
   ],
   "safeguards": {
@@ -74,5 +74,5 @@
       "observation_window": "None."
     }
   },
-  "diff_sha256": "2cb6e09a0e70dcf81ea59763b72acda563669c62d0a85edafa098eb0ecc74dfe"
+  "diff_sha256": "01c5000dbbf24802031c4797fb43ecf3f3b61b2055ee3a782b26a16990cc23f5"
 }

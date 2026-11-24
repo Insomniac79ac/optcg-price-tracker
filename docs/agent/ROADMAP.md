@@ -347,16 +347,7 @@ coverage (item 11d).
 
 ### 19. Security audit 2026-10-16 open items
 
-- **Update 2026-10-28:** L1 (`hide_parameters=True` in `app/db.py`) is still open: it missed the
-  collector releases #224, #231 and #237. Attach it to the next one. Other open items unchanged (not
-  re-verified).
-- **Status (2026-10-18): in progress.** Fixed and live: A1 to A3, F1, D2, D3, F5, F8, F9, F11, F12, F13 and F14 web
-  parts, CSP enforced (#136 to #165, #170).
-- **Open:** F15 `CORS_ALLOW_ORIGIN_REGEX` on Railway (owner checking); F13 and F14 API parts, F2, F3,
-  F4, F10, S1, I1 (data lane); F6, F7 (migrations on protected tables); D4 (npm); L1
-  `hide_parameters` (needs a collector release: it missed #173 and now waits for the next one);
-  D1 remainder (Next.js 16.3, parked).
-- **Source:** the 16 Oct accounts audit, now in the owner's private record.
+Audit items from the 2026-10-16 review are tracked privately.
 
 ### 20. Currency selector (later)
 
