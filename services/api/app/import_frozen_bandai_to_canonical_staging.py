@@ -96,7 +96,7 @@ from app.services.canonical_staging_target import (
     StagingTargetRefused,
     scrub_credentials,
 )
-from app.services.print_import_planner import plan_entries
+from app.services.print_import_planner import own_set_rarities_from_entries, plan_entries
 from app.services.uncoded_source_renderings import UNCODED_SOURCE_RENDERINGS
 from app.services.uncoded_product_evidence import (
     UncodedProductEvidenceError,
@@ -443,6 +443,9 @@ def main(
                 classify_mappings=False,
                 sibling_counts=sibling_counts,
                 authorised_uncoded_names=frozenset(authorised),
+                # Owner t648u: own-set rarities measured over the WHOLE snapshot,
+                # like sibling counts, so a scoped run sees every own-set rarity.
+                own_set_rarities=own_set_rarities_from_entries(snapshot.entries),
             )
             if on_plan is not None:
                 on_plan(plan)
