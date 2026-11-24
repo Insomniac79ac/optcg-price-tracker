@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "mission": "OP-18 option A (owner t642u 2026-11-24, content-pipeline ops/decisions.md L647): catalogue-import scopes may name exclude_entry_ids (entry id and reason); op-18 excludes OP18-064_p1 (TR) and OP18-084_p2 (SPカード), the 2 planner conflicts in dry run 45124567278, so the second op-18 import can create the 38 clean parallels. Expected dry run: create 38, no_change 119, conflict 0, both excluded entries printed by id. Merging writes nothing: the import is a separate ops-write dry run and owner-approved apply. No identity rule, canonical rarity, collector or fleet change.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "scripts/ops/catalogue_import.py"
+      ],
+      "effects": [
+        "bulk_data"
+      ],
+      "reason": "exclude_entry_ids: validated in resolve_scope, removed from the image set (scoped_entry_ids), reported by id with card code, rarity and reason (excluded_report, refuses an id the scope does not capture), filtered at the importer's plan_entries input for the run only (excluding_planner, restored on exit), a plan holding an excluded entry refuses, and the sorted ids join plan_sha256 only for scopes that exclude, so every other scope's SHA is unchanged."
+    },
+    {
+      "files": [
+        "docs/agent/CATALOGUE_IMPORT_SCOPES.json"
+      ],
+      "effects": [
+        "bulk_data"
+      ],
+      "reason": "op-18 gains exclude_entry_ids OP18-064_p1 and OP18-084_p2 with the owner's reason; series stays exactly 550118."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_catalogue_import.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Committed op-18 excludes exactly the 2 ids with reasons; malformed lists refuse; excluded entries get no image and are reported; a stale id refuses; exclusions move the SHA only when present; a dry run plans without the excluded entry and restores the planner; a plan that still holds one refuses; the real importer passes entries to plan_entries second."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Documents exclude_entry_ids and the op-18 exclusions."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "staging Postgres catalogue tables, only through owner-approved ops-write catalogue-import runs"
+      ],
+      "routes": [
+        "Bandai JP card list picker, all series pages and the op-18 scope's images (minus the 2 excluded) during the later import, 1 per second"
+      ],
+      "dependencies": [
+        "staging at ab56bc7a or later",
+        "#307 (storage reserve, DATA) merged and delivered first: one DATA delivery at a time (owner t642u order)"
+      ],
+      "deployment_impact": "Merging changes nothing live. changed_runtime_inputs from 770c574a (current pins): snkrdunk and yuyutei unchanged.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "ab56bc7a6338e3e28ed12519786e503e695d071f",
+      "procedure": "Code: native revert PR with its own mission file. Data: none from this merge; the later apply report lists created rows, restore from the Railway backup that apply requires or an owner-approved removal.",
+      "trigger": "A dry run that plans an excluded entry, plans prints outside OP-18, or does not show create 38, no_change 119, conflict 0.",
+      "backup": "Not applicable to this merge: no schema or row change. The later apply refuses without a Railway Postgres backup under 24 hours old.",
+      "validation": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/CATALOGUE_IMPORT_SCOPES.json"
+      ],
+      "observation_window": "The catalogue-import op-18 dry run (owner approves; expect create 38, no_change 119, conflict 0 and both excluded entries listed), then the apply, official-series-index and the price checker's spot check of the applied prints."
+    }
+  },
+  "diff_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+}
