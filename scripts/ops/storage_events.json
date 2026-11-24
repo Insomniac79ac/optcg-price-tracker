@@ -2,13 +2,18 @@
  "_doc": "Named storage events for scripts/ops/storage_rates.py. A step is a measured one-off (a batch) removed from every later sample so it is not charged again per day. A transient is a rise that recovered; its samples can be excluded from the stress rate by name. Add an entry only with evidence; the as-observed rate is always reported too.",
  "window_start": "2026-10-10T14:31:00.430268+00:00",
  "window_start_reason": "a852244 collector rollout completed (PR #98 receipt): rates over current collector code only (owner decision 2026-10-12)",
- "reserve_ceiling_mb_s9": 6778.7,
- "reserve_reason": "3 GiB reserve on the 10 GB volume, s9 basis (GB x 1024): 3,655.3 + 3,123.4 MB (session 10)",
+ "reserve_ceiling_mb_s9": 16778.8,
+ "reserve_reason": "3 GiB reserve (3,221.2 MB, same convention as session 10) on the 20 GB volume: 20,000 - 3,221.2 = 16,778.8 MB s9. Was 6,778.7 on the 10 GB volume (3,655.3 + 3,123.4 MB, session 10). Owner resized the staging Postgres volume 10 to 20 GB on 2026-11-23 about 06:33Z (owner t619u and t621u); CEO decision 2026-11-23 21:41 MYT keeps this convention (about 10,960 MB room at 5,819.8 MB, not the 11,600 a GiB basis would give)",
  "steps": {
   "new50": {
    "from": "2026-10-13T16:05:00+00:00",
    "to": "2026-10-13T16:30:00+00:00",
    "evidence": "docs/agent/handoff/2026-10-15/capacity75-session13/evidence/new50-evidence.json"
+  },
+  "volume-resize-20gb": {
+   "from": "2026-11-23T06:30:00+00:00",
+   "to": "2026-11-23T06:40:00+00:00",
+   "evidence": "Railway volume resize 10 to 20 GB (owner t621u), not data: ops-readonly storage-rates 45096539918 (2026-11-23 01:47Z, 5,244.1 MB) and 45125227201 (06:36Z, 5,819.8 MB mid-settle); 45307620635 volume-series shows 5,252.1 MB at 06:30Z and 5,849.4 MB at 06:40Z, flat before and after (597.3 MB step)"
   }
  },
  "transients": {
