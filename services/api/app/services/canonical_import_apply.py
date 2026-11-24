@@ -87,7 +87,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Iterable, Sequence
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias, Source
@@ -177,6 +177,10 @@ ABORT_EXISTING_ASSET_DIGEST = "existing_asset_digest_mismatch"
 # converted to needs_review and not mutated: the planner's decision is read,
 # never edited.
 ABORT_PLANNER_CONFLICT = "planner_conflict"
+# Owner t648u: a planned canonical rarity -> NULL transition failed its
+# preflight (stored value moved, a print without official_rarity, an effective
+# rarity that would change) or its bounded write did not match exactly one row.
+ABORT_RARITY_TRANSITION = "canonical_rarity_transition_refused"
 
 # How many conflicting plans the abort context names individually. The count
 # is always exact; the sample is bounded so a corpus-wide disagreement reports
@@ -876,6 +880,10 @@ class ApplyReport:
     # Codes written with rarity = NULL because the catalogue settles none.
     # Named in the report so the absence stays visible after the import.
     rarity_null_codes: list[str] = field(default_factory=list)
+    # Owner t648u: canonical rarity -> NULL transitions, each with every print
+    # on the card (active or not) and its effective rarity before and after.
+    canonical_rarity_transitions: list[dict[str, Any]] = field(default_factory=list)
+    canonical_rarity_transitions_applied: int = 0
 
     distinct_image_digests: int = 0
     pre_counts: dict[str, int] = field(default_factory=dict)
@@ -916,6 +924,8 @@ class ApplyReport:
                 "rarity_null_codes": self.rarity_null_codes,
                 "rarity_null_count": len(self.rarity_null_codes),
             },
+            "canonical_rarity_transitions": self.canonical_rarity_transitions,
+            "canonical_rarity_transitions_applied": self.canonical_rarity_transitions_applied,
             "distinct_image_digests": self.distinct_image_digests,
             "pre_counts": self.pre_counts,
             "post_counts": self.post_counts,
@@ -1371,6 +1381,7 @@ class CanonicalImportApplier:
         self._check_existing_asset_digests()
         self._check_proposed_identity_unique(eligible)
         self._check_established_products(eligible)
+        transitions = self._check_rarity_transitions(report)
 
         if not apply:
             report.applied = False
@@ -1393,6 +1404,8 @@ class CanonicalImportApplier:
         self._create_card_prints(eligible, products, cards, report, uncoded_products=uncoded)
         self._session.flush()
         self._backfill_existing_metadata(report)
+        self._session.flush()
+        self._apply_rarity_transitions(transitions, report)
         self._session.flush()
 
         # 7. post-write invariants, before commit
@@ -1632,6 +1645,123 @@ class CanonicalImportApplier:
                     f"release_product #{product.id} carries official_code "
                     f"{product.official_code!r}, not {planned.official_product_code!r}",
                 )
+
+    def _check_rarity_transitions(
+        self, report: ApplyReport
+    ) -> list[planner.CanonicalRarityTransition]:
+        """Owner t648u, C1 and C2. Read-only; runs on the dry run and the apply.
+
+        For every card the planner marked for a canonical rarity -> NULL
+        transition: the stored value must still be the planned old value; every
+        card_prints row on the card, active or not, must hold a non-blank
+        official_rarity (C1), and so must every print this run creates on it;
+        and no print's effective rarity (official_rarity, else the canonical
+        value) may change (C2). Any failure aborts the whole run.
+        """
+        by_card: dict[int, planner.CanonicalRarityTransition] = {}
+        for planned in self._plan.prints:
+            t = planned.canonical_rarity_transition
+            if t is None:
+                continue
+            held = by_card.setdefault(t.canonical_card_id, t)
+            if held != t:
+                raise ApplyAborted(
+                    ABORT_RARITY_TRANSITION,
+                    f"canonical card #{t.canonical_card_id} carries two different planned "
+                    "rarity transitions; nothing is written",
+                )
+        transitions = [by_card[k] for k in sorted(by_card)]
+        for t in transitions:
+            card = self._session.get(CanonicalCard, t.canonical_card_id)
+            if card is None or (card.rarity or "") != t.old_rarity:
+                raise ApplyAborted(
+                    ABORT_RARITY_TRANSITION,
+                    f"canonical card #{t.canonical_card_id} ({t.card_code}) no longer holds "
+                    f"rarity {t.old_rarity!r}; nothing is written",
+                )
+            prints = self._session.execute(
+                select(CardPrint).where(CardPrint.canonical_card_id == t.canonical_card_id)
+                .order_by(CardPrint.id)
+            ).scalars().all()
+            rows: list[dict[str, Any]] = []
+            for cp in prints:
+                own = (cp.official_rarity or "").strip()
+                before = own or (card.rarity or "").strip() or None
+                after = own or None
+                rows.append(
+                    {
+                        "card_print_id": cp.id,
+                        "is_active": bool(cp.is_active),
+                        "official_rarity": cp.official_rarity,
+                        "effective_rarity_before": before,
+                        "effective_rarity_after": after,
+                    }
+                )
+            created = [
+                p for p in self._plan.prints
+                if p.existing_canonical_card_id == t.canonical_card_id
+                and p.existing_card_print_id is None
+                and p.outcome not in (OUTCOME_NEEDS_REVIEW, OUTCOME_NO_CHANGE)
+            ]
+            for p in created:
+                own = (p.official_metadata.official_rarity or "").strip()
+                rows.append(
+                    {
+                        "card_print_id": None,
+                        "entry_id": p.entry_id,
+                        "is_active": True,
+                        "official_rarity": p.official_metadata.official_rarity,
+                        "effective_rarity_before": own or None,
+                        "effective_rarity_after": own or None,
+                    }
+                )
+            report.canonical_rarity_transitions.append(
+                {
+                    "canonical_card_id": t.canonical_card_id,
+                    "card_code": t.card_code,
+                    "old_rarity": t.old_rarity,
+                    "own_set": t.own_set,
+                    "own_set_rarities": list(t.own_set_rarities),
+                    "prints": rows,
+                }
+            )
+            missing = [r for r in rows if not (r["official_rarity"] or "").strip()]
+            if missing:
+                raise ApplyAborted(
+                    ABORT_RARITY_TRANSITION,
+                    f"canonical card #{t.canonical_card_id} ({t.card_code}): "
+                    f"{len(missing)} print(s) hold no official_rarity, so NULL would change "
+                    "their rarity (C1); nothing is written",
+                    {"canonical_rarity_transitions": report.canonical_rarity_transitions},
+                )
+            moved = [r for r in rows if r["effective_rarity_before"] != r["effective_rarity_after"]]
+            if moved:
+                raise ApplyAborted(
+                    ABORT_RARITY_TRANSITION,
+                    f"canonical card #{t.canonical_card_id} ({t.card_code}): "
+                    f"{len(moved)} print(s) would change effective rarity (C2); nothing is written",
+                    {"canonical_rarity_transitions": report.canonical_rarity_transitions},
+                )
+        return transitions
+
+    def _apply_rarity_transitions(
+        self, transitions: Sequence[planner.CanonicalRarityTransition], report: ApplyReport
+    ) -> None:
+        """The one bounded canonical write D adds: rarity -> NULL, exactly 1 row each."""
+        for t in transitions:
+            result = self._session.execute(
+                update(CanonicalCard)
+                .where(CanonicalCard.id == t.canonical_card_id, CanonicalCard.rarity == t.old_rarity)
+                .values(rarity=None)
+                .execution_options(synchronize_session="fetch")
+            )
+            if result.rowcount != 1:
+                raise ApplyAborted(
+                    ABORT_RARITY_TRANSITION,
+                    f"canonical card #{t.canonical_card_id} ({t.card_code}): the rarity "
+                    f"transition matched {result.rowcount} rows, not 1; nothing is written",
+                )
+            report.canonical_rarity_transitions_applied += 1
 
     def _check_untouched(self, pre: dict[str, int], post: dict[str, int]) -> None:
         for table in UNTOUCHED_TABLES:

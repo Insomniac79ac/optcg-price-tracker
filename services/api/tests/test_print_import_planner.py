@@ -21,6 +21,7 @@ from app.services.print_import_planner import (
     CREATE_RELEASE_PRODUCT,
     FLAG_ASSET_CHANGED,
     FLAG_CANONICAL_CARD_CONFLICT,
+    FLAG_CANONICAL_RARITY_TRANSITION,
     FLAG_MALFORMED_ASSET,
     FLAG_NAME_DIFFERS_BY_PRINTING,
     FLAG_RARITY_DIFFERS_BY_PRINTING,
@@ -32,6 +33,7 @@ from app.services.print_import_planner import (
     PrintImportPlanner,
     is_promo_card_code,
     original_set_code,
+    own_set_rarities_from_entries,
     plan_entries,
 )
 
@@ -1293,3 +1295,126 @@ def test_a_duplicate_exact_identity_is_still_refused_not_first_matched(
     planner = PrintImportPlanner(db_session)
     with pytest.raises(MultipleResultsFound):
         planner.plan_entry(entry(), series_index=SERIES_INDEX)
+
+
+# --- owner t648u (24 Nov 2026): canonical rarity transition, not a conflict ---
+#
+# OP18-084 is SR in OP-18 and Bandai later added OP18-084_p2 as SPカード in
+# the SAME set. The importer's rule (own set publishes several -> NULL) now
+# applies to the existing card: a transition to NULL, never a rewrite to the
+# new value, and only when the current value is one of the own-set rarities.
+
+def _sr_card(db_session, rarity="SR") -> CanonicalCard:
+    card = CanonicalCard(
+        card_code="OP01-001",
+        name_jp="ロロノア・ゾロ",
+        original_set_code="OP-01",
+        rarity=rarity,
+        card_type="Leader",
+    )
+    db_session.add(card)
+    db_session.commit()
+    return card
+
+
+def _p2(rarity="SPカード"):
+    return entry(entry_id="OP01-001_p2", image=f"{CARDLIST}/OP01-001_p2.png", rarity=rarity)
+
+
+P2_DIGESTS = {f"{CARDLIST}/OP01-001_p2.png": P1_DIGEST, f"{CARDLIST}/OP01-001.png?260821": BASE_DIGEST}
+
+
+def test_a_second_own_set_rarity_plans_a_transition_not_a_conflict(db_session, op01):
+    card = _sr_card(db_session)
+    planner = PrintImportPlanner(
+        db_session,
+        digest_provider=P2_DIGESTS.get,
+        own_set_rarities={"OP01-001": {"OP-01": frozenset({"SR", "SPカード"})}},
+    )
+    planned = planner.plan_entry(_p2(), series_index=SERIES_INDEX)
+    assert planned.outcome != OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT not in planned.flags
+    assert FLAG_CANONICAL_RARITY_TRANSITION in planned.flags
+    t = planned.canonical_rarity_transition
+    assert t is not None
+    assert (t.canonical_card_id, t.card_code, t.old_rarity, t.own_set) == (card.id, "OP01-001", "SR", "OP-01")
+    assert t.own_set_rarities == tuple(sorted({"SR", "SPカード"}))
+    # The planner never writes: the canonical value is untouched here.
+    db_session.refresh(card)
+    assert card.rarity == "SR"
+
+
+def test_a_current_value_outside_the_own_set_rarities_stays_a_conflict(db_session, op01):
+    _sr_card(db_session, rarity="SEC")
+    planner = PrintImportPlanner(
+        db_session,
+        digest_provider=P2_DIGESTS.get,
+        own_set_rarities={"OP01-001": {"OP-01": frozenset({"SR", "SPカード"})}},
+    )
+    planned = planner.plan_entry(_p2(), series_index=SERIES_INDEX)
+    assert planned.outcome == OUTCOME_CONFLICT
+    assert planned.canonical_rarity_transition is None
+
+
+def test_one_own_set_rarity_is_still_a_conflict(db_session, op01):
+    _sr_card(db_session)
+    planner = PrintImportPlanner(
+        db_session,
+        digest_provider=P2_DIGESTS.get,
+        own_set_rarities={"OP01-001": {"OP-01": frozenset({"SPカード"})}},
+    )
+    planned = planner.plan_entry(_p2(), series_index=SERIES_INDEX)
+    assert planned.outcome == OUTCOME_CONFLICT
+    assert planned.canonical_rarity_transition is None
+
+
+def test_without_the_whole_snapshot_a_subset_fails_closed(db_session, op01):
+    """Planning only the new entry, with no whole-snapshot measure, cannot see
+    the base SR, so the card stays a conflict (nothing is guessed)."""
+    _sr_card(db_session)
+    plan = plan_entries(
+        db_session, [_p2()], series_index=SERIES_INDEX, digest_provider=P2_DIGESTS.get,
+        classify_mappings=False,
+    )
+    assert [p.outcome for p in plan.prints] == [OUTCOME_CONFLICT]
+
+
+def test_both_entries_together_plan_the_same_transition(db_session, op01):
+    card = _sr_card(db_session)
+    plan = plan_entries(
+        db_session, [entry(rarity="SR"), _p2()], series_index=SERIES_INDEX,
+        digest_provider=P2_DIGESTS.get, classify_mappings=False,
+    )
+    base, p2 = plan.prints
+    assert base.outcome != OUTCOME_CONFLICT and base.canonical_rarity_transition is None
+    assert p2.outcome != OUTCOME_CONFLICT
+    assert p2.canonical_rarity_transition is not None
+    assert p2.canonical_rarity_transition.canonical_card_id == card.id
+
+
+def test_a_later_sets_printing_never_plans_a_transition(db_session, op01):
+    """A reprint in another set is a print-scoped note, as before."""
+    _sr_card(db_session)
+    later = OfficialSeries(series_id="550108", display_name="ブースターパック 二つの伝説【OP-08】", official_code="OP-08")
+    planner = PrintImportPlanner(
+        db_session,
+        digest_provider={f"{CARDLIST}/OP01-001_p3.png": BASE_DIGEST}.get,
+        own_set_rarities={"OP01-001": {"OP-01": frozenset({"SR", "SPカード"}), "OP-08": frozenset({"SPカード"})}},
+    )
+    planned = planner.plan_entry(
+        entry(entry_id="OP01-001_p3", image=f"{CARDLIST}/OP01-001_p3.png",
+              products=("ブースターパック 二つの伝説【OP-08】",), rarity="SPカード"),
+        series_index=(OP01_SERIES, later),
+    )
+    assert planned.canonical_rarity_transition is None
+    assert FLAG_RARITY_DIFFERS_BY_PRINTING in planned.flags
+
+
+def test_own_set_rarities_are_read_per_product_from_single_product_entries():
+    seen = own_set_rarities_from_entries([
+        entry(rarity="SR"),
+        _p2(),
+        entry(entry_id="OP01-001_p3", products=("ブースターパック 二つの伝説【OP-08】",), rarity="SPカード"),
+        entry(entry_id="OP01-001_p9", products=("ROMANCE DAWN【OP-01】", "ブースターパック 二つの伝説【OP-08】"), rarity="SEC"),
+    ])
+    assert seen == {"OP01-001": {"OP-01": frozenset({"SR", "SPカード"}), "OP-08": frozenset({"SPカード"})}}
