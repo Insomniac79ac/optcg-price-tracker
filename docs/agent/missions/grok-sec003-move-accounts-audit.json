@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "Docs-only (owner ruling 2026-11-24): remove docs/agent/security/2026-10-16-accounts-audit.md from staging because it now lives in the owner's private record; ROADMAP.md section 9 names that record, and section 19 keeps one line that audit items are tracked privately. No code, config, workflow or environment change; no history rewrite.",
+  "classification": "GREEN",
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/security/2026-10-16-accounts-audit.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Moved to the owner's private record (copy confirmed before removal); removed from the public docs."
+    },
+    {
+      "files": [
+        "docs/agent/ROADMAP.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Section 9 names the private record instead of the removed file. Section 19 keeps one line that audit items are tracked privately."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "docs only"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "none"
+      ],
+      "deployment_impact": "None.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 1
+    },
+    "recovery": {
+      "artifact": "f0674dffdadf23364603dcc99b792ba76ecf6752",
+      "procedure": "Native revert restores the file and links.",
+      "trigger": "A doc or script still needs the file in the repo.",
+      "backup": "Not applicable.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/ROADMAP.md"
+      ],
+      "observation_window": "None."
+    }
+  },
+  "diff_sha256": "b52f4738c6b08e58cbd867dc5a50d5dcf19fc794684b22c6a0ed5c29205258ac"
+}
