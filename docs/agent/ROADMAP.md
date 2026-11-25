@@ -89,7 +89,7 @@ coverage (item 11d).
 | 16 | Partnerships (PCG, Collector Crypt) | planned | RED (external) | no PCG plan; CC outreach not sent |
 | 17 | Production deprecation step 2 | done (2026-10-12) | none | none |
 | 18 | Domain | done (`cardpirate.app`, 2026-10-24; staging on `staging.cardpirate.app`) | none | none |
-| 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | F15 owner check; L1 still open (missed #224, #231 and #237) |
+| 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | tracked privately |
 | 20 | Currency selector | planned (later) | RED (invariant amendment) | deferred |
 | 21 | English-edition catalogue | planned (later) | AMBER | deferred |
 | 22 | Per-PR mission files (stop manifest conflicts) | done (in use on every PR since 2026-10-19) | none | none |
@@ -511,7 +511,7 @@ production deletion (#107, #108). Never-replay list: session 14 handoff "Session
 8. Owner decisions on `plan/new-sources` N1 to N16, then Dorasuta (item 13).
 9. Ops readability: KPI fields in the staging-state summary, `fleet-vs-receipt` against the newest
    receipts, the auto-merge-on-clean-PR fix (items 11, 22, 23).
-10. Security data-lane batch, L1 with the next collector release (item 19); then the launch gate
+10. Security data-lane work for item 19 (tracked privately); then the launch gate
     toward production (item 12).
 
 ## 7. Sources read for this revision
