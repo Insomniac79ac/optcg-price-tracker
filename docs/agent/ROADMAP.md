@@ -89,7 +89,7 @@ coverage (item 11d).
 | 16 | Partnerships (PCG, Collector Crypt) | planned | RED (external) | no PCG plan; CC outreach not sent |
 | 17 | Production deprecation step 2 | done (2026-10-12) | none | none |
 | 18 | Domain | done (`cardpirate.app`, 2026-10-24; staging on `staging.cardpirate.app`) | none | none |
-| 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | F15 owner check; L1 still open (missed #224, #231 and #237) |
+| 19 | Security audit 2026-10-16 open items | in progress | AMBER (data lane) | tracked privately |
 | 20 | Currency selector | planned (later) | RED (invariant amendment) | deferred |
 | 21 | English-edition catalogue | planned (later) | AMBER | deferred |
 | 22 | Per-PR mission files (stop manifest conflicts) | done (in use on every PR since 2026-10-19) | none | none |
@@ -231,7 +231,7 @@ coverage (item 11d).
 
 - **Status: blocked.** Share cards serve a static image (#153) while Next.js stays on 16.2.12, which
   closes the `next/og` advisory path. Generated cards come back after Next.js 16.3.6+ (retry plan in
-  [security/2026-10-16-accounts-audit.md](security/2026-10-16-accounts-audit.md)).
+  the 16 Oct accounts audit, now in the owner's private record).
 - **Collection sharing:** private only (collector-v1 §B4); an opt-in share needs a privacy contract
   (RED: private data exposure).
 
@@ -347,16 +347,7 @@ coverage (item 11d).
 
 ### 19. Security audit 2026-10-16 open items
 
-- **Update 2026-10-28:** L1 (`hide_parameters=True` in `app/db.py`) is still open: it missed the
-  collector releases #224, #231 and #237. Attach it to the next one. Other open items unchanged (not
-  re-verified).
-- **Status (2026-10-18): in progress.** Fixed and live: A1 to A3, F1, D2, D3, F5, F8, F9, F11, F12, F13 and F14 web
-  parts, CSP enforced (#136 to #165, #170).
-- **Open:** F15 `CORS_ALLOW_ORIGIN_REGEX` on Railway (owner checking); F13 and F14 API parts, F2, F3,
-  F4, F10, S1, I1 (data lane); F6, F7 (migrations on protected tables); D4 (npm); L1
-  `hide_parameters` (needs a collector release: it missed #173 and now waits for the next one);
-  D1 remainder (Next.js 16.3, parked).
-- **Source:** [security/2026-10-16-accounts-audit.md](security/2026-10-16-accounts-audit.md).
+Audit items from the 2026-10-16 review are tracked privately.
 
 ### 20. Currency selector (later)
 
@@ -520,7 +511,7 @@ production deletion (#107, #108). Never-replay list: session 14 handoff "Session
 8. Owner decisions on `plan/new-sources` N1 to N16, then Dorasuta (item 13).
 9. Ops readability: KPI fields in the staging-state summary, `fleet-vs-receipt` against the newest
    receipts, the auto-merge-on-clean-PR fix (items 11, 22, 23).
-10. Security data-lane batch, L1 with the next collector release (item 19); then the launch gate
+10. Security data-lane work for item 19 (tracked privately); then the launch gate
     toward production (item 12).
 
 ## 7. Sources read for this revision
