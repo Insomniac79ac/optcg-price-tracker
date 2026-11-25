@@ -355,8 +355,12 @@ def plan_rows(plan, entry_records=None):
     return sorted(rows, key=lambda r: (r["print"]["card_code"], r["print"]["entry_id"]))
 
 
-def plan_sha(scope, rows, uncoded=(), asia_en_sha256=None):
+def plan_sha(scope, rows, uncoded=(), asia_en_sha256=None, same_set_rarity_differences=()):
     body = {"scope": scope["name"], "series": scope["series"], "prints": rows}
+    if same_set_rarity_differences:
+        # Owner t648u early warning: part of what the owner reads, so part of the SHA (only when
+        # present, so a scope with no such card keeps its SHA).
+        body["same_set_rarity_differences"] = list(same_set_rarity_differences)
     if scope.get("exclude_entry_ids"):
         # What is left out decides what gets written too (only scopes that exclude carry it, so
         # every other scope's SHA is unchanged).
@@ -476,7 +480,10 @@ def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, ope
             facts["refused"] = "the plan holds excluded entries: " + ", ".join(leaked)
             raise common.Refused(facts["refused"])
         rows = plan_rows(plan, records)
-        facts.update(rows=rows, sha=plan_sha(scope, rows, uncoded, asia_sha), outcomes=plan.counts())
+        differences = list(getattr(plan, "same_set_rarity_differences", None) or ())
+        facts.update(rows=rows, sha=plan_sha(scope, rows, uncoded, asia_sha, differences),
+                     outcomes=plan.counts(), same_set_rarity_differences=differences,
+                     transitions=rarity_transitions(rows))
         if apply:
             try:
                 check_apply(expected_sha256, facts["sha"])
@@ -496,7 +503,22 @@ def import_scope(snapshot_root, scope, *, apply, expected_sha256, main=None, ope
 REPORT_KEYS = ("applied", "products_created", "product_aliases_created", "canonical_cards_created",
                "card_prints_created", "existing_print_metadata_updated", "plans_total", "eligible_plans",
                "skipped_needs_review", "planner_conflicts", "skipped_no_change", "skipped_ineligible",
-               "distinct_image_digests", "rollback_reason", "rollback_detail")
+               "distinct_image_digests", "canonical_rarity_transitions_applied", "rollback_reason",
+               "rollback_detail")
+
+
+def rarity_transitions(rows):
+    """Planned canonical rarity -> NULL transitions (owner t648u), one per card, from the plan
+    rows (so they are inside plan_sha256)."""
+    seen = {}
+    for row in rows:
+        t = row["print"].get("canonical_rarity_transition")
+        if t:
+            seen[t["canonical_card_id"]] = {
+                "canonical_card_id": t["canonical_card_id"], "card_code": t["card_code"],
+                "old_rarity": t["old_rarity"], "new_rarity": None, "own_set": t["own_set"],
+                "own_set_rarities": list(t["own_set_rarities"]), "entry_id": row["print"]["entry_id"]}
+    return [seen[k] for k in sorted(seen)]
 
 
 def compact_row(row):
@@ -579,6 +601,13 @@ def run(out_dir, *, apply=False, scope="", expected_sha256="", fetcher=None, mai
                        "outcomes": facts.get("outcomes"), "prints": facts.get("rows"), "report": report,
                        "observed_at": state.timestamp()})
     rows = facts.get("rows") or []
+    # Owner t648u: every transition (card, old value, own-set rarities) and, from the applier's
+    # C1/C2 preflight, every print on the card with its effective rarity before and after. The
+    # early-warning list is printed on every dry run, for every scope, even when empty.
+    summary["canonical_rarity_transitions"] = facts.get("transitions") or []
+    if isinstance(report, dict) and report.get("canonical_rarity_transitions"):
+        summary["canonical_rarity_transition_prints"] = report.get("canonical_rarity_transitions")
+    summary["same_set_rarity_differences"] = facts.get("same_set_rarity_differences") or []
     summary.update(
         ok=code == 0 and not facts.get("refused"),
         exit_code=code,
