@@ -127,6 +127,32 @@ class Scope(unittest.TestCase):
         self.assertFalse(scope.get("uncoded_series"))
         self.assertFalse(scope.get("report_only"))
 
+    def test_committed_op18_scope_excludes_exactly_the_two_conflicts(self):
+        # Owner t642u (2026-11-24, option A): OP18-064_p1 and OP18-084_p2 stay out until option D.
+        scope = ci.resolve_scope("op-18", ci.load_scopes())
+        self.assertEqual(sorted(ci.excluded_ids(scope)), ["OP18-064_p1", "OP18-084_p2"])
+        self.assertTrue(all(e["reason"] for e in scope["exclude_entry_ids"]))
+
+    def test_malformed_exclude_entry_ids_refuse(self):
+        for bad in ([{"entry_id": "a"}], [{"entry_id": "a", "reason": ""}], ["a"],
+                    [{"entry_id": "a", "reason": "r"}, {"entry_id": "a", "reason": "s"}],
+                    [{"entry_id": " a", "reason": "r"}], {"entry_id": "a", "reason": "r"}):
+            with self.assertRaises(common.Refused):
+                ci.resolve_scope("x", {"x": {"series": ["550205"], "exclude_entry_ids": bad}})
+
+    def test_excluded_entries_get_no_image_and_are_reported_by_id(self):
+        rows = [{"entry_id": "a", "card_code": "A", "rarity": "UC", "source_series_id": "550205", "product_names": []},
+                {"entry_id": "a_p1", "card_code": "A", "rarity": "TR", "source_series_id": "550205", "product_names": []}]
+        scope = ci.resolve_scope("x", {"x": {"series": ["550205"],
+                                             "exclude_entry_ids": [{"entry_id": "a_p1", "reason": "conflict"}]}})
+        self.assertEqual(ci.scoped_entry_ids(rows, scope), {"a"})
+        self.assertEqual(ci.excluded_report(rows, scope),
+                         [{"entry_id": "a_p1", "card_code": "A", "rarity": "TR", "reason": "conflict"}])
+        stale = ci.resolve_scope("x", {"x": {"series": ["550205"],
+                                             "exclude_entry_ids": [{"entry_id": "gone", "reason": "r"}]}})
+        with self.assertRaises(common.Refused):
+            ci.excluded_report(rows, stale)
+
     def test_unknown_missing_and_malformed_scopes_refuse(self):
         for name in ("", "nope", "bad"):
             with self.assertRaises(common.Refused):
@@ -261,6 +287,15 @@ class PlanDigest(unittest.TestCase):
         records = {"EB05-001": {"fields": [{"name": "cost", "value": "3"}]}}
         self.assertNotEqual(sha, ci.plan_sha(scope, ci.plan_rows(fake_plan(["EB05-001", "EB05-002"]), records)))
 
+    def test_exclusions_are_in_the_sha_only_for_scopes_that_exclude(self):
+        rows = ci.plan_rows(fake_plan(["EB05-001"]))
+        plain = ci.resolve_scope("eb-05", SCOPES)
+        self.assertEqual(ci.plan_sha(plain, rows), ci.plan_sha(dict(plain, exclude_entry_ids=[]), rows))
+        one = dict(plain, exclude_entry_ids=[{"entry_id": "EB05-002", "reason": "r"}])
+        two = dict(plain, exclude_entry_ids=[{"entry_id": "EB05-003", "reason": "r"}])
+        self.assertNotEqual(ci.plan_sha(plain, rows), ci.plan_sha(one, rows))
+        self.assertNotEqual(ci.plan_sha(one, rows), ci.plan_sha(two, rows))
+
     def test_apply_needs_the_matching_sha(self):
         with self.assertRaises(common.Refused):
             ci.check_apply("", "a" * 64)
@@ -357,3 +392,67 @@ class RunFlow(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeImporterModule:
+    """Shaped like app.import_frozen_bandai_to_canonical_staging: main() measures nothing itself and
+    hands the scoped entries to the module-level plan_entries, then calls on_plan."""
+
+    def __init__(self, codes):
+        self.codes = codes
+        self.seen = []
+
+    def plan_entries(self, session, entries, **kwargs):
+        self.seen.append([e.entry_id for e in entries])
+        return fake_plan([e.entry_id for e in entries])
+
+    def main(self, argv, *, open_tunnel, on_plan):
+        entries = [SimpleNamespace(entry_id=c) for c in self.codes]
+        try:
+            plan = self.plan_entries(None, entries, sibling_counts={})   # an instance attribute wins, as a module global
+            on_plan(plan)
+        except Exception as exc:  # noqa: BLE001
+            print(f"FAIL: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps({"applied": "--apply" in argv, "eligible_plans": len(plan.prints)}))
+        return 0
+
+
+class ExcludedEntries(unittest.TestCase):
+    """Owner t642u (2026-11-24): OP-18 option A leaves the 2 conflicting parallels out, and the dry
+    run prints every excluded entry by id."""
+
+    SCOPES = {"eb-05x": {"series": ["550205"], "uncoded_products": [],
+                         "exclude_entry_ids": [{"entry_id": "EB05-002", "reason": "planner conflict"}]}}
+
+    def setUp(self):
+        sys.modules.setdefault("generate_staging_state", SimpleNamespace(timestamp=lambda: "t"))
+
+    def test_dry_run_plans_without_the_excluded_entry_and_prints_it(self):
+        module = FakeImporterModule(["EB05-001", "EB05-002"])
+        with tempfile.TemporaryDirectory() as tmp:
+            out = ci.run(tmp, scope="eb-05x", fetcher=FakeFetcher(), main=module.main, open_tunnel=OPEN,
+                         scopes=self.SCOPES, importer_module=module)
+        self.assertTrue(out["ok"], out)
+        self.assertEqual(module.seen, [["EB05-001"]])
+        self.assertEqual(out["excluded_entries"],
+                         [{"entry_id": "EB05-002", "card_code": "EB05-002", "rarity": "C", "reason": "planner conflict"}])
+        self.assertEqual(out["excluded_at_planner"], ["EB05-002"])
+        self.assertEqual(out["outcomes"], {"create_card_print": 1})
+        self.assertEqual(out["capture"]["scoped_entries"], 1)
+        self.assertIs(module.plan_entries.__func__, FakeImporterModule.plan_entries)   # restored after the run
+
+    def test_a_plan_that_still_holds_an_excluded_entry_refuses(self):
+        importer = FakeImporter(codes=("EB05-001", "EB05-002"))   # ignores the planner filter
+        module = SimpleNamespace(plan_entries=lambda *a, **k: None)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = ci.run(tmp, scope="eb-05x", fetcher=FakeFetcher(), main=importer, open_tunnel=OPEN,
+                         scopes=self.SCOPES, importer_module=module)
+        self.assertFalse(out["ok"])
+        self.assertIn("EB05-002", out["refused"])
+
+    def test_the_real_importer_hands_entries_to_plan_entries_second(self):
+        import inspect
+        from app import import_frozen_bandai_to_canonical_staging as importer
+        self.assertEqual(list(inspect.signature(importer.plan_entries).parameters)[:2], ["session", "entries"])
+        self.assertIn("plan_entries(", inspect.getsource(importer.main))
