@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import hmac
 import jwt
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
@@ -26,7 +27,13 @@ def require_admin_token(x_admin_token: str | None = Header(default=None)) -> Non
             detail="ADMIN_TOKEN is not configured and ENVIRONMENT/APP_ENV is not 'development'.",
         )
 
-    if x_admin_token != settings.ADMIN_TOKEN:
+    if not isinstance(x_admin_token, str):
+        raise HTTPException(status_code=401, detail="Admin token required")
+
+    if not hmac.compare_digest(
+        x_admin_token.encode("utf-8"),
+        settings.ADMIN_TOKEN.encode("utf-8"),
+    ):
         raise HTTPException(status_code=401, detail="Admin token required")
 
 
