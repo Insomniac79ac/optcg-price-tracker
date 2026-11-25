@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "mission": "Option D (owner t648u 2026-11-24, content-pipeline ops/decisions.md L654, identity_weakening only): when a card's own set publishes a second rarity in a later catalogue import and the card's current canonical rarity is one of the own-set rarities, the planner plans a canonical rarity -> NULL transition instead of a conflict, and the applier writes it with one bounded UPDATE per card, after C1 (every print on the card, active or not, holds its own official_rarity) and C2 (no print's effective rarity changes); anything else that would change a canonical value still refuses. Every dry run lists each transition, every print's rarity before and after, and same_set_rarity_differences. The admin SNKRDUNK print options show the print's own rarity first. Merging writes nothing: transitions happen only in later owner-approved catalogue-import runs. Owner merges by hand.",
+  "target": "staging",
+  "classification": "RED",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": true,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "owner_approvals": {
+    "identity_weakening": "https://github.com/Insomniac79ac/content-pipeline/blob/5f3fb89215f2bbbb53a9baf3d24ed11bb906e8c5/ops/decisions.md#L654"
+  },
+  "impacts": [
+    {
+      "files": [
+        "services/api/app/services/print_import_planner.py"
+      ],
+      "effects": [
+        "bulk_data"
+      ],
+      "reason": "CanonicalRarityTransition: a baseline rarity difference becomes a transition to NULL only when the own set publishes 2+ rarities for the card (measured over the whole snapshot) and the current value is one of them; otherwise it stays a conflict. ImportPlan.same_set_rarity_differences lists every card whose own set publishes several rarities while canonical rarity is set. The planner still writes nothing."
+    },
+    {
+      "files": [
+        "services/api/app/services/canonical_import_apply.py"
+      ],
+      "effects": [
+        "bulk_data"
+      ],
+      "reason": "Preflight on dry run and apply: stored value still the planned old value, C1 every print (active or not) holds official_rarity, C2 no effective rarity changes; then one UPDATE canonical_cards SET rarity = NULL WHERE id and rarity = old, exactly 1 row per card or the whole apply rolls back. The report lists each transition with every print before and after."
+    },
+    {
+      "files": [
+        "services/api/app/import_frozen_bandai_to_canonical_staging.py"
+      ],
+      "effects": [
+        "bulk_data"
+      ],
+      "reason": "Passes own-set rarities measured over the whole snapshot to the planner, like sibling counts."
+    },
+    {
+      "files": [
+        "scripts/ops/catalogue_import.py"
+      ],
+      "effects": [
+        "bulk_data"
+      ],
+      "reason": "The summary lists canonical_rarity_transitions, the applier's per-print before/after list and same_set_rarity_differences (always, even empty); the early-warning list joins plan_sha256 only when non-empty, so other scopes keep their SHA."
+    },
+    {
+      "files": [
+        "services/api/app/api/admin_snkrdunk_matching.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Admin print options show the print's own official rarity first (print_catalogue.effective_rarity) as a facet token, the card's only as a fallback; display only, approval unchanged."
+    },
+    {
+      "files": [
+        "services/api/tests/test_print_import_planner.py",
+        "services/api/tests/test_canonical_import_apply_postgres.py",
+        "services/api/tests/test_exact_print_approval.py",
+        "scripts/tests/test_ops_catalogue_import.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Transition vs conflict cases, whole-snapshot measure, base then parallel equals both together (Postgres), C1 and stale-value refusals, early warning, catalogue-import summary and SHA, admin print-first rarity."
+    },
+    {
+      "files": [
+        "docs/agent/DECISIONS.md",
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Records the owner's rule (t648u) and documents the new catalogue-import summary keys."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "staging Postgres canonical_cards.rarity, only through later owner-approved ops-write catalogue-import runs"
+      ],
+      "routes": [
+        "admin SNKRDUNK print options (display only)"
+      ],
+      "dependencies": [
+        "staging at 5508dae2 or later",
+        "OP-18 option A applied and EB-05 step 1 delivered first (owner t653u order); one DATA delivery at a time"
+      ],
+      "deployment_impact": "The API rebuilds through its native Git deploy. No collector runtime input change, no migration, no website change. Merging changes no data.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "5508dae2bf06a8ad0df250f5e428b86f65bcb7b0",
+      "procedure": "Code: native revert PR with its own mission file. Data: none from this merge; a later apply report records each old canonical value, and restoring one is a canonical write that needs the owner.",
+      "trigger": "A dry run that plans a transition for a card whose current value is not an own-set rarity, shows any print's effective rarity changing, or touches any other canonical value.",
+      "backup": "Not applicable to this merge. The later apply refuses without a Railway Postgres backup under 24 hours old.",
+      "validation": [
+        "services/api/tests/test_print_import_planner.py",
+        "services/api/tests/test_canonical_import_apply_postgres.py",
+        "scripts/tests/test_ops_catalogue_import.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "services/api/app/services/print_import_planner.py",
+        "services/api/app/services/canonical_import_apply.py"
+      ],
+      "observation_window": "After merge: the PR removing op-18's exclusions, then an op-18 dry run expecting create 2, transitions 2 (7977 UC and 7997 SR to NULL), conflict 0 and unchanged print rarities; the owner approves each dry run and apply; CP security re-rules first if any print's rarity would move (C3)."
+    }
+  },
+  "diff_sha256": ""
+}
