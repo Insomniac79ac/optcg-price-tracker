@@ -183,6 +183,27 @@ owner merges by hand. After a hand merge, `Verify staging merge` (push to `stagi
 head and regenerates state as usual. Agents may add the label, never remove it
 (`.claude/hooks/guard.py`).
 
+**Delivery guard (owner 2026-11-24).** The `delivery-guard` job (`scripts/delivery_guard.py`, run
+from the base checkout with a read-only token) fails a staging PR's check while anything that holds
+the `card-pirate-staging-delivery` group is running or queued: a `Verify staging merge` run, or a
+CI run whose `staging-credential-presence` or `staging-automerge` job is not completed (this run
+excluded). It applies to PRs that `policy-gate` marks `owner_merge_only`, that carry
+`hold-for-owner` (read live, not from the event), or that change `.github/workflows/`; other PRs
+get a success that says not applicable. It decides on workflow ids, run ids, job keys and statuses
+only, and fails on any doubt (an error, a timeout, more than one page of results, an unknown
+status, staging no longer requiring `engineering-gate`). Because strict up-to-date protection makes
+every hand-merge PR re-run its checks after each staging merge, the check is re-evaluated during
+each delivery. It is an accident interlock for hand merges, nothing more: a PR that edits
+`.github/workflows/` runs its own copy of the workflow, so the owner checks Actions for a running
+delivery by hand before merging such a PR. A green check on a fork PR proves nothing; the owner
+does not merge fork PRs and approves fork workflow runs only for a contributor he expects.
+`policy-gate` and `delivery-guard` run for same-repository PRs only, so an unmodified workflow
+fails `engineering-gate` for any fork PR. The staging chain (`staging-pr-live`,
+`staging-credential-presence`, `staging-automerge`) skips PRs that are not open, so an edit to a
+merged or closed PR starts no delivery step. Native auto-merges get no `Verify staging merge` run
+(a push made by the job token starts no workflow); their verification happens inside
+`staging-automerge`, which holds the group about 25 minutes past the merge.
+
 **Approved RED work (owner 2026-11-17).** A mission with a RED effect, or a RED category set to
 true, passes `policy-gate` only when `owner_approvals` maps every one of its RED categories to a
 link to the owner's approval (`https://github.com/Insomniac79ac/optcg-price-tracker/...` or
