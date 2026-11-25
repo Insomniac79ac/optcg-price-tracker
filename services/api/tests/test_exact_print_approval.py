@@ -637,6 +637,30 @@ def test_print_options_assigns_an_art_ordinal_only_where_it_disambiguates(
     assert by_id[catalogue["prints"]["sp_p3"].id]["art_ordinal"] is None
 
 
+
+def test_print_options_show_each_prints_own_rarity_first(client, catalogue, candidate):
+    """Owner t648u: the option's rarity is the print's own official rarity (facet
+    token), the card's only as a fallback, and it survives a NULL canonical value."""
+    db = catalogue["db"]
+    prints = catalogue["prints"]
+    prints["base"].official_rarity = "SR"
+    db.commit()
+
+    body = client.get(f"/admin/snkrdunk-candidates/{candidate.id}/print-options").json()
+    by_id = {o["card_print_id"]: o for o in body["options"]}
+    assert by_id[prints["sp_p3"].id]["rarity"] == "SP CARD"
+    assert by_id[prints["base"].id]["rarity"] == "SR"
+    assert by_id[prints["p1"].id]["rarity"] == "SR"  # no own value: card fallback
+
+    catalogue["canonical"].rarity = None
+    db.commit()
+    body = client.get(f"/admin/snkrdunk-candidates/{candidate.id}/print-options").json()
+    by_id = {o["card_print_id"]: o for o in body["options"]}
+    assert by_id[prints["sp_p3"].id]["rarity"] == "SP CARD"
+    assert by_id[prints["base"].id]["rarity"] == "SR"
+    assert by_id[prints["p1"].id]["rarity"] is None  # unknown stays unknown, never guessed
+    assert "SPカード" not in str(body)
+
 # --- 4F-3C: unresolved product evidence is not absent evidence ----------------
 #
 # The 2026-08-27 staging replay found four of six "exact" SNKRDUNK candidates
