@@ -130,5 +130,5 @@
       "observation_window": "After merge: the PR removing op-18's exclusions, then an op-18 dry run expecting create 2, transitions 2 (7977 UC and 7997 SR to NULL), conflict 0 and unchanged print rarities; the owner approves each dry run and apply; CP security re-rules first if any print's rarity would move (C3)."
     }
   },
-  "diff_sha256": ""
+  "diff_sha256": "4f149d58e0733b6e4215cde94b26a04196cf4e1c450e2782b56f26eb1e6ed220"
 }
