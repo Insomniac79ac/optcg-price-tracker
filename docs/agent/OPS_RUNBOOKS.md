@@ -264,10 +264,11 @@ catalogue-gap request (owner 2026-10-26).
    Canonical rarity transitions (owner t648u, docs/agent/DECISIONS.md 2026-11-24): when the card's
    own set now publishes several rarities and the card's canonical rarity is one of them, the plan
    carries a transition to NULL instead of a conflict. The summary lists each transition
-   (`canonical_rarity_transitions`: card id, code, old value, own-set rarities) and, from the
-   applier's preflight, every print on the card, active or not, with its rarity before and after
-   (`canonical_rarity_transition_prints`); the run refuses if any print has no official rarity or
-   would change rarity. Every dry run also prints `same_set_rarity_differences`, each card whose
+   (`canonical_rarity_transitions`: card id, code, old value, own-set rarities and
+   `existing_prints`, every print on the card, active or not, with its rarity before and after,
+   read when the plan is made) and, from the applier's preflight, the same list plus the prints
+   this run creates (`canonical_rarity_transition_prints`); the run refuses if any print has no
+   official rarity, would change rarity, or no longer matches the planned list. Every dry run also prints `same_set_rarity_differences`, each card whose
    own set publishes several rarities while its canonical rarity is still set (in the snapshot,
    in scope or not), even when empty. Transitions and that list are part of `plan_sha256`.
 2. Capture: a fresh Bandai JP snapshot in the run directory, every six-digit series page plus the

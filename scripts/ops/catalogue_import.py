@@ -517,7 +517,8 @@ def rarity_transitions(rows):
             seen[t["canonical_card_id"]] = {
                 "canonical_card_id": t["canonical_card_id"], "card_code": t["card_code"],
                 "old_rarity": t["old_rarity"], "new_rarity": None, "own_set": t["own_set"],
-                "own_set_rarities": list(t["own_set_rarities"]), "entry_id": row["print"]["entry_id"]}
+                "own_set_rarities": list(t["own_set_rarities"]), "entry_id": row["print"]["entry_id"],
+                "existing_prints": list(t.get("existing_prints") or ())}
     return [seen[k] for k in sorted(seen)]
 
 

@@ -458,8 +458,10 @@ class ExcludedEntries(unittest.TestCase):
         self.assertIn("plan_entries(", inspect.getsource(importer.main))
 
 
+EXISTING = [{"card_print_id": 7103, "is_active": True, "official_rarity": "UC",
+             "effective_rarity_before": "UC", "effective_rarity_after": "UC"}]
 TRANSITION = {"canonical_card_id": 7977, "card_code": "EB05-001", "old_rarity": "UC", "own_set": "EB05",
-              "own_set_rarities": ["TR", "UC"]}
+              "own_set_rarities": ["TR", "UC"], "existing_prints": EXISTING}
 DIFFERENCE = {"card_code": "EB05-001", "canonical_card_id": 7977, "canonical_rarity": "UC", "own_set": "EB05",
               "own_set_rarities": ["TR", "UC"]}
 
@@ -498,6 +500,21 @@ class CanonicalRarityTransitionReport(unittest.TestCase):
         rows = ci.plan_rows(transition_plan())
         self.assertEqual(ci.rarity_transitions(rows), [dict(TRANSITION, new_rarity=None, entry_id="EB05-001")])
         self.assertEqual(ci.rarity_transitions(ci.plan_rows(fake_plan(["EB05-001"]))), [])
+
+    def test_the_per_print_before_and_after_list_is_inside_the_sha(self):
+        """CEO 25 Nov 2026: a print on the card that reads differently gives a different SHA."""
+        scope = ci.resolve_scope("eb-05", SCOPES)
+        approved = ci.plan_sha(scope, ci.plan_rows(transition_plan()))
+        moved = transition_plan()
+        first = moved.prints[0]
+        doc = first.to_dict()
+        doc["canonical_rarity_transition"] = dict(
+            TRANSITION, existing_prints=[dict(EXISTING[0], official_rarity="TR", effective_rarity_after="TR",
+                                              effective_rarity_before="TR")])
+        moved.prints[0] = SimpleNamespace(entry_id=first.entry_id, card_code=first.card_code,
+                                          to_dict=lambda: dict(doc))
+        self.assertNotEqual(approved, ci.plan_sha(scope, ci.plan_rows(moved)))
+        self.assertEqual(ci.rarity_transitions(ci.plan_rows(transition_plan()))[0]["existing_prints"], EXISTING)
 
     def test_a_transition_moves_the_sha(self):
         scope = ci.resolve_scope("eb-05", SCOPES)

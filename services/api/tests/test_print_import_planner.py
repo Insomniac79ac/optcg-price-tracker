@@ -1454,3 +1454,18 @@ def test_the_early_warning_is_empty_for_one_rarity_or_a_null_card(db_session, op
         digest_provider=P2_DIGESTS.get, classify_mappings=False,
     )
     assert both.same_set_rarity_differences == []
+
+
+def test_a_transition_lists_every_print_on_the_card_active_or_not(db_session, op01):
+    """CEO 25 Nov 2026: the per-print before/after list is part of the plan."""
+    card = _sr_card(db_session)
+    inactive = make_print(db_session, card, op01, "p5", official_rarity="SR", is_active=False)
+    planner = PrintImportPlanner(
+        db_session,
+        digest_provider=P2_DIGESTS.get,
+        own_set_rarities={"OP01-001": {"OP-01": frozenset({"SR", "SPカード"})}},
+    )
+    t = planner.plan_entry(_p2(), series_index=SERIES_INDEX).canonical_rarity_transition
+    assert t is not None
+    assert [(r.card_print_id, r.is_active, r.official_rarity, r.effective_rarity_before,
+             r.effective_rarity_after) for r in t.existing_prints] == [(inactive.id, False, "SR", "SR", "SR")]

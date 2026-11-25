@@ -1379,3 +1379,44 @@ def test_a_value_changed_since_the_plan_refuses_the_transition(db):
         _apply(db, plan=plan)
     assert excinfo.value.report.rollback_reason == A.ABORT_RARITY_TRANSITION
     assert _fingerprint(db) == before
+
+
+# CEO 25 Nov 2026: the per-print before/after list is inside plan_sha256, so it
+# is planned (SELECT only) and the applier refuses if the rows moved since.
+
+def test_the_plan_carries_every_print_on_the_card_with_before_and_after(db):
+    assert _apply_entries(db, [_D_BASE]).applied
+    with Session(db.engine) as session:
+        plan = P.plan_entries(
+            session, [_D_BASE, _D_P1], series_index=SERIES,
+            digest_provider=DIGESTS.get, classify_mappings=False,
+        )
+        base_id = session.execute(text(
+            "SELECT p.id FROM card_prints p JOIN canonical_cards c ON c.id = p.canonical_card_id "
+            "WHERE c.card_code = 'OP01-050'"
+        )).scalar_one()
+    [t] = [p.canonical_rarity_transition for p in plan.prints if p.canonical_rarity_transition]
+    assert [(r.card_print_id, r.is_active, r.official_rarity, r.effective_rarity_before,
+             r.effective_rarity_after) for r in t.existing_prints] == [(base_id, True, "SR", "SR", "SR")]
+    row = next(p for p in plan.prints if p.canonical_rarity_transition).to_dict()
+    assert row["canonical_rarity_transition"]["existing_prints"][0]["card_print_id"] == base_id
+
+
+def test_a_print_changed_since_the_plan_refuses_the_transition(db):
+    assert _apply_entries(db, [_D_BASE]).applied
+    with Session(db.engine) as session:
+        plan = P.plan_entries(
+            session, [_D_BASE, _D_P1], series_index=SERIES,
+            digest_provider=DIGESTS.get, classify_mappings=False,
+        )
+    with db.engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE card_prints SET is_active = false WHERE canonical_card_id = "
+            "(SELECT id FROM canonical_cards WHERE card_code = 'OP01-050')"
+        ))
+    before = _fingerprint(db)
+    with pytest.raises(A.ApplyRunFailed) as excinfo:
+        _apply(db, plan=plan)
+    assert excinfo.value.report.rollback_reason == A.ABORT_RARITY_TRANSITION
+    assert "prints changed since the plan" in str(excinfo.value.report.rollback_detail)
+    assert _fingerprint(db) == before

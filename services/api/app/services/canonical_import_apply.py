@@ -1683,6 +1683,20 @@ class CanonicalImportApplier:
                 select(CardPrint).where(CardPrint.canonical_card_id == t.canonical_card_id)
                 .order_by(CardPrint.id)
             ).scalars().all()
+            # The per-print list the owner approved is inside plan_sha256 (CEO
+            # 25 Nov). If the rows on the card moved since the plan was made, the
+            # approved list no longer describes this write: refuse.
+            now = [(cp.id, bool(cp.is_active), cp.official_rarity) for cp in prints]
+            planned_rows = [
+                (p.card_print_id, p.is_active, p.official_rarity) for p in t.existing_prints
+            ]
+            if now != planned_rows:
+                raise ApplyAborted(
+                    ABORT_RARITY_TRANSITION,
+                    f"canonical card #{t.canonical_card_id} ({t.card_code}): its prints changed "
+                    "since the plan (the approved per-print list no longer matches); nothing "
+                    "is written",
+                )
             rows: list[dict[str, Any]] = []
             for cp in prints:
                 own = (cp.official_rarity or "").strip()

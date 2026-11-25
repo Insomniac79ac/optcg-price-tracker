@@ -516,12 +516,32 @@ def compare_metadata_to_canonical(
 
 
 @dataclass(frozen=True)
+class TransitionPrint:
+    """One existing card_prints row on a card with a planned rarity transition,
+    as the planner read it, with its effective rarity before and after (owner
+    t648u C1/C2; CEO 25 Nov: the per-print before/after list is inside
+    plan_sha256). Effective rarity is official_rarity, else the canonical value.
+    """
+
+    card_print_id: int
+    is_active: bool
+    official_rarity: str | None
+    effective_rarity_before: str | None
+    effective_rarity_after: str | None
+
+
+@dataclass(frozen=True)
 class CanonicalRarityTransition:
     """A planned canonical_cards.rarity -> NULL write (owner t648u). Pure data.
 
     `own_set_rarities` is every distinct rarity the card's own set publishes
     for this card code across the WHOLE snapshot, sorted; the current value is
     always one of them, or no transition is planned.
+
+    `existing_prints` is every card_prints row on the card at planning time,
+    active or not, ordered by id, with its effective rarity before and after.
+    It is part of the plan (so of plan_sha256); the applier re-reads the rows
+    and refuses the run if they no longer match.
     """
 
     canonical_card_id: int
@@ -529,6 +549,7 @@ class CanonicalRarityTransition:
     old_rarity: str
     own_set: str
     own_set_rarities: tuple[str, ...]
+    existing_prints: tuple[TransitionPrint, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -728,6 +749,8 @@ class PrintImportPlanner:
         # Empty means no transition can be planned, which keeps every caller
         # that does not pass it on the old conflict behaviour (fail closed).
         self._own_set_rarities = own_set_rarities or {}
+        # canonical card id -> its prints as read for a planned transition.
+        self._transition_prints_cache: dict[int, tuple[TransitionPrint, ...]] = {}
         self._catalogue = source_catalogue
         self._digest_provider = digest_provider
         # Prefetched Atlas state, built once on first use. `None` means "not
@@ -879,6 +902,37 @@ class PrintImportPlanner:
                 }
             )
         return rows
+
+    def _transition_prints(self, card: CanonicalCard) -> tuple[TransitionPrint, ...]:
+        """Every card_prints row on `card`, active or not, any language, by id
+        (the same rows the applier's C1/C2 preflight reads). SELECT only."""
+        cache = self._transition_prints_cache
+        if card.id in cache:
+            return cache[card.id]
+        canonical = (card.rarity or "").strip() or None
+        rows = (
+            self._session.execute(
+                select(CardPrint)
+                .where(CardPrint.canonical_card_id == card.id)
+                .order_by(CardPrint.id)
+            )
+            .scalars()
+            .all()
+        )
+        result = []
+        for cp in rows:
+            own = (cp.official_rarity or "").strip() or None
+            result.append(
+                TransitionPrint(
+                    card_print_id=cp.id,
+                    is_active=bool(cp.is_active),
+                    official_rarity=cp.official_rarity,
+                    effective_rarity_before=own or canonical,
+                    effective_rarity_after=own,
+                )
+            )
+        cache[card.id] = tuple(result)
+        return cache[card.id]
 
     def _canonical_card(self, card_code: str) -> CanonicalCard | None:
         self._load_cards()
@@ -1086,6 +1140,7 @@ class PrintImportPlanner:
                     old_rarity=existing_card.rarity,
                     own_set=baseline_for_card,
                     own_set_rarities=tuple(sorted(own_set_seen or ())),
+                    existing_prints=self._transition_prints(existing_card),
                 )
             for note_flag, note in notes:
                 flags.append(note_flag)
