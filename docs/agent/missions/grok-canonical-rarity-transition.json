@@ -37,7 +37,7 @@
       "effects": [
         "bulk_data"
       ],
-      "reason": "Preflight on dry run and apply: stored value still the planned old value, C1 every print (active or not) holds official_rarity, C2 no effective rarity changes; then one UPDATE canonical_cards SET rarity = NULL WHERE id and rarity = old, exactly 1 row per card or the whole apply rolls back. The report lists each transition with every print before and after."
+      "reason": "Preflight on dry run and apply: stored value still the planned old value, every print on the card (active or not) still matches the planned per-print list that is inside plan_sha256, C1 every print holds official_rarity, C2 no effective rarity changes; then one UPDATE canonical_cards SET rarity = NULL WHERE id and rarity = old, exactly 1 row per card or the whole apply rolls back. The report lists each transition with every print before and after."
     },
     {
       "files": [
@@ -55,7 +55,7 @@
       "effects": [
         "bulk_data"
       ],
-      "reason": "The summary lists canonical_rarity_transitions, the applier's per-print before/after list and same_set_rarity_differences (always, even empty); the early-warning list joins plan_sha256 only when non-empty, so other scopes keep their SHA."
+      "reason": "The summary lists canonical_rarity_transitions (each with the planned per-print before/after list, inside plan_sha256), the applier's per-print before/after list and same_set_rarity_differences (always, even empty); the early-warning list joins plan_sha256 only when non-empty, so other scopes keep their SHA."
     },
     {
       "files": [
@@ -130,5 +130,5 @@
       "observation_window": "After merge: the PR removing op-18's exclusions, then an op-18 dry run expecting create 2, transitions 2 (7977 UC and 7997 SR to NULL), conflict 0 and unchanged print rarities; the owner approves each dry run and apply; CP security re-rules first if any print's rarity would move (C3)."
     }
   },
-  "diff_sha256": "4f149d58e0733b6e4215cde94b26a04196cf4e1c450e2782b56f26eb1e6ed220"
+  "diff_sha256": "9efb1bfa64e3b58e6ada10616388c6a9e73e866e39cf0c273cf48b6c52f422b2"
 }
