@@ -15,7 +15,7 @@
     "significant_recurring_cost": false,
     "yuyu_sale_policy": false
   },
-  "mission": "EB-05 step 1 (owner t622u, content-pipeline ops/decisions.md L631, 23 Nov 2026; order confirmed by owner t648u and t653u, 24 Nov): EB-05 JP release date. Data migration e216c1c45131 on 7d2f9b4e1a63 sets released_on 2026-10-31 and release_date_source DATE_VERIFIED_SINGLE_SOURCE on the bandai_jp EB-05 release product (release_product_id 231 on staging) only when it is still undated, same pattern as cb7419af37e9 (catalogue plus official code match; no insert or delete). Frozen input docs/evidence/eb05-release-date-2026-11-24.json: release watcher 12 Nov and Bandai JP product page re-read 24 Nov twice, each 2026年10月31日(土). apply_migration.py allowlists e216c1c45131 on 7d2f9b4e1a63. Order after merge: owner approves apply-migration dry run, then the apply; then a fleet PR records revision e216c1c45131.",
+  "mission": "EB-05 step 1 (owner t622u, content-pipeline ops/decisions.md L631, 23 Nov 2026; order confirmed by owner t648u and t653u, 24 Nov): EB-05 JP release date. Data migration e216c1c45131 on 7d2f9b4e1a63 sets released_on 2026-10-31 and release_date_source DATE_VERIFIED_SINGLE_SOURCE on the bandai_jp EB-05 release product (release_product_id 231 on staging) only when it is still undated, same pattern as cb7419af37e9 (catalogue plus official code match; no insert or delete). Frozen input docs/evidence/eb05-release-date-2026-11-24.json: release watcher 12 Nov and Bandai JP product page re-read 24 Nov twice, each 2026\u5e7410\u670831\u65e5(\u571f). apply_migration.py allowlists e216c1c45131 on 7d2f9b4e1a63. Order after merge: owner approves apply-migration dry run, then the apply; then a fleet PR records revision e216c1c45131.",
   "classification": "AMBER",
   "impacts": [
     {
@@ -41,12 +41,13 @@
       "files": [
         "scripts/tests/test_ops_apply_migration.py",
         "services/api/tests/test_eb05_release_date.py",
-        "services/api/tests/test_eb05_release_date_postgres.py"
+        "services/api/tests/test_eb05_release_date_postgres.py",
+        "services/api/tests/test_snkrdunk_katakana_eb_aliases.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Allowlist pair; upgrade dates only the undated EB-05 product, leaves dated or other products alone (OP-17, OP-18), downgrade reverts only its own value (Postgres test runs in CI)."
+      "reason": "Allowlist pair; upgrade dates only the undated EB-05 product, leaves dated or other products alone (OP-17, OP-18), downgrade reverts only its own value (Postgres test runs in CI); 7d2f9b4e1a63 alias migration test tolerates a later linear head."
     }
   ],
   "safeguards": {
@@ -91,5 +92,5 @@
       "observation_window": "apply-migration dry run and apply runs; then the EB-05 release shows released_on 2026-10-31 in the release chronology."
     }
   },
-  "diff_sha256": "0785ef30bd84e625d7fd78d1b51339ae6f68aba3e413450f4e7533d8e5c061ad"
+  "diff_sha256": "a1a6703cd335026e247166d3def26452e608570b132384e747a99ff57982fb31"
 }
