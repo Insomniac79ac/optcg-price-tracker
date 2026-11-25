@@ -160,6 +160,12 @@ short window is a sign of either real traffic growth or abuse worth investigatin
 "Security headers, CSP, and rate limiting" in `docs/deployment.md` for what each group covers and
 why this is single-instance only.
 
+It also reports request-key counts since `started_at` (when the serving API process started):
+`platform_header_requests` (keyed by the platform client-IP header), `unverified_requests` (the
+header was missing or not a valid IP, so the request shared the strict `ip:unverified` key) and
+`mismatch_requests` (informational: another forwarding header named a different address). These
+are integers only and are counted by the process that answered, like the limits themselves.
+
 **Adjusting limits**: set the matching env var in `.env.production` and restart the `api`
 container - limits are read from `Settings` at request time, so no code change is needed:
 
@@ -1442,16 +1448,19 @@ doesn't add, remove, or substitute for that check. If you uncommented the option
 proxy location, admin endpoints reached through it are exactly as protected as they were before -
 see the warning comment on that location block in both example configs.
 
-**Rate limit behavior behind a proxy**: `app.core.rate_limit` keys its per-IP counters off
-`X-Forwarded-For` (falling back to the direct connection's IP if that header is absent - see
-`app.core.rate_limit._client_ip`). Both example proxy configs already set this header correctly
-(`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for` in Nginx, `header_up X-Forwarded-For
-{remote_host}` in Caddy). If every request behind your proxy is getting rate-limited together
-(one client's traffic exhausting the limit for everyone), that's a sign `X-Forwarded-For` either
-isn't being set or is being overwritten somewhere - all requests would appear to originate from
-the proxy's own loopback IP instead of the real clients'. Verify with `GET
-/admin/rate-limit/status` (see "Check rate limit status" above): `active_keys` staying at `1` under
-real multi-client traffic is the tell.
+**Rate limit behavior behind a proxy**: `app.core.rate_limit` and the admin login counters are
+keyed by the platform client-IP header (see `app.core.client_ip`), which must hold a single valid
+IP address. Both example proxy configs already set it from the connecting client. Outside
+development, a request without a valid value shares one strict key, `ip:unverified`; in
+development the direct connection's IP is used instead. If every request behind your proxy is
+getting rate-limited together (one client's traffic exhausting the limit for everyone), the proxy
+is probably not setting that header. Verify with `GET /admin/rate-limit/status` (see "Check rate
+limit status" above): a growing `unverified_requests`, or `active_keys` staying at `1` under real
+multi-client traffic, is the tell.
+
+## Admin login temporarily unavailable
+
+If a login attempt is refused with "Too many attempts. Try again later.", wait for the Retry-After header, in seconds. Restarting the API does not clear this. The shared admin token used by the admin API routes is a separate control.
 
 ## Performance and scale operations
 

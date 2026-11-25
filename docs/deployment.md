@@ -493,8 +493,11 @@ host, you'll need to widen the matching CSP directive in `next.config.ts` or it'
 blocked (check the browser console for a CSP violation, not a generic network error).
 
 **Rate limiting** (`app.core.rate_limit`) is in-memory, keyed by client IP + route group, no
-external dependency. The collector's own `/me` routes are keyed by the signed-in collector instead
-(a digest of the verified bearer token's subject; an unverifiable token falls back to the IP),
+external dependency. The client IP is read from the platform client-IP header and must be a single
+valid address (IPv6 is grouped by /64); outside development a missing or invalid value shares one
+strict `ip:unverified` key (see `app.core.client_ip`). The collector's own `/me` routes are keyed
+by the signed-in collector instead (a digest of the verified bearer token's subject; an
+unverifiable token falls back to the client IP),
 because the website calls `/me` server-to-server and every collector arrives from the same few
 platform egress addresses. Five groups, each independently configurable via env var (defaults shown):
 

@@ -9,19 +9,26 @@ Requests are classified into one of four route groups (see classify_route)
 based on path + method, each with its own limit/window read live from
 Settings (so tests can monkeypatch settings.RATE_LIMIT_* and see the change
 immediately, and so RATE_LIMIT_ENABLED=false can be toggled without a
-restart). Within a group, requests are keyed by client IP (or, for /me,
-by the signed-in collector - see _rate_limit_key) using a fixed window
+restart). Within a group, requests are keyed by client address (or, for
+/me, by the signed-in collector - see _rate_limit_key) using a fixed window
 counter: cheap, bounded memory, and precise enough for basic abuse
 hardening (as opposed to a sliding-log window, which would need unbounded
 per-IP timestamp lists).
+
+The client address comes from app.core.client_ip (the platform client-IP
+header, validated; a shared strict key when it is missing or invalid outside
+development). ClientKeyCounts below reports, per process, how requests were
+keyed since process start, for GET /admin/rate-limit/status.
 """
 
 from __future__ import annotations
 
 import hashlib
 import math
+import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import jwt
 
@@ -29,6 +36,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app.core.client_ip import PLATFORM_HEADER, UNVERIFIED, UNVERIFIED_KEY, ClientAddress, resolve_client
 from app.core.collector_token import verify_collector_token
 from app.services.app_logging import record_app_log
 from app.settings import settings
@@ -228,9 +236,64 @@ class RateLimitResult:
 _limiter = RateLimiter()
 
 
+# The shared unverified key is logged at most once per this many seconds.
+UNVERIFIED_LOG_WINDOW_SECONDS = 300
+
+
+class ClientKeyCounts:
+    """How requests were keyed since this process started: integers only,
+    never an address or a digest of one. Per process (per replica, and per
+    worker if more than one), like the limiter itself. Guarded by a lock
+    because sync routes run in a thread pool."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._reset_locked()
+
+    def _reset_locked(self) -> None:
+        self.started_at = datetime.now(timezone.utc)
+        self.platform_header = 0
+        self.unverified = 0
+        self.mismatch = 0
+        self._last_unverified_log_window: int | None = None
+
+    def record(self, client: ClientAddress) -> bool:
+        """Counts one classified request. Returns True when this is the first
+        unverified request in the current log window (caller logs it)."""
+        with self._lock:
+            if client.source == PLATFORM_HEADER:
+                self.platform_header += 1
+                if client.mismatch:
+                    self.mismatch += 1
+            elif client.source == UNVERIFIED:
+                self.unverified += 1
+                window = int(time.time() // UNVERIFIED_LOG_WINDOW_SECONDS)
+                if self._last_unverified_log_window != window:
+                    self._last_unverified_log_window = window
+                    return True
+            return False
+
+    def snapshot(self) -> dict:
+        with self._lock:
+            return {
+                "started_at": self.started_at.isoformat(),
+                "platform_header_requests": self.platform_header,
+                "unverified_requests": self.unverified,
+                "mismatch_requests": self.mismatch,
+            }
+
+    def reset(self) -> None:
+        with self._lock:
+            self._reset_locked()
+
+
+_counts = ClientKeyCounts()
+
+
 def reset_rate_limits() -> None:
     """Test hook - see tests/conftest.py."""
     _limiter.reset()
+    _counts.reset()
 
 
 def rate_limit_status() -> dict:
@@ -245,6 +308,7 @@ def rate_limit_status() -> dict:
             }
             for group in ALL_GROUPS
         ],
+        **_counts.snapshot(),
     }
 
 
@@ -268,39 +332,50 @@ def _collector_key(request: Request) -> str | None:
     return "user:" + hashlib.sha256(sub.encode()).hexdigest()[:32]
 
 
-def _rate_limit_key(request: Request) -> str:
+def _rate_limit_key(request: Request, client: ClientAddress) -> str:
     if is_me_path(request.url.path):
         key = _collector_key(request)
         if key:
             return key
-    # Prefixed so a client-chosen X-Forwarded-For value can never name a
-    # collector's "user:" bucket.
-    return "ip:" + _client_ip(request)
+    # Prefixed so a client-supplied value can never name a collector's
+    # "user:" bucket. Each process keeps its own counters - see 'Rate
+    # limiting' in docs/deployment.md.
+    return "ip:" + client.key
 
 
-def _client_ip(request: Request) -> str:
-    # Behind a reverse proxy, the real client IP arrives via
-    # X-Forwarded-For (first hop = original client) - see 'Rate limiting'
-    # in docs/deployment.md for why this still isn't sufficient for a
-    # multi-instance deployment (each instance has its own counters).
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
-    return request.client.host if request.client else "unknown"
+def _log_key(key: str) -> str:
+    """The rate-limit key as written to logs: client addresses are hashed
+    (same truncated-digest convention as app.api.admin_login), the shared
+    unverified key and collector digests are written as they are."""
+    if key.startswith("ip:") and key != "ip:" + UNVERIFIED_KEY:
+        return "ip:" + hashlib.sha256(key[3:].encode("utf-8")).hexdigest()[:16]
+    return key
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
-        if not settings.RATE_LIMIT_ENABLED:
-            return await call_next(request)
-
         group = classify_route(request.url.path, request.method)
         if group is None:
             return await call_next(request)
 
-        key = _rate_limit_key(request)
+        # Counted even while the limiter is disabled, so the status page
+        # still shows how requests would be keyed.
+        client = resolve_client(request)
+        first_unverified = _counts.record(client)
+
+        if not settings.RATE_LIMIT_ENABLED:
+            return await call_next(request)
+
+        if first_unverified:
+            record_app_log(
+                "warning",
+                "api",
+                "rate_limit_unverified_client",
+                f"Request keyed to ip:{UNVERIFIED_KEY} for group '{group}'.",
+                context={"group": group},
+            )
+
+        key = _rate_limit_key(request, client)
         result = _limiter.check(group, key)
 
         if not result.allowed:
@@ -309,7 +384,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "warning",
                     "api",
                     "rate_limit",
-                    f"Rate limit exceeded for group '{group}' from {key}.",
+                    f"Rate limit exceeded for group '{group}' from {_log_key(key)}.",
                     context={"group": group, "limit": result.limit},
                 )
             response: Response = JSONResponse(

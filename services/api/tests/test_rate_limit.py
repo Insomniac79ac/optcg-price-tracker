@@ -2,6 +2,8 @@ import jwt
 import pytest
 
 from app.accounts.config import FLAG
+import re
+
 from app.core.rate_limit import classify_route, group_config, rate_limit_status, reset_rate_limits
 from app.settings import settings
 from tests._auth_helpers import make_bearer_token
@@ -285,15 +287,191 @@ def test_repeated_429_logged_at_most_once_per_window(client, db_session, monkeyp
     assert len(rate_limit_logs) == 1
 
 
-def test_a_forwarded_for_value_cannot_name_a_collectors_bucket(client, db_session, monkeypatch):
+def test_a_client_header_cannot_name_a_collectors_bucket(client, db_session, monkeypatch):
     import hashlib
 
     monkeypatch.setenv(FLAG, "true")
     monkeypatch.setattr(settings, "RATE_LIMIT_COLLECTION_WRITE_PER_5M", 1)
     victim_key = "user:" + hashlib.sha256(b"user-a").hexdigest()[:32]
 
-    spoofed = {"Authorization": "Bearer junk", "X-Forwarded-For": victim_key}
-    client.put("/me/preferences", json={}, headers=spoofed)
-    client.put("/me/preferences", json={}, headers=spoofed)
+    client_supplied = {"Authorization": "Bearer junk", "X-Real-IP": victim_key}
+    client.put("/me/preferences", json={}, headers=client_supplied)
+    client.put("/me/preferences", json={}, headers=client_supplied)
 
     assert client.put("/me/preferences", json={"currency": "JPY"}, headers=_bearer("user-a")).status_code == 200
+
+
+# --- client key and status counts ---------------------------------------
+
+
+def _counts():
+    status = rate_limit_status()
+    return status["platform_header_requests"], status["unverified_requests"], status["mismatch_requests"]
+
+
+def test_other_forwarding_headers_do_not_change_the_client_key(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_PUBLIC_READ_PER_5M", 2)
+
+    client.get("/cards", headers={"X-Real-IP": "203.0.113.5", "X-Forwarded-For": "198.51.100.1"})
+    client.get("/cards", headers={"X-Real-IP": "203.0.113.5", "X-Forwarded-For": "203.0.113.9, 10.0.0.1"})
+    third = client.get("/cards", headers={"X-Real-IP": "203.0.113.5", "X-Forwarded-For": "198.51.100.2"})
+
+    assert third.status_code == 429
+    assert client.get("/cards", headers={"X-Real-IP": "203.0.113.6"}).status_code == 200
+
+
+def test_missing_client_header_outside_development_uses_the_shared_unverified_key(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_PUBLIC_READ_PER_5M", 1)
+
+    client.get("/cards", headers={"X-Forwarded-For": "198.51.100.1"})
+    second = client.get("/cards", headers={"X-Forwarded-For": "198.51.100.2"})
+
+    assert second.status_code == 429
+    assert client.get("/cards", headers={"X-Real-IP": "203.0.113.5"}).status_code == 200
+
+
+def test_ipv6_addresses_in_one_slash_64_share_a_key(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_PUBLIC_READ_PER_5M", 1)
+
+    client.get("/cards", headers={"X-Real-IP": "2001:db8:1:2::1"})
+
+    assert client.get("/cards", headers={"X-Real-IP": "2001:db8:1:2::99"}).status_code == 429
+    assert client.get("/cards", headers={"X-Real-IP": "2001:db8:1:3::1"}).status_code == 200
+
+
+def test_rate_limit_log_hashes_the_client_key(client, db_session, monkeypatch):
+    from app.models import AppLogEvent
+
+    monkeypatch.setattr(settings, "RATE_LIMIT_PUBLIC_READ_PER_5M", 1)
+    headers = {"X-Real-IP": "203.0.113.77"}
+
+    client.get("/cards", headers=headers)
+    assert client.get("/cards", headers=headers).status_code == 429
+
+    logs = db_session.query(AppLogEvent).filter(AppLogEvent.event_type == "rate_limit").all()
+    assert len(logs) == 1
+    for event in db_session.query(AppLogEvent).all():
+        text = f"{event.message} {event.context_json}"
+        assert "203.0.113.77" not in text
+        assert "ip:203.0.113.77" not in text
+    assert re.search(r"from ip:[0-9a-f]{16}\.", logs[0].message)
+
+
+def test_unverified_key_is_logged_once_per_window(client, db_session, monkeypatch):
+    from app.models import AppLogEvent
+
+    client.get("/cards")
+    client.get("/cards")
+
+    logs = (
+        db_session.query(AppLogEvent)
+        .filter(AppLogEvent.event_type == "rate_limit_unverified_client")
+        .all()
+    )
+    assert len(logs) == 1
+    assert "ip:unverified" in logs[0].message
+
+
+def test_status_counts_a_platform_header_request(client, db_session):
+    before = _counts()
+
+    client.get("/cards", headers={"X-Real-IP": "203.0.113.5"})
+
+    after = _counts()
+    assert after[0] == before[0] + 1
+    assert after[1] == before[1]
+    assert after[2] == before[2]
+
+
+@pytest.mark.parametrize("headers", [{}, {"X-Real-IP": "1.2.3.4:80"}, {"X-Real-IP": "a, b"}])
+def test_status_counts_a_shared_unverified_request(client, db_session, headers):
+    before = _counts()
+
+    client.get("/cards", headers=headers)
+
+    after = _counts()
+    assert after[1] == before[1] + 1
+    assert after[0] == before[0]
+    assert after[2] == before[2]
+
+
+def test_status_counts_a_header_mismatch(client, db_session):
+    before = _counts()
+    client.get("/cards", headers={"X-Real-IP": "203.0.113.5", "X-Forwarded-For": "198.51.100.1"})
+    after = _counts()
+    assert after[0] == before[0] + 1
+    assert after[2] == before[2] + 1
+
+    # Equal parsed addresses with different IPv6 text are not a mismatch.
+    client.get(
+        "/cards",
+        headers={"X-Real-IP": "2001:db8::1", "X-Forwarded-For": "2001:0db8:0:0:0:0:0:1, 10.0.0.1"},
+    )
+    last = _counts()
+    assert last[0] == after[0] + 1
+    assert last[2] == after[2]
+    assert last[1] == before[1]
+
+
+def test_status_counts_while_the_limiter_is_disabled(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", False)
+    before = _counts()
+
+    client.get("/cards", headers={"X-Real-IP": "203.0.113.5"})
+
+    assert _counts()[0] == before[0] + 1
+
+
+def test_status_does_not_count_an_exempt_path(client, db_session):
+    before = _counts()
+
+    client.get("/health")
+
+    assert _counts() == before
+
+
+def test_status_counts_reset_with_the_limiter(client, db_session):
+    client.get("/cards")
+    reset_rate_limits()
+
+    assert _counts() == (0, 0, 0)
+
+
+def test_rate_limit_status_rejects_a_wrong_token(db_session):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    response = TestClient(app).get("/admin/rate-limit/status", headers={"X-Admin-Token": "wrong-token"})
+    assert response.status_code == 401
+
+
+def test_status_counts_contain_no_addresses(client, db_session):
+    client.get("/cards", headers={"X-Real-IP": "203.0.113.5", "X-Forwarded-For": "198.51.100.1"})
+    client.get("/cards", headers={"X-Real-IP": "2001:db8:1:2::1"})
+    client.get("/cards")
+
+    response = client.get("/admin/rate-limit/status", headers={"X-Real-IP": "203.0.113.5"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data) == {
+        "enabled",
+        "windows",
+        "started_at",
+        "platform_header_requests",
+        "unverified_requests",
+        "mismatch_requests",
+    }
+    for window in data["windows"]:
+        assert set(window) == {"group", "limit", "window_seconds", "active_keys"}
+    for name in ("platform_header_requests", "unverified_requests", "mismatch_requests"):
+        assert isinstance(data[name], int)
+    from datetime import datetime
+
+    assert datetime.fromisoformat(data["started_at"]).tzinfo is not None
+    # The timestamp is the only field with colons; check everything else.
+    body = response.text.replace(data["started_at"], "")
+    assert not re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", body)
+    assert not re.search(r"[0-9a-fA-F]{1,4}::|::[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){2,}[0-9a-fA-F]{1,4}", body)
+    assert not re.search(r"[0-9a-f]{32}|[0-9a-f]{64}", body)
