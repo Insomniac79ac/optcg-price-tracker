@@ -254,6 +254,13 @@ catalogue-gap request (owner 2026-10-26).
    Coded set scopes: `eb-05` (550205) and `op-18` (550118, Mission 5 #274; series id from
    `official-series-index` run 43379261767, 119 Bandai entries on 2026-11-13; the import leaves
    the release date unset, it is set by its own data migration).
+   `exclude_entry_ids` (entry id and reason) leaves named entries out: they get no image and are
+   filtered at the planner's input, after the importer measured sibling counts over the whole
+   snapshot, so every other entry plans as before. The summary prints each excluded entry by id
+   (card code, Bandai rarity, reason); an excluded id the scope does not capture refuses, a plan
+   that still holds one refuses, and the list is part of `plan_sha256`. `op-18` excludes
+   `OP18-064_p1` and `OP18-084_p2` (owner t642u, 2026-11-24, option A: canonical rarity conflicts
+   from the 13 Nov base-only import, dry run 45124567278) until option D lands.
 2. Capture: a fresh Bandai JP snapshot in the run directory, every six-digit series page plus the
    images of the scope's entries only; with uncoded products, also Bandai's Asia-EN picker and
    every one of its uncoded series pages (at most six; any failure refuses, so a missing page can
