@@ -51,6 +51,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import asdict, dataclass, field
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
@@ -666,6 +667,10 @@ class ImportPlan:
 
     prints: list[PlannedPrint] = field(default_factory=list)
     mappings: list[ClassifiedMapping] = field(default_factory=list)
+    # Early warning (owner t642u item 5, t648u): every card in the snapshot
+    # whose own set publishes several rarities while its canonical rarity is
+    # still set, in scope or not. Sorted by card code. Pure data.
+    same_set_rarity_differences: list[dict[str, Any]] = field(default_factory=list)
 
     def by_outcome(self, outcome: str) -> list[PlannedPrint]:
         return [p for p in self.prints if p.outcome == outcome]
@@ -840,6 +845,41 @@ class PrintImportPlanner:
         self._prints_by_identity = index
 
     # -- lookups (all SELECT) ---------------------------------------------
+    def same_set_rarity_differences(self) -> list[dict[str, Any]]:
+        """Cards whose own set publishes 2+ rarities while canonical rarity is set.
+
+        Read from the own-set rarities this planner was given (the whole
+        snapshot) and Atlas's canonical rows. A card code with no single
+        canonical row is left out (nothing to compare). Report only: this
+        changes no plan outcome.
+        """
+        self._load_cards()
+        assert self._cards_by_code is not None
+        rows: list[dict[str, Any]] = []
+        for card_code in sorted(self._own_set_rarities):
+            cards = self._cards_by_code.get(card_code, [])
+            if len(cards) != 1:
+                continue
+            card = cards[0]
+            current = (card.rarity or "").strip()
+            if not current:
+                continue
+            own_set = self._baseline_set_code(card)
+            seen = self._own_set_rarities[card_code].get(own_set) if own_set else None
+            distinct = sorted({r.strip() for r in (seen or ()) if r and r.strip()})
+            if len(distinct) < 2:
+                continue
+            rows.append(
+                {
+                    "card_code": card.card_code,
+                    "canonical_card_id": card.id,
+                    "canonical_rarity": current,
+                    "own_set": own_set,
+                    "own_set_rarities": distinct,
+                }
+            )
+        return rows
+
     def _canonical_card(self, card_code: str) -> CanonicalCard | None:
         self._load_cards()
         assert self._cards_by_code is not None
@@ -1613,4 +1653,5 @@ def plan_entries(
         )
     if classify_mappings:
         plan.mappings = planner.classify_lineage_less_mappings(plan.prints)
+    plan.same_set_rarity_differences = planner.same_set_rarity_differences()
     return plan

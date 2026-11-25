@@ -1418,3 +1418,39 @@ def test_own_set_rarities_are_read_per_product_from_single_product_entries():
         entry(entry_id="OP01-001_p9", products=("ROMANCE DAWN【OP-01】", "ブースターパック 二つの伝説【OP-08】"), rarity="SEC"),
     ])
     assert seen == {"OP01-001": {"OP-01": frozenset({"SR", "SPカード"}), "OP-08": frozenset({"SPカード"})}}
+
+
+# --- owner t642u item 5 / t648u: same_set_rarity_differences early warning ---
+
+def test_the_early_warning_lists_a_set_card_whose_own_set_publishes_two_rarities(db_session, op01):
+    card = _sr_card(db_session)
+    plan = plan_entries(
+        db_session, [entry(rarity="SR"), _p2()], series_index=SERIES_INDEX,
+        digest_provider=P2_DIGESTS.get, classify_mappings=False,
+    )
+    assert plan.same_set_rarity_differences == [
+        {
+            "card_code": "OP01-001",
+            "canonical_card_id": card.id,
+            "canonical_rarity": "SR",
+            "own_set": "OP-01",
+            "own_set_rarities": sorted({"SR", "SPカード"}),
+        }
+    ]
+
+
+def test_the_early_warning_is_empty_for_one_rarity_or_a_null_card(db_session, op01):
+    card = _sr_card(db_session)
+    one = plan_entries(
+        db_session, [entry(rarity="SR")], series_index=SERIES_INDEX,
+        digest_provider=P2_DIGESTS.get, classify_mappings=False,
+    )
+    assert one.same_set_rarity_differences == []
+    # The 18 reference cards: canonical already NULL, nothing to warn about.
+    card.rarity = None
+    db_session.commit()
+    both = plan_entries(
+        db_session, [entry(rarity="SR"), _p2()], series_index=SERIES_INDEX,
+        digest_provider=P2_DIGESTS.get, classify_mappings=False,
+    )
+    assert both.same_set_rarity_differences == []
