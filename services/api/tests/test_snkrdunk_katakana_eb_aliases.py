@@ -21,7 +21,10 @@ def test_migration_matches_evidence_and_is_the_single_head():
                for r in evidence["accepted_mapping"])
     config = Config()
     config.set_main_option("script_location", str(ROOT / "services/api/alembic"))
-    assert ScriptDirectory.from_config(config).get_heads() == [migration["revision"]]
+    scripts = ScriptDirectory.from_config(config)
+    # Later revisions may sit on top of it; it must stay in the one linear history.
+    assert len(scripts.get_heads()) == 1
+    assert migration["revision"] in {r.revision for r in scripts.walk_revisions()}
     assert migration["down_revision"] == "cb7419af37e9"
 
 
