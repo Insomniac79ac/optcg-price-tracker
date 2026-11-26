@@ -3488,6 +3488,11 @@ class RateLimitWindowOut(BaseModel):
 class RateLimitStatusOut(BaseModel):
     enabled: bool
     windows: list[RateLimitWindowOut]
+    # Since this API process started (per process, not across replicas).
+    started_at: str
+    platform_header_requests: int
+    unverified_requests: int
+    mismatch_requests: int
 
 
 # --- version / release status -------------------------------------------

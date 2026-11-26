@@ -119,7 +119,7 @@ def logged_events(monkeypatch):
 
 
 def _login(raw_client, email=ADMIN_EMAIL, password=ADMIN_PASSWORD, ip=None):
-    headers = {"X-Forwarded-For": ip} if ip else None
+    headers = {"X-Real-IP": ip} if ip else None
     return raw_client.post(
         "/auth/admin/verify", json={"email": email, "password": password}, headers=headers
     )
@@ -230,6 +230,36 @@ def test_lockout_expires_after_window(raw_client, monkeypatch):
     time.sleep(1.2)
 
     assert _login(raw_client).status_code == 200
+
+
+def test_email_and_client_lock_does_not_lock_a_second_client(raw_client):
+    for _ in range(5):
+        assert _login(raw_client, password="wrong", ip="1.1.1.1").status_code == 401
+
+    assert _login(raw_client, ip="1.1.1.1").status_code == 429
+    assert _login(raw_client, ip="2.2.2.2").status_code == 200
+
+
+def test_account_ceiling_locks_across_clients(raw_client):
+    # 20 failures over 5 clients, 4 each: no client reaches its own limit,
+    # but the account ceiling locks the email even from a fresh client.
+    for n in range(20):
+        assert _login(raw_client, password="wrong", ip=f"10.0.{n // 4}.1").status_code == 401
+
+    response = _login(raw_client, ip="9.9.9.9")
+
+    assert response.status_code == 429
+    assert "Retry-After" in response.headers
+
+
+def test_missing_client_header_still_counts_toward_the_client_limit(raw_client):
+    # No client header outside development: every attempt shares the strict
+    # unverified key, so the client counter still applies.
+    for n in range(5):
+        _login(raw_client, email=f"user{n}@example.com", password="wrong")
+
+    assert _login(raw_client).status_code == 429
+    assert _login(raw_client, ip="2.2.2.2").status_code == 200
 
 
 def test_successful_login_clears_account_failure_counter(raw_client, monkeypatch):
