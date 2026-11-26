@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.admin_login_throttle import check_locked, clear_account_failures, record_failure
 from app.core.admin_password import verify_password
+from app.core.client_ip import resolve_client
 from app.schemas import AdminLoginVerifyIn, AdminLoginVerifyOut
 from app.services.app_logging import record_app_log
 from app.settings import settings
@@ -40,19 +41,6 @@ from app.settings import settings
 router = APIRouter(prefix="/auth/admin", tags=["auth"])
 
 ADMIN_LOGIN_ID = "staging-admin"
-
-
-def _client_ip(request: Request) -> str | None:
-    # Same trusted-proxy convention as app.core.rate_limit's private
-    # _client_ip - duplicated rather than imported (that helper belongs to
-    # a different module's concerns, and this router's "optional, may be
-    # None" usage differs slightly).
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
-    return request.client.host if request.client else None
 
 
 def _log_hash(value: str | None) -> str | None:
@@ -109,7 +97,9 @@ def verify_admin_credentials(body: AdminLoginVerifyIn, request: Request):
     # configured admin account (see app.core.admin_login_throttle).
     submitted_email = body.email.strip().lower()
     configured_email = (settings.ADMIN_LOGIN_EMAIL or "").strip().lower()
-    ip = _client_ip(request)
+    # Same client key as the request rate limiter (app.core.client_ip);
+    # never None, so every counter always applies.
+    ip = resolve_client(request).key
 
     try:
         throttle_status = check_locked(submitted_email, ip)
@@ -160,7 +150,7 @@ def verify_admin_credentials(body: AdminLoginVerifyIn, request: Request):
         return _generic_invalid_credentials()
 
     try:
-        clear_account_failures(submitted_email)
+        clear_account_failures(submitted_email, ip)
     except redis.RedisError:
         # Non-fatal: the login itself already succeeded on its merits: a
         # stale failure counter only makes a *future* login marginally

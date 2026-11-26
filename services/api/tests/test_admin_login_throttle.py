@@ -112,17 +112,44 @@ def test_locks_account_at_threshold(fake_client, monkeypatch):
     assert status.retry_after_seconds > 0
 
 
+def _spread_failures(email, count, per_client=4):
+    """count failures for email, at most per_client from each client, so no
+    single client reaches its own threshold of 5."""
+    for n in range(count):
+        throttle.record_failure(email, f"10.0.{n // per_client}.1")
+
+
 def test_account_lock_effective_even_if_ip_changes(fake_client, monkeypatch):
-    monkeypatch.setattr(settings, "ADMIN_LOGIN_MAX_ATTEMPTS", 3)
-    for ip in ("1.1.1.1", "2.2.2.2", "3.3.3.3"):
-        throttle.record_failure("admin@example.com", ip)
+    # The account ceiling (c) still holds when every attempt comes from a
+    # different client: 20 failures spread over 5 clients lock the account,
+    # even from a client that has never failed.
+    monkeypatch.setattr(settings, "ADMIN_LOGIN_MAX_ATTEMPTS", 5)
+    _spread_failures("admin@example.com", 19)
+    assert throttle.check_locked("admin@example.com", "9.9.9.9").locked is False
+
+    throttle.record_failure("admin@example.com", "10.0.9.1")
 
     status = throttle.check_locked("admin@example.com", "9.9.9.9")
-
     assert status.locked is True
+    assert 0 < status.retry_after_seconds <= throttle.ACCOUNT_LOCKOUT_SECONDS
 
 
-def test_ip_lock_independent_of_account(fake_client, monkeypatch):
+def test_account_ceiling_uses_the_owner_numbers():
+    assert throttle.ACCOUNT_MAX_ATTEMPTS == 20
+    assert throttle.ACCOUNT_WINDOW_SECONDS == 3600
+    assert throttle.ACCOUNT_LOCKOUT_SECONDS == 1800
+
+
+def test_email_and_client_lock_does_not_lock_a_second_client(fake_client, monkeypatch):
+    monkeypatch.setattr(settings, "ADMIN_LOGIN_MAX_ATTEMPTS", 5)
+    for _ in range(5):
+        throttle.record_failure("admin@example.com", "1.1.1.1")
+
+    assert throttle.check_locked("admin@example.com", "1.1.1.1").locked is True
+    assert throttle.check_locked("admin@example.com", "2.2.2.2").locked is False
+
+
+def test_client_lock_is_independent_of_email(fake_client, monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_LOGIN_MAX_ATTEMPTS", 3)
     for email in ("a@example.com", "b@example.com", "c@example.com"):
         throttle.record_failure(email, "5.5.5.5")
@@ -130,6 +157,38 @@ def test_ip_lock_independent_of_account(fake_client, monkeypatch):
     status = throttle.check_locked("unrelated@example.com", "5.5.5.5")
 
     assert status.locked is True
+    assert throttle.check_locked("unrelated@example.com", "6.6.6.6").locked is False
+
+
+def test_successful_login_clears_email_counters_only(fake_client, monkeypatch):
+    monkeypatch.setattr(settings, "ADMIN_LOGIN_MAX_ATTEMPTS", 5)
+    # 19 account failures over several clients, plus 2 more from 1.2.3.4
+    # with other emails (client counter only).
+    _spread_failures("admin@example.com", 19)
+    throttle.record_failure("x@example.com", "1.2.3.4")
+    throttle.record_failure("y@example.com", "1.2.3.4")
+    throttle.record_failure("admin@example.com", "1.2.3.4")  # 20th: account locked
+    assert throttle.check_locked("admin@example.com", "8.8.8.8").locked is True
+
+    throttle.clear_account_failures("admin@example.com", "1.2.3.4")
+
+    # (c) cleared: one more failure does not re-lock the account.
+    assert throttle.check_locked("admin@example.com", "8.8.8.8").locked is False
+    throttle.record_failure("admin@example.com", "7.7.7.7")
+    assert throttle.check_locked("admin@example.com", "8.8.8.8").locked is False
+    # (a) cleared for this email and client.
+    assert throttle._pair_key("admin@example.com", "1.2.3.4", "fails") not in fake_client._store
+    # (b) not cleared: 3 failures already on 1.2.3.4, 2 more lock it.
+    throttle.record_failure("z@example.com", "1.2.3.4")
+    throttle.record_failure("w@example.com", "1.2.3.4")
+    assert throttle.check_locked("someone@example.com", "1.2.3.4").locked is True
+
+
+def test_an_empty_client_key_is_refused(fake_client):
+    with pytest.raises(ValueError):
+        throttle.record_failure("admin@example.com", "")
+    with pytest.raises(ValueError):
+        throttle.check_locked("admin@example.com", "")
 
 
 def test_lockout_expires_after_window(fake_client, monkeypatch):
@@ -155,7 +214,7 @@ def test_successful_login_clears_account_failure_counter(fake_client, monkeypatc
     throttle.record_failure("admin@example.com", "1.1.1.1")
     throttle.record_failure("admin@example.com", "1.1.1.1")
 
-    throttle.clear_account_failures("admin@example.com")
+    throttle.clear_account_failures("admin@example.com", "1.1.1.1")
 
     # One more failure after clearing should not immediately lock (counter
     # restarted from zero, not resumed at 2).
@@ -169,7 +228,7 @@ def test_clear_account_failures_does_not_clear_ip_counter(fake_client, monkeypat
     throttle.record_failure("other@example.com", "1.2.3.4")
     assert throttle.check_locked("admin@example.com", "1.2.3.4").locked is True
 
-    throttle.clear_account_failures("admin@example.com")
+    throttle.clear_account_failures("admin@example.com", "1.2.3.4")
 
     # The IP itself is still locked (from the two distinct-email failures),
     # even though the admin@example.com account counter was just cleared.
@@ -194,4 +253,4 @@ def test_redis_failure_propagates_from_clear_account_failures(monkeypatch):
     monkeypatch.setattr(throttle, "_get_client", lambda: ExplodingRedis())
 
     with pytest.raises(redis.RedisError):
-        throttle.clear_account_failures("admin@example.com")
+        throttle.clear_account_failures("admin@example.com", "1.2.3.4")
