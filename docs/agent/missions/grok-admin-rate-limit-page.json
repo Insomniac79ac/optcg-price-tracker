@@ -115,5 +115,5 @@
       "observation_window": "This merge's staging delivery verify, then a signed-out request to /api/admin/rate-limit/status returns 401 and /admin/rate-limit redirects to admin login; the owner confirms the signed-in page."
     }
   },
-  "diff_sha256": "ac75f10f4e128a374b5d32c414e2a2bfe3739a12a557cf6a5b2f1abe105fca9f"
+  "diff_sha256": "6e58cdef778a3ae6b8897a42d7b01278242d11459f11b477b871a2356eb16560"
 }
