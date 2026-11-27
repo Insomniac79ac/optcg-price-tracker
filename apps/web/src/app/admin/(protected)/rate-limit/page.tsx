@@ -56,8 +56,8 @@ export default function RateLimitPage() {
   const [status, setStatus] = useState<PageStatus>("loading");
   const [proxyMessage, setProxyMessage] = useState<string | null>(null);
 
-  function load() {
-    setStatus("loading");
+  // Only settles state from the promise, so the mount effect sets no state synchronously.
+  function fetchAndApply() {
     fetchRateLimitStatus()
       .then((result) => {
         setData(result);
@@ -75,8 +75,13 @@ export default function RateLimitPage() {
       });
   }
 
+  function refresh() {
+    setStatus("loading");
+    fetchAndApply();
+  }
+
   useEffect(() => {
-    load();
+    fetchAndApply();
   }, []);
 
   return (
@@ -108,7 +113,7 @@ export default function RateLimitPage() {
         {status === "ready" && data && (
           <>
             <div className="mb-4 flex flex-wrap items-center gap-3">
-              <ActionButton onClick={load}>Refresh</ActionButton>
+              <ActionButton onClick={refresh}>Refresh</ActionButton>
               <span className="text-xs text-text-secondary">
                 Limiter {data.enabled ? "enabled" : "disabled"}
               </span>
