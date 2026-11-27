@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "mission": "Remove OP-18's two exclude_entry_ids (OP18-064_p1 TR, OP18-084_p2 SPカード) after option D (#314) merges, as the owner ordered (t648u 2026-11-24, content-pipeline ops/decisions.md L654: after D merges, a PR removing op-18's exclusions, then a dry run expecting create 2, transitions 2, conflict 0). Merging writes nothing: the import is a separate ops-write dry run and owner-approved apply. No code path, identity rule, collector or fleet change; the exclude_entry_ids mechanism stays for other scopes.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "docs/agent/CATALOGUE_IMPORT_SCOPES.json"
+      ],
+      "effects": [
+        "bulk_data"
+      ],
+      "reason": "op-18 drops exclude_entry_ids (OP18-064_p1, OP18-084_p2); series stays exactly 550118. With option D on staging the next op-18 plan treats the two as canonical rarity transitions instead of conflicts."
+    },
+    {
+      "files": [
+        "scripts/ops/catalogue_import.py"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Docstring only: the op-18 exclusion is recorded as removed after option D. No code change."
+    },
+    {
+      "files": [
+        "scripts/tests/test_ops_catalogue_import.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "The committed op-18 scope now excludes nothing; the malformed, stale-id and SHA tests for exclude_entry_ids stay."
+    },
+    {
+      "files": [
+        "docs/agent/OPS_RUNBOOKS.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Records that op-18's exclusions were removed after option D."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "staging Postgres catalogue tables, only through owner-approved ops-write catalogue-import runs"
+      ],
+      "routes": [
+        "Bandai JP card list picker, all series pages and the op-18 scope's images during the later import, 1 per second"
+      ],
+      "dependencies": [
+        "option D (#314, RED, owner hand merge) merged and its delivery verified first: one DATA delivery at a time",
+        "staging at e25b45b6 or later, with #314 merged in before Ready"
+      ],
+      "deployment_impact": "Merging changes nothing live. changed_runtime_inputs from 770c574a (current pins) and from e25b45b6: snkrdunk and yuyutei unchanged.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "e25b45b6e5ab7bde87c9d68fe5f79a9ec8cd6b07",
+      "procedure": "Code: native revert PR with its own mission file restores the two exclusions. Data: none from this merge; the later apply report lists created rows and transitions, restore from the Railway backup that apply requires or an owner-approved correction.",
+      "trigger": "A dry run that plans prints outside OP-18, or does not show create 2, canonical rarity transitions 2, conflict 0 (no_change for the rest).",
+      "backup": "Not applicable to this merge: no schema or row change. The later apply refuses without a Railway Postgres backup under 24 hours old.",
+      "validation": [
+        "scripts/tests/test_ops_catalogue_import.py",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "docs/agent/CATALOGUE_IMPORT_SCOPES.json"
+      ],
+      "observation_window": "The catalogue-import op-18 dry run (owner approves; expect create 2, transitions 2, conflict 0), the release watcher's confirmation, then the apply on a second approval, and the price checker's spot check of the two prints."
+    }
+  },
+  "diff_sha256": ""
+}
