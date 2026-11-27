@@ -2310,6 +2310,27 @@ export interface JobLockForceReleaseResponse {
 
 /** Routed through the Next.js server proxy (see
  * src/app/api/admin/job-locks/route.ts) - same reasoning as fetchCardAudit. */
+export interface RateLimitWindow {
+  group: string;
+  limit: number;
+  window_seconds: number;
+  active_keys: number;
+}
+
+/** GET /admin/rate-limit/status: counts since this API process started. */
+export interface RateLimitStatus {
+  enabled: boolean;
+  windows: RateLimitWindow[];
+  started_at: string;
+  platform_header_requests: number;
+  unverified_requests: number;
+  mismatch_requests: number;
+}
+
+export function fetchRateLimitStatus(): Promise<RateLimitStatus> {
+  return fetchAdminJson<RateLimitStatus>("/api/admin/rate-limit/status");
+}
+
 export function fetchJobLocks(): Promise<JobLockListResponse> {
   return fetchAdminJson<JobLockListResponse>("/api/admin/job-locks");
 }
