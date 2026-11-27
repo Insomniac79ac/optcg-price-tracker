@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "mission": "GREEN backlog item (issue #315, owner t729u 26 Nov, content-pipeline ops/decisions.md L699, moved up by t756u L714): a read-only admin page for the existing rate-limit status counts, behind the admin session, through the existing admin proxy. Web only, with tests and a PRODUCT_LOG line. No API change.",
+  "classification": "GREEN",
+  "impacts": [
+    {
+      "files": [
+        "apps/web/src/app/api/admin/rate-limit/status/route.ts"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "GET only, fixed backend path /admin/rate-limit/status through proxyAdminJson (admin session required), force-dynamic."
+    },
+    {
+      "files": [
+        "apps/web/src/app/admin/(protected)/rate-limit/page.tsx"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Read-only admin page under the protected layout: counting-since time, three counts, window table, Refresh; notes counts are per API process and reset on every deploy."
+    },
+    {
+      "files": [
+        "apps/web/src/lib/api.ts"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "RateLimitStatus type mirroring the API response and fetchRateLimitStatus()."
+    },
+    {
+      "files": [
+        "apps/web/src/components/admin/adminNavigation.ts",
+        "apps/web/src/lib/commandRegistry.ts"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "One Rate Limits entry in admin navigation and the command palette."
+    },
+    {
+      "files": [
+        "apps/web/src/app/api/admin/rate-limit/status/route.test.ts",
+        "apps/web/src/app/admin/(protected)/rate-limit/page.test.tsx"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Route uses the fixed path and only exports GET and dynamic; page renders counts and started_at, Refresh is the only action, session-expired state."
+    },
+    {
+      "files": [
+        "docs/agent/PRODUCT_LOG.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Product log entry."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "Vercel staging web build"
+      ],
+      "routes": [
+        "/admin/rate-limit (admin session)",
+        "/api/admin/rate-limit/status (admin session)"
+      ],
+      "dependencies": [
+        "option D (#314) delivered or held first: one delivery at a time"
+      ],
+      "deployment_impact": "Vercel staging web rebuilds. No collector rollout, no Railway deployment, no fleet change.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
+    },
+    "recovery": {
+      "artifact": "e25b45b6e5ab7bde87c9d68fe5f79a9ec8cd6b07",
+      "procedure": "Native revert PR of this merge with its own mission file; the page and route disappear.",
+      "trigger": "The route answers without an admin session, is served from a shared cache, or the staging delivery verify fails.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "apps/web/src/app/api/admin/rate-limit/status/route.test.ts",
+        "apps/web/src/app/admin/(protected)/rate-limit/page.test.tsx",
+        "scripts/tests/test_staging_mission.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "frontend-build"
+      ],
+      "post_change": [
+        "apps/web/src/app/api/admin/rate-limit/status/route.ts"
+      ],
+      "observation_window": "This merge's staging delivery verify, then a signed-out request to /api/admin/rate-limit/status returns 401 and /admin/rate-limit redirects to admin login; the owner confirms the signed-in page."
+    }
+  },
+  "diff_sha256": ""
+}
