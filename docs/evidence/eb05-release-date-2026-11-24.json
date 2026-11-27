@@ -1,0 +1,33 @@
+{
+  "purpose": "Frozen input for Alembic revision e216c1c45131 (EB-05 JP release date). Owner t622u step 1 (content-pipeline ops/decisions.md L631), 23 Nov 2026.",
+  "status": "FINAL: Bandai JP product page re-read 2026-11-24 by the CP engineer; the date matches the release watcher's 12 Nov confirmation",
+  "accepted_mapping": [
+    {
+      "source_catalogue": "bandai_jp",
+      "official_code": "EB-05",
+      "release_date": "2026-10-31",
+      "classification": "DATE_VERIFIED_SINGLE_SOURCE"
+    }
+  ],
+  "observations": [
+    {
+      "source_url": "https://www.onepiece-cardgame.com/products/eb05.html",
+      "observed_text": "EB-05 confirmed 2026-10-31 on the Bandai product page",
+      "observed_at": "2026-11-12T08:59:00+08:00",
+      "observed_by": "CP release watcher (content-pipeline ops/decisions.md L168)"
+    },
+    {
+      "source_url": "https://www.onepiece-cardgame.com/products/eb05.html",
+      "observed_text": "発売日 : 2026年10月31日(土)",
+      "observed_at": "2026-11-24T14:48:00+08:00",
+      "observed_by": "CP engineer (WebFetch of the official JP product page)"
+    },
+    {
+      "source_url": "https://www.onepiece-cardgame.com/products/eb05.html",
+      "observed_text": "エクストラブースター ONE PIECE Heroines Edition vol.2【EB-05】 発売日 : 2026年10月31日(土)",
+      "observed_at": "2026-11-24T21:47:00+08:00",
+      "observed_by": "CP engineer (WebFetch of the official JP product page)"
+    }
+  ],
+  "single_source_reason": "Only the official JP product page states the JP date. Regional English releases are different products and are not used."
+}
