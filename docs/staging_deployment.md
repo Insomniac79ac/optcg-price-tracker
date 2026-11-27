@@ -289,15 +289,14 @@ web app's `/`, `/analytics`, `/cards`, `/collection`, `/collection/vault`, and
   resolve outside Docker, so the browser sees a 502 from that route) rather than failing the build
   up front. Double-check `API_INTERNAL_URL` is set in the Vercel dashboard - there is no automated
   gate catching a missing value the way there is in the Docker/Compose path.
-- **`APP_ENV=staging` is not a recognized value in the backend's own env validation**
-  (`services/api/app/core/env_validation.py`/`services/worker/worker/env_validation.py` only
-  special-case `production` and `development` - anything else, including `staging`, is treated
-  like "not production", so the hard production-only startup checks (`ADMIN_TOKEN` shape/length,
-  `SCRAPING_MODE=live` minimum delays, Telegram completeness) do not hard-fail on staging the way
-  they would in a real production deploy). This is existing app behavior, intentionally left
-  unchanged for this staging pass (no formula/validation-logic changes) - set staging values
-  correctly by hand regardless of what startup validation would or wouldn't catch (see
-  [.env.staging.example](../.env.staging.example)).
+- **`APP_ENV=staging` is a recognized, non-production label** in the backend's env validation
+  (`services/api/app/core/env_validation.py` and its mirror `services/worker/worker/env_validation.py`
+  accept `production`, `staging` and `development`, so staging no longer logs an "unrecognized
+  label" warning at startup). Only `production` turns on the hard production-only startup checks
+  (`ADMIN_TOKEN` shape/length, `SCRAPING_MODE=live` minimum delays, Telegram completeness); on
+  staging they stay warn-only, as before. Do not set the label to `production` on staging to
+  change that. Set staging values correctly by hand regardless of what startup validation would
+  or wouldn't catch (see [.env.staging.example](../.env.staging.example)).
 - **Single Railway region/instance assumptions in the app's rate limiting** (`app.core.rate_limit`)
   carry over unchanged from production - see `docs/deployment.md` section 12. Not a staging-specific
   concern, just worth knowing if `api` is ever scaled to multiple Railway replicas.

@@ -48,6 +48,10 @@ CRITICAL = "critical"
 
 PRODUCTION = "production"
 DEVELOPMENT = "development"
+# A recognised, non-production label: staging keeps warn-only severity for the
+# production-only checks (is_production stays app_env == PRODUCTION).
+STAGING = "staging"
+RECOGNIZED_APP_ENVS = (PRODUCTION, STAGING, DEVELOPMENT)
 
 LOCAL_DEV_ADMIN_TOKEN = "local-dev-admin-token"
 MIN_ADMIN_TOKEN_LENGTH = 32
@@ -120,12 +124,12 @@ def _severity_for(is_production: bool) -> tuple[str, str]:
 
 
 def _check_app_env_recognized(app_env: str) -> EnvCheckResult:
-    if app_env not in (PRODUCTION, DEVELOPMENT):
+    if app_env not in RECOGNIZED_APP_ENVS:
         return EnvCheckResult(
             "app_env_recognized",
             WARNING,
             WARNING_SEVERITY,
-            f"APP_ENV/ENVIRONMENT={app_env!r} is not 'production' or 'development' - "
+            f"APP_ENV/ENVIRONMENT={app_env!r} is not 'production', 'staging' or 'development' - "
             "treating this as non-production (warn-only) for these checks.",
         )
     return EnvCheckResult(

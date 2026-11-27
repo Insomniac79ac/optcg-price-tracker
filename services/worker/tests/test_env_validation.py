@@ -190,3 +190,31 @@ def test_validate_environment_defaults_to_os_environ(monkeypatch):
     report = validate_environment()
 
     assert report.app_env == "development"
+
+
+# --- environment label ------------------------------------------------------
+
+
+def test_staging_app_env_is_recognized_and_stays_non_production():
+    # staging is a recognised label (same as the API mirror): no
+    # app_env_recognized warning, production-only checks stay warn-only.
+    report = validate_environment({"APP_ENV": "staging"})
+
+    assert report.app_env == "staging"
+    assert report.ok is True
+    assert checks_by_name(report)["app_env_recognized"].status == "pass"
+    assert not any("is not 'production'" in w for w in report.warnings)
+
+
+def test_staging_missing_admin_token_warns_not_fails():
+    report = validate_environment({"APP_ENV": "staging", "ADMIN_TOKEN": ""})
+
+    assert report.ok is True
+    assert checks_by_name(report)["admin_token_present"].status == "warning"
+
+
+def test_unrecognized_app_env_still_warns():
+    report = validate_environment({"APP_ENV": "qa"})
+
+    assert report.ok is True
+    assert any("not 'production', 'staging' or 'development'" in w for w in report.warnings)

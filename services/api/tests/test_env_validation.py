@@ -103,11 +103,32 @@ def test_development_missing_everything_warns_but_passes():
 
 
 def test_development_unrecognized_app_env_warns_but_passes():
+    report = validate_environment({"APP_ENV": "qa"})
+
+    assert report.app_env == "qa"
+    assert report.ok is True
+    assert any("not 'production', 'staging' or 'development'" in w for w in report.warnings)
+
+
+def test_staging_app_env_is_recognized_and_stays_non_production():
+    # staging is a recognised label: no app_env_recognized warning, and the
+    # production-only checks keep their warn-only severity (nothing fails).
     report = validate_environment({"APP_ENV": "staging"})
 
     assert report.app_env == "staging"
     assert report.ok is True
-    assert any("not 'production' or 'development'" in w for w in report.warnings)
+    recognized = [c for c in report.checks if c.name == "app_env_recognized"]
+    assert len(recognized) == 1 and recognized[0].status == "pass"
+    assert not any("is not 'production'" in w for w in report.warnings)
+    assert not any(c.status == "fail" for c in report.checks)
+
+
+def test_staging_missing_admin_token_warns_not_fails():
+    report = validate_environment({"APP_ENV": "staging", "ADMIN_TOKEN": ""})
+
+    assert report.ok is True
+    token = [c for c in report.checks if c.name == "admin_token_present"]
+    assert len(token) == 1 and token[0].status == "warning"
 
 
 # --- market workflow schedule ----------------------------------------------
