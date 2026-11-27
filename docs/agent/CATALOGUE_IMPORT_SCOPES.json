@@ -14,17 +14,7 @@
       "series": [
         "550118"
       ],
-      "uncoded_products": [],
-      "exclude_entry_ids": [
-        {
-          "entry_id": "OP18-064_p1",
-          "reason": "Owner t642u 2026-11-24 (OP-18 option A): planner conflict, own-set parallel rarity TR differs from canonical rarity UC set by the 13 Nov base-only import (dry run 45124567278). Left out until option D (canonical rarity to NULL, RED) lands; then removed from this list."
-        },
-        {
-          "entry_id": "OP18-084_p2",
-          "reason": "Owner t642u 2026-11-24 (OP-18 option A): planner conflict, own-set parallel rarity SPカード differs from canonical rarity SR set by the 13 Nov base-only import (dry run 45124567278). Left out until option D (canonical rarity to NULL, RED) lands; then removed from this list."
-        }
-      ]
+      "uncoded_products": []
     },
     "family-deck-set": {
       "note": "Phase 2: Family Deck Set (series 550701), established through the single-product catch-all amendment (owner 2026-10-26).",

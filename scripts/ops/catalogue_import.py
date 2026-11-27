@@ -33,7 +33,7 @@ This runbook gives it both inside the ops-write workflow:
    sibling counts stay measured over the whole snapshot). Every excluded entry is printed by id
    in the summary, an excluded id the scope does not capture refuses, a plan that still holds
    one refuses, and the list is part of the plan SHA-256 (owner t642u, 2026-11-24: OP-18
-   option A, OP18-064_p1 and OP18-084_p2 until option D lands).
+   option A excluded OP18-064_p1 and OP18-084_p2 until option D; removed after D, t648u).
 
 Dry run (default): read-only session at the server, plan and the engine's dry-run report.
 Apply: --apply with the dry run's plan_sha256, after the owner approves the run.
