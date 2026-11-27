@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "Env validation recognises 'staging' as a valid, non-production environment label (owner t752u, 26 Nov 2026): the API and worker env validation accept production, staging and development, so staging stops logging an unrecognised-label warning at every start. Only production enables the production-only hard checks; staging keeps warn-only severity, unchanged. The label on staging is not changed.",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
