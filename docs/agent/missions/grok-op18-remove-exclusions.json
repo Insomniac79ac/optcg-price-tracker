@@ -94,5 +94,5 @@
       "observation_window": "The catalogue-import op-18 dry run (owner approves; expect create 2, transitions 2, conflict 0), the release watcher's confirmation, then the apply on a second approval, and the price checker's spot check of the two prints."
     }
   },
-  "diff_sha256": "417df1195935f3d5e4338d4616e56ef9197396f48e1bd10be0fc5809ba412369"
+  "diff_sha256": "e18c62eac7a10ff9137a83e1085c6e7fcfe851185b4c9a7405584dde1a955d00"
 }
