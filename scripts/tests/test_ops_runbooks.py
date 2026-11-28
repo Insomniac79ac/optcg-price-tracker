@@ -154,7 +154,22 @@ class WorkflowsMatchRegistry(unittest.TestCase):
                          [n for n, v in run.RUNBOOKS.items() if v[0] == "read"])
         self.assertEqual(self.options("ops-write.yml", "runbook"),
                          [n for n, v in run.RUNBOOKS.items() if v[0] == "write"])
-        self.assertEqual(self.options("ops-readonly.yml", "diagnostic"), diagnostic.available())
+
+    def test_diagnostic_is_a_string_input_gated_by_load(self):
+        # SEC-001 R13: a new diagnostic needs no workflow edit; load() is the gate.
+        import yaml
+        data = yaml.safe_load((ROOT / ".github/workflows/ops-readonly.yml").read_text())
+        inputs = data[True]["workflow_dispatch"]["inputs"]
+        self.assertEqual(inputs["diagnostic"]["type"], "string")
+        self.assertNotIn("options", inputs["diagnostic"])
+        self.assertEqual(inputs["print_ids"]["type"], "string")
+        text = (ROOT / ".github/workflows/ops-readonly.yml").read_text()
+        self.assertIn("PRINT_IDS: ${{ inputs.print_ids }}", text)
+        self.assertIn('--print-ids "$PRINT_IDS"', text)
+        for name in ["no-such-diagnostic", "Work-By-State", "../x", "work-by-state.sql", ""]:
+            with self.subTest(name=name):
+                with self.assertRaises(common.Refused):
+                    diagnostic.load(name)
 
     def test_delivery_workflows_have_runs_of_their_own(self):
         # A workflow_call-only workflow has no runs endpoint (404), which fails the preflight closed.
