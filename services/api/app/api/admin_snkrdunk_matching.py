@@ -35,6 +35,8 @@ from app.schemas import (
     SnkrdunkCandidateOut,
 )
 from app.services.app_logging import record_app_log
+from app.services.print_catalogue import effective_rarity
+from app.services.rarity_facets import facet_value
 from app.services.card_matching import (
     SUGGESTED_SCORE_THRESHOLD,
     CandidateMatchResult,
@@ -68,6 +70,12 @@ router = APIRouter(
 # the pre-existing manual match endpoint) and are never overwritten here.
 _AUTO_SETTABLE_STATUSES = ("unmatched", "suggested", "ambiguous")
 _REMATCH_ALL_STATUS_CHOICES = ("unmatched", "suggested", "ambiguous", "all")
+
+
+def _option_rarity(print_row, canonical) -> str | None:
+    """The rarity one print option shows: print_catalogue.effective_rarity, as a facet value."""
+    value = effective_rarity(print_row, canonical)
+    return facet_value(value.strip()) if value and value.strip() else None
 
 
 def _get_candidate_or_404(db: Session, candidate_id: int) -> SnkrdunkCandidate:
@@ -252,7 +260,10 @@ def get_print_options(candidate_id: int, db: Session = Depends(get_db)):
                 display_image=display_images.get(print_row.id),
                 image_url=print_row.image_url,
                 found_in_product=print_row.release_product_code,
-                rarity=canonical.rarity,
+                # Print first (owner t648u): the print's own official rarity, the
+                # card's only as a fallback, shown with the catalogue's facet token
+                # so a raw published token never reaches the operator.
+                rarity=_option_rarity(print_row, canonical),
                 special_print=special_print_label(print_row, canonical),
                 printing=printing_label(print_row),
                 art_ordinal=ordinals.get(print_row.id),

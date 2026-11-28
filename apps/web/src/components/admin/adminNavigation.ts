@@ -35,7 +35,8 @@ export const ADMIN_NAVIGATION = [
     routes: [
       ["/admin/system-check", "System Check"], ["/admin/performance", "Performance"],
       ["/admin/logs", "Logs"], ["/admin/cache", "Cache"],
-      ["/admin/job-locks", "Job Locks"], ["/admin/data-retention", "Data Retention"],
+      ["/admin/job-locks", "Job Locks"], ["/admin/rate-limit", "Rate Limits"],
+      ["/admin/data-retention", "Data Retention"],
       ["/admin/backup", "Backup"], ["/admin/release-status", "Release Status"],
     ],
   },

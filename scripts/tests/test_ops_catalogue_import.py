@@ -458,3 +458,96 @@ class ExcludedEntries(unittest.TestCase):
         from app import import_frozen_bandai_to_canonical_staging as importer
         self.assertEqual(list(inspect.signature(importer.plan_entries).parameters)[:2], ["session", "entries"])
         self.assertIn("plan_entries(", inspect.getsource(importer.main))
+
+
+EXISTING = [{"card_print_id": 7103, "is_active": True, "official_rarity": "UC",
+             "effective_rarity_before": "UC", "effective_rarity_after": "UC"}]
+TRANSITION = {"canonical_card_id": 7977, "card_code": "EB05-001", "old_rarity": "UC", "own_set": "EB05",
+              "own_set_rarities": ["TR", "UC"], "existing_prints": EXISTING}
+DIFFERENCE = {"card_code": "EB05-001", "canonical_card_id": 7977, "canonical_rarity": "UC", "own_set": "EB05",
+              "own_set_rarities": ["TR", "UC"]}
+
+
+def transition_plan(codes=("EB05-001", "EB05-002"), differences=(DIFFERENCE,)):
+    plan = fake_plan(codes)
+    first = plan.prints[0]
+    doc = dict(first.to_dict(), canonical_rarity_transition=dict(TRANSITION))
+    plan.prints[0] = SimpleNamespace(entry_id=first.entry_id, card_code=first.card_code, to_dict=lambda: dict(doc))
+    plan.same_set_rarity_differences = [dict(d) for d in differences]
+    return plan
+
+
+class TransitionImporter(FakeImporter):
+    """Like FakeImporter, but its plan carries one canonical rarity transition and the early
+    warning, and its report carries the applier's per-print C1/C2 list."""
+
+    def __call__(self, argv, *, open_tunnel, on_plan):
+        self.calls.append(argv)
+        on_plan(transition_plan(self.codes))
+        prints = [{"card_print_id": 7103, "is_active": True, "official_rarity": "UC",
+                   "effective_rarity_before": "UC", "effective_rarity_after": "UC"}]
+        print(json.dumps({"applied": False, "canonical_rarity_transitions": [dict(TRANSITION, prints=prints)],
+                          "canonical_rarity_transitions_applied": 0}))
+        return 0
+
+
+class CanonicalRarityTransitionReport(unittest.TestCase):
+    """Owner t648u: the dry run lists each transition and every print's rarity before and after,
+    and prints the early-warning list on every run; both sit inside plan_sha256."""
+
+    def setUp(self):
+        sys.modules.setdefault("generate_staging_state", SimpleNamespace(timestamp=lambda: "t"))
+
+    def test_transitions_are_read_from_the_plan_rows_one_per_card(self):
+        rows = ci.plan_rows(transition_plan())
+        self.assertEqual(ci.rarity_transitions(rows), [dict(TRANSITION, new_rarity=None, entry_id="EB05-001")])
+        self.assertEqual(ci.rarity_transitions(ci.plan_rows(fake_plan(["EB05-001"]))), [])
+
+    def test_the_per_print_before_and_after_list_is_inside_the_sha(self):
+        """CEO 25 Nov 2026: a print on the card that reads differently gives a different SHA."""
+        scope = ci.resolve_scope("eb-05", SCOPES)
+        approved = ci.plan_sha(scope, ci.plan_rows(transition_plan()))
+        moved = transition_plan()
+        first = moved.prints[0]
+        doc = first.to_dict()
+        doc["canonical_rarity_transition"] = dict(
+            TRANSITION, existing_prints=[dict(EXISTING[0], official_rarity="TR", effective_rarity_after="TR",
+                                              effective_rarity_before="TR")])
+        moved.prints[0] = SimpleNamespace(entry_id=first.entry_id, card_code=first.card_code,
+                                          to_dict=lambda: dict(doc))
+        self.assertNotEqual(approved, ci.plan_sha(scope, ci.plan_rows(moved)))
+        self.assertEqual(ci.rarity_transitions(ci.plan_rows(transition_plan()))[0]["existing_prints"], EXISTING)
+
+    def test_a_transition_moves_the_sha(self):
+        scope = ci.resolve_scope("eb-05", SCOPES)
+        plain = ci.plan_sha(scope, ci.plan_rows(fake_plan(["EB05-001", "EB05-002"])))
+        self.assertNotEqual(plain, ci.plan_sha(scope, ci.plan_rows(transition_plan())))
+
+    def test_the_early_warning_is_in_the_sha_only_when_present(self):
+        scope = ci.resolve_scope("eb-05", SCOPES)
+        rows = ci.plan_rows(fake_plan(["EB05-001"]))
+        self.assertEqual(ci.plan_sha(scope, rows), ci.plan_sha(scope, rows, same_set_rarity_differences=[]))
+        self.assertNotEqual(ci.plan_sha(scope, rows), ci.plan_sha(scope, rows, same_set_rarity_differences=[DIFFERENCE]))
+
+    def test_every_dry_run_prints_the_early_warning_even_when_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = ci.run(tmp, scope="eb-05", fetcher=FakeFetcher(), main=FakeImporter(), open_tunnel=OPEN, scopes=SCOPES)
+        self.assertEqual(out["same_set_rarity_differences"], [])
+        self.assertEqual(out["canonical_rarity_transitions"], [])
+        self.assertNotIn("canonical_rarity_transition_prints", out)
+
+    def test_dry_run_lists_the_transition_its_prints_and_the_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = ci.run(tmp, scope="eb-05", fetcher=FakeFetcher(), main=TransitionImporter(), open_tunnel=OPEN,
+                         scopes=SCOPES)
+        self.assertTrue(out["ok"])
+        self.assertEqual(out["canonical_rarity_transitions"][0]["canonical_card_id"], 7977)
+        self.assertEqual(out["canonical_rarity_transitions"][0]["new_rarity"], None)
+        prints = out["canonical_rarity_transition_prints"][0]["prints"]
+        self.assertEqual([(p["effective_rarity_before"], p["effective_rarity_after"]) for p in prints], [("UC", "UC")])
+        self.assertEqual(out["same_set_rarity_differences"], [DIFFERENCE])
+        self.assertEqual(out["report"]["canonical_rarity_transitions_applied"], 0)
+        with tempfile.TemporaryDirectory() as tmp:
+            plain = ci.run(tmp, scope="eb-05", fetcher=FakeFetcher(), main=FakeImporter(), open_tunnel=OPEN,
+                           scopes=SCOPES)
+        self.assertNotEqual(out["plan_sha256"], plain["plan_sha256"])

@@ -278,6 +278,17 @@ export const COMMAND_REGISTRY: Command[] = [
     requires_admin: true,
   }),
   cmd({
+    id: "admin-rate-limit",
+    label: "Rate Limits",
+    description: "Rate-limit status counts",
+    group: "Admin",
+    route_path: "/admin/rate-limit",
+    keywords: ["rate", "limit"],
+    scope: "admin",
+    badge: "admin",
+    requires_admin: true,
+  }),
+  cmd({
     id: "admin-file-jobs",
     label: "File Jobs",
     description: "File processing jobs",
