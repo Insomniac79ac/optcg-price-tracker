@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "mission": "Build image hygiene for the three Railway Python services (CEO-approved plan 2026-11-21 22:07 MYT, content-pipeline ops/decisions.md L606; owner t589u L605; own PR per owner t586u L603 and CEO L604): deploy/railway/api.Dockerfile, beat.Dockerfile and worker.Dockerfile move from the floating python:3.12-slim tag to the same multi-arch index digest sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b (read from Docker Hub 2026-11-23 14:35 MYT), and upgrade the base image's bundled pip to 26.2.2 before the first dependency install. No requirements, application code, collector input, services/api/Dockerfile or services/worker/Dockerfile change. DATA lane (build supply chain, owner rule t397u). Draft: the owner marks it ready.",
+  "target": "staging",
+  "classification": "AMBER",
+  "red_decisions": {
+    "ambiguous_approval": false,
+    "destructive_migration": false,
+    "identity_weakening": false,
+    "legal_compliance": false,
+    "major_product_or_brand": false,
+    "pricing_methodology": false,
+    "private_data_exposure": false,
+    "production": false,
+    "published_history_rewrite": false,
+    "security_or_secrets_policy": false,
+    "significant_recurring_cost": false,
+    "yuyu_sale_policy": false
+  },
+  "impacts": [
+    {
+      "files": [
+        "deploy/railway/api.Dockerfile",
+        "deploy/railway/beat.Dockerfile",
+        "deploy/railway/worker.Dockerfile"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "FROM python:3.12-slim becomes FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b in all three, and RUN python -m pip install --no-cache-dir \"pip==26.2.2\" is added before the first pip install -r. The API, worker and beat rebuild through their Railway GitHub triggers on the merge commit. Collector runtime inputs unchanged (changed_runtime_inputs ab56bc7a..HEAD: snkrdunk [], yuyutei [])."
+    }
+  ],
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "staging api, worker and beat services (Railway GitHub-triggered builds)"
+      ],
+      "routes": [
+        "No route change. No source request."
+      ],
+      "dependencies": [
+        "staging at ab56bc7a or later (#305 delivered)"
+      ],
+      "deployment_impact": "API, worker and beat images rebuild on the merge commit from the pinned base with pip 26.2.2; installed application dependencies resolve from the same requirements files as today. No collector release (collector runtime inputs unchanged). No schema change. verify_staging_delivery checks the API only; worker and beat deployment status is read back separately after merge.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 70
+    },
+    "recovery": {
+      "artifact": "ab56bc7a6338e3e28ed12519786e503e695d071f",
+      "procedure": "Native revert PR with its own mission file (back to the floating tag and the base image's pip); Railway redeploys api, worker and beat from the revert merge.",
+      "trigger": "An api, worker or beat build or deploy failure after merge, a failing delivery verify, or a crash loop in worker or beat.",
+      "backup": "Not applicable: no schema or row change.",
+      "validation": [
+        "scripts/tests/test_staging_mission.py",
+        "scripts/tests/test_collector_runtime_inputs.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate",
+        "policy-gate",
+        "agent-state-tests"
+      ],
+      "post_change": [
+        "deploy/railway/api.Dockerfile",
+        "deploy/railway/beat.Dockerfile",
+        "deploy/railway/worker.Dockerfile"
+      ],
+      "observation_window": "This merge's delivery verify (API on the merge commit), then worker and beat deployment status on the merge commit read back, then pip 26.2.2 confirmed in the api, worker and beat build logs."
+    }
+  },
+  "diff_sha256": "fdf342fcc4db5501bb69f7c6446a97c2586736760b3a37bb47f3cd38c01a528a"
+}

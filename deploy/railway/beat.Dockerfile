@@ -24,11 +24,16 @@
 # point exists in the image even before a volume is attached; Railway
 # overlays the actual volume at runtime.
 
-FROM python:3.12-slim
+# Base pinned by multi-arch index digest (read 2026-11-23 14:35 MYT from Docker Hub);
+# refreshed by a reviewed PR, never floating.
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 
 WORKDIR /app
 
 COPY services/worker/requirements.txt .
+# Upgrade the base image's bundled pip (and its vendored CA bundle) before
+# any dependency install.
+RUN python -m pip install --no-cache-dir "pip==26.2.2"
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY packages/opcg_source_identity /opt/opcg_source_identity
