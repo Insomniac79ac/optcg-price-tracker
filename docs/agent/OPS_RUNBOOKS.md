@@ -258,9 +258,10 @@ catalogue-gap request (owner 2026-10-26).
    filtered at the planner's input, after the importer measured sibling counts over the whole
    snapshot, so every other entry plans as before. The summary prints each excluded entry by id
    (card code, Bandai rarity, reason); an excluded id the scope does not capture refuses, a plan
-   that still holds one refuses, and the list is part of `plan_sha256`. `op-18` excludes
+   that still holds one refuses, and the list is part of `plan_sha256`. `op-18` excluded
    `OP18-064_p1` and `OP18-084_p2` (owner t642u, 2026-11-24, option A: canonical rarity conflicts
-   from the 13 Nov base-only import, dry run 45124567278) until option D lands.
+   from the 13 Nov base-only import, dry run 45124567278) until option D landed; the list was
+   removed after D (owner t648u order), so a scope with no exclusions keeps its earlier SHA.
    Canonical rarity transitions (owner t648u, docs/agent/DECISIONS.md 2026-11-24): when the card's
    own set now publishes several rarities and the card's canonical rarity is one of them, the plan
    carries a transition to NULL instead of a conflict. The summary lists each transition

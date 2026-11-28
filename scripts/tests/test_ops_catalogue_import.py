@@ -127,11 +127,13 @@ class Scope(unittest.TestCase):
         self.assertFalse(scope.get("uncoded_series"))
         self.assertFalse(scope.get("report_only"))
 
-    def test_committed_op18_scope_excludes_exactly_the_two_conflicts(self):
-        # Owner t642u (2026-11-24, option A): OP18-064_p1 and OP18-084_p2 stay out until option D.
+    def test_committed_op18_scope_excludes_nothing_after_option_d(self):
+        # Owner t642u (2026-11-24, option A) left OP18-064_p1 and OP18-084_p2 out until option D;
+        # owner t648u: after D merges, a PR removes the exclusions so the next op-18 run plans them
+        # as canonical rarity transitions (expected create 2, transitions 2, conflict 0).
         scope = ci.resolve_scope("op-18", ci.load_scopes())
-        self.assertEqual(sorted(ci.excluded_ids(scope)), ["OP18-064_p1", "OP18-084_p2"])
-        self.assertTrue(all(e["reason"] for e in scope["exclude_entry_ids"]))
+        self.assertEqual(sorted(ci.excluded_ids(scope)), [])
+        self.assertFalse(scope.get("exclude_entry_ids"))
 
     def test_malformed_exclude_entry_ids_refuse(self):
         for bad in ([{"entry_id": "a"}], [{"entry_id": "a", "reason": ""}], ["a"],
